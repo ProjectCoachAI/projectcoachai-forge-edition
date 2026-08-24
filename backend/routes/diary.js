@@ -99,26 +99,42 @@ Content: ${text}`
 // a defensive limit against pathological cases, not a realistic ceiling
 // for normal use.
 
-// Fetches a URL over HTTPS with a lowered TLS security level and
-// realistic browser headers — confirmed live, via direct server-log
-// evidence, that a plain fetch() failed against several real,
-// independent image CDNs with "write EPROTO ... handshake failure: SSL
-// alert number 40", a well-known pattern where recent Node/OpenSSL
-// versions disable older cipher suites by default that some servers
-// still require; a real browser tolerates them for compatibility, but
-// Node's stricter default doesn't. DEFAULT@SECLEVEL=1 explicitly
-// restores that older compatibility for this one, specific outbound
-// connection — not a global change to this server's own TLS security
-// posture for anything else. Uses the older https module directly
-// (already imported at the top of this file) rather than the global
-// fetch()/undici, since this needs a custom Agent with cipher control
-// that isn't easily reachable through fetch() without an extra
-// dependency.
-function fetchImageWithLegacyTls(url) {
+// Fetches a URL over HTTPS, trying several different TLS configurations
+// in sequence — confirmed live, via direct server-log evidence, that a
+// single, specific fix (lowering the cipher security level alone) did
+// NOT resolve real "write EPROTO ... handshake failure: SSL alert
+// number 40" errors against several independent image CDNs. A
+// handshake_failure alert can stem from several different, independent
+// negotiation dimensions (cipher suite, TLS protocol version, signature
+// algorithms) — rather than guess a single "correct" configuration
+// blindly (this server's own sandboxed test environment can't reach
+// these specific domains to verify against), this tries a short cascade
+// of genuinely different configurations, moving to the next ONLY on
+// another handshake-specific failure (not on a real 404, timeout, or
+// other unrelated error, which wouldn't be helped by different TLS
+// settings at all). Uses the older https module directly (already
+// imported at the top of this file) rather than the global
+// fetch()/undici, since this needs per-attempt Agent control that isn't
+// easily reachable through fetch() without an extra dependency.
+const TLS_CONFIGS = [
+  { label: 'default', ciphers: undefined, minVersion: undefined },
+  { label: 'seclevel1', ciphers: 'DEFAULT@SECLEVEL=1', minVersion: undefined },
+  { label: 'seclevel0-tls1', ciphers: 'DEFAULT@SECLEVEL=0', minVersion: 'TLSv1' },
+  { label: 'legacy-cipher-list', ciphers: 'ALL:@SECLEVEL=0', minVersion: 'TLSv1' },
+];
+
+function isHandshakeError(e) {
+  return e && (e.code === 'EPROTO' || /ssl|tls|handshake/i.test(e.message || ''));
+}
+
+function attemptImageFetch(url, tlsConfig) {
   return new Promise((resolve, reject) => {
     let parsed;
     try { parsed = new URL(url); } catch (e) { reject(e); return; }
-    const agent = new https.Agent({ ciphers: 'DEFAULT@SECLEVEL=1', keepAlive: false });
+    const agentOpts = { keepAlive: false };
+    if (tlsConfig.ciphers) agentOpts.ciphers = tlsConfig.ciphers;
+    if (tlsConfig.minVersion) agentOpts.minVersion = tlsConfig.minVersion;
+    const agent = new https.Agent(agentOpts);
     const req = https.request({
       hostname: parsed.hostname,
       path: parsed.pathname + parsed.search,
@@ -139,6 +155,21 @@ function fetchImageWithLegacyTls(url) {
     req.setTimeout(15000, () => { req.destroy(new Error('Image fetch timed out')); });
     req.end();
   });
+}
+
+async function fetchImageWithLegacyTls(url) {
+  let lastError;
+  for (const tlsConfig of TLS_CONFIGS) {
+    try {
+      const result = await attemptImageFetch(url, tlsConfig);
+      return result;
+    } catch (e) {
+      lastError = e;
+      if (!isHandshakeError(e)) throw e; // a non-TLS error (404, timeout, DNS) won't be fixed by a different TLS config — stop immediately
+      console.warn('[Diary] TLS config "' + tlsConfig.label + '" failed for', url, '—', e.message, '— trying next config');
+    }
+  }
+  throw lastError;
 }
 
 async function rehostImagesAndPatch(entryId, allImages, userEmail) {
