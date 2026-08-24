@@ -1084,7 +1084,29 @@ function renderEntryCard(e) {
     '<div class="entry-body">' +
 
       '<div class="entry-content md">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
-      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(url) { return '<img src="' + url + '" onclick="event.stopPropagation();openImageZoom(\'' + url.replace(/'/g, "\\'") + '\')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>'; }).join('') + '</div></div>' : '') +
+      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
+        // NOTE: images can now be either a plain URL string (every
+        // existing entry saved before native hosting existed) or a
+        // richer { url, originalUrl, status } object (Priority 4's
+        // native hosting) — status is 'hosted' once successfully
+        // re-hosted to our own storage, 'failed' if the fetch/upload
+        // genuinely didn't work (an honest, labeled state rather than a
+        // silent or ambiguous broken image), or 'pending' briefly while
+        // re-hosting is still in progress, which renders using its
+        // current url (the original provider link) exactly like the
+        // old format did, since there's nothing else to show yet.
+        var isObj = typeof img === 'object' && img !== null;
+        var url = isObj ? img.url : img;
+        var status = isObj ? img.status : 'hosted';
+        if (status === 'failed') {
+          var fallbackUrl = (isObj && img.originalUrl) || url;
+          return '<div style="width:150px;height:150px;border-radius:8px;background:#F5F3EE;border:1px dashed #D6D2C8;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:10px;color:#9E9890;padding:8px;gap:4px;">' +
+            '<span>This image couldn\u2019t be saved for offline viewing</span>' +
+            '<a href="' + escHtml(fallbackUrl) + '" target="_blank" onclick="event.stopPropagation();" style="color:#C17D3C;font-weight:500;">View original &#8599;</a>' +
+            '</div>';
+        }
+        return '<img src="' + escHtml(url) + '" onclick="event.stopPropagation();openImageZoom(\'' + url.replace(/'/g, "\\'") + '\')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>';
+      }).join('') + '</div></div>' : '') +
       // NOTE: attachments — a lightweight index, not the files themselves.
       // Stores just filename + type (via metadata.attachments, the same
       // flexible JSONB field already used for url/images — no backend or

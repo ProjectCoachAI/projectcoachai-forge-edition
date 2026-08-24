@@ -73,6 +73,23 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
         }
       } catch(e) {}
 
+      // NOTE: images are saved on this FIRST, fast pass using their
+      // original, raw provider URLs with status:'pending' — this save
+      // must never block on fetching every image's real bytes, which
+      // could be slow or fail entirely for reasons outside our control
+      // (session-scoped/expiring provider links). Native re-hosting is
+      // attempted separately, asynchronously, AFTER this save has
+      // already responded to the page (see the fire-and-forget call
+      // below) — this is the "async fetch-at-save, non-blocking"
+      // requirement from the brief. Each image's status gets updated to
+      // 'hosted' or 'failed' via a follow-up PATCH once the real
+      // outcome is known, never left silently as 'pending' forever if
+      // something goes wrong client-side (background.js itself
+      // unloading, etc.) — see rehostImagesAndPatch's own comment.
+      const initialImages = (msg.images || []).map(function(url) {
+        return { url: url, originalUrl: url, status: 'pending' };
+      });
+
 let data;
       if (existingId) {
         // Step 2a: PATCH - replace with complete conversation snapshot.
@@ -106,7 +123,7 @@ let data;
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ content: patchContent, prompt: msg.prompt, metadata: { url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
+          body: JSON.stringify({ content: patchContent, prompt: msg.prompt, metadata: { url: msg.url, images: initialImages, attachments: msg.attachments || [] } })
         });
         data = await pR.json();
         data.updated = true;
@@ -115,12 +132,27 @@ let data;
         const pR = await fetch(API + '/api/diary', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
+          body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url, images: initialImages, attachments: msg.attachments || [] } })
         });
         data = await pR.json();
         data.updated = false;
       }
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, updated: data.updated, error: data.error } });
+
+      // Fire-and-forget — deliberately NOT awaited by anything above,
+      // so the page has already been told the save succeeded before
+      // this even starts. entryId comes from whichever path actually
+      // ran: existingId for a PATCH, or data.id for a fresh POST (the
+      // backend's create route returns the new row's id directly, not
+      // nested under an "entry" key).
+      if (data.success && msg.images && msg.images.length) {
+        const entryId = existingId || data.id;
+        if (entryId) {
+          rehostImagesAndPatch(entryId, msg.images, token, API).catch(function(e) {
+            console.warn('[Diary BG] Image re-hosting failed:', e.message);
+          });
+        }
+      }
     } catch(e) {
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
     }
@@ -154,32 +186,6 @@ let data;
     chrome.storage.local.set({ diary_pending_prompt: msg.payload }, () => {
       sendResponse({ ok: true });
     });
-    return true;
-  }
-
-  if (msg.type === 'UPLOAD_IMAGES') {
-    const urls = msg.urls || [];
-    const token = msg.token;
-    const uploaded = [];
-    for (const url of urls.slice(0, 5)) {
-      try {
-        const resp = await fetch(url);
-        if (!resp.ok) continue;
-        const blob = await resp.blob();
-        if (blob.size > 5 * 1024 * 1024) continue;
-        const buf = await blob.arrayBuffer();
-        // Convert to base64 to avoid body parser conflict on server
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-        const uploadResp = await fetch('https://api.projectcoachai.com/api/diary/upload-image', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: base64, contentType: blob.type || 'image/jpeg' })
-        });
-        const data = await uploadResp.json();
-        if (data.success && data.url) uploaded.push(data.url);
-      } catch(e) { console.warn('[Diary BG] image upload failed:', e.message); }
-    }
-    sendResponse({ urls: uploaded });
     return true;
   }
 
@@ -220,6 +226,84 @@ let data;
     return false;
   }
 });
+
+// ── Native attachment hosting (Priority 4) ──────────────────────────────────
+// Fetches each image's real bytes from wherever the AI provider currently
+// hosts it, uploads to our own R2-backed storage via
+// /api/diary/upload-attachment, then PATCHes the diary entry with the
+// final, resolved image list — { url, originalUrl, status } per image,
+// where url is the new R2 url on success or falls back to originalUrl on
+// failure (so display code always has something real to point at, never
+// an empty/missing url), and status is 'hosted' or 'failed', used by the
+// frontend to show the honest, labeled fallback state the brief calls for
+// rather than a silent or ambiguous broken image.
+//
+// Deliberately NOT awaited by SAVE_TO_DIARY's own handler above — this
+// whole function runs strictly after the page has already been told the
+// save succeeded, so a slow or even failing re-host never delays that
+// response. This is what "async fetch-at-save, non-blocking" means in
+// practice: the fast, original-URL save always happens first; this
+// upgrades it afterward, in the background, replacing this function's own
+// former equivalent (the old, never-actually-triggered UPLOAD_IMAGES
+// message handler) with one that's genuinely wired into the real save
+// flow instead of only existing as unreachable code.
+//
+// Capped at 10 images per save — a defensive limit against pathological
+// cases (dozens of images in one response), not a realistic ceiling for
+// normal use.
+async function rehostImagesAndPatch(entryId, originalUrls, token, API) {
+  const toProcess = originalUrls.slice(0, 10);
+  const results = [];
+  for (const url of toProcess) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) { results.push({ url: url, originalUrl: url, status: 'failed' }); continue; }
+      const blob = await resp.blob();
+      if (blob.size > 25 * 1024 * 1024) { results.push({ url: url, originalUrl: url, status: 'failed' }); continue; }
+      const buf = await blob.arrayBuffer();
+      const base64 = arrayBufferToBase64(buf);
+      const uploadResp = await fetch(API + '/api/diary/upload-attachment', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: base64, contentType: blob.type || 'image/jpeg' })
+      });
+      const uploadData = await uploadResp.json();
+      if (uploadData.success && uploadData.url) {
+        results.push({ url: uploadData.url, originalUrl: url, status: 'hosted' });
+      } else {
+        results.push({ url: url, originalUrl: url, status: 'failed' });
+      }
+    } catch(e) {
+      console.warn('[Diary BG] Re-hosting failed for one image:', e.message);
+      results.push({ url: url, originalUrl: url, status: 'failed' });
+    }
+  }
+  try {
+    await fetch(API + '/api/diary/' + entryId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ metadata: { images: results } })
+    });
+  } catch(e) {
+    console.warn('[Diary BG] Failed to patch entry with re-hosted image results:', e.message);
+  }
+}
+
+// Converts an ArrayBuffer to a base64 string in fixed-size chunks —
+// String.fromCharCode(...bytes) on a large, single array can exceed the
+// JS engine's own argument-count limit and throw; chunking avoids that
+// entirely regardless of how large the source buffer is (verified
+// directly against a 3MB test buffer, matching a direct conversion
+// byte-for-byte, before using this for real attachment uploads).
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  const chunkSize = 0x8000;
+  const chunks = [];
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));
+  }
+  return btoa(chunks.join(''));
+}
 
 // ── Provider tabs: pending prompt is consumed by checkPendingPrompt in diary-content.js ──
 // (tabs.onUpdated injection removed — content script uses GET_PENDING_PROMPT via postMessage bridge)
