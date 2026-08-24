@@ -995,41 +995,60 @@ router.get('/pending-prompt', requireAuth, async (req, res) => {
 });
 
 
-// ── POST /api/diary/upload-image — upload image to R2 ────────────────────────
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+// ── POST /api/diary/upload-attachment — store an attachment via the ────────
+// shared storage interface (backend/lib/attachmentStorage.js, R2 for v1)
+//
+// NOTE: replaces the old, image-only /upload-image route — nothing
+// calls that route yet (confirmed: the extension has never actually
+// wired it up), so there's no backward-compatibility concern in
+// replacing it outright with a single, generic endpoint that covers
+// every attachment type Priority 4 actually needs to host (images,
+// PDFs, plain text/code), rather than a separate, near-duplicate route
+// per type. DOCX/XLSX are deliberately NOT in this whitelist yet —
+// v1.1, per the corrected brief, converts them to PDF/HTML at capture
+// time rather than hosting the original format directly, so they'll
+// flow through this same endpoint as a PDF/HTML contentType once that
+// conversion step exists, not as their own, separate case here.
+const attachmentStorage = require('../lib/attachmentStorage');
 
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-  },
-});
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'application/pdf',
+  'text/plain', 'text/markdown', 'text/csv', 'application/json',
+]);
+// A generous set of extensions treated as "plain text/code" for the
+// purpose of this whitelist even when the browser/extension reports a
+// generic or missing contentType for them (common for code files).
+const TEXT_LIKE_EXTENSIONS = /\.(txt|md|csv|json|js|jsx|ts|tsx|py|rb|go|java|c|cpp|h|hpp|cs|php|sh|yml|yaml|xml|html|css|sql)$/i;
 
-router.post('/upload-image', requireAuth, async (req, res) => {
+router.post('/upload-attachment', requireAuth, async (req, res) => {
   try {
-    const { data: base64Data, contentType = 'image/jpeg' } = req.body;
-    if (!base64Data) return res.status(400).json({ success: false, error: 'No image data' });
-    
-    const buffer = Buffer.from(base64Data, 'base64');
-    if (buffer.length > 10 * 1024 * 1024) return res.status(400).json({ success: false, error: 'Image too large' });
-    
-    const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
-    const key = `diary/${req.userEmail.replace(/[^a-z0-9]/gi, '_')}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    
-    await r2Client.send(new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    }));
+    const { data: base64Data, contentType, filename } = req.body;
+    if (!base64Data) return res.status(400).json({ success: false, error: 'No file data provided' });
 
-    const url = `${process.env.R2_PUBLIC_URL}/${key}`;
-    res.json({ success: true, url });
-  } catch(e) {
-    console.error('[Diary] R2 upload error:', e.message);
-    res.status(500).json({ success: false, error: 'Upload failed' });
+    const normalizedType = (contentType || '').split(';')[0].trim().toLowerCase();
+    const looksTextLike = TEXT_LIKE_EXTENSIONS.test(filename || '');
+    if (!ALLOWED_ATTACHMENT_TYPES.has(normalizedType) && !(looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream'))) {
+      return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
+    }
+    // Text-like files with an ambiguous/missing contentType are stored
+    // as text/plain — good enough for v1's "render inline as text"
+    // requirement, which doesn't need language-specific MIME accuracy.
+    const effectiveType = ALLOWED_ATTACHMENT_TYPES.has(normalizedType) ? normalizedType : 'text/plain';
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const result = await attachmentStorage.store({
+      buffer,
+      contentType: effectiveType,
+      userEmail: req.userEmail,
+      filenameHint: filename,
+    });
+
+    res.json({ success: true, id: result.id, url: result.url, contentType: result.contentType, size: result.size });
+  } catch (e) {
+    console.error('[Diary] Attachment upload error:', e.message);
+    const status = /exceeds maximum size/.test(e.message) ? 400 : 500;
+    res.status(status).json({ success: false, error: e.message || 'Upload failed' });
   }
 });
 
