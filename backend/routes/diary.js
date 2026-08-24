@@ -1341,6 +1341,20 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 // generic or missing contentType for them (common for code files).
 const TEXT_LIKE_EXTENSIONS = /\.(txt|md|csv|json|js|jsx|ts|tsx|py|rb|go|java|c|cpp|h|hpp|cs|php|sh|yml|yaml|xml|html|css|sql)$/i;
 
+// Reverse of the browser-reported Content-Type → this project's own
+// tracked `type` (file extension) mapping — used as a fallback whenever
+// the browser/provider reports a generic or missing Content-Type for a
+// download (common for shared, multi-file-type download endpoints;
+// confirmed live for Claude's own /wiggle/download-file route, which
+// reports application/octet-stream even for a genuine PDF). Only
+// includes entries matching ALLOWED_ATTACHMENT_TYPES's own real mime
+// values — this map exists purely to recover a known-good mime from an
+// already-reliable extension, never to invent support for a new type.
+const TYPE_TO_MIME = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+  pdf: 'application/pdf', txt: 'text/plain', md: 'text/markdown', csv: 'text/csv', json: 'application/json',
+};
+
 router.post('/upload-attachment', requireAuth, async (req, res) => {
   try {
     const { data: base64Data, contentType, filename } = req.body;
@@ -1409,21 +1423,34 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, error: 'No matching attachment found on this entry (filename+type)' });
     }
 
+    // NOTE: fixed twice now, on real, live evidence each time. First
+    // fix: TEXT_LIKE_EXTENSIONS was tested against `filename` alone,
+    // but Claude's tracked attachment filenames carry no extension at
+    // all (shown separately as their own badge) — the regex could
+    // never match. Second, distinct fix, confirmed live against a real
+    // Claude PDF download: browsers/providers frequently report a
+    // generic application/octet-stream Content-Type for download
+    // endpoints that serve many file types through one shared route
+    // (confirmed: Claude's own /wiggle/download-file endpoint does
+    // this) — even for a real, valid PDF, leaving nothing in
+    // contentType that ever matches ALLOWED_ATTACHMENT_TYPES at all.
+    // `type` is the reliable, separately-tracked signal in both cases
+    // regardless of what the filename or the reported Content-Type
+    // says, so it's used as the fallback source of truth for both.
     const normalizedType = (contentType || '').split(';')[0].trim().toLowerCase();
-    // NOTE: fixed — was testing TEXT_LIKE_EXTENSIONS against `filename`
-    // alone, but confirmed live (Claude) that tracked attachment
-    // filenames often carry NO extension at all (Claude displays the
-    // extension separately as its own badge, e.g. filename:"Sammy davis
-    // jr summary", type:"md") — the regex could never match, incorrectly
-    // rejecting every genuinely text-like file whose provider omits the
-    // extension from the displayed name. `type` is already the reliable,
-    // separately-tracked extension regardless of what's in the display
-    // name, so build the test string from that instead.
+    const mappedFromType = TYPE_TO_MIME[(type || '').toLowerCase()];
     const looksTextLike = TEXT_LIKE_EXTENSIONS.test('.' + (type || ''));
-    if (!ALLOWED_ATTACHMENT_TYPES.has(normalizedType) && !(looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream'))) {
+
+    let effectiveType;
+    if (ALLOWED_ATTACHMENT_TYPES.has(normalizedType)) {
+      effectiveType = normalizedType; // browser-reported type is already good
+    } else if (mappedFromType && ALLOWED_ATTACHMENT_TYPES.has(mappedFromType)) {
+      effectiveType = mappedFromType; // generic/wrong reported type, but the tracked type maps to a known-good mime
+    } else if (looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream')) {
+      effectiveType = 'text/plain'; // generic/missing type, but a text-like extension
+    } else {
       return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
     }
-    const effectiveType = ALLOWED_ATTACHMENT_TYPES.has(normalizedType) ? normalizedType : 'text/plain';
 
     const buffer = Buffer.from(base64Data, 'base64');
     const stored = await attachmentStorage.store({
