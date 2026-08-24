@@ -1360,4 +1360,31 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
   }
 });
 
+// TEMPORARY DIAGNOSTIC — isolates whether attachmentStorage.store()
+// (the R2 upload itself, via the AWS SDK's S3Client) is reachable at
+// all right now, independent of any provider fetch, download-capture
+// logic, or any other app code. A real capture-attachment call failed
+// with the same "SSL alert number 40" TLS handshake error seen all day
+// for image CDN fetches — but that's a genuinely different code path
+// (a manual https.request(), not the AWS SDK) hitting genuinely
+// different destinations (image CDNs, not R2) — so this needs its own,
+// direct, isolated test rather than assuming it's the same root cause.
+// Visit this URL directly (requires auth) to get a clean pass/fail. To
+// be removed once resolved.
+router.get('/diag-r2-test', requireAuth, async (req, res) => {
+  try {
+    const testBuffer = Buffer.from('Diary R2 connectivity test — ' + new Date().toISOString());
+    const stored = await attachmentStorage.store({
+      buffer: testBuffer,
+      contentType: 'text/plain',
+      userEmail: req.userEmail,
+      filenameHint: 'r2_diag_test',
+    });
+    res.json({ success: true, message: 'R2 upload succeeded', url: stored.url });
+  } catch (e) {
+    console.error('[Diary DIAG] R2 test failed:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 module.exports = router;
