@@ -268,6 +268,11 @@
     });
   </script>
   <!-- End PostHog -->
+  <!-- pdf.js — same rendering engine behind Chrome's own built-in PDF
+       viewer, per the Priority 4 spec's explicit choice. Loaded from
+       cdnjs (the pre-approved CDN for this codebase) rather than
+       bundled, since this is a plain, unbundled HTML app. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
 </head>
 <body>
 
@@ -509,6 +514,14 @@
 <script>
 
 
+
+// pdf.js worker configuration — required for pdf.js to actually parse
+// PDFs (parsing runs in a separate Web Worker for performance); must
+// point at the SAME version as the main pdf.min.js loaded in <head>,
+// or pdf.js fails silently/throws on the first real document.
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+}
 
 var allEntries = [];
 var filteredEntries = [];
@@ -1132,23 +1145,30 @@ function renderEntryCard(e) {
         // but with a genuinely dotted filename instead.
         var type = (att.type || (att.filename || '').split('.').pop()).toLowerCase();
         var icon = { pdf:'📕', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📽️', pptx:'📽️', md:'📃' }[type] || '📎';
-        // NOTE: click behavior added — previously a static div with no
-        // click handler at all, meaning clicking it did nothing. Given
-        // it visually reads as a file reference (icon + filename),
-        // people would naturally expect clicking it to do SOMETHING —
-        // a dead click risks reading as "this is broken" rather than
-        // intentionally minimal. Reuses the existing origUrl (already
-        // computed above) and the existing, already-verified-generic
-        // openOriginalUrl() helper — clicking now takes the person to
-        // the original conversation, where the actual file genuinely
-        // lives and can be opened/downloaded, matching the original
-        // request's own framing ("when the user revisits the
-        // conversation via Open original, they are physically there").
-        // Falls back to non-clickable, static display (unchanged from
-        // before) for the rare case an entry has attachments but no
-        // origUrl at all.
-        var clickable = origUrl ? ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;cursor:pointer;" onclick="openOriginalUrl(this)" data-orig-url="' + origUrl + '"' : ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;"';
-        return '<div' + clickable + '>' + icon + ' ' + escHtml(att.filename || 'Attachment') + (origUrl ? ' <span style="color:#9E9890;">&#8599;</span>' : '') + '</div>';
+        // NOTE: two-state click behavior — Priority 4's actual point.
+        // Once a real, capable reader exists (pdf.js for PDFs, plain
+        // text otherwise — see openAttachmentReader), an attachment
+        // that's genuinely been captured (att.status === 'hosted', a
+        // real R2 url present) should open THAT, not send someone back
+        // to the original conversation for something already sitting
+        // right here. Everything not yet captured keeps the prior,
+        // correct behavior unchanged: "Open original" is the honest,
+        // permanent state for a file nobody has downloaded themselves.
+        var isHosted = att.status === 'hosted' && att.url;
+        var clickHandler, badge;
+        if (isHosted) {
+          clickHandler = 'openAttachmentReader(\'' + att.url.replace(/'/g, "\\'") + '\', \'' + escHtml(att.filename || 'Attachment').replace(/'/g, "\\'") + '\', \'' + type.replace(/'/g, "\\'") + '\')';
+          badge = ' <span style="color:#9E9890;">&#8226; Read here</span>';
+        } else if (origUrl) {
+          clickHandler = 'openOriginalUrl(this)';
+          badge = ' <span style="color:#9E9890;">&#8599;</span>';
+        } else {
+          clickHandler = null;
+          badge = '';
+        }
+        var dataOrigAttr = (!isHosted && origUrl) ? ' data-orig-url="' + origUrl + '"' : '';
+        var clickable = clickHandler ? ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;cursor:pointer;" onclick="' + clickHandler + '"' + dataOrigAttr : ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;"';
+        return '<div' + clickable + '>' + icon + ' ' + escHtml(att.filename || 'Attachment') + badge + '</div>';
       }).join('') + '</div>' : '') +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
@@ -1664,6 +1684,125 @@ function openImageZoom(url) {
   modal.style.display = 'flex';
 }
 window.openImageZoom = openImageZoom;
+
+// ── Attachment Reader (Priority 4) ──────────────────────────────────────────
+// One general-purpose reader for any captured attachment, regardless of
+// how its bytes arrived (download-interception today; any future
+// sanctioned-capture path later) — renders PDFs via pdf.js, plain text/
+// code as readable text. Deliberately NOT built for DOCX/XLSX — those
+// remain "Open original" only, per the current, permanent v1 scope.
+function closeAttachmentReader() {
+  var modal = document.getElementById('attachmentReaderModal');
+  if (modal) modal.style.display = 'none';
+  var body = document.getElementById('attachmentReaderBody');
+  if (body) body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
+}
+window.closeAttachmentReader = closeAttachmentReader;
+
+var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
+
+async function openAttachmentReader(url, filename, type) {
+  var modal = document.getElementById('attachmentReaderModal');
+  var titleEl = document.getElementById('attachmentReaderTitle');
+  var downloadEl = document.getElementById('attachmentReaderDownload');
+  var body = document.getElementById('attachmentReaderBody');
+  if (!modal || !titleEl || !downloadEl || !body) return;
+
+  titleEl.textContent = filename || 'Document';
+  downloadEl.href = url;
+  body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
+  modal.style.display = 'flex';
+
+  var t = (type || '').toLowerCase();
+  try {
+    if (t === 'pdf') {
+      await renderPdfIntoReader(url, body);
+    } else if (ATTACHMENT_READER_TEXT_TYPES.indexOf(t) !== -1) {
+      await renderTextIntoReader(url, body);
+    } else {
+      body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This file type can\'t be previewed here yet. <a href="' + escHtml(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+    }
+  } catch (e) {
+    console.warn('[Diary] Attachment reader failed to render:', e.message);
+    body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Couldn\'t load this file for preview. <a href="' + escHtml(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+  }
+}
+window.openAttachmentReader = openAttachmentReader;
+
+async function renderTextIntoReader(url, body) {
+  var resp = await fetch(url);
+  if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
+  var text = await resp.text();
+  body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;background:#fff;padding:20px;border-radius:6px;margin:0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + escHtml(text) + '</pre>';
+}
+
+// Renders every page of a PDF into the reader body: a <canvas> for
+// visual fidelity, plus a manually-positioned, invisible text layer
+// built directly from getTextContent() item positions/transforms (the
+// same, long-standing pdf.js pattern used before the library's newer
+// PDFJS.TextLayer convenience class existed — used here deliberately
+// since that newer class may only ship in pdf.js's separate viewer
+// bundle, not the core pdf.min.js loaded in <head>, and this couldn't
+// be verified without a live browser). This is what makes real text
+// selection/copy and the browser's own native Ctrl+F search work
+// directly over the rendered PDF, matching the brief's "searchable,
+// selectable/copyable" requirement without needing pdf.js's full,
+// separate viewer application just for this one piece.
+async function renderPdfIntoReader(url, body) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js failed to load');
+  body.innerHTML = '';
+  var pdf = await pdfjsLib.getDocument(url).promise;
+  for (var pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    var page = await pdf.getPage(pageNum);
+    var viewport = page.getViewport({ scale: 1.4 });
+
+    var pageWrapper = document.createElement('div');
+    pageWrapper.style.position = 'relative';
+    pageWrapper.style.margin = '0 auto 16px auto';
+    pageWrapper.style.width = viewport.width + 'px';
+    pageWrapper.style.height = viewport.height + 'px';
+    pageWrapper.style.boxShadow = '0 2px 10px rgba(0,0,0,0.15)';
+    pageWrapper.style.background = '#fff';
+
+    var canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.display = 'block';
+    pageWrapper.appendChild(canvas);
+
+    var textLayerDiv = document.createElement('div');
+    textLayerDiv.style.position = 'absolute';
+    textLayerDiv.style.left = '0';
+    textLayerDiv.style.top = '0';
+    textLayerDiv.style.width = viewport.width + 'px';
+    textLayerDiv.style.height = viewport.height + 'px';
+    textLayerDiv.style.overflow = 'hidden';
+    textLayerDiv.style.lineHeight = '1';
+    pageWrapper.appendChild(textLayerDiv);
+
+    body.appendChild(pageWrapper);
+
+    var ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+    var textContent = await page.getTextContent();
+    textContent.items.forEach(function(item) {
+      var tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+      var fontHeight = Math.hypot(tx[2], tx[3]);
+      var span = document.createElement('span');
+      span.textContent = item.str;
+      span.style.position = 'absolute';
+      span.style.left = tx[4] + 'px';
+      span.style.top = (tx[5] - fontHeight) + 'px';
+      span.style.fontSize = fontHeight + 'px';
+      span.style.fontFamily = 'sans-serif';
+      span.style.whiteSpace = 'pre';
+      span.style.color = 'transparent';
+      span.style.cursor = 'text';
+      textLayerDiv.appendChild(span);
+    });
+  }
+}
 
 // NOTE: rewritten entirely to use a SINGLE, shared #citePopup element
 // (attached directly to <body>, see the bottom of this file) instead of
@@ -2358,6 +2497,27 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 <div id="imageZoomModal" onclick="if(event.target===this)closeImageZoom()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;cursor:zoom-out;">
   <button onclick="closeImageZoom()" aria-label="Close" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;font-family:Inter,sans-serif;">&times;</button>
   <img id="imageZoomImg" src="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.5);cursor:default;" onclick="event.stopPropagation();"/>
+</div>
+
+<!-- Attachment Reader — general-purpose viewer for any captured
+     attachment (PDF via pdf.js, or plain text/code), regardless of
+     whether the bytes arrived via download-interception or any future
+     capture path. Same overlay/close conventions as the image lightbox
+     above; a document needs a readable-width panel rather than a
+     full-bleed image, so this uses a centered, page-like card instead. -->
+<div id="attachmentReaderModal" onclick="if(event.target===this)closeAttachmentReader()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#F5F3EE;width:min(880px,92vw);height:88vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;">
+      <div id="attachmentReaderTitle" style="font-size:14px;font-weight:600;color:#1B2A4A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;font-family:Inter,sans-serif;"></div>
+      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+        <a id="attachmentReaderDownload" href="" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;">&#8681; Download</a>
+        <button onclick="closeAttachmentReader()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+      </div>
+    </div>
+    <div id="attachmentReaderBody" style="flex:1;overflow:auto;padding:24px;">
+      <div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>
+    </div>
+  </div>
 </div>
 
 <!-- Citation hover popup — a SINGLE, shared element, deliberately attached
