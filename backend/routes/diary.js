@@ -110,8 +110,26 @@ async function rehostImagesAndPatch(entryId, allImages, userEmail) {
     pendingBudget--;
     const url = img.originalUrl || img.url;
     try {
-      const resp = await fetch(url);
-      if (!resp.ok) { results.push({ url, originalUrl: url, status: 'failed' }); continue; }
+      // NOTE: added realistic browser-like headers — confirmed live
+      // that a fetch with no explicit User-Agent (Node's own default,
+      // which doesn't resemble a real browser at all) failed against
+      // every one of several different, entirely unrelated image CDNs
+      // in the same real test, which is a strong signal of shared,
+      // generic bot/hotlink protection rather than four independent,
+      // unrelated failures. Many image hosts reject non-browser-looking
+      // requests outright regardless of the URL otherwise being
+      // perfectly valid and publicly accessible.
+      const resp = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        },
+      });
+      if (!resp.ok) {
+        console.warn('[Diary] Image re-host: non-OK response for', url, '— status:', resp.status, resp.statusText);
+        results.push({ url, originalUrl: url, status: 'failed' });
+        continue;
+      }
       const contentType = resp.headers.get('content-type') || 'image/jpeg';
       const buf = Buffer.from(await resp.arrayBuffer());
       if (buf.length > attachmentStorage.MAX_ATTACHMENT_BYTES) {
@@ -121,7 +139,7 @@ async function rehostImagesAndPatch(entryId, allImages, userEmail) {
       const stored = await attachmentStorage.store({ buffer: buf, contentType, userEmail, filenameHint: 'image' });
       results.push({ url: stored.url, originalUrl: url, status: 'hosted' });
     } catch (e) {
-      console.warn('[Diary] Image re-host failed for one image:', e.message);
+      console.warn('[Diary] Image re-host failed for one image:', url, '—', e.message);
       results.push({ url, originalUrl: url, status: 'failed' });
     }
   }

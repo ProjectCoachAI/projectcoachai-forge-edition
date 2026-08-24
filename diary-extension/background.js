@@ -54,7 +54,6 @@ chrome.alarms.onAlarm.addListener(() => {});
 
 // ── Messages from content scripts ─────────────────────────────────────────────
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-
   if (msg.type === 'SAVE_TO_DIARY') {
     try {
       const API = 'https://api.projectcoachai.com';
