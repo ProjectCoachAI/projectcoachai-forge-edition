@@ -1189,6 +1189,33 @@ router.get('/diag-versions', requireAuth, async (req, res) => {
   });
 });
 
+// TEMPORARY DIAGNOSTIC — checks whether the R2 environment variables
+// attachmentStorage.js's module-level client is built from are actually
+// present. The endpoint is constructed as
+// `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com` with NO
+// validation that R2_ACCOUNT_ID is actually set — if it's missing, this
+// silently becomes the malformed hostname
+// "https://undefined.r2.cloudflarestorage.com", which could plausibly
+// produce exactly the generic TLS handshake failure seen everywhere
+// else, for a completely different, configuration-level reason rather
+// than any TLS-client or Node-version behavior. Never returns actual
+// secret values (accessKeyId/secretAccessKey) — only whether each is
+// present and non-empty, plus the actual, non-sensitive endpoint that
+// would be constructed, so a genuinely malformed value is visible
+// without ever exposing the real R2_ACCOUNT_ID content unnecessarily.
+router.get('/diag-r2-env', requireAuth, async (req, res) => {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  res.json({
+    success: true,
+    R2_ACCOUNT_ID_set: !!accountId,
+    constructedEndpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    R2_ACCESS_KEY_ID_set: !!process.env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY_set: !!process.env.R2_SECRET_ACCESS_KEY,
+    R2_BUCKET_NAME: process.env.R2_BUCKET_NAME || null,
+    R2_PUBLIC_URL: process.env.R2_PUBLIC_URL || null,
+  });
+});
+
 // TEMPORARY DIAGNOSTIC — isolates whether attachmentStorage.store()
 // (the R2 upload itself, via the AWS SDK's S3Client) is reachable at
 // all right now, independent of any provider fetch, download-capture
