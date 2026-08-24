@@ -52,6 +52,174 @@ const DIARY_ORIGINS = [
 chrome.alarms.create('keepAlive', { periodInMinutes: 0.4 });
 chrome.alarms.onAlarm.addListener(() => {});
 
+// ── Priority 4: passive download-interception capture ──────────────────────
+// Confirmed live (via a temporary diagnostic, since removed) that a
+// provider's "Download" button triggers a real https:// download on the
+// provider's OWN domain — not a blob: URL — meaning this extension can
+// fetch the real file bytes directly, since host_permissions already
+// covers every provider's own domain. This is the passive-interception
+// design from the revised brief: react to a download the user genuinely,
+// manually triggered themselves — no simulated clicks, no automation of
+// a provider's own interface. Coverage is a deliberate, accepted trade-
+// off: a file never personally downloaded stays as "Open original."
+const MIME_TO_ATTACHMENT_TYPE = {
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'text/markdown': 'md',
+  'text/x-python': 'py',
+  'text/x-python-script': 'py',
+  'application/x-python-code': 'py',
+  'text/javascript': 'js',
+  'application/javascript': 'js',
+  'application/json': 'json',
+  'text/csv': 'csv',
+  'text/plain': 'txt'
+};
+
+// Many providers embed the real filename in a query param (ChatGPT uses
+// `fn=`, double-URL-encoded — confirmed directly against a real captured
+// URL). Decodes repeatedly but safely: stops as soon as decoding stops
+// changing the string, so a name that legitimately contains a literal
+// '%' is never over-decoded into something wrong.
+function extractFilenameFromDownloadUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const candidateParams = ['fn', 'filename', 'name'];
+    for (const param of candidateParams) {
+      const raw = parsed.searchParams.get(param);
+      if (raw) {
+        let decoded = raw;
+        for (let i = 0; i < 3; i++) {
+          try {
+            const next = decodeURIComponent(decoded);
+            if (next === decoded) break;
+            decoded = next;
+          } catch(e) { break; }
+        }
+        return decoded;
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+
+function normalizeForMatch(name) {
+  return (name || '').toLowerCase().replace(/\.[a-z0-9]+$/i, '').replace(/[^a-z0-9]/g, '');
+}
+
+// Matches a real download event against ONE specific, not-yet-hosted
+// attachment already tracked on the matched Diary entry. Deliberately
+// conservative: narrows by type (from mime) first, resolves immediately
+// if that leaves exactly one candidate, and only falls back to filename
+// comparison when genuinely needed to disambiguate multiple attachments
+// of the same type on one entry. Returns null — never a guess — when the
+// match is still ambiguous after that, since attaching bytes to the
+// wrong tracked attachment would be worse than not attaching them at all.
+function matchDownloadToAttachment(attachments, downloadItem) {
+  const mime = (downloadItem.mime || '').split(';')[0].trim().toLowerCase();
+  const typeFromMime = MIME_TO_ATTACHMENT_TYPE[mime];
+  const urlFilename = extractFilenameFromDownloadUrl(downloadItem.url);
+  const candidateName = urlFilename || downloadItem.filename;
+
+  const pool = attachments.filter(function(a) {
+    if (a.url) return false; // already captured previously
+    if (typeFromMime && a.type !== typeFromMime) return false;
+    return true;
+  });
+
+  if (pool.length === 0) return null;
+  if (pool.length === 1) return pool[0];
+
+  if (candidateName) {
+    const normalizedCandidate = normalizeForMatch(candidateName);
+    const filenameMatch = pool.find(function(a) {
+      return normalizeForMatch(a.filename) === normalizedCandidate;
+    });
+    if (filenameMatch) return filenameMatch;
+  }
+  return null;
+}
+
+chrome.downloads.onCreated.addListener(async function(item) {
+  try {
+    if (!item.referrer || !item.url) return;
+
+    const stored = await chrome.storage.local.get(['diary_token']);
+    const token = stored.diary_token;
+    if (!token) return; // not logged into Diary — nothing to attach to
+
+    const API = 'https://api.projectcoachai.com';
+
+    const lookupResp = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(item.referrer), {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const lookupData = await lookupResp.json();
+    if (!lookupData.success || !lookupData.entry) return; // this conversation was never saved
+
+    const entry = lookupData.entry;
+    const attachments = (entry.metadata && entry.metadata.attachments) || [];
+    if (!attachments.length) return;
+
+    const matched = matchDownloadToAttachment(attachments, item);
+    if (!matched) return; // no tracked attachment this download corresponds to, or genuinely ambiguous
+
+    // Fetch the real bytes promptly — the URL is very likely signed
+    // and/or time-limited (confirmed live: ChatGPT's carries a `sig=`
+    // parameter), so this happens immediately upon the download event,
+    // not deferred.
+    const fileResp = await fetch(item.url);
+    if (!fileResp.ok) {
+      console.warn('[Diary BG] Download-capture fetch failed:', fileResp.status, 'for', matched.filename);
+      return;
+    }
+    const blob = await fileResp.blob();
+    if (blob.size > 25 * 1024 * 1024) {
+      console.warn('[Diary BG] Download-capture skipped, file too large:', matched.filename);
+      return;
+    }
+    const buf = await blob.arrayBuffer();
+    const base64 = arrayBufferToBase64(buf);
+
+    const captureResp = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        data: base64,
+        contentType: blob.type || item.mime || 'application/octet-stream',
+        filename: matched.filename,
+        type: matched.type
+      })
+    });
+    const captureData = await captureResp.json();
+    if (captureData.success) {
+      console.log('[Diary BG] Captured downloaded attachment:', matched.filename);
+    } else {
+      console.warn('[Diary BG] Failed to capture downloaded attachment:', matched.filename, '—', captureData.error);
+    }
+  } catch (e) {
+    console.warn('[Diary BG] Download-capture error:', e.message);
+  }
+});
+
+// Converts an ArrayBuffer to a base64 string in fixed-size chunks —
+// String.fromCharCode(...bytes) on a large, single array can exceed the
+// JS engine's own argument-count limit and throw; chunking avoids that
+// regardless of source buffer size.
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  const chunkSize = 0x8000;
+  const chunks = [];
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));
+  }
+  return btoa(chunks.join(''));
+}
+
 // ── Messages from content scripts ─────────────────────────────────────────────
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'SAVE_TO_DIARY') {

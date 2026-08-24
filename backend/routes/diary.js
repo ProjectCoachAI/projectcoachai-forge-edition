@@ -1288,4 +1288,76 @@ router.post('/upload-attachment', requireAuth, async (req, res) => {
   }
 });
 
+// ── Priority 4: passive download-interception capture ──────────────────────
+// Called by background.js when a real, user-initiated download from a
+// provider's own "Download" button is detected (via chrome.downloads) AND
+// matched against a saved Diary entry by conversation URL. This is the
+// ONLY moment file bytes for PDF/DOCX/code attachments ever become
+// available — there is no other fetchable reference for these on any
+// provider (see the Priority 4 investigation). The extension fetches the
+// real bytes itself (the signed download URL lives on the provider's own
+// domain, already covered by this extension's existing host_permissions)
+// and sends them here as base64, the same shape as /upload-attachment.
+//
+// Unlike /upload-attachment, this updates ONE SPECIFIC element within an
+// existing entry's metadata.attachments array — matched by filename+type,
+// the same dedup key used elsewhere for attachments — rather than
+// replacing the whole array, so other attachments already indexed on this
+// entry are never disturbed by capturing one of them.
+router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: base64Data, contentType, filename, type } = req.body;
+    if (!base64Data) return res.status(400).json({ success: false, error: 'No file data provided' });
+    if (!filename || !type) return res.status(400).json({ success: false, error: 'filename and type are required to match the attachment' });
+
+    const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+    if (!existing.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
+
+    const meta = existing.rows[0].metadata || {};
+    const attachments = meta.attachments || [];
+    const matchIndex = attachments.findIndex(a => a.filename === filename && a.type === type);
+    if (matchIndex === -1) {
+      // Not necessarily an error — the entry may have been re-saved since
+      // this download started and no longer lists this exact attachment.
+      // Nothing to attach the bytes to; report this plainly rather than
+      // silently discarding the upload or guessing which entry to use.
+      return res.status(404).json({ success: false, error: 'No matching attachment found on this entry (filename+type)' });
+    }
+
+    const normalizedType = (contentType || '').split(';')[0].trim().toLowerCase();
+    const looksTextLike = TEXT_LIKE_EXTENSIONS.test(filename);
+    if (!ALLOWED_ATTACHMENT_TYPES.has(normalizedType) && !(looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream'))) {
+      return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
+    }
+    const effectiveType = ALLOWED_ATTACHMENT_TYPES.has(normalizedType) ? normalizedType : 'text/plain';
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const stored = await attachmentStorage.store({
+      buffer,
+      contentType: effectiveType,
+      userEmail: req.userEmail,
+      filenameHint: filename,
+    });
+
+    const updatedAttachments = attachments.slice();
+    updatedAttachments[matchIndex] = Object.assign({}, attachments[matchIndex], {
+      url: stored.url,
+      status: 'hosted',
+    });
+
+    await db.query(
+      `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{attachments}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+      [JSON.stringify(updatedAttachments), id, req.userEmail]
+    );
+
+    console.log(`[Diary] Captured downloaded attachment "${filename}" for entry ${id}`);
+    res.json({ success: true, url: stored.url });
+  } catch (e) {
+    console.error('[Diary] capture-attachment error:', e.message);
+    const status = /exceeds maximum size/.test(e.message) ? 400 : 500;
+    res.status(status).json({ success: false, error: e.message || 'Capture failed' });
+  }
+});
+
 module.exports = router;
