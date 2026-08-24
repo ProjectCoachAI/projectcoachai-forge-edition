@@ -1165,6 +1165,30 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// TEMPORARY DIAGNOSTIC — reports the actual, running Node.js and
+// OpenSSL versions on this deployment. Given the same TLS handshake
+// failure ("SSL alert number 40") now confirmed against BOTH external
+// image CDNs AND Cloudflare R2 — a large, thoroughly modern, well-
+// maintained service — the earlier "target server has an old/unusual
+// TLS config" hypothesis no longer holds. That points toward this
+// deployment's OWN TLS client (Node/OpenSSL version, or a global config
+// affecting it) as the more likely side of the mismatch, worth checking
+// directly rather than guessing at more per-connection cipher configs.
+// Also MUST be defined before GET /:id, same reasoning as diag-r2-test
+// below. To be removed once resolved.
+router.get('/diag-versions', requireAuth, async (req, res) => {
+  res.json({
+    success: true,
+    nodeVersion: process.version,
+    opensslVersion: process.versions.openssl,
+    v8Version: process.versions.v8,
+    platform: process.platform,
+    arch: process.arch,
+    nodeOptionsEnv: process.env.NODE_OPTIONS || null,
+    opensslConfEnv: process.env.OPENSSL_CONF || null,
+  });
+});
+
 // TEMPORARY DIAGNOSTIC — isolates whether attachmentStorage.store()
 // (the R2 upload itself, via the AWS SDK's S3Client) is reachable at
 // all right now, independent of any provider fetch, download-capture
