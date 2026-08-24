@@ -1410,7 +1410,16 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
     }
 
     const normalizedType = (contentType || '').split(';')[0].trim().toLowerCase();
-    const looksTextLike = TEXT_LIKE_EXTENSIONS.test(filename);
+    // NOTE: fixed — was testing TEXT_LIKE_EXTENSIONS against `filename`
+    // alone, but confirmed live (Claude) that tracked attachment
+    // filenames often carry NO extension at all (Claude displays the
+    // extension separately as its own badge, e.g. filename:"Sammy davis
+    // jr summary", type:"md") — the regex could never match, incorrectly
+    // rejecting every genuinely text-like file whose provider omits the
+    // extension from the displayed name. `type` is already the reliable,
+    // separately-tracked extension regardless of what's in the display
+    // name, so build the test string from that instead.
+    const looksTextLike = TEXT_LIKE_EXTENSIONS.test('.' + (type || ''));
     if (!ALLOWED_ATTACHMENT_TYPES.has(normalizedType) && !(looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream'))) {
       return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
     }

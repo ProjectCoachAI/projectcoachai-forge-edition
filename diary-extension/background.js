@@ -147,11 +147,21 @@ function matchDownloadToAttachment(attachments, downloadItem) {
 
 chrome.downloads.onCreated.addListener(async function(item) {
   try {
-    if (!item.referrer || !item.url) return;
+    // TEMPORARY DIAGNOSTIC — every early-exit below was silent, making
+    // it impossible to tell "listener never fired at all" apart from
+    // "fired but exited early for some specific reason" (e.g. a
+    // provider whose UI doesn't trigger the browser's native download
+    // mechanism at all, vs. a genuine matching failure). Confirmed live
+    // this ambiguity mattered: a real Perplexity download attempt
+    // produced zero [Diary BG] output at all. To be removed once every
+    // provider's actual behavior here is understood.
+    console.log('[Diary BG] onCreated fired:', JSON.stringify({ referrer: item.referrer, url: item.url, mime: item.mime, filename: item.filename }));
+
+    if (!item.referrer || !item.url) { console.log('[Diary BG] Skipped: no referrer or url'); return; }
 
     const stored = await chrome.storage.local.get(['diary_token']);
     const token = stored.diary_token;
-    if (!token) return; // not logged into Diary — nothing to attach to
+    if (!token) { console.log('[Diary BG] Skipped: not logged into Diary'); return; }
 
     const API = 'https://api.projectcoachai.com';
 
@@ -159,14 +169,14 @@ chrome.downloads.onCreated.addListener(async function(item) {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const lookupData = await lookupResp.json();
-    if (!lookupData.success || !lookupData.entry) return; // this conversation was never saved
+    if (!lookupData.success || !lookupData.entry) { console.log('[Diary BG] Skipped: conversation not saved to Diary'); return; }
 
     const entry = lookupData.entry;
     const attachments = (entry.metadata && entry.metadata.attachments) || [];
-    if (!attachments.length) return;
+    if (!attachments.length) { console.log('[Diary BG] Skipped: entry has no tracked attachments'); return; }
 
     const matched = matchDownloadToAttachment(attachments, item);
-    if (!matched) return; // no tracked attachment this download corresponds to, or genuinely ambiguous
+    if (!matched) { console.log('[Diary BG] Skipped: no matching tracked attachment for this download (or ambiguous)', JSON.stringify(attachments)); return; }
 
     // Fetch the real bytes promptly — the URL is very likely signed
     // and/or time-limited (confirmed live: ChatGPT's carries a `sig=`
