@@ -103,27 +103,48 @@
       // EXACT structure is already present in the collapsed, inline card
       // as it sits in the conversation, before any click — so this can
       // run passively at save time with no need to simulate opening each
-      // attachment first. Scoped to h2[title] elements that ALSO have a
-      // short, alphanumeric-only trailing .text-muted span (the file type
-      // badge) specifically to avoid false-positives on unrelated h2
-      // elements elsewhere on the page that happen to have a title
-      // attribute but aren't attachment cards at all — verified against a
-      // decoy element with no matching structure before shipping this.
+      // attachment first. Originally scoped to h2[title] elements with a
+      // trailing .text-muted type badge — confirmed live via real DOM
+      // inspection that Claude's attachment cards no longer use this
+      // structure at all (no h2 element present anywhere in a current
+      // attachment card), which fully explains why only some — not all —
+      // attachments in a multi-file conversation were ever being
+      // detected: whatever got picked up wasn't coming from this
+      // function matching correctly at all, since its selector could
+      // never match the new markup. New, primary selector targets the
+      // actual, current structure directly: each attachment is a
+      // ".group/artifact-block" container with a plain, non-heading title
+      // div and a separate "Document · TYPE" div. Old h2[title] check
+      // kept as a fallback in case that structure still appears in some
+      // other, not-yet-seen context.
       getAttachments: function() {
         var attachments = [];
         try {
-          var els = document.querySelectorAll('h2[title]');
-          els.forEach(function(h2) {
-            var spans = h2.querySelectorAll('span.text-muted');
-            if (spans.length >= 1) {
-              var typeSpan = spans[spans.length - 1];
-              var type = (typeSpan.textContent || '').trim();
-              if (type && type.length <= 6 && /^[A-Za-z0-9]+$/.test(type)) {
-                var filename = h2.getAttribute('title') || '';
-                if (filename) attachments.push({ filename: filename, type: type.toLowerCase() });
-              }
+          var blocks = document.querySelectorAll('.group\\/artifact-block');
+          blocks.forEach(function(block) {
+            var titleEl = block.querySelector('.leading-tight.text-sm.line-clamp-1');
+            var typeEl = block.querySelector('.text-xs.line-clamp-1.text-text-400');
+            var filename = titleEl ? (titleEl.textContent || '').trim() : '';
+            var typeText = typeEl ? (typeEl.textContent || '').trim() : '';
+            var type = typeText.split('\u00b7').pop().replace(/\u00a0/g, '').trim();
+            if (filename && type && type.length <= 8) {
+              attachments.push({ filename: filename, type: type.toLowerCase() });
             }
           });
+          if (!attachments.length) {
+            var els = document.querySelectorAll('h2[title]');
+            els.forEach(function(h2) {
+              var spans = h2.querySelectorAll('span.text-muted');
+              if (spans.length >= 1) {
+                var typeSpan = spans[spans.length - 1];
+                var type = (typeSpan.textContent || '').trim();
+                if (type && type.length <= 6 && /^[A-Za-z0-9]+$/.test(type)) {
+                  var filename = h2.getAttribute('title') || '';
+                  if (filename) attachments.push({ filename: filename, type: type.toLowerCase() });
+                }
+              }
+            });
+          }
         } catch(_) {}
         return attachments;
       }

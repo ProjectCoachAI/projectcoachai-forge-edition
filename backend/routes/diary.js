@@ -889,14 +889,21 @@ router.patch('/:id', requireAuth, async (req, res) => {
       // something to combine element by element. Now an attachment only
       // ever needs to be visible ONCE, at any point across however many
       // times a conversation gets saved — not on every single save going
-      // forward. Deduplicates by filename so re-detecting the same,
-      // still-visible attachment on a later save doesn't create a
-      // duplicate entry.
+      // forward.
+      //
+      // Dedup key is filename+type together, NOT filename alone — fixed
+      // after confirming live that filename-only dedup silently dropped
+      // two of three real, distinct attachments in the same conversation,
+      // since Claude commonly offers the same artifact for download in
+      // multiple formats sharing one title (e.g. "Diary launch brief" as
+      // MD, PDF, and DOCX all at once) — filename alone isn't a unique
+      // identifier for an attachment at all in that case, even though it
+      // usually is when only one format exists.
       const existingAttachments = existingMeta.attachments || [];
       const newAttachments = newMetaRaw.attachments || [];
       const mergedAttachments = existingAttachments.slice();
       newAttachments.forEach(att => {
-        const alreadyHave = mergedAttachments.some(e => e.filename === att.filename);
+        const alreadyHave = mergedAttachments.some(e => e.filename === att.filename && e.type === att.type);
         if (!alreadyHave) mergedAttachments.push(att);
       });
       const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: mergedAttachments });
