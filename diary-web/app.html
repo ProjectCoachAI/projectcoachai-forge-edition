@@ -670,11 +670,27 @@ async function loadDiary() {
   }
 }
 
-function goToPage(n) {
+async function goToPage(n) {
   if (n < 1 || (paginationMeta && n > paginationMeta.totalPages)) return;
   currentPage = n;
-  loadDiary();
-  document.getElementById('diaryEntries').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // NOTE: fixed — this previously called loadDiary() without awaiting
+  // it, then immediately called scrollIntoView() in the very next line.
+  // Since loadDiary() involves an async network fetch, the scroll
+  // attempt ran before the new page's entries had actually loaded and
+  // rendered into the DOM — meaning it scrolled based on the OLD
+  // page's stale layout, not the new one, which is why navigating
+  // pages didn't reliably land at the top. Awaiting first ensures the
+  // new page is fully rendered before attempting to scroll to it.
+  //
+  // Also switched from #diaryEntries.scrollIntoView() to a plain
+  // window scroll-to-0 — scrollIntoView() targets that one element's
+  // own position specifically, which confirmed live still landed
+  // short of the true page top (the "Your Diary" heading and its
+  // counts sit above it). A direct scroll to absolute 0 matches the
+  // same, already-confirmed "scroll to the very top of the page"
+  // behavior used elsewhere (see toggleEntry's own expand case).
+  await loadDiary();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 window.goToPage = goToPage;
 
