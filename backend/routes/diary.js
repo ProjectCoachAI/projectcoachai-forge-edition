@@ -98,6 +98,49 @@ Content: ${text}`
 // delays the save itself. Processes at most 10 pending images per call —
 // a defensive limit against pathological cases, not a realistic ceiling
 // for normal use.
+
+// Fetches a URL over HTTPS with a lowered TLS security level and
+// realistic browser headers — confirmed live, via direct server-log
+// evidence, that a plain fetch() failed against several real,
+// independent image CDNs with "write EPROTO ... handshake failure: SSL
+// alert number 40", a well-known pattern where recent Node/OpenSSL
+// versions disable older cipher suites by default that some servers
+// still require; a real browser tolerates them for compatibility, but
+// Node's stricter default doesn't. DEFAULT@SECLEVEL=1 explicitly
+// restores that older compatibility for this one, specific outbound
+// connection — not a global change to this server's own TLS security
+// posture for anything else. Uses the older https module directly
+// (already imported at the top of this file) rather than the global
+// fetch()/undici, since this needs a custom Agent with cipher control
+// that isn't easily reachable through fetch() without an extra
+// dependency.
+function fetchImageWithLegacyTls(url) {
+  return new Promise((resolve, reject) => {
+    let parsed;
+    try { parsed = new URL(url); } catch (e) { reject(e); return; }
+    const agent = new https.Agent({ ciphers: 'DEFAULT@SECLEVEL=1', keepAlive: false });
+    const req = https.request({
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method: 'GET',
+      agent: agent,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      },
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        resolve({ status: res.statusCode, contentType: res.headers['content-type'], buffer: Buffer.concat(chunks) });
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(15000, () => { req.destroy(new Error('Image fetch timed out')); });
+    req.end();
+  });
+}
+
 async function rehostImagesAndPatch(entryId, allImages, userEmail) {
   if (!allImages || !allImages.length) return;
   let pendingBudget = 10;
@@ -110,28 +153,14 @@ async function rehostImagesAndPatch(entryId, allImages, userEmail) {
     pendingBudget--;
     const url = img.originalUrl || img.url;
     try {
-      // NOTE: added realistic browser-like headers — confirmed live
-      // that a fetch with no explicit User-Agent (Node's own default,
-      // which doesn't resemble a real browser at all) failed against
-      // every one of several different, entirely unrelated image CDNs
-      // in the same real test, which is a strong signal of shared,
-      // generic bot/hotlink protection rather than four independent,
-      // unrelated failures. Many image hosts reject non-browser-looking
-      // requests outright regardless of the URL otherwise being
-      // perfectly valid and publicly accessible.
-      const resp = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-          'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-        },
-      });
-      if (!resp.ok) {
-        console.warn('[Diary] Image re-host: non-OK response for', url, '— status:', resp.status, resp.statusText);
+      const resp = await fetchImageWithLegacyTls(url);
+      if (resp.status < 200 || resp.status >= 300) {
+        console.warn('[Diary] Image re-host: non-OK response for', url, '— status:', resp.status);
         results.push({ url, originalUrl: url, status: 'failed' });
         continue;
       }
-      const contentType = resp.headers.get('content-type') || 'image/jpeg';
-      const buf = Buffer.from(await resp.arrayBuffer());
+      const contentType = resp.contentType || 'image/jpeg';
+      const buf = resp.buffer;
       if (buf.length > attachmentStorage.MAX_ATTACHMENT_BYTES) {
         results.push({ url, originalUrl: url, status: 'failed' });
         continue;
