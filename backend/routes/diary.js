@@ -131,20 +131,33 @@ function attemptImageFetch(url, tlsConfig) {
   return new Promise((resolve, reject) => {
     let parsed;
     try { parsed = new URL(url); } catch (e) { reject(e); return; }
-    const agentOpts = { keepAlive: false };
-    if (tlsConfig.ciphers) agentOpts.ciphers = tlsConfig.ciphers;
-    if (tlsConfig.minVersion) agentOpts.minVersion = tlsConfig.minVersion;
-    const agent = new https.Agent(agentOpts);
-    const req = https.request({
+    // NOTE: fixed — the working Anthropic API call elsewhere in this
+    // same file (autoCategorizeDiary) uses https.request() with NO
+    // custom agent at all, relying on Node's own implicit default
+    // agent, and confirmed live to succeed. This function previously
+    // constructed a brand-new https.Agent for EVERY config, including
+    // the supposed "default" one — meaning no attempt here ever
+    // actually matched the one, real, known-working configuration at
+    // all. Only construct a custom Agent when this specific TLS config
+    // genuinely needs non-default cipher/version options — the
+    // "default" entry in TLS_CONFIGS now omits the agent option
+    // entirely, exactly matching the proven-working call elsewhere.
+    const requestOptions = {
       hostname: parsed.hostname,
       path: parsed.pathname + parsed.search,
       method: 'GET',
-      agent: agent,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
       },
-    }, (res) => {
+    };
+    if (tlsConfig.ciphers || tlsConfig.minVersion) {
+      const agentOpts = { keepAlive: false };
+      if (tlsConfig.ciphers) agentOpts.ciphers = tlsConfig.ciphers;
+      if (tlsConfig.minVersion) agentOpts.minVersion = tlsConfig.minVersion;
+      requestOptions.agent = new https.Agent(agentOpts);
+    }
+    const req = https.request(requestOptions, (res) => {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
