@@ -178,6 +178,40 @@ function deriveRealFileType(item, filename) {
   return typeGuess;
 }
 
+// Converts an ArrayBuffer to a base64 string in fixed-size chunks —
+// String.fromCharCode(...bytes) on a large, single array can exceed the
+// JS engine's own argument-count limit and throw; chunking avoids that
+// regardless of source buffer size.
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  const chunkSize = 0x8000;
+  const chunks = [];
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));
+  }
+  return btoa(chunks.join(''));
+}
+
+// Attempts to fetch a download's real bytes directly, client-side, from
+// this extension's own context. Returns { base64, contentType } on
+// success, or null on any failure (network error, CORS block, non-OK
+// response) — a failure here is expected and normal for some providers,
+// not logged as a warning, since the caller falls back to a server-side
+// fetch instead (see the capture-attachment/pending-capture call sites'
+// own comments for why BOTH paths are needed, not just one).
+async function tryClientSideFetch(url) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    if (blob.size > 25 * 1024 * 1024) return null;
+    const buf = await blob.arrayBuffer();
+    return { base64: arrayBufferToBase64(buf), contentType: blob.type || '' };
+  } catch (e) {
+    return null;
+  }
+}
+
 // Resolves the real, specific conversation URL a download belongs to —
 // confirmed live as a real, necessary fix: item.referrer alone isn't
 // reliable for every provider. Claude's own download endpoint is
@@ -309,19 +343,35 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const realFilenameForType = extractFilenameFromDownloadUrl(item.url) || item.filename;
       const realType = deriveRealFileType(item, realFilenameForType);
 
-      // NOTE: sends the download's own URL, not pre-fetched bytes — the
-      // backend fetches this itself now (see fetchFileFromUrl's own
-      // comment there for why). Confirmed live as a real, necessary
-      // change: Perplexity hosts its generated files on a separate,
-      // third-party S3 domain this extension has no host_permissions
-      // for at all, so a client-side fetch() from here failed outright
-      // for that provider — a server-side fetch isn't subject to that
-      // restriction, and works the same way regardless of which domain
-      // any provider ever chooses to host files on.
+      // Hybrid fetch strategy — confirmed live as genuinely necessary,
+      // not just defensive: a purely server-side fetch (the earlier
+      // version of this) works for a provider like Perplexity, whose
+      // file lives on a separate, third-party S3 domain via a publicly-
+      // signed URL needing no session at all — but FAILS for a provider
+      // like ChatGPT, whose own /backend-api/estuary/content endpoint
+      // apparently requires the user's own, logged-in session cookies
+      // to authorize access (confirmed live: a server-side fetch got a
+      // genuine, real 403 Forbidden back from ChatGPT's own server,
+      // despite reaching it fine). This extension's own client-side
+      // fetch() naturally carries the browser's real session cookies
+      // for any domain it has host_permissions for — which is exactly
+      // why this worked when tried straight from here before. Neither
+      // approach alone covers both cases, so: try client-side first
+      // (works for same-origin, cookie-gated endpoints); if that's
+      // blocked or fails for any reason (a third-party domain we have
+      // no host_permissions for, like Perplexity's S3 bucket), fall
+      // back to asking the backend to fetch it instead — the case
+      // where a failure here actually signals "this needs a server-
+      // side, cookie-free fetch instead," not a real problem.
+      const clientFetch = await tryClientSideFetch(item.url);
+      const captureBody = clientFetch
+        ? { data: clientFetch.base64, contentType: clientFetch.contentType, filename: matched.filename, type: matched.type, realType: realType }
+        : { sourceUrl: item.url, filename: matched.filename, type: matched.type, realType: realType };
+
       const captureResp = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ sourceUrl: item.url, filename: matched.filename, type: matched.type, realType: realType })
+        body: JSON.stringify(captureBody)
       });
       const captureData = await captureResp.json();
       if (captureData.success) {
@@ -346,12 +396,17 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const typeGuess = deriveRealFileType(item, urlFilename);
       if (!typeGuess) { console.log('[Diary BG] Skipped: no entry yet, and file type could not be determined'); return; }
 
-      // See the sibling call site above for why sourceUrl is sent here
-      // rather than pre-fetched bytes.
+      // See the sibling call site above for why both a client-side
+      // attempt AND a server-side fallback are needed here too.
+      const clientFetch = await tryClientSideFetch(item.url);
+      const pendingBody = clientFetch
+        ? { conversation_url: conversationUrl, filename: urlFilename, type: typeGuess, data: clientFetch.base64, contentType: clientFetch.contentType }
+        : { conversation_url: conversationUrl, filename: urlFilename, type: typeGuess, sourceUrl: item.url };
+
       const pendingResp = await fetch(API + '/api/diary/pending-capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ conversation_url: conversationUrl, filename: urlFilename, type: typeGuess, sourceUrl: item.url })
+        body: JSON.stringify(pendingBody)
       });
       const pendingData = await pendingResp.json();
       if (pendingData.success) {

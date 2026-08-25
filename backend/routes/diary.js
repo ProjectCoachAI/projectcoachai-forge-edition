@@ -1555,11 +1555,34 @@ async function fetchFileFromUrl(sourceUrl) {
   return { buffer, contentType };
 }
 
+// Resolves actual file bytes + content-type from a request body that can
+// arrive in EITHER of two shapes, depending on which path the
+// extension's own hybrid fetch strategy took (see background.js's own
+// comment for the full reasoning): `data` (already-fetched base64, from
+// a successful CLIENT-SIDE fetch — used for same-origin, cookie-gated
+// endpoints like ChatGPT's own /backend-api/estuary/content, which a
+// cookie-free server-side fetch got a genuine, confirmed-live 403
+// Forbidden from) or `sourceUrl` (a URL for THIS server to fetch itself
+// — used when the client-side fetch failed instead, typically because
+// the file lives on a third-party domain the extension has no
+// host_permissions for at all, like Perplexity's own S3 bucket, where a
+// session was never needed anyway since the URL itself is a publicly-
+// signed one). Neither shape alone would correctly cover both providers.
+async function resolveFileBytes(body) {
+  if (body.data) {
+    return { buffer: Buffer.from(body.data, 'base64'), contentType: body.contentType || '' };
+  }
+  if (body.sourceUrl) {
+    return await fetchFileFromUrl(body.sourceUrl);
+  }
+  throw new Error('Either data or sourceUrl is required');
+}
+
 router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { sourceUrl, filename, type, realType } = req.body;
-    if (!sourceUrl) return res.status(400).json({ success: false, error: 'sourceUrl is required' });
+    const { filename, type, realType } = req.body;
+    if (!req.body.data && !req.body.sourceUrl) return res.status(400).json({ success: false, error: 'Either data or sourceUrl is required' });
     if (!filename || !type) return res.status(400).json({ success: false, error: 'filename and type are required to match the attachment' });
 
     const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
@@ -1576,11 +1599,11 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, error: 'No matching attachment found on this entry (filename+type)' });
     }
 
-    // Fetch the real bytes now, server-side — see fetchFileFromUrl's own
-    // comment for why this moved here from the extension. Also happens
-    // promptly, same as before: the source URL is very likely signed
-    // and/or time-limited.
-    const { buffer, contentType } = await fetchFileFromUrl(sourceUrl);
+    // Resolves via whichever shape the extension actually sent — see
+    // resolveFileBytes's own comment. Also happens promptly if this is
+    // the sourceUrl path: that source URL is very likely signed and/or
+    // time-limited.
+    const { buffer, contentType } = await resolveFileBytes(req.body);
 
     // NOTE: fixed a third time now, on real, live evidence each time.
     // First fix: TEXT_LIKE_EXTENSIONS was tested against `filename`
@@ -1666,14 +1689,17 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
 // saves at all.
 router.post('/pending-capture', requireAuth, async (req, res) => {
   try {
-    const { conversation_url, filename, type, sourceUrl } = req.body;
-    if (!conversation_url || !filename || !type || !sourceUrl) {
-      return res.status(400).json({ success: false, error: 'conversation_url, filename, type, and sourceUrl are required' });
+    const { conversation_url, filename, type } = req.body;
+    if (!conversation_url || !filename || !type) {
+      return res.status(400).json({ success: false, error: 'conversation_url, filename, and type are required' });
+    }
+    if (!req.body.data && !req.body.sourceUrl) {
+      return res.status(400).json({ success: false, error: 'Either data or sourceUrl is required' });
     }
 
-    // Fetch the real bytes now, server-side — see fetchFileFromUrl's own
-    // comment.
-    const { buffer, contentType } = await fetchFileFromUrl(sourceUrl);
+    // Resolves via whichever shape the extension actually sent — see
+    // resolveFileBytes's own comment for the full reasoning.
+    const { buffer, contentType } = await resolveFileBytes(req.body);
 
     // Same effective-type resolution as capture-attachment above — see
     // that route's own comment for why a provider's reported
