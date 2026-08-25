@@ -1712,20 +1712,24 @@ function closeAttachmentReader() {
   if (modal) modal.style.display = 'none';
   var body = document.getElementById('attachmentReaderBody');
   if (body) body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
+  currentReaderAttachment = null;
 }
 window.closeAttachmentReader = closeAttachmentReader;
 
 var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
+// Tracks the currently-open attachment's real url/filename for the
+// Download button — see downloadAttachmentFromReader's own comment for
+// why this can't just be a plain <a href download> link.
+var currentReaderAttachment = null;
 
 async function openAttachmentReader(url, filename, type) {
   var modal = document.getElementById('attachmentReaderModal');
   var titleEl = document.getElementById('attachmentReaderTitle');
-  var downloadEl = document.getElementById('attachmentReaderDownload');
   var body = document.getElementById('attachmentReaderBody');
-  if (!modal || !titleEl || !downloadEl || !body) return;
+  if (!modal || !titleEl || !body) return;
 
+  currentReaderAttachment = { url: url, filename: filename || 'download' };
   titleEl.textContent = filename || 'Document';
-  downloadEl.href = url;
   body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
   modal.style.display = 'flex';
 
@@ -1744,6 +1748,36 @@ async function openAttachmentReader(url, filename, type) {
   }
 }
 window.openAttachmentReader = openAttachmentReader;
+
+// Confirmed live: a plain <a href="..." download> pointing at this R2
+// url still opened Chrome's built-in PDF viewer instead of saving the
+// file — the HTML `download` attribute is only reliably honored by
+// browsers for SAME-ORIGIN links; this R2 url is cross-origin from
+// diary.projectcoachai.com, so Chrome ignored it and fell back to its
+// normal, inline-view behavior for a PDF. Fetching the bytes via JS and
+// downloading from a locally-created blob: url instead works reliably
+// regardless of where the original bytes came from, since a blob: url
+// is always same-origin from the browser's own perspective.
+async function downloadAttachmentFromReader() {
+  if (!currentReaderAttachment) return;
+  try {
+    var resp = await fetch(currentReaderAttachment.url);
+    if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
+    var blob = await resp.blob();
+    var blobUrl = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = currentReaderAttachment.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1000);
+  } catch (e) {
+    console.warn('[Diary] Attachment download failed:', e.message);
+    window.open(currentReaderAttachment.url, '_blank');
+  }
+}
+window.downloadAttachmentFromReader = downloadAttachmentFromReader;
 
 async function renderTextIntoReader(url, body) {
   var resp = await fetch(url);
@@ -2532,7 +2566,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;">
       <div id="attachmentReaderTitle" style="font-size:14px;font-weight:600;color:#1B2A4A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;font-family:Inter,sans-serif;"></div>
       <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
-        <a id="attachmentReaderDownload" href="" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;">&#8681; Download</a>
+        <button id="attachmentReaderDownload" onclick="downloadAttachmentFromReader()" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;">&#8681; Download</button>
         <button onclick="closeAttachmentReader()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
       </div>
     </div>
