@@ -134,6 +134,30 @@ function normalizeForMatch(name) {
   return (name || '').toLowerCase().replace(/\.[a-z0-9]+$/i, '').replace(/[^a-z0-9]/g, '');
 }
 
+// Derives the file type directly from the download itself (its own
+// URL/filename extension, or its reported MIME) — factored out of the
+// "no entry yet" path so the "entry already exists" path can use the
+// exact same logic. Confirmed live as a real, necessary fix: a
+// provider's own DISPLAYED type badge for an attachment can go stale
+// when the same artifact gets regenerated in a different format (e.g.
+// Claude showing "DOCX" for a card that was later re-requested as a
+// PDF — the card's own type text apparently doesn't always update).
+// Trusting the tracked, displayed type for anything beyond FINDING
+// which attachment slot a download belongs to would incorrectly reject
+// a genuinely supported file (a real PDF) just because stale metadata
+// called it something unsupported (docx) — or worse, silently upload it
+// mislabeled. The real, downloaded file's own type is always more
+// trustworthy than what a page happened to display for it earlier.
+function deriveRealFileType(item, filename) {
+  const mime = (item.mime || '').split(';')[0].trim().toLowerCase();
+  let typeGuess = MIME_TO_ATTACHMENT_TYPE[mime];
+  if (!typeGuess && filename) {
+    const extMatch = filename.match(/\.([a-z0-9]+)$/i);
+    typeGuess = extMatch ? extMatch[1].toLowerCase() : null;
+  }
+  return typeGuess;
+}
+
 // Matches a real download event against ONE specific, not-yet-hosted
 // attachment already tracked on the matched Diary entry. Deliberately
 // conservative: narrows by type (from mime) first, resolves immediately
@@ -251,10 +275,18 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const fileData = await fetchDownloadBytes(item, matched.filename);
       if (!fileData) return;
 
+      // realType: derived directly from the download itself, separate
+      // from matched.type (the TRACKED, possibly-stale type used only
+      // to find this attachment's own slot above) — see
+      // deriveRealFileType's own comment for why these two purposes
+      // need to stay separate rather than reusing one value for both.
+      const realFilenameForType = extractFilenameFromDownloadUrl(item.url) || item.filename;
+      const realType = deriveRealFileType(item, realFilenameForType);
+
       const captureResp = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ data: fileData.base64, contentType: fileData.contentType, filename: matched.filename, type: matched.type })
+        body: JSON.stringify({ data: fileData.base64, contentType: fileData.contentType, filename: matched.filename, type: matched.type, realType: realType })
       });
       const captureData = await captureResp.json();
       if (captureData.success) {
@@ -276,12 +308,7 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const urlFilename = extractFilenameFromDownloadUrl(item.url) || item.filename;
       if (!urlFilename) { console.log('[Diary BG] Skipped: no entry yet, and no filename could be determined for this download'); return; }
 
-      const mime = (item.mime || '').split(';')[0].trim().toLowerCase();
-      let typeGuess = MIME_TO_ATTACHMENT_TYPE[mime];
-      if (!typeGuess) {
-        const extMatch = urlFilename.match(/\.([a-z0-9]+)$/i);
-        typeGuess = extMatch ? extMatch[1].toLowerCase() : null;
-      }
+      const typeGuess = deriveRealFileType(item, urlFilename);
       if (!typeGuess) { console.log('[Diary BG] Skipped: no entry yet, and file type could not be determined'); return; }
 
       const fileData = await fetchDownloadBytes(item, urlFilename);

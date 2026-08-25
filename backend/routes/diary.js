@@ -1440,6 +1440,21 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
   'application/pdf',
   'text/plain', 'text/markdown', 'text/csv', 'application/json',
+  // DOCX/XLSX/PPTX (and legacy .doc/.xls/.ppt) — hostable/downloadable
+  // like any other attachment, even though the in-Diary reader itself
+  // only previews PDF and plain text/code; these correctly fall back to
+  // "can't be previewed here yet" with a download link, same honest
+  // pattern as any other unsupported-for-preview type. Confirmed live
+  // as a real, missing gap: a genuine DOCX download failed outright
+  // with "Unsupported attachment type" since these were never actually
+  // added here at all, despite being in the brief's own stated scope
+  // for what download-interception should capture.
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 // A generous set of extensions treated as "plain text/code" for the
 // purpose of this whitelist even when the browser/extension reports a
@@ -1458,6 +1473,12 @@ const TEXT_LIKE_EXTENSIONS = /\.(txt|md|csv|json|js|jsx|ts|tsx|py|rb|go|java|c|c
 const TYPE_TO_MIME = {
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
   pdf: 'application/pdf', txt: 'text/plain', md: 'text/markdown', csv: 'text/csv', json: 'application/json',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 };
 
 router.post('/upload-attachment', requireAuth, async (req, res) => {
@@ -1510,7 +1531,7 @@ router.post('/upload-attachment', requireAuth, async (req, res) => {
 router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { data: base64Data, contentType, filename, type } = req.body;
+    const { data: base64Data, contentType, filename, type, realType } = req.body;
     if (!base64Data) return res.status(400).json({ success: false, error: 'No file data provided' });
     if (!filename || !type) return res.status(400).json({ success: false, error: 'filename and type are required to match the attachment' });
 
@@ -1528,29 +1549,35 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, error: 'No matching attachment found on this entry (filename+type)' });
     }
 
-    // NOTE: fixed twice now, on real, live evidence each time. First
-    // fix: TEXT_LIKE_EXTENSIONS was tested against `filename` alone,
-    // but Claude's tracked attachment filenames carry no extension at
-    // all (shown separately as their own badge) — the regex could
-    // never match. Second, distinct fix, confirmed live against a real
-    // Claude PDF download: browsers/providers frequently report a
-    // generic application/octet-stream Content-Type for download
-    // endpoints that serve many file types through one shared route
-    // (confirmed: Claude's own /wiggle/download-file endpoint does
-    // this) — even for a real, valid PDF, leaving nothing in
-    // contentType that ever matches ALLOWED_ATTACHMENT_TYPES at all.
-    // `type` is the reliable, separately-tracked signal in both cases
-    // regardless of what the filename or the reported Content-Type
-    // says, so it's used as the fallback source of truth for both.
+    // NOTE: fixed a third time now, on real, live evidence each time.
+    // First fix: TEXT_LIKE_EXTENSIONS was tested against `filename`
+    // alone, but Claude's tracked attachment filenames carry no
+    // extension at all. Second fix: browsers/providers frequently
+    // report a generic application/octet-stream Content-Type for
+    // download endpoints that serve many file types through one shared
+    // route (confirmed: Claude's own /wiggle/download-file endpoint
+    // does this). Third, distinct fix, confirmed live: the TRACKED
+    // `type` used above to find this attachment's own slot can itself
+    // be stale — a provider's displayed type badge for an artifact
+    // doesn't always update when the same artifact gets regenerated in
+    // a different format (confirmed: Claude showed "DOCX" for a card
+    // later re-requested as a PDF; the real download was genuinely a
+    // PDF, but relying on the tracked "docx" for MIME resolution would
+    // have incorrectly rejected a real, supported file as unsupported).
+    // `realType` — derived by the extension directly from the actual
+    // download's own URL/MIME, never from anything a page merely
+    // displayed — is what's actually resolved against here; `type`
+    // itself is used ONLY to find the right attachment slot above, per
+    // its own, single, narrower purpose.
     const normalizedType = (contentType || '').split(';')[0].trim().toLowerCase();
-    const mappedFromType = TYPE_TO_MIME[(type || '').toLowerCase()];
-    const looksTextLike = TEXT_LIKE_EXTENSIONS.test('.' + (type || ''));
+    const mappedFromType = TYPE_TO_MIME[(realType || type || '').toLowerCase()];
+    const looksTextLike = TEXT_LIKE_EXTENSIONS.test('.' + (realType || type || ''));
 
     let effectiveType;
     if (ALLOWED_ATTACHMENT_TYPES.has(normalizedType)) {
       effectiveType = normalizedType; // browser-reported type is already good
     } else if (mappedFromType && ALLOWED_ATTACHMENT_TYPES.has(mappedFromType)) {
-      effectiveType = mappedFromType; // generic/wrong reported type, but the tracked type maps to a known-good mime
+      effectiveType = mappedFromType; // generic/wrong reported type, but the real type maps to a known-good mime
     } else if (looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream')) {
       effectiveType = 'text/plain'; // generic/missing type, but a text-like extension
     } else {
@@ -1565,10 +1592,16 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
       filenameHint: filename,
     });
 
+    // Correct the stored, tracked type too, once the real one is known
+    // — not just url/status — since app.html's own icon/reader-eligibility
+    // logic reads this same type field, and leaving it as the original,
+    // stale "docx" would show the wrong icon and never offer the pdf.js
+    // reader for a file that's genuinely, now, a real PDF.
     const updatedAttachments = attachments.slice();
     updatedAttachments[matchIndex] = Object.assign({}, attachments[matchIndex], {
       url: stored.url,
       status: 'hosted',
+      type: realType || type,
     });
 
     await db.query(
