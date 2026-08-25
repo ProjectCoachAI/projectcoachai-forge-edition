@@ -1767,7 +1767,13 @@ async function renderTextIntoReader(url, body) {
 async function renderPdfIntoReader(url, body) {
   if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js failed to load');
   body.innerHTML = '';
-  var pdf = await pdfjsLib.getDocument(url).promise;
+  // NOTE: fixed — was calling getDocument(url) with a bare string.
+  // Confirmed live: this version rejects that shorthand outright
+  // ("expected either data, range, or url parameter"), unlike some
+  // older pdf.js releases that accepted a plain string as shorthand for
+  // { url }. The explicit options-object form is unambiguous and the
+  // one actually documented for this version.
+  var pdf = await pdfjsLib.getDocument({ url: url }).promise;
   for (var pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     var page = await pdf.getPage(pageNum);
     var viewport = page.getViewport({ scale: 1.4 });
