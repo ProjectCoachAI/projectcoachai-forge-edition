@@ -1528,11 +1528,38 @@ router.post('/upload-attachment', requireAuth, async (req, res) => {
 // the same dedup key used elsewhere for attachments — rather than
 // replacing the whole array, so other attachments already indexed on this
 // entry are never disturbed by capturing one of them.
+// Fetches a file's real bytes directly, server-side — used by both
+// capture-attachment and pending-capture below, replacing an earlier
+// design where the EXTENSION fetched the bytes client-side and sent
+// them here as base64. Confirmed live as a real, necessary change:
+// Claude/ChatGPT host their generated files on the same domain as the
+// conversation itself (already covered by this extension's own
+// host_permissions), but Perplexity hosts its own generated files on a
+// completely separate, third-party domain (its own S3 bucket) — and
+// different providers could keep doing this differently, in ways that
+// can't all be predicted or permission-listed in the extension's
+// manifest ahead of time. A Node.js server-side fetch() isn't subject
+// to CORS or the Chrome extension permission model at all — already
+// proven working for exactly this reason, in this same file, for
+// external image CDNs (Priority 4's image-hosting pipeline) — so
+// fetching here instead means this works for any provider's file-
+// hosting choice, present or future, with nothing to ever add to the
+// extension's manifest again.
+async function fetchFileFromUrl(sourceUrl) {
+  const resp = await fetch(sourceUrl);
+  if (!resp.ok) {
+    throw new Error('Fetch failed with status ' + resp.status);
+  }
+  const contentType = resp.headers.get('content-type') || '';
+  const buffer = Buffer.from(await resp.arrayBuffer());
+  return { buffer, contentType };
+}
+
 router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { data: base64Data, contentType, filename, type, realType } = req.body;
-    if (!base64Data) return res.status(400).json({ success: false, error: 'No file data provided' });
+    const { sourceUrl, filename, type, realType } = req.body;
+    if (!sourceUrl) return res.status(400).json({ success: false, error: 'sourceUrl is required' });
     if (!filename || !type) return res.status(400).json({ success: false, error: 'filename and type are required to match the attachment' });
 
     const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
@@ -1548,6 +1575,12 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
       // silently discarding the upload or guessing which entry to use.
       return res.status(404).json({ success: false, error: 'No matching attachment found on this entry (filename+type)' });
     }
+
+    // Fetch the real bytes now, server-side — see fetchFileFromUrl's own
+    // comment for why this moved here from the extension. Also happens
+    // promptly, same as before: the source URL is very likely signed
+    // and/or time-limited.
+    const { buffer, contentType } = await fetchFileFromUrl(sourceUrl);
 
     // NOTE: fixed a third time now, on real, live evidence each time.
     // First fix: TEXT_LIKE_EXTENSIONS was tested against `filename`
@@ -1575,7 +1608,7 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
 
     let effectiveType;
     if (ALLOWED_ATTACHMENT_TYPES.has(normalizedType)) {
-      effectiveType = normalizedType; // browser-reported type is already good
+      effectiveType = normalizedType; // server-fetched, real Content-Type is already good
     } else if (mappedFromType && ALLOWED_ATTACHMENT_TYPES.has(mappedFromType)) {
       effectiveType = mappedFromType; // generic/wrong reported type, but the real type maps to a known-good mime
     } else if (looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream')) {
@@ -1584,7 +1617,6 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
     }
 
-    const buffer = Buffer.from(base64Data, 'base64');
     const stored = await attachmentStorage.store({
       buffer,
       contentType: effectiveType,
@@ -1634,10 +1666,14 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
 // saves at all.
 router.post('/pending-capture', requireAuth, async (req, res) => {
   try {
-    const { conversation_url, filename, type, data: base64Data, contentType } = req.body;
-    if (!conversation_url || !filename || !type || !base64Data) {
-      return res.status(400).json({ success: false, error: 'conversation_url, filename, type, and data are required' });
+    const { conversation_url, filename, type, sourceUrl } = req.body;
+    if (!conversation_url || !filename || !type || !sourceUrl) {
+      return res.status(400).json({ success: false, error: 'conversation_url, filename, type, and sourceUrl are required' });
     }
+
+    // Fetch the real bytes now, server-side — see fetchFileFromUrl's own
+    // comment.
+    const { buffer, contentType } = await fetchFileFromUrl(sourceUrl);
 
     // Same effective-type resolution as capture-attachment above — see
     // that route's own comment for why a provider's reported
@@ -1657,7 +1693,6 @@ router.post('/pending-capture', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
     }
 
-    const buffer = Buffer.from(base64Data, 'base64');
     const stored = await attachmentStorage.store({
       buffer,
       contentType: effectiveType,

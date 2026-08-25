@@ -126,6 +126,26 @@ function extractFilenameFromDownloadUrl(url) {
       const segments = decodedPath.split('/').filter(Boolean);
       if (segments.length) return segments[segments.length - 1];
     }
+    // Some providers deliver files via a signed, third-party storage
+    // URL (confirmed live: Perplexity's own files live on an S3
+    // bucket) using the standard S3 pre-signed-URL convention of a
+    // `response-content-disposition` param — itself an HTTP
+    // Content-Disposition-style STRING value, not a bare filename, e.g.
+    // `attachment; filename="x.pdf"; filename*=UTF-8''x.pdf`. Extract
+    // just the filename= portion out of that string.
+    const dispositionParam = parsed.searchParams.get('response-content-disposition');
+    if (dispositionParam) {
+      let decodedDisposition = dispositionParam;
+      for (let i = 0; i < 3; i++) {
+        try {
+          const next = decodeURIComponent(decodedDisposition);
+          if (next === decodedDisposition) break;
+          decodedDisposition = next;
+        } catch(e) { break; }
+      }
+      const dispositionMatch = decodedDisposition.match(/filename="?([^";]+)"?/i);
+      if (dispositionMatch) return dispositionMatch[1];
+    }
   } catch(e) {}
   return null;
 }
@@ -156,6 +176,35 @@ function deriveRealFileType(item, filename) {
     typeGuess = extMatch ? extMatch[1].toLowerCase() : null;
   }
   return typeGuess;
+}
+
+// Resolves the real, specific conversation URL a download belongs to —
+// confirmed live as a real, necessary fix: item.referrer alone isn't
+// reliable for every provider. Claude's own download endpoint is
+// same-origin (claude.ai itself), so the browser preserves the full
+// referrer path. Perplexity's files live on a separate, third-party
+// domain (an S3 bucket) — for this kind of cross-origin request, the
+// browser's own referrer-policy truncates the referrer down to just the
+// bare origin, with no path at all (confirmed live: referrer arrived as
+// exactly "https://www.perplexity.ai/", nothing more). chrome.downloads
+// has no way to directly expose which TAB triggered a given download —
+// a known, documented API limitation — so when the referrer is only a
+// bare origin, this falls back to querying for an open tab on that same
+// origin and using ITS own, current, full URL instead (the tab the user
+// was presumably on when they clicked Download). Works without any new
+// permission: host_permissions for a domain already grants the ability
+// to read/query that domain's own tabs.
+async function resolveConversationUrl(referrer) {
+  try {
+    const parsed = new URL(referrer);
+    if (parsed.pathname && parsed.pathname !== '/' ) return referrer;
+    const tabs = await chrome.tabs.query({ url: parsed.origin + '/*' });
+    if (tabs.length) {
+      const activeTab = tabs.find(function(t) { return t.active; });
+      return (activeTab || tabs[0]).url || referrer;
+    }
+  } catch (e) {}
+  return referrer;
 }
 
 // Matches a real download event against ONE specific, not-yet-hosted
@@ -211,27 +260,6 @@ function isFromSupportedProvider(referrer) {
   }
 }
 
-// Shared by both branches of the listener below — fetches a download's
-// real bytes and returns them ready to send to the backend, or null
-// (having already logged why) if anything about that failed. Factored
-// out specifically because the "entry exists" and "no entry yet" paths
-// both need this exact same fetch-and-encode step, just sending the
-// result to a different endpoint afterward.
-async function fetchDownloadBytes(item, label) {
-  const fileResp = await fetch(item.url);
-  if (!fileResp.ok) {
-    console.warn('[Diary BG] Download-capture fetch failed:', fileResp.status, 'for', label);
-    return null;
-  }
-  const blob = await fileResp.blob();
-  if (blob.size > 25 * 1024 * 1024) {
-    console.warn('[Diary BG] Download-capture skipped, file too large:', label);
-    return null;
-  }
-  const buf = await blob.arrayBuffer();
-  return { base64: arrayBufferToBase64(buf), contentType: blob.type || item.mime || 'application/octet-stream' };
-}
-
 chrome.downloads.onCreated.addListener(async function(item) {
   try {
     // TEMPORARY DIAGNOSTIC — every early-exit below was silent, making
@@ -247,13 +275,18 @@ chrome.downloads.onCreated.addListener(async function(item) {
     if (!item.referrer || !item.url) { console.log('[Diary BG] Skipped: no referrer or url'); return; }
     if (!isFromSupportedProvider(item.referrer)) { console.log('[Diary BG] Skipped: download not from a supported AI provider'); return; }
 
+    // See resolveConversationUrl's own comment — item.referrer alone
+    // isn't reliable for every provider (confirmed live: Perplexity's
+    // cross-origin file host truncates it to a bare origin).
+    const conversationUrl = await resolveConversationUrl(item.referrer);
+
     const stored = await chrome.storage.local.get(['diary_token']);
     const token = stored.diary_token;
     if (!token) { console.log('[Diary BG] Skipped: not logged into Diary'); return; }
 
     const API = 'https://api.projectcoachai.com';
 
-    const lookupResp = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(item.referrer), {
+    const lookupResp = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(conversationUrl), {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const lookupData = await lookupResp.json();
@@ -268,13 +301,6 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const matched = matchDownloadToAttachment(attachments, item);
       if (!matched) { console.log('[Diary BG] Skipped: no matching tracked attachment for this download (or ambiguous)', JSON.stringify(attachments)); return; }
 
-      // Fetch the real bytes promptly — the URL is very likely signed
-      // and/or time-limited (confirmed live: ChatGPT's carries a `sig=`
-      // parameter), so this happens immediately upon the download
-      // event, not deferred.
-      const fileData = await fetchDownloadBytes(item, matched.filename);
-      if (!fileData) return;
-
       // realType: derived directly from the download itself, separate
       // from matched.type (the TRACKED, possibly-stale type used only
       // to find this attachment's own slot above) — see
@@ -283,10 +309,19 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const realFilenameForType = extractFilenameFromDownloadUrl(item.url) || item.filename;
       const realType = deriveRealFileType(item, realFilenameForType);
 
+      // NOTE: sends the download's own URL, not pre-fetched bytes — the
+      // backend fetches this itself now (see fetchFileFromUrl's own
+      // comment there for why). Confirmed live as a real, necessary
+      // change: Perplexity hosts its generated files on a separate,
+      // third-party S3 domain this extension has no host_permissions
+      // for at all, so a client-side fetch() from here failed outright
+      // for that provider — a server-side fetch isn't subject to that
+      // restriction, and works the same way regardless of which domain
+      // any provider ever chooses to host files on.
       const captureResp = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ data: fileData.base64, contentType: fileData.contentType, filename: matched.filename, type: matched.type, realType: realType })
+        body: JSON.stringify({ sourceUrl: item.url, filename: matched.filename, type: matched.type, realType: realType })
       });
       const captureData = await captureResp.json();
       if (captureData.success) {
@@ -311,13 +346,12 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const typeGuess = deriveRealFileType(item, urlFilename);
       if (!typeGuess) { console.log('[Diary BG] Skipped: no entry yet, and file type could not be determined'); return; }
 
-      const fileData = await fetchDownloadBytes(item, urlFilename);
-      if (!fileData) return;
-
+      // See the sibling call site above for why sourceUrl is sent here
+      // rather than pre-fetched bytes.
       const pendingResp = await fetch(API + '/api/diary/pending-capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ conversation_url: item.referrer, filename: urlFilename, type: typeGuess, data: fileData.base64, contentType: fileData.contentType })
+        body: JSON.stringify({ conversation_url: conversationUrl, filename: urlFilename, type: typeGuess, sourceUrl: item.url })
       });
       const pendingData = await pendingResp.json();
       if (pendingData.success) {
@@ -330,20 +364,6 @@ chrome.downloads.onCreated.addListener(async function(item) {
     console.warn('[Diary BG] Download-capture error:', e.message);
   }
 });
-
-// Converts an ArrayBuffer to a base64 string in fixed-size chunks —
-// String.fromCharCode(...bytes) on a large, single array can exceed the
-// JS engine's own argument-count limit and throw; chunking avoids that
-// regardless of source buffer size.
-function arrayBufferToBase64(buf) {
-  const bytes = new Uint8Array(buf);
-  const chunkSize = 0x8000;
-  const chunks = [];
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));
-  }
-  return btoa(chunks.join(''));
-}
 
 // ── Messages from content scripts ─────────────────────────────────────────────
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
