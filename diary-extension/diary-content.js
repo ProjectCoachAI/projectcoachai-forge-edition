@@ -2780,11 +2780,46 @@ function queryAllDeep(selector) {
         var contentToSave = stripCitations(fullThread);
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // saveUrl: use most specific URL available
+        //
+        // NOTE: fixed — confirmed live as a real, reproduced, serious
+        // bug: this previously considered EVERY turn ever captured in
+        // this tab's lifetime, across however many different, unrelated
+        // conversations were visited via the app's own sidebar (SPA
+        // navigation never reloads the page, so window.__diaryCapture.
+        // turns genuinely accumulates turns from multiple conversations
+        // within one tab session — already known and handled correctly
+        // for the CONTENT itself via captureTurns' own URL filter above,
+        // but this separate saveUrl computation never applied that same
+        // filter). Blindly picking whichever turn's URL happened to be
+        // longest meant a save could compute its content correctly from
+        // only the current conversation, yet compute its OWN saveUrl
+        // from a completely different, unrelated, earlier conversation's
+        // turn — causing the save to silently overwrite THAT unrelated
+        // entry instead of its own (confirmed: a Reagan conversation's
+        // saved entry ended up with an unrelated Michael Jackson
+        // conversation's content merged into it this way).
+        //
+        // Now walks backward from the most recently captured turn and
+        // stops at the first one that doesn't belong to the current,
+        // ongoing conversation (exact URL match, or the turn's own URL
+        // still being an unresolved "/new" placeholder) — this only
+        // ever considers the CURRENT conversation's own, contiguous run
+        // of turns, naturally excluding anything from an earlier,
+        // different conversation without needing to solve the harder,
+        // more general problem of telling two different "/new"
+        // conversations apart from their URL alone.
         var saveUrl = canonicalUrl();
         if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-          var turnUrls = window.__diaryCapture.turns
-            .map(function(t) { return t.url ? t.url.split('?')[0] : ''; })
-            .filter(function(u) { return u.length > saveUrl.length; });
+          var turnUrls = [];
+          for (var saveUrlTurnIdx = window.__diaryCapture.turns.length - 1; saveUrlTurnIdx >= 0; saveUrlTurnIdx--) {
+            var _t = window.__diaryCapture.turns[saveUrlTurnIdx];
+            var _tUrl = _t.url ? _t.url.split('?')[0] : '';
+            if (_tUrl === saveUrl || /\/new(\?|$)/.test(_t.url)) {
+              if (_tUrl.length > saveUrl.length) turnUrls.push(_tUrl);
+            } else {
+              break;
+            }
+          }
           if (turnUrls.length) {
             turnUrls.sort(function(a, b) { return b.length - a.length; });
             saveUrl = turnUrls[0];
