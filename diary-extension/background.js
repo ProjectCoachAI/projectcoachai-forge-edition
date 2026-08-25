@@ -212,6 +212,37 @@ async function tryClientSideFetch(url) {
   }
 }
 
+// Resolves the actual file data for ANY download, routing to the right
+// mechanism depending on the URL's own scheme:
+// - blob: URLs (confirmed live: Grok's own "Download" button) can ONLY
+//   ever be read from within the exact browsing context that created
+//   them — not this service worker, not our backend, regardless of any
+//   permission or cookie. This finds the right tab from the blob's own
+//   embedded origin (blob:<origin>/<uuid> — present even when
+//   item.referrer itself is empty, also confirmed live for this exact
+//   case) and asks that page's own main-world script, via the isolated-
+//   world relay, for the real bytes of a blob it already created and
+//   cached itself — see diary-interceptor.js's own createObjectURL hook
+//   for the full reasoning on why this is observation, not simulation.
+// - https:// URLs use the existing hybrid client/then-server-side
+//   approach (see tryClientSideFetch's own comment for why both exist).
+async function resolveDownloadFileData(item) {
+  if (item.url.indexOf('blob:') === 0) {
+    let origin;
+    try { origin = new URL(item.url).origin; } catch (e) { return null; }
+    const tabs = await chrome.tabs.query({ url: origin + '/*' });
+    if (!tabs.length) return null;
+    const activeTab = tabs.find(function(t) { return t.active; });
+    const targetTab = activeTab || tabs[0];
+    const blobData = await fetchBlobDataFromTab(targetTab.id, item.url);
+    if (!blobData) return null;
+    return { data: blobData.base64, contentType: blobData.contentType };
+  }
+  const clientFetch = await tryClientSideFetch(item.url);
+  if (clientFetch) return { data: clientFetch.base64, contentType: clientFetch.contentType };
+  return { sourceUrl: item.url };
+}
+
 // Resolves the real, specific conversation URL a download belongs to —
 // confirmed live as a real, necessary fix: item.referrer alone isn't
 // reliable for every provider. Claude's own download endpoint is
@@ -235,7 +266,21 @@ async function resolveConversationUrl(referrer) {
     const tabs = await chrome.tabs.query({ url: parsed.origin + '/*' });
     if (tabs.length) {
       const activeTab = tabs.find(function(t) { return t.active; });
-      return (activeTab || tabs[0]).url || referrer;
+      const tabUrl = (activeTab || tabs[0]).url;
+      if (!tabUrl) return referrer;
+      // NOTE: fixed — a genuine, confirmed mismatch. The normal
+      // "Save to Diary" flow saves an entry under canonicalUrl()
+      // (origin + pathname ONLY — diary-content.js deliberately
+      // excludes any query string/hash), but this fallback was
+      // returning the tab's raw, full url unchanged — confirmed live
+      // to include a real, provider-added query param (Grok's own
+      // ?rid=...). Two different strings for the exact same
+      // conversation meant the by-url lookup could never match an
+      // already-saved entry at all, even when one genuinely existed.
+      try {
+        const tabParsed = new URL(tabUrl);
+        return tabParsed.origin + tabParsed.pathname;
+      } catch (e) { return tabUrl; }
     }
   } catch (e) {}
   return referrer;
@@ -306,13 +351,24 @@ chrome.downloads.onCreated.addListener(async function(item) {
     // provider's actual behavior here is understood.
     console.log('[Diary BG] onCreated fired:', JSON.stringify({ referrer: item.referrer, url: item.url, mime: item.mime, filename: item.filename }));
 
-    if (!item.referrer || !item.url) { console.log('[Diary BG] Skipped: no referrer or url'); return; }
-    if (!isFromSupportedProvider(item.referrer)) { console.log('[Diary BG] Skipped: download not from a supported AI provider'); return; }
+    // A blob: URL download can arrive with a genuinely EMPTY referrer
+    // (confirmed live: Grok) — but the blob URL itself always embeds
+    // its own creating origin (blob:<origin>/<uuid>), so that's used as
+    // a fallback here, before any of the referrer-dependent checks
+    // below run, rather than needing separate, duplicated handling in
+    // each of them individually.
+    let effectiveReferrer = item.referrer;
+    if (!effectiveReferrer && item.url && item.url.indexOf('blob:') === 0) {
+      try { effectiveReferrer = new URL(item.url).origin + '/'; } catch (e) {}
+    }
+
+    if (!effectiveReferrer || !item.url) { console.log('[Diary BG] Skipped: no referrer or url'); return; }
+    if (!isFromSupportedProvider(effectiveReferrer)) { console.log('[Diary BG] Skipped: download not from a supported AI provider'); return; }
 
     // See resolveConversationUrl's own comment — item.referrer alone
     // isn't reliable for every provider (confirmed live: Perplexity's
     // cross-origin file host truncates it to a bare origin).
-    const conversationUrl = await resolveConversationUrl(item.referrer);
+    const conversationUrl = await resolveConversationUrl(effectiveReferrer);
 
     const stored = await chrome.storage.local.get(['diary_token']);
     const token = stored.diary_token;
@@ -343,30 +399,13 @@ chrome.downloads.onCreated.addListener(async function(item) {
       const realFilenameForType = extractFilenameFromDownloadUrl(item.url) || item.filename;
       const realType = deriveRealFileType(item, realFilenameForType);
 
-      // Hybrid fetch strategy — confirmed live as genuinely necessary,
-      // not just defensive: a purely server-side fetch (the earlier
-      // version of this) works for a provider like Perplexity, whose
-      // file lives on a separate, third-party S3 domain via a publicly-
-      // signed URL needing no session at all — but FAILS for a provider
-      // like ChatGPT, whose own /backend-api/estuary/content endpoint
-      // apparently requires the user's own, logged-in session cookies
-      // to authorize access (confirmed live: a server-side fetch got a
-      // genuine, real 403 Forbidden back from ChatGPT's own server,
-      // despite reaching it fine). This extension's own client-side
-      // fetch() naturally carries the browser's real session cookies
-      // for any domain it has host_permissions for — which is exactly
-      // why this worked when tried straight from here before. Neither
-      // approach alone covers both cases, so: try client-side first
-      // (works for same-origin, cookie-gated endpoints); if that's
-      // blocked or fails for any reason (a third-party domain we have
-      // no host_permissions for, like Perplexity's S3 bucket), fall
-      // back to asking the backend to fetch it instead — the case
-      // where a failure here actually signals "this needs a server-
-      // side, cookie-free fetch instead," not a real problem.
-      const clientFetch = await tryClientSideFetch(item.url);
-      const captureBody = clientFetch
-        ? { data: clientFetch.base64, contentType: clientFetch.contentType, filename: matched.filename, type: matched.type, realType: realType }
-        : { sourceUrl: item.url, filename: matched.filename, type: matched.type, realType: realType };
+      // Resolves via whichever mechanism this download actually needs —
+      // see resolveDownloadFileData's own comment for the full
+      // reasoning (blob: URLs need the tab-relay mechanism; https://
+      // URLs use the existing client-then-server hybrid).
+      const fileData = await resolveDownloadFileData(item);
+      if (!fileData) { console.log('[Diary BG] Skipped: could not resolve file data for this download'); return; }
+      const captureBody = Object.assign({ filename: matched.filename, type: matched.type, realType: realType }, fileData);
 
       const captureResp = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
         method: 'POST',
@@ -390,18 +429,24 @@ chrome.downloads.onCreated.addListener(async function(item) {
       // backend for how a later save picks this up automatically, and
       // this file's own comment for why nothing gets silently saved to
       // Diary here: that must stay the user's own, deliberate choice.
-      const urlFilename = extractFilenameFromDownloadUrl(item.url) || item.filename;
+      let urlFilename = extractFilenameFromDownloadUrl(item.url) || item.filename;
+      if (!urlFilename && item.url.indexOf('blob:') === 0) {
+        // blob: URLs carry no filename information themselves — this
+        // waits for Chrome's own onDeterminingFilename event instead,
+        // which reflects the page's real, intended filename (see that
+        // listener's own comment).
+        urlFilename = await waitForDeterminedFilename(item.id);
+      }
       if (!urlFilename) { console.log('[Diary BG] Skipped: no entry yet, and no filename could be determined for this download'); return; }
 
       const typeGuess = deriveRealFileType(item, urlFilename);
       if (!typeGuess) { console.log('[Diary BG] Skipped: no entry yet, and file type could not be determined'); return; }
 
-      // See the sibling call site above for why both a client-side
-      // attempt AND a server-side fallback are needed here too.
-      const clientFetch = await tryClientSideFetch(item.url);
-      const pendingBody = clientFetch
-        ? { conversation_url: conversationUrl, filename: urlFilename, type: typeGuess, data: clientFetch.base64, contentType: clientFetch.contentType }
-        : { conversation_url: conversationUrl, filename: urlFilename, type: typeGuess, sourceUrl: item.url };
+      // See the sibling call site above for the full reasoning — this
+      // resolves via whichever mechanism the download actually needs.
+      const fileData = await resolveDownloadFileData(item);
+      if (!fileData) { console.log('[Diary BG] Skipped: could not resolve file data for this download'); return; }
+      const pendingBody = Object.assign({ conversation_url: conversationUrl, filename: urlFilename, type: typeGuess }, fileData);
 
       const pendingResp = await fetch(API + '/api/diary/pending-capture', {
         method: 'POST',
@@ -420,8 +465,102 @@ chrome.downloads.onCreated.addListener(async function(item) {
   }
 });
 
+// A blob: URL (confirmed live: Grok) is an opaque, randomly-generated
+// identifier — unlike every other provider's own download URL, it
+// carries no filename information at all, since a Blob itself (unlike
+// a File) has no name. Chrome's own onDeterminingFilename event fires
+// once it has determined a "tentative filename" for a download —
+// reflecting whatever the page's own <a download="..."> attribute
+// specified — which is exactly the real, intended filename this needs.
+// Only ever observes; suggest() is called with no arguments so this
+// never overrides where Chrome actually saves the file.
+//
+// Always caches the result the moment it arrives, regardless of
+// whether anything is actively waiting for it yet — onDeterminingFilename
+// can genuinely fire before this extension's own onCreated handler even
+// reaches waitForDeterminedFilename() below (several other awaits
+// happen first in that same handler), and a result that arrived with no
+// registered waiter yet would otherwise be silently lost forever.
+const determinedFilenames = new Map();
+const pendingFilenameDeterminations = new Map();
+chrome.downloads.onDeterminingFilename.addListener(function(item, suggest) {
+  determinedFilenames.set(item.id, item.filename || null);
+  setTimeout(function() { determinedFilenames.delete(item.id); }, 15000);
+
+  const pending = pendingFilenameDeterminations.get(item.id);
+  if (pending) {
+    pendingFilenameDeterminations.delete(item.id);
+    pending(item.filename || null);
+  }
+  suggest();
+});
+
+function waitForDeterminedFilename(downloadId) {
+  if (determinedFilenames.has(downloadId)) {
+    return Promise.resolve(determinedFilenames.get(downloadId));
+  }
+  return new Promise(function(resolve) {
+    const timeout = setTimeout(function() {
+      pendingFilenameDeterminations.delete(downloadId);
+      resolve(null);
+    }, 3000);
+    pendingFilenameDeterminations.set(downloadId, function(filename) {
+      clearTimeout(timeout);
+      resolve(filename);
+    });
+  });
+}
+
 // ── Messages from content scripts ─────────────────────────────────────────────
+// Correlates an async request for a specific blob's real bytes (sent to
+// a tab via GET_BLOB_DATA) with its eventual response (a BLOB_DATA_
+// RESPONSE message, relayed back through the isolated-world script) —
+// see fetchBlobDataFromTab's own comment for the full flow.
+const pendingBlobRequests = new Map();
+
+async function fetchBlobDataFromTab(tabId, blobUrl) {
+  return new Promise(function(resolve) {
+    // 30s: the round-trip (background -> tab -> main world ->
+    // blob.arrayBuffer() -> back through the same chain) can genuinely
+    // take a little while; this is a one-time, per-download wait, not a
+    // cost paid repeatedly.
+    const timeout = setTimeout(function() {
+      pendingBlobRequests.delete(blobUrl);
+      resolve(null);
+    }, 30000);
+    pendingBlobRequests.set(blobUrl, function(result) {
+      clearTimeout(timeout);
+      resolve(result);
+    });
+    // NOTE: fixed a genuine, confirmed bug — this callback previously
+    // treated chrome.runtime.lastError as a real failure and
+    // IMMEDIATELY deleted the pending entry + resolved null on it. But
+    // GET_BLOB_DATA's own handler (diary-isolated.js) never calls
+    // sendResponse() at all — it just relays the request into the page
+    // and returns — so this message channel closes with no response by
+    // design, which reliably sets lastError even on a genuine success.
+    // The REAL response is a separate, later BLOB_DATA_RESPONSE message
+    // entirely, matched via pendingBlobRequests above — confirmed live
+    // as the actual root cause: the real response consistently arrived
+    // correctly, but was already discarded by this exact callback
+    // before it could ever be matched. This callback must never touch
+    // the pending entry at all now; only the real response or the
+    // timeout above may resolve this promise.
+    chrome.tabs.sendMessage(tabId, { type: 'GET_BLOB_DATA', blobUrl: blobUrl }, function() {
+      void chrome.runtime.lastError; // deliberately ignored — see comment above
+    });
+  });
+}
+
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+  if (msg.type === 'BLOB_DATA_RESPONSE' && msg.blobUrl) {
+    const pending = pendingBlobRequests.get(msg.blobUrl);
+    if (pending) {
+      pendingBlobRequests.delete(msg.blobUrl);
+      pending(msg.success ? { base64: msg.base64, contentType: msg.contentType } : null);
+    }
+    return;
+  }
   if (msg.type === 'SAVE_TO_DIARY') {
     try {
       const API = 'https://api.projectcoachai.com';

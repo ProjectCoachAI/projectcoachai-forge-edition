@@ -415,6 +415,61 @@
     return accumulated;
   }
 
+  // ── Patch URL.createObjectURL (Priority 4, revised) ──────────────────────
+  // Provider-generated file downloads sometimes use a blob: URL rather
+  // than a real, fetchable https:// link (confirmed live: Grok's own
+  // "Download" button does this). A blob: URL only ever exists within
+  // the exact browsing context that created it — not this extension's
+  // background service worker, not our own backend server, regardless
+  // of any permission or cookie — so there is genuinely no way to
+  // recover its bytes from anywhere except right here, in the same
+  // MAIN-world context the page itself runs in. This is deliberately
+  // NOT click-simulation (the mechanism explicitly rejected earlier):
+  // it never triggers, fakes, or automates any user action at all — it
+  // only passively observes a real Blob the page's own code already,
+  // genuinely creates on its own, the same category of thing this
+  // file's own window.fetch patch already does for conversation history.
+  // Cached by blob URL string so a later, real download event (chrome.
+  // downloads.onCreated, in background.js, a separate context) can ask
+  // — via the existing isolated-world relay — for this exact blob's
+  // real bytes after the fact.
+  var _blobCache = new Map();
+  var _createObjectURL = URL.createObjectURL.bind(URL);
+  URL.createObjectURL = function(obj) {
+    var blobUrl = _createObjectURL(obj);
+    try {
+      if (obj instanceof Blob) _blobCache.set(blobUrl, obj);
+    } catch(e) {}
+    return blobUrl;
+  };
+
+  // Responds to a request (relayed from background.js, via the isolated
+  // world) for a specific, previously-cached blob's real bytes. Only
+  // ever looks up a blob this SAME page already created and cached
+  // above — never fetches, opens, or generates anything new.
+  window.addEventListener('message', function(event) {
+    if (event.source !== window) return;
+    if (!event.data || event.data.type !== '__DIARY_GET_BLOB_DATA__') return;
+    var blobUrl = event.data.blobUrl;
+    var blob = _blobCache.get(blobUrl);
+    if (!blob) {
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'BLOB_DATA_RESPONSE', blobUrl: blobUrl, success: false } }, '*');
+      return;
+    }
+    blob.arrayBuffer().then(function(buf) {
+      var bytes = new Uint8Array(buf);
+      var chunkSize = 0x8000;
+      var chunks = [];
+      for (var i = 0; i < bytes.length; i += chunkSize) {
+        chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));
+      }
+      var base64 = btoa(chunks.join(''));
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'BLOB_DATA_RESPONSE', blobUrl: blobUrl, success: true, base64: base64, contentType: blob.type || '' } }, '*');
+    }).catch(function(e) {
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'BLOB_DATA_RESPONSE', blobUrl: blobUrl, success: false } }, '*');
+    });
+  });
+
   // ── Patch window.fetch ─────────────────────────────────────────────────────
   var _fetch = window.fetch;
   var _fetchActive = false;

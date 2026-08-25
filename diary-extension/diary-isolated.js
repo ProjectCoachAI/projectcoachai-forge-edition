@@ -52,6 +52,15 @@
       window.__diaryAIComplete = { url: message.url, ts: Date.now() };
       setTimeout(function() { window.postMessage(message, '*'); }, 200);
     }
+
+    // Relays background.js's request for a specific, previously-cached
+    // blob's real bytes to the MAIN world, where diary-interceptor.js's
+    // own URL.createObjectURL hook actually holds it — see that hook's
+    // own comment for the full reasoning (Priority 4, revised: blob:
+    // URL downloads, e.g. Grok's own "Download" button).
+    if (message.type === 'GET_BLOB_DATA' && message.blobUrl) {
+      window.postMessage({ type: '__DIARY_GET_BLOB_DATA__', blobUrl: message.blobUrl }, '*');
+    }
   });
 
   // On load — proactively post token so MAIN world has it immediately
