@@ -67,6 +67,93 @@ Content: ${text}`
   });
 }
 
+// ── Priority 4 (revised): pending-capture adoption ──────────────────────────
+// See pending_attachment_captures' own comment in db.js for the full
+// design rationale. Called right before an entry is actually saved
+// (POST) or re-saved (PATCH), immediately after this same conversation's
+// attachments have been prepared — checks whether any earlier, pre-save
+// downloads for THIS conversation are sitting unclaimed, and if so,
+// marks the matching, still-un-hosted attachment(s) as already
+// 'hosted' using that file, with no second download or re-host ever
+// needed. Matching is fuzzy (case/punctuation-insensitive, extension
+// stripped) since a tracked attachment's displayed filename and a
+// download's own filename don't always agree on exact formatting — the
+// same reasoning already used for matching a live download against an
+// entry's own tracked attachments in background.js. Deliberately never
+// overwrites an attachment that already has a url (e.g. adopted or
+// captured by an earlier save already) — this is additive-only, never
+// destructive of anything already resolved.
+function normalizeAttachmentNameForMatch(name) {
+  return (name || '').toLowerCase().replace(/\.[a-z0-9]+$/i, '').replace(/[^a-z0-9]/g, '');
+}
+
+async function adoptPendingCaptures(userEmail, conversationUrl, attachments) {
+  if (!attachments || !attachments.length || !conversationUrl) return attachments;
+  let pending;
+  try {
+    pending = await db.query(
+      `SELECT id, filename, type, url FROM pending_attachment_captures WHERE user_email=$1 AND conversation_url=$2`,
+      [userEmail, conversationUrl]
+    );
+  } catch (e) {
+    console.warn('[Diary] Failed to look up pending captures:', e.message);
+    return attachments;
+  }
+  if (!pending.rows.length) return attachments;
+
+  const consumedIds = [];
+  const updated = attachments.map(function(att) {
+    if (att.url) return att;
+    const match = pending.rows.find(function(p) {
+      return p.type === att.type &&
+        normalizeAttachmentNameForMatch(p.filename) === normalizeAttachmentNameForMatch(att.filename) &&
+        consumedIds.indexOf(p.id) === -1;
+    });
+    if (match) {
+      consumedIds.push(match.id);
+      return Object.assign({}, att, { url: match.url, status: 'hosted' });
+    }
+    return att;
+  });
+
+  if (consumedIds.length) {
+    try {
+      await db.query(`DELETE FROM pending_attachment_captures WHERE id = ANY($1::int[])`, [consumedIds]);
+    } catch (e) {
+      console.warn('[Diary] Failed to clear consumed pending captures:', e.message);
+    }
+  }
+  return updated;
+}
+
+// Opportunistic cleanup, run fire-and-forget after every new pending
+// capture is created — no separate cron/scheduled job exists in this
+// codebase, so rather than adding one just for this, expired rows get
+// swept whenever this endpoint is naturally exercised anyway. Also
+// removes each expired row's own R2 object (via its stored r2_key, not
+// its public url — remove() needs the object key), so an unclaimed
+// pending capture doesn't linger in storage indefinitely just because
+// the user never came back to save that conversation.
+const PENDING_CAPTURE_EXPIRY_HOURS = 48;
+
+async function cleanupExpiredPendingCaptures(userEmail) {
+  const expired = await db.query(
+    `SELECT id, r2_key FROM pending_attachment_captures WHERE user_email=$1 AND created_at < NOW() - INTERVAL '${PENDING_CAPTURE_EXPIRY_HOURS} hours'`,
+    [userEmail]
+  );
+  for (const row of expired.rows) {
+    try { await attachmentStorage.remove(row.r2_key); } catch (e) {
+      console.warn('[Diary] Failed to remove expired pending-capture R2 object:', e.message);
+    }
+  }
+  if (expired.rows.length) {
+    await db.query(
+      `DELETE FROM pending_attachment_captures WHERE user_email=$1 AND created_at < NOW() - INTERVAL '${PENDING_CAPTURE_EXPIRY_HOURS} hours'`,
+      [userEmail]
+    );
+  }
+}
+
 // ── Native image hosting (Priority 4) ───────────────────────────────────────
 // Fetches each still-'pending' image's real bytes SERVER-SIDE (not from
 // the extension) and uploads to our own R2-backed storage via
@@ -912,6 +999,17 @@ router.post('/', requireAuth, async (req, res) => {
     // immediately, before any re-hosting has had a chance to run at all.
     const preparedMetadata = metadata ? Object.assign({}, metadata, { images: prepareImagesForSave(metadata.images) }) : metadata;
 
+    // Priority 4 (revised): adopt any pending, pre-save downloads for
+    // THIS exact conversation before the entry is even inserted — see
+    // adoptPendingCaptures' own comment. This is why it runs here,
+    // before the DB insert below, rather than as a follow-up patch
+    // afterward: the freshly-created entry should already reflect any
+    // already-hosted attachment on its very first save, not need a
+    // second write to catch up.
+    if (preparedMetadata && preparedMetadata.attachments && preparedMetadata.attachments.length && preparedMetadata.url) {
+      preparedMetadata.attachments = await adoptPendingCaptures(req.userEmail, preparedMetadata.url, preparedMetadata.attachments);
+    }
+
     // ── Saves are unconditionally unlimited ─────────────────────────────────
     // Confirmed as an explicit product decision: monetization happens via
     // search limits and synthesis credits, not by restricting saves. The
@@ -1125,7 +1223,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
         const alreadyHave = mergedAttachments.some(e => e.filename === att.filename && e.type === att.type);
         if (!alreadyHave) mergedAttachments.push(att);
       });
-      const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: mergedAttachments, images: preparedImages });
+      // Priority 4 (revised): adopt any pending, pre-save downloads for
+      // this conversation now that it's actually being saved — see
+      // adoptPendingCaptures' own comment. conversation url comes from
+      // whichever save actually set it first (existingMeta, since a
+      // PATCH's own newMetaRaw won't always resend it).
+      const conversationUrlForAdoption = newMetaRaw.url || existingMeta.url;
+      const attachmentsAfterAdoption = await adoptPendingCaptures(req.userEmail, conversationUrlForAdoption, mergedAttachments);
+      const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: attachmentsAfterAdoption, images: preparedImages });
       sets.push(`metadata=$${i++}`); params.push(JSON.stringify(newMeta));
     }
 
@@ -1475,6 +1580,74 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
     res.json({ success: true, url: stored.url });
   } catch (e) {
     console.error('[Diary] capture-attachment error:', e.message);
+    const status = /exceeds maximum size/.test(e.message) ? 400 : 500;
+    res.status(status).json({ success: false, error: e.message || 'Capture failed' });
+  }
+});
+
+// ── Priority 4 (revised): capture a download for a conversation that
+// hasn't been saved to Diary yet ────────────────────────────────────────────
+// Called by background.js's download listener specifically for the
+// "no existing entry yet" case (confirmed live as a real, common
+// sequence: download first, decide to save afterward). No entry exists
+// to attach this to, and — per the explicit product decision — nothing
+// gets silently created here either; saving must stay a deliberate,
+// visible choice the user makes themselves. The file is uploaded to R2
+// right away regardless (the signed download URL is often time-
+// limited, so this can't wait on that decision) and held as an
+// unclaimed, temporary record instead. See adoptPendingCaptures for how
+// a later save picks this up automatically, and
+// cleanupExpiredPendingCaptures for what happens if the user never
+// saves at all.
+router.post('/pending-capture', requireAuth, async (req, res) => {
+  try {
+    const { conversation_url, filename, type, data: base64Data, contentType } = req.body;
+    if (!conversation_url || !filename || !type || !base64Data) {
+      return res.status(400).json({ success: false, error: 'conversation_url, filename, type, and data are required' });
+    }
+
+    // Same effective-type resolution as capture-attachment above — see
+    // that route's own comment for why a provider's reported
+    // Content-Type can't be trusted at face value on its own.
+    const normalizedType = (contentType || '').split(';')[0].trim().toLowerCase();
+    const mappedFromType = TYPE_TO_MIME[(type || '').toLowerCase()];
+    const looksTextLike = TEXT_LIKE_EXTENSIONS.test('.' + (type || ''));
+
+    let effectiveType;
+    if (ALLOWED_ATTACHMENT_TYPES.has(normalizedType)) {
+      effectiveType = normalizedType;
+    } else if (mappedFromType && ALLOWED_ATTACHMENT_TYPES.has(mappedFromType)) {
+      effectiveType = mappedFromType;
+    } else if (looksTextLike && (normalizedType === '' || normalizedType === 'application/octet-stream')) {
+      effectiveType = 'text/plain';
+    } else {
+      return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const stored = await attachmentStorage.store({
+      buffer,
+      contentType: effectiveType,
+      userEmail: req.userEmail,
+      filenameHint: filename,
+    });
+
+    await db.query(
+      `INSERT INTO pending_attachment_captures (user_email, conversation_url, filename, type, url, r2_key) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [req.userEmail, conversation_url, filename, type, stored.url, stored.id]
+    );
+
+    console.log(`[Diary] Pending-captured "${filename}" for not-yet-saved conversation`);
+    res.json({ success: true, url: stored.url });
+
+    // Fire-and-forget — no separate cron job exists in this codebase for
+    // this, so expired, never-claimed rows get swept opportunistically
+    // whenever this endpoint is naturally exercised anyway.
+    cleanupExpiredPendingCaptures(req.userEmail).catch(function(e) {
+      console.warn('[Diary] Pending-capture cleanup failed:', e.message);
+    });
+  } catch (e) {
+    console.error('[Diary] pending-capture error:', e.message);
     const status = /exceeds maximum size/.test(e.message) ? 400 : 500;
     res.status(status).json({ success: false, error: e.message || 'Capture failed' });
   }

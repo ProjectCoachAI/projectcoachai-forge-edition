@@ -104,6 +104,28 @@ function extractFilenameFromDownloadUrl(url) {
         return decoded;
       }
     }
+    // Some providers (confirmed live: Claude's own /wiggle/download-file
+    // endpoint) encode the file's full server-side PATH rather than just
+    // its name — e.g. path=/mnt/user-data/outputs/rat_pack_summary.pdf.
+    // This case genuinely matters, not just as a nice-to-have: with no
+    // tracked attachment to fall back on (the "no Diary entry yet" case
+    // below has nothing else to match against at all), failing to
+    // extract a filename here means the whole pending-capture can't
+    // happen — confirmed live as a real, reproduced bug before this was
+    // added. Extract just the final path segment (the actual filename).
+    const pathParam = parsed.searchParams.get('path');
+    if (pathParam) {
+      let decodedPath = pathParam;
+      for (let i = 0; i < 3; i++) {
+        try {
+          const next = decodeURIComponent(decodedPath);
+          if (next === decodedPath) break;
+          decodedPath = next;
+        } catch(e) { break; }
+      }
+      const segments = decodedPath.split('/').filter(Boolean);
+      if (segments.length) return segments[segments.length - 1];
+    }
   } catch(e) {}
   return null;
 }
@@ -145,6 +167,47 @@ function matchDownloadToAttachment(attachments, downloadItem) {
   return null;
 }
 
+// The 8 providers this extension actually supports — sourced directly
+// from manifest.json's own content_scripts matches, the canonical list.
+// Needed here specifically to scope the NEW "no entry yet" pending-
+// capture path below: the existing "entry already exists" path is
+// naturally scoped already (a saved Diary entry's own URL is always one
+// of these 8 providers, since that's all Diary ever saves), but without
+// this explicit check, the pending-capture path would otherwise try to
+// upload EVERY download on the entire browser — a random file from an
+// unrelated shopping site, etc. — which would be a serious scope,
+// privacy, and cost overreach far beyond what this feature is for.
+const AI_PROVIDER_HOSTNAMES = ['claude.ai', 'chatgpt.com', 'gemini.google.com', 'www.perplexity.ai', 'grok.com', 'chat.deepseek.com', 'chat.mistral.ai', 'www.meta.ai'];
+
+function isFromSupportedProvider(referrer) {
+  try {
+    return AI_PROVIDER_HOSTNAMES.indexOf(new URL(referrer).hostname) !== -1;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Shared by both branches of the listener below — fetches a download's
+// real bytes and returns them ready to send to the backend, or null
+// (having already logged why) if anything about that failed. Factored
+// out specifically because the "entry exists" and "no entry yet" paths
+// both need this exact same fetch-and-encode step, just sending the
+// result to a different endpoint afterward.
+async function fetchDownloadBytes(item, label) {
+  const fileResp = await fetch(item.url);
+  if (!fileResp.ok) {
+    console.warn('[Diary BG] Download-capture fetch failed:', fileResp.status, 'for', label);
+    return null;
+  }
+  const blob = await fileResp.blob();
+  if (blob.size > 25 * 1024 * 1024) {
+    console.warn('[Diary BG] Download-capture skipped, file too large:', label);
+    return null;
+  }
+  const buf = await blob.arrayBuffer();
+  return { base64: arrayBufferToBase64(buf), contentType: blob.type || item.mime || 'application/octet-stream' };
+}
+
 chrome.downloads.onCreated.addListener(async function(item) {
   try {
     // TEMPORARY DIAGNOSTIC — every early-exit below was silent, making
@@ -158,6 +221,7 @@ chrome.downloads.onCreated.addListener(async function(item) {
     console.log('[Diary BG] onCreated fired:', JSON.stringify({ referrer: item.referrer, url: item.url, mime: item.mime, filename: item.filename }));
 
     if (!item.referrer || !item.url) { console.log('[Diary BG] Skipped: no referrer or url'); return; }
+    if (!isFromSupportedProvider(item.referrer)) { console.log('[Diary BG] Skipped: download not from a supported AI provider'); return; }
 
     const stored = await chrome.storage.local.get(['diary_token']);
     const token = stored.diary_token;
@@ -169,47 +233,71 @@ chrome.downloads.onCreated.addListener(async function(item) {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const lookupData = await lookupResp.json();
-    if (!lookupData.success || !lookupData.entry) { console.log('[Diary BG] Skipped: conversation not saved to Diary'); return; }
 
-    const entry = lookupData.entry;
-    const attachments = (entry.metadata && entry.metadata.attachments) || [];
-    if (!attachments.length) { console.log('[Diary BG] Skipped: entry has no tracked attachments'); return; }
+    if (lookupData.success && lookupData.entry) {
+      // Existing path: an entry already exists — match this download
+      // against its own tracked, not-yet-hosted attachments.
+      const entry = lookupData.entry;
+      const attachments = (entry.metadata && entry.metadata.attachments) || [];
+      if (!attachments.length) { console.log('[Diary BG] Skipped: entry has no tracked attachments'); return; }
 
-    const matched = matchDownloadToAttachment(attachments, item);
-    if (!matched) { console.log('[Diary BG] Skipped: no matching tracked attachment for this download (or ambiguous)', JSON.stringify(attachments)); return; }
+      const matched = matchDownloadToAttachment(attachments, item);
+      if (!matched) { console.log('[Diary BG] Skipped: no matching tracked attachment for this download (or ambiguous)', JSON.stringify(attachments)); return; }
 
-    // Fetch the real bytes promptly — the URL is very likely signed
-    // and/or time-limited (confirmed live: ChatGPT's carries a `sig=`
-    // parameter), so this happens immediately upon the download event,
-    // not deferred.
-    const fileResp = await fetch(item.url);
-    if (!fileResp.ok) {
-      console.warn('[Diary BG] Download-capture fetch failed:', fileResp.status, 'for', matched.filename);
-      return;
-    }
-    const blob = await fileResp.blob();
-    if (blob.size > 25 * 1024 * 1024) {
-      console.warn('[Diary BG] Download-capture skipped, file too large:', matched.filename);
-      return;
-    }
-    const buf = await blob.arrayBuffer();
-    const base64 = arrayBufferToBase64(buf);
+      // Fetch the real bytes promptly — the URL is very likely signed
+      // and/or time-limited (confirmed live: ChatGPT's carries a `sig=`
+      // parameter), so this happens immediately upon the download
+      // event, not deferred.
+      const fileData = await fetchDownloadBytes(item, matched.filename);
+      if (!fileData) return;
 
-    const captureResp = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({
-        data: base64,
-        contentType: blob.type || item.mime || 'application/octet-stream',
-        filename: matched.filename,
-        type: matched.type
-      })
-    });
-    const captureData = await captureResp.json();
-    if (captureData.success) {
-      console.log('[Diary BG] Captured downloaded attachment:', matched.filename);
+      const captureResp = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ data: fileData.base64, contentType: fileData.contentType, filename: matched.filename, type: matched.type })
+      });
+      const captureData = await captureResp.json();
+      if (captureData.success) {
+        console.log('[Diary BG] Captured downloaded attachment:', matched.filename);
+      } else {
+        console.warn('[Diary BG] Failed to capture downloaded attachment:', matched.filename, '—', captureData.error);
+      }
     } else {
-      console.warn('[Diary BG] Failed to capture downloaded attachment:', matched.filename, '—', captureData.error);
+      // NEW path (Priority 4, revised): no entry exists yet — confirmed
+      // live as a real, common sequence (download first, decide to save
+      // afterward). There's nothing tracked to match against yet, so
+      // filename/type are derived directly from the download itself
+      // instead. Uploaded now regardless (the signed URL won't wait
+      // around for the user to decide whether to save) and held as an
+      // unclaimed "pending capture" — see adoptPendingCaptures on the
+      // backend for how a later save picks this up automatically, and
+      // this file's own comment for why nothing gets silently saved to
+      // Diary here: that must stay the user's own, deliberate choice.
+      const urlFilename = extractFilenameFromDownloadUrl(item.url) || item.filename;
+      if (!urlFilename) { console.log('[Diary BG] Skipped: no entry yet, and no filename could be determined for this download'); return; }
+
+      const mime = (item.mime || '').split(';')[0].trim().toLowerCase();
+      let typeGuess = MIME_TO_ATTACHMENT_TYPE[mime];
+      if (!typeGuess) {
+        const extMatch = urlFilename.match(/\.([a-z0-9]+)$/i);
+        typeGuess = extMatch ? extMatch[1].toLowerCase() : null;
+      }
+      if (!typeGuess) { console.log('[Diary BG] Skipped: no entry yet, and file type could not be determined'); return; }
+
+      const fileData = await fetchDownloadBytes(item, urlFilename);
+      if (!fileData) return;
+
+      const pendingResp = await fetch(API + '/api/diary/pending-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ conversation_url: item.referrer, filename: urlFilename, type: typeGuess, data: fileData.base64, contentType: fileData.contentType })
+      });
+      const pendingData = await pendingResp.json();
+      if (pendingData.success) {
+        console.log('[Diary BG] Pending-captured (no entry yet):', urlFilename);
+      } else {
+        console.warn('[Diary BG] Failed to pending-capture:', urlFilename, '—', pendingData.error);
+      }
     }
   } catch (e) {
     console.warn('[Diary BG] Download-capture error:', e.message);

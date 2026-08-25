@@ -322,6 +322,32 @@ CREATE INDEX IF NOT EXISTS idx_diary_user ON diary_entries(user_email, created_a
 CREATE INDEX IF NOT EXISTS idx_diary_category ON diary_entries(user_email, category);
 CREATE INDEX IF NOT EXISTS idx_diary_source ON diary_entries(user_email, source);
 
+-- Priority 4 (revised): "pending captures" — when a real, user-
+-- initiated download fires for a conversation that hasn't been saved to
+-- Diary YET, there's no existing entry to attach the captured file to.
+-- Rather than silently dropping it (Option A) or silently creating a
+-- Diary entry the user never asked for (Option B/C, explicitly rejected
+-- — saving must stay a deliberate, explicit choice), the file is
+-- uploaded to R2 immediately (the signed download URL is often time-
+-- limited, so this can't wait for the user to decide whether to save)
+-- and held here as a temporary, unclaimed record. If the user saves
+-- that same conversation within the window below, the new entry
+-- automatically adopts this already-hosted file — no second download
+-- needed. If they never save, this row (and its R2 object) is simply
+-- left to expire and get cleaned up; nothing about it was ever visible
+-- anywhere in the product.
+CREATE TABLE IF NOT EXISTS pending_attachment_captures (
+  id               SERIAL PRIMARY KEY,
+  user_email       TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  conversation_url TEXT NOT NULL,
+  filename         TEXT NOT NULL,
+  type             TEXT NOT NULL,
+  url              TEXT NOT NULL,
+  r2_key           TEXT NOT NULL,
+  created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pending_capture_lookup ON pending_attachment_captures(user_email, conversation_url);
+
 CREATE TABLE IF NOT EXISTS forge_library (
   file_id     TEXT PRIMARY KEY,
   user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
