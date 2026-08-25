@@ -1713,6 +1713,17 @@ function closeAttachmentReader() {
   var body = document.getElementById('attachmentReaderBody');
   if (body) body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
   currentReaderAttachment = null;
+  // Reset search state — the body's own innerHTML replacement above
+  // already discards any <mark> elements, but readerSearchMatches would
+  // otherwise still reference those now-detached nodes, and a
+  // previously-open search bar/query shouldn't carry over to whatever
+  // attachment gets opened next.
+  var searchBar = document.getElementById('attachmentSearchBar');
+  if (searchBar) searchBar.style.display = 'none';
+  var searchInput = document.getElementById('attachmentSearchInput');
+  if (searchInput) searchInput.value = '';
+  readerSearchMatches = [];
+  readerSearchIndex = -1;
 }
 window.closeAttachmentReader = closeAttachmentReader;
 
@@ -1728,7 +1739,7 @@ async function openAttachmentReader(url, filename, type) {
   var body = document.getElementById('attachmentReaderBody');
   if (!modal || !titleEl || !body) return;
 
-  currentReaderAttachment = { url: url, filename: filename || 'download' };
+  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase() };
   titleEl.textContent = filename || 'Document';
   body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
   modal.style.display = 'flex';
@@ -1778,6 +1789,184 @@ async function downloadAttachmentFromReader() {
   }
 }
 window.downloadAttachmentFromReader = downloadAttachmentFromReader;
+
+// ── Reader toolbar: search, share, print ────────────────────────────────────
+
+var readerSearchMatches = [];
+var readerSearchIndex = -1;
+
+function toggleAttachmentSearch() {
+  var bar = document.getElementById('attachmentSearchBar');
+  if (!bar) return;
+  var isHidden = bar.style.display === 'none' || !bar.style.display;
+  bar.style.display = isHidden ? 'flex' : 'none';
+  if (isHidden) {
+    document.getElementById('attachmentSearchInput').focus();
+  } else {
+    document.getElementById('attachmentSearchInput').value = '';
+    clearAttachmentSearchHighlights();
+  }
+}
+window.toggleAttachmentSearch = toggleAttachmentSearch;
+
+// Removes existing highlight <mark> wrappers, restoring the original
+// text nodes — always run before a fresh search so re-searching (or
+// searching an empty string) never leaves stale marks behind, and
+// .normalize() merges the restored text back into single text nodes so
+// a following TreeWalker pass sees clean, unfragmented nodes again.
+function clearAttachmentSearchHighlights() {
+  var body = document.getElementById('attachmentReaderBody');
+  if (!body) return;
+  var marks = body.querySelectorAll('mark.reader-search-hit');
+  marks.forEach(function(m) {
+    var parent = m.parentNode;
+    if (!parent) return;
+    parent.replaceChild(document.createTextNode(m.textContent), m);
+    parent.normalize();
+  });
+  readerSearchMatches = [];
+  readerSearchIndex = -1;
+  updateSearchCounter();
+}
+
+function updateSearchCounter() {
+  var counter = document.getElementById('attachmentSearchCounter');
+  var input = document.getElementById('attachmentSearchInput');
+  if (!counter) return;
+  if (!input || !input.value.trim()) { counter.textContent = ''; return; }
+  counter.textContent = readerSearchMatches.length ? (readerSearchIndex + 1) + ' of ' + readerSearchMatches.length : '0 of 0';
+}
+
+// One search implementation for both reader modes (the PDF text layer's
+// invisible spans, and the plain-text <pre> block) — both are just
+// regular DOM text nodes, so a single TreeWalker pass over
+// #attachmentReaderBody handles either without needing to know which
+// mode is currently showing. Highlights get a visible background even
+// over the PDF's color:transparent text layer, since a <mark>'s own
+// background isn't affected by an ancestor's text color — the yellow
+// box appears at the exact position of the match, sitting over the
+// real, visible text already painted onto the canvas underneath.
+function runAttachmentSearch() {
+  clearAttachmentSearchHighlights();
+  var query = document.getElementById('attachmentSearchInput').value.trim();
+  if (!query) return;
+  var body = document.getElementById('attachmentReaderBody');
+  if (!body) return;
+
+  var walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null);
+  var textNodes = [];
+  var node;
+  while ((node = walker.nextNode())) {
+    if (node.nodeValue && node.nodeValue.trim()) textNodes.push(node);
+  }
+
+  var lowerQuery = query.toLowerCase();
+  textNodes.forEach(function(textNode) {
+    var text = textNode.nodeValue;
+    var lowerText = text.toLowerCase();
+    if (lowerText.indexOf(lowerQuery) === -1) return;
+
+    var frag = document.createDocumentFragment();
+    var lastEnd = 0;
+    var idx = lowerText.indexOf(lowerQuery);
+    while (idx !== -1) {
+      frag.appendChild(document.createTextNode(text.slice(lastEnd, idx)));
+      var mark = document.createElement('mark');
+      mark.className = 'reader-search-hit';
+      mark.style.background = '#FFE58A';
+      mark.style.borderRadius = '2px';
+      mark.textContent = text.slice(idx, idx + query.length);
+      frag.appendChild(mark);
+      lastEnd = idx + query.length;
+      idx = lowerText.indexOf(lowerQuery, lastEnd);
+    }
+    frag.appendChild(document.createTextNode(text.slice(lastEnd)));
+    textNode.parentNode.replaceChild(frag, textNode);
+  });
+
+  readerSearchMatches = Array.prototype.slice.call(body.querySelectorAll('mark.reader-search-hit'));
+  readerSearchIndex = readerSearchMatches.length ? 0 : -1;
+  updateSearchCounter();
+  focusCurrentSearchMatch();
+}
+window.runAttachmentSearch = runAttachmentSearch;
+
+function focusCurrentSearchMatch() {
+  readerSearchMatches.forEach(function(m, i) {
+    m.style.background = i === readerSearchIndex ? '#FFA500' : '#FFE58A';
+  });
+  if (readerSearchIndex >= 0 && readerSearchMatches[readerSearchIndex]) {
+    readerSearchMatches[readerSearchIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+function nextSearchMatch() {
+  if (!readerSearchMatches.length) return;
+  readerSearchIndex = (readerSearchIndex + 1) % readerSearchMatches.length;
+  updateSearchCounter();
+  focusCurrentSearchMatch();
+}
+window.nextSearchMatch = nextSearchMatch;
+
+function prevSearchMatch() {
+  if (!readerSearchMatches.length) return;
+  readerSearchIndex = (readerSearchIndex - 1 + readerSearchMatches.length) % readerSearchMatches.length;
+  updateSearchCounter();
+  focusCurrentSearchMatch();
+}
+window.prevSearchMatch = prevSearchMatch;
+
+// Uses the native OS share sheet where available (works well on mobile
+// and several desktop browsers) — falls back to copying the link, since
+// there's no universal, reliable share UI otherwise. Deliberately a
+// separate, simpler function rather than reusing the existing
+// shareEntry()/shareVia() modal, which is built specifically around
+// sharing an entry's own TEXT content (WhatsApp/email message bodies, a
+// generated .doc) — none of those channels fit "share a link to this
+// PDF" correctly.
+async function shareAttachmentFromReader() {
+  if (!currentReaderAttachment) return;
+  var shareData = { title: currentReaderAttachment.filename, url: currentReaderAttachment.url };
+  if (navigator.share) {
+    try { await navigator.share(shareData); } catch (e) { /* user cancelled — not an error */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(currentReaderAttachment.url);
+    if (window.Forge && Forge.showToast) Forge.showToast('Link copied to clipboard', 'success');
+  } catch (e) {
+    console.warn('[Diary] Failed to copy attachment link:', e.message);
+  }
+}
+window.shareAttachmentFromReader = shareAttachmentFromReader;
+
+// For PDFs: opens the raw file directly rather than trying to print our
+// own canvas-rendered pages — Chrome's own, built-in PDF viewer already
+// has a fully reliable print flow, and replicating that ourselves would
+// be more fragile and lower quality for no real benefit. For text/code:
+// reuses the exact "new window, formatted content, print()" pattern
+// already used elsewhere in this app (see shareVia's own 'print'
+// channel) rather than inventing a second, different one.
+async function printAttachmentFromReader() {
+  if (!currentReaderAttachment) return;
+  if (currentReaderAttachment.type === 'pdf') {
+    window.open(currentReaderAttachment.url, '_blank');
+    return;
+  }
+  try {
+    var resp = await fetch(currentReaderAttachment.url);
+    if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
+    var text = await resp.text();
+    var w = window.open('', '_blank');
+    w.document.write('<html><head><title>' + escHtml(currentReaderAttachment.filename) + '</title><style>body{font-family:ui-monospace,Menlo,Consolas,monospace;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6;white-space:pre-wrap;word-break:break-word;}</style></head><body>' + escHtml(text) + '</body></html>');
+    w.document.close();
+    w.print();
+  } catch (e) {
+    console.warn('[Diary] Print failed:', e.message);
+    window.open(currentReaderAttachment.url, '_blank');
+  }
+}
+window.printAttachmentFromReader = printAttachmentFromReader;
 
 async function renderTextIntoReader(url, body) {
   var resp = await fetch(url);
@@ -2566,9 +2755,25 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;">
       <div id="attachmentReaderTitle" style="font-size:14px;font-weight:600;color:#1B2A4A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;font-family:Inter,sans-serif;"></div>
       <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+        <button onclick="toggleAttachmentSearch()" aria-label="Search" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Search in document">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <button onclick="printAttachmentFromReader()" aria-label="Print" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Print">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </button>
+        <button onclick="shareAttachmentFromReader()" aria-label="Share" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Share">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
         <button id="attachmentReaderDownload" onclick="downloadAttachmentFromReader()" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;">&#8681; Download</button>
         <button onclick="closeAttachmentReader()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
       </div>
+    </div>
+    <div id="attachmentSearchBar" style="display:none;align-items:center;gap:10px;padding:10px 20px;border-bottom:0.5px solid #D6D2C8;background:#fdfdfb;flex-shrink:0;">
+      <input id="attachmentSearchInput" type="text" placeholder="Search in document..." oninput="runAttachmentSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){prevSearchMatch()}else{nextSearchMatch()}}else if(event.key==='Escape'){toggleAttachmentSearch()}" style="flex:1;font-size:13px;padding:6px 10px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>
+      <span id="attachmentSearchCounter" style="font-size:12px;color:#9E9890;white-space:nowrap;min-width:52px;text-align:center;font-family:Inter,sans-serif;"></span>
+      <button onclick="prevSearchMatch()" aria-label="Previous match" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:16px;">&#8593;</button>
+      <button onclick="nextSearchMatch()" aria-label="Next match" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:16px;">&#8595;</button>
+      <button onclick="toggleAttachmentSearch()" aria-label="Close search" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:16px;">&times;</button>
     </div>
     <div id="attachmentReaderBody" style="flex:1;overflow:auto;padding:24px;">
       <div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>
