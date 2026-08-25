@@ -270,9 +270,26 @@
   <!-- End PostHog -->
   <!-- pdf.js — same rendering engine behind Chrome's own built-in PDF
        viewer, per the Priority 4 spec's explicit choice. Loaded from
-       cdnjs (the pre-approved CDN for this codebase) rather than
-       bundled, since this is a plain, unbundled HTML app. -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+       cdnjs (the pre-approved CDN for this codebase).
+       NOTE: confirmed live and directly verified against cdnjs's own,
+       current file listing — modern pdf.js (this version included) ships
+       ONLY as ES modules (.mjs); there is no plain .js/UMD build that
+       defines a global window.pdfjsLib anymore. An earlier version of
+       this used a plain <script src="...pdf.min.js"> tag pointing at a
+       file that doesn't exist at all in this distribution, which is
+       exactly why pdfjsLib was always undefined. Must use
+       type="module" + a real import, then explicitly bridge it onto
+       `window` so the rest of this plain, non-module app (everything
+       else in this file) can still call it the same way as any other
+       global. The worker path is configured HERE, inside the module,
+       not in the main script block below — module scripts are deferred
+       until after the document parses, so setting it in the main,
+       synchronous script block would run before this import completes. -->
+  <script type="module">
+    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108/pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108/pdf.worker.min.mjs';
+    window.pdfjsLib = pdfjsLib;
+  </script>
 </head>
 <body>
 
@@ -515,13 +532,12 @@
 
 
 
-// pdf.js worker configuration — required for pdf.js to actually parse
-// PDFs (parsing runs in a separate Web Worker for performance); must
-// point at the SAME version as the main pdf.min.js loaded in <head>,
-// or pdf.js fails silently/throws on the first real document.
-if (typeof pdfjsLib !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
-}
+// NOTE: pdf.js worker configuration lives in the <script type="module">
+// block in <head> now, not here — see that block's own comment for why
+// (module scripts are deferred until after the document parses; this
+// plain script block runs immediately, before that import would have
+// completed, so `pdfjsLib` would never actually be defined yet at this
+// point regardless of the `typeof` guard below).
 
 var allEntries = [];
 var filteredEntries = [];
