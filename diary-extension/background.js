@@ -224,9 +224,24 @@ async function tryClientSideFetch(url) {
 //   world relay, for the real bytes of a blob it already created and
 //   cached itself — see diary-interceptor.js's own createObjectURL hook
 //   for the full reasoning on why this is observation, not simulation.
+// - data: URIs (confirmed live: Mistral's own download mechanism)
+//   already contain the file's real bytes directly, inline, in the URL
+//   itself — the simplest case of all, needing neither a fetch nor any
+//   cross-context relay.
 // - https:// URLs use the existing hybrid client/then-server-side
 //   approach (see tryClientSideFetch's own comment for why both exist).
 async function resolveDownloadFileData(item) {
+  if (item.url.indexOf('data:') === 0) {
+    const match = item.url.match(/^data:([^;,]+)(;base64)?,([\s\S]*)$/);
+    if (!match) return null;
+    const mimeType = match[1] || '';
+    const isBase64 = !!match[2];
+    const rawData = match[3];
+    if (isBase64) return { data: rawData, contentType: mimeType };
+    try {
+      return { data: btoa(decodeURIComponent(rawData)), contentType: mimeType };
+    } catch (e) { return null; }
+  }
   if (item.url.indexOf('blob:') === 0) {
     let origin;
     try { origin = new URL(item.url).origin; } catch (e) { return null; }

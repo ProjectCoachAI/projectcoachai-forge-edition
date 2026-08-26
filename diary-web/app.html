@@ -1111,8 +1111,20 @@ function renderEntryCard(e) {
       '<span class="entry-chevron">&#9660;</span>' +
     '</div>' +
     '<div class="entry-body">' +
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">' +
+        '<button onclick="event.stopPropagation();toggleEntrySearch(' + e.id + ')" title="Search in this entry" style="background:none;border:none;color:#9E9890;cursor:pointer;padding:2px 4px;display:flex;align-items:center;">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+        '</button>' +
+      '</div>' +
+      '<div id="entry-search-bar-' + e.id + '" style="display:none;align-items:center;gap:8px;padding:6px 8px;margin-bottom:10px;background:#F5F3EE;border-radius:6px;">' +
+        '<input id="entry-search-input-' + e.id + '" type="text" placeholder="Search in this entry..." oninput="runEntrySearch(' + e.id + ')" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();if(event.key===\'Enter\'){event.preventDefault();if(event.shiftKey){prevEntrySearchMatch(' + e.id + ')}else{nextEntrySearchMatch(' + e.id + ')}}else if(event.key===\'Escape\'){toggleEntrySearch(' + e.id + ')}" style="flex:1;font-size:12px;padding:5px 8px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>' +
+        '<span id="entry-search-counter-' + e.id + '" style="font-size:11px;color:#9E9890;white-space:nowrap;min-width:48px;text-align:center;"></span>' +
+        '<button onclick="event.stopPropagation();prevEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;font-size:14px;">&#8593;</button>' +
+        '<button onclick="event.stopPropagation();nextEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;font-size:14px;">&#8595;</button>' +
+        '<button onclick="event.stopPropagation();toggleEntrySearch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;font-size:14px;">&times;</button>' +
+      '</div>' +
 
-      '<div class="entry-content md">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
+      '<div class="entry-content md" id="entry-content-' + e.id + '">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
         // existing entry saved before native hosting existed) or a
@@ -1272,6 +1284,132 @@ function toggleEntry(id) {
   }
 }
 window.toggleEntry = toggleEntry;
+
+// ── Per-entry search — independent from the attachment reader's own
+// search (a single, shared modal), since multiple entries can be
+// expanded and searched simultaneously here. State is keyed by entry
+// id in a Map rather than reusing the reader's global variables, so
+// one entry's search never interferes with another's.
+var entrySearchState = new Map();
+
+function toggleEntrySearch(id) {
+  var bar = document.getElementById('entry-search-bar-' + id);
+  if (!bar) return;
+  var isHidden = bar.style.display === 'none' || !bar.style.display;
+  bar.style.display = isHidden ? 'flex' : 'none';
+  var input = document.getElementById('entry-search-input-' + id);
+  if (isHidden) {
+    if (input) input.focus();
+  } else {
+    if (input) input.value = '';
+    clearEntrySearchHighlights(id);
+  }
+}
+window.toggleEntrySearch = toggleEntrySearch;
+
+function clearEntrySearchHighlights(id) {
+  var content = document.getElementById('entry-content-' + id);
+  if (content) {
+    var marks = content.querySelectorAll('mark.entry-search-hit');
+    marks.forEach(function(m) {
+      var parent = m.parentNode;
+      if (!parent) return;
+      parent.replaceChild(document.createTextNode(m.textContent), m);
+      parent.normalize();
+    });
+  }
+  entrySearchState.delete(id);
+  updateEntrySearchCounter(id);
+}
+
+function updateEntrySearchCounter(id) {
+  var counter = document.getElementById('entry-search-counter-' + id);
+  var input = document.getElementById('entry-search-input-' + id);
+  if (!counter) return;
+  if (!input || !input.value.trim()) { counter.textContent = ''; return; }
+  var state = entrySearchState.get(id);
+  var matches = state ? state.matches : [];
+  counter.textContent = matches.length ? (state.index + 1) + ' of ' + matches.length : '0 of 0';
+}
+
+// Same TreeWalker-based approach as the attachment reader's own search
+// (see openAttachmentReader's sibling functions), scoped to one
+// specific entry's own #entry-content-ID container instead of the
+// reader's single, shared body.
+function runEntrySearch(id) {
+  clearEntrySearchHighlights(id);
+  var input = document.getElementById('entry-search-input-' + id);
+  var query = input ? input.value.trim() : '';
+  if (!query) return;
+  var content = document.getElementById('entry-content-' + id);
+  if (!content) return;
+
+  var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null);
+  var textNodes = [];
+  var node;
+  while ((node = walker.nextNode())) {
+    if (node.nodeValue && node.nodeValue.trim()) textNodes.push(node);
+  }
+
+  var lowerQuery = query.toLowerCase();
+  textNodes.forEach(function(textNode) {
+    var text = textNode.nodeValue;
+    var lowerText = text.toLowerCase();
+    if (lowerText.indexOf(lowerQuery) === -1) return;
+
+    var frag = document.createDocumentFragment();
+    var lastEnd = 0;
+    var idx = lowerText.indexOf(lowerQuery);
+    while (idx !== -1) {
+      frag.appendChild(document.createTextNode(text.slice(lastEnd, idx)));
+      var mark = document.createElement('mark');
+      mark.className = 'entry-search-hit';
+      mark.style.background = '#FFE58A';
+      mark.style.borderRadius = '2px';
+      mark.textContent = text.slice(idx, idx + query.length);
+      frag.appendChild(mark);
+      lastEnd = idx + query.length;
+      idx = lowerText.indexOf(lowerQuery, lastEnd);
+    }
+    frag.appendChild(document.createTextNode(text.slice(lastEnd)));
+    textNode.parentNode.replaceChild(frag, textNode);
+  });
+
+  var matches = Array.prototype.slice.call(content.querySelectorAll('mark.entry-search-hit'));
+  entrySearchState.set(id, { matches: matches, index: matches.length ? 0 : -1 });
+  updateEntrySearchCounter(id);
+  focusCurrentEntrySearchMatch(id);
+}
+window.runEntrySearch = runEntrySearch;
+
+function focusCurrentEntrySearchMatch(id) {
+  var state = entrySearchState.get(id);
+  if (!state) return;
+  state.matches.forEach(function(m, i) {
+    m.style.background = i === state.index ? '#FFA500' : '#FFE58A';
+  });
+  if (state.index >= 0 && state.matches[state.index]) {
+    state.matches[state.index].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+function nextEntrySearchMatch(id) {
+  var state = entrySearchState.get(id);
+  if (!state || !state.matches.length) return;
+  state.index = (state.index + 1) % state.matches.length;
+  updateEntrySearchCounter(id);
+  focusCurrentEntrySearchMatch(id);
+}
+window.nextEntrySearchMatch = nextEntrySearchMatch;
+
+function prevEntrySearchMatch(id) {
+  var state = entrySearchState.get(id);
+  if (!state || !state.matches.length) return;
+  state.index = (state.index - 1 + state.matches.length) % state.matches.length;
+  updateEntrySearchCounter(id);
+  focusCurrentEntrySearchMatch(id);
+}
+window.prevEntrySearchMatch = prevEntrySearchMatch;
 
 async function saveNote(id) {
   var el = document.getElementById('note-' + id);
@@ -2559,6 +2697,35 @@ async function continueOnProvider(btn) {
 window.continueOnProvider = continueOnProvider;
 
 function renderWithBubbles(text) {
+  // Priority: collapsible Sources footer — split off BEFORE any of the
+  // bubble-marker logic below runs at all, since diary-extension's own
+  // stripCitations() always appends this at the very end of the
+  // ENTIRE, raw text, in one fixed, predictable shape:
+  // "\n\n---\n\n**Sources:**\n1. [label](url)\n2. ...". Splitting it
+  // off first means the rest of this function's existing logic
+  // (bubble-splitting, etc.) only ever operates on the remaining,
+  // shorter text — this collapsible version is rendered separately and
+  // appended once, at the very end, regardless of how many bubble
+  // segments the main text itself split into. Collapsed by default —
+  // a long source list otherwise dominates an entry's visible space
+  // for something most people only want to check occasionally.
+  var sourcesHtml = '';
+  var sourcesMatch = text.match(/\n\n---\n\n\*\*Sources:\*\*\n([\s\S]*)$/);
+  if (sourcesMatch) {
+    text = text.slice(0, sourcesMatch.index);
+    var sourceLines = sourcesMatch[1].split('\n').filter(function(l) { return l.trim(); });
+    var sourcesBody = Forge.renderMarkdown(sourcesMatch[1]).replace(/<p>\s*<\/p>/g, '');
+    var sid = 'src-' + Math.random().toString(36).slice(2, 10);
+    sourcesHtml = '<div class="sources-collapsible" style="margin-top:14px;">' +
+      '<button onclick="event.stopPropagation();var b=document.getElementById(\'' + sid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.sources-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
+        'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:12px;color:#6B655C;font-family:Inter,sans-serif;">' +
+        '<span class="sources-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);">&#9656;</span>' +
+        'Sources (' + sourceLines.length + ')' +
+      '</button>' +
+      '<div id="' + sid + '" style="display:none;padding-left:18px;font-size:13px;color:#6B655C;">' + sourcesBody + '</div>' +
+    '</div>';
+  }
+
   // NOTE: rebuilt again — extended from title-only to EVERY question
   // getting the bubble treatment, per explicit product decision:
   // subsequent questions in a multi-turn conversation were otherwise
@@ -2588,10 +2755,10 @@ function renderWithBubbles(text) {
     html += '<div class="user-bubble">' + escHtml(m[1]) + '</div>';
     lastIndex = markerRe.lastIndex;
   }
-  if (!found) return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '');
+  if (!found) return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '') + sourcesHtml;
   var rest = text.slice(lastIndex).replace(/^\n+/, '');
   if (rest) html += Forge.renderMarkdown(rest).replace(/<p>\s*<\/p>/g, '');
-  return html;
+  return html + sourcesHtml;
 }
 
 function panelOpenOriginal() {
