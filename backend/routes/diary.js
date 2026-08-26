@@ -1368,6 +1368,27 @@ router.get('/diag-r2-test', requireAuth, async (req, res) => {
   }
 });
 
+// ── TEMPORARY — one-time cache invalidation after the Sonnet/prompt
+// upgrade — remove after use. Scoped to the logged-in user's own
+// entries only, never a global wipe. Clears summary_data so the next
+// view of each entry regenerates under the new model/prompt, rather
+// than continuing to show an already-cached Haiku-era summary
+// indefinitely (the cache is keyed to content, not model or prompt
+// version, so a model upgrade alone doesn't invalidate anything on its
+// own).
+router.post('/diag-invalidate-summaries', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      'UPDATE diary_entries SET summary_data = NULL WHERE user_email=$1 AND summary_data IS NOT NULL',
+      [req.userEmail]
+    );
+    res.json({ success: true, invalidated: result.rowCount });
+  } catch (e) {
+    console.error('[Diary DIAG] invalidate-summaries failed:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── GET /api/diary/:id — fetch single entry ──────────────────────────────────
 router.get('/:id', requireAuth, async (req, res) => {
   try {
@@ -1482,7 +1503,7 @@ router.post('/:id/record-open', requireAuth, async (req, res) => {
 // never attachment contents (PDF/DOCX/code), even ones captured via
 // the download-interception mechanism — a distinct, later feature if
 // ever wanted, not folded into this one.
-const SUMMARY_SYSTEM_PROMPT = 'You are helping someone quickly re-orient into a conversation they already had and are returning to. This is NOT a summary for someone seeing this for the first time — it is a fast way back into flow for someone who already knows the context.\n\nRespond with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:\n{"whatItWasAbout": "one line, for quick re-identification when scanning a list of entries", "whereItLanded": ["2-3 short, structured bullets - the actual conclusion or answer reached, not compressed prose"], "whereYouLeftOff": "the last open question, or the natural next step"}';
+const SUMMARY_SYSTEM_PROMPT = 'You are helping someone quickly re-orient into a conversation they already had and are returning to. This is NOT a summary for someone seeing this for the first time — it is a fast way back into flow for someone who already knows the context.\n\nBe concrete, not generic. Use the actual names, numbers, dates, tools, and decisions that appear in the conversation. A bullet like "discussed budget options" is too vague to be useful to someone re-orienting — "chose HubSpot over Salesforce; budget capped at $40k for Q2" is the standard to aim for. If the conversation itself never gets specific about something, do not invent specifics — just say less about that part rather than filling the gap with a vague phrase.\n\nRespond with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:\n{"whatItWasAbout": "one line, for quick re-identification when scanning a list of entries", "whereItLanded": ["2-3 short, structured bullets - the actual conclusion or answer reached, not compressed prose"], "whereYouLeftOff": "the last open question, or the natural next step"}';
 
 function truncateForSummary(content, maxLen) {
   if (content.length <= maxLen) return content;
@@ -1517,7 +1538,15 @@ async function generateStructuredSummary(content) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
+          // NOTE: upgraded from claude-haiku-4-5-20251001, which was
+          // copied from synthesize.js's own constant purely for
+          // convenience, without separately reconsidering fit for
+          // THIS task. Confirmed live: the output felt too generic.
+          // Summary is already naturally low-volume (favorited/
+          // revisited entries only, generated once, then cached), so
+          // there was never a real cost reason to have defaulted to
+          // the cheapest tier here.
+          model: 'claude-sonnet-5',
           max_tokens: 500,
           temperature: 0.3,
           system: SUMMARY_SYSTEM_PROMPT,
