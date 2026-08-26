@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const crypto  = require('crypto');
 const router  = express.Router();
 const https   = require('https');
 const { requireAuth } = require('../middleware/auth');
@@ -399,6 +400,19 @@ async function ensureRatingColumn() {
   try {
     await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS conversation_count INTEGER DEFAULT 0`);
     await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS search_text TEXT`);
+    // Summary feature: genuine "times opened" tracking, since
+    // conversation_count (above) turned out to never actually be
+    // written to anywhere despite its name — confirmed live before
+    // building on it. open_count increments at most once per calendar
+    // day per entry (see the record-open route's own comment for why),
+    // so it reflects genuine, separate-day revisits rather than
+    // however many times someone happened to click the same entry in
+    // one sitting. summary_data caches the on-demand-generated,
+    // three-part structured summary once produced, so repeat views of
+    // the Summary tab are instant rather than re-generating every time.
+    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS open_count INTEGER DEFAULT 0`);
+    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS last_opened_date DATE`);
+    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS summary_data JSONB`);
     await db.query(`CREATE TABLE IF NOT EXISTS diary_pending_prompts (
       user_email TEXT PRIMARY KEY,
       prompt TEXT NOT NULL,
@@ -548,7 +562,7 @@ router.get('/', requireAuth, async (req, res) => {
     // recently-updated ones now correctly float to the top, without
     // touching the displayed original date anywhere.
     const sql = `SELECT id, source, title, prompt, content, document_text,
-                        conversation, decision_note, category, tags, metadata, rating, is_favorite, conversation_count, created_at, updated_at
+                        conversation, decision_note, category, tags, metadata, rating, is_favorite, conversation_count, open_count, created_at, updated_at
                  FROM diary_entries${whereSql}
                  ORDER BY COALESCE(updated_at, created_at) DESC
                  LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
@@ -1425,6 +1439,164 @@ router.delete('/:id/attachment', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('[Diary] delete-attachment error:', e.message);
     res.status(500).json({ success: false, error: e.message || 'Failed to remove attachment' });
+  }
+});
+
+// ── POST /api/diary/:id/record-open — genuine "times opened" tracking ──────
+// Confirmed live before building on it: conversation_count, despite its
+// name, is never actually written to anywhere in this file — it can't
+// be trusted as a "times opened" signal at all. This is the real thing,
+// purpose-built for the Summary feature's own trigger (favorited OR
+// revisited). Increments at most once per calendar day per entry — a
+// single, atomic, conditional UPDATE (not read-then-write) using
+// Postgres's own CURRENT_DATE, so this is safe against races and
+// reflects genuine, separate-day revisits rather than however many
+// times someone happened to click the same entry in one sitting.
+router.post('/:id/record-open', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query(
+      `UPDATE diary_entries
+       SET open_count = open_count + 1, last_opened_date = CURRENT_DATE
+       WHERE id=$1 AND user_email=$2 AND (last_opened_date IS NULL OR last_opened_date < CURRENT_DATE)`,
+      [id, req.userEmail]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[Diary] record-open error:', e.message);
+    res.status(500).json({ success: false });
+  }
+});
+
+// ── Summary: on-demand, three-part structured recap ─────────────────────────
+// Deliberately a SEPARATE, dedicated pipeline from Forge's own
+// Synthesis engine (backend/routes/synthesize.js) — confirmed by direct
+// investigation that engine is built for a fundamentally different
+// task (combining MULTIPLE providers' answers to the SAME prompt into
+// one output, with its own, separate usage-limit/billing
+// infrastructure Diary summaries shouldn't be coupled to). This is not
+// a general-purpose summarizer for someone seeing the thread for the
+// first time — it's a fast re-orientation aid for someone who already
+// has, so it always returns exactly three fixed parts, never
+// free-form prose. Operates ONLY on the entry's own captured text,
+// never attachment contents (PDF/DOCX/code), even ones captured via
+// the download-interception mechanism — a distinct, later feature if
+// ever wanted, not folded into this one.
+const SUMMARY_SYSTEM_PROMPT = 'You are helping someone quickly re-orient into a conversation they already had and are returning to. This is NOT a summary for someone seeing this for the first time — it is a fast way back into flow for someone who already knows the context.\n\nRespond with ONLY a JSON object, no other text, no markdown fences, in exactly this shape:\n{"whatItWasAbout": "one line, for quick re-identification when scanning a list of entries", "whereItLanded": ["2-3 short, structured bullets - the actual conclusion or answer reached, not compressed prose"], "whereYouLeftOff": "the last open question, or the natural next step"}';
+
+function truncateForSummary(content, maxLen) {
+  if (content.length <= maxLen) return content;
+  const headLen = Math.floor(maxLen * 0.6);
+  const tailLen = maxLen - headLen;
+  return content.slice(0, headLen) + '\n\n...[middle portion omitted for length]...\n\n' + content.slice(-tailLen);
+}
+
+function parseSummaryJson(text) {
+  try {
+    const cleaned = text.trim().replace(/^```json\s*|^```\s*|```$/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    if (!parsed.whatItWasAbout || !Array.isArray(parsed.whereItLanded) || !parsed.whereYouLeftOff) return null;
+    return parsed;
+  } catch (e) { return null; }
+}
+
+async function generateStructuredSummary(content) {
+  // 50,000 chars is an extremely generous safety net — a typical
+  // Diary entry's conversation text is nowhere close to this; this
+  // only ever engages for a genuine outlier, and even then keeps both
+  // ends (see truncateForSummary's own reasoning: the "where you left
+  // off" part is likely near the END of the conversation, so a naive
+  // head-only truncation would cut off exactly the part that matters
+  // most for that field).
+  const userMessage = 'Conversation:\n\n' + truncateForSummary(content, 50000);
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+  if (anthropicKey) {
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 500,
+          temperature: 0.3,
+          system: SUMMARY_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userMessage }]
+        })
+      });
+      const data = await resp.json();
+      const text = data.content && data.content[0] && data.content[0].text;
+      if (text) {
+        const parsed = parseSummaryJson(text);
+        if (parsed) return Object.assign({ model: 'claude' }, parsed);
+      }
+      console.warn('[Diary] Claude summary response could not be parsed, falling back');
+    } catch (e) {
+      console.warn('[Diary] Claude summary attempt failed, falling back:', e.message);
+    }
+  }
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    try {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + openaiKey },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [{ role: 'system', content: SUMMARY_SYSTEM_PROMPT }, { role: 'user', content: userMessage }],
+          max_tokens: 500,
+          temperature: 0.3
+        })
+      });
+      const data = await resp.json();
+      const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (text) {
+        const parsed = parseSummaryJson(text);
+        if (parsed) return Object.assign({ model: 'chatgpt' }, parsed);
+      }
+      console.warn('[Diary] ChatGPT summary fallback response could not be parsed either');
+    } catch (e) {
+      console.warn('[Diary] ChatGPT summary fallback also failed:', e.message);
+    }
+  }
+
+  throw new Error('Both Claude and ChatGPT summary attempts failed');
+}
+
+router.post('/:id/summary', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await db.query(
+      'SELECT content, summary_data FROM diary_entries WHERE id=$1 AND user_email=$2',
+      [id, req.userEmail]
+    );
+    if (!existing.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
+
+    const { content, summary_data } = existing.rows[0];
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, error: 'Nothing to summarize' });
+    }
+
+    // Cached, keyed to a hash of the exact content it was generated
+    // from — a genuine content change (re-saving with new turns)
+    // correctly invalidates this, while an unrelated, metadata-only
+    // re-save (e.g. adopting a pending capture, which never touches
+    // content at all) does not force a wasteful re-generation.
+    const contentHash = crypto.createHash('sha256').update(content).digest('hex');
+    if (summary_data && summary_data.contentHash === contentHash) {
+      return res.json({ success: true, summary: summary_data, cached: true });
+    }
+
+    const summary = await generateStructuredSummary(content);
+    const summaryData = Object.assign({ contentHash: contentHash, generatedAt: new Date().toISOString() }, summary);
+
+    await db.query('UPDATE diary_entries SET summary_data=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(summaryData), id, req.userEmail]);
+
+    res.json({ success: true, summary: summaryData, cached: false });
+  } catch (e) {
+    console.error('[Diary] summary error:', e.message);
+    res.status(502).json({ success: false, error: 'Summary temporarily unavailable' });
   }
 });
 

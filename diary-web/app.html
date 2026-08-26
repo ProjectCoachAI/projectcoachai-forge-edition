@@ -1124,7 +1124,24 @@ function renderEntryCard(e) {
         '<button onclick="event.stopPropagation();toggleEntrySearch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;font-size:14px;">&times;</button>' +
       '</div>' +
 
+      // Summary feature: "Read: Full/Summary" toggle — a view within
+      // Read, not a new top-level mode, per the spec's own framing.
+      // Only surfaced on entries that are favorited or have been
+      // genuinely revisited (open_count, incremented at most once per
+      // calendar day — see the record-open route's own comment) —
+      // favoriting/revisiting is a direct signal of "I'll come back to
+      // this," which is what this feature exists to make faster, not a
+      // general-purpose summarizer for every entry regardless of
+      // whether anyone will ever return to it.
+      (((e.is_favorite) || (e.open_count || 0) > 1) ?
+        '<div style="display:flex;gap:6px;margin-bottom:10px;" onclick="event.stopPropagation();">' +
+          '<button id="read-full-btn-' + e.id + '" onclick="setEntryReadMode(' + e.id + ',\'full\')" style="font-size:11px;padding:4px 10px;border-radius:5px;border:0.5px solid #D6D2C8;background:#3D3830;color:#F5F3EE;cursor:pointer;font-family:Inter,sans-serif;">Full</button>' +
+          '<button id="read-summary-btn-' + e.id + '" onclick="setEntryReadMode(' + e.id + ',\'summary\')" style="font-size:11px;padding:4px 10px;border-radius:5px;border:0.5px solid #D6D2C8;background:none;color:#6B6559;cursor:pointer;font-family:Inter,sans-serif;">Summary</button>' +
+        '</div>'
+      : '') +
+
       '<div class="entry-content md" id="entry-content-' + e.id + '">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
+      '<div id="entry-summary-' + e.id + '" style="display:none;"></div>' +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
         // existing entry saved before native hosting existed) or a
@@ -1243,11 +1260,70 @@ var entryScrollPositions = {};
 // so this adds a little extra breathing room past the bar's own height.
 var STICKY_HEADER_OFFSET = 78;
 
+// Summary feature: switches the "Read: Full/Summary" view for one
+// entry. Generates on-demand, on first switch into Summary — per
+// explicit decision, since the trigger (favorited/revisited only)
+// already bounds volume, an "always generate on save" cost wasn't
+// worth paying for summaries that might never be viewed. Cached in the
+// DOM (data-loaded) so switching back and forth within the same page
+// load never re-fetches; the backend itself separately caches too
+// (keyed to the entry's own content), so even a fresh page load's
+// first click is usually near-instant rather than a genuine
+// regeneration.
+async function setEntryReadMode(id, mode) {
+  var fullBtn = document.getElementById('read-full-btn-' + id);
+  var summaryBtn = document.getElementById('read-summary-btn-' + id);
+  var fullDiv = document.getElementById('entry-content-' + id);
+  var summaryDiv = document.getElementById('entry-summary-' + id);
+  if (!fullBtn || !summaryBtn || !fullDiv || !summaryDiv) return;
+
+  if (mode === 'full') {
+    fullBtn.style.background = '#3D3830'; fullBtn.style.color = '#F5F3EE';
+    summaryBtn.style.background = 'none'; summaryBtn.style.color = '#6B6559';
+    fullDiv.style.display = ''; summaryDiv.style.display = 'none';
+    return;
+  }
+
+  fullBtn.style.background = 'none'; fullBtn.style.color = '#6B6559';
+  summaryBtn.style.background = '#3D3830'; summaryBtn.style.color = '#F5F3EE';
+  fullDiv.style.display = 'none'; summaryDiv.style.display = '';
+
+  if (summaryDiv.getAttribute('data-loaded') === 'true') return;
+  summaryDiv.innerHTML = '<div style="padding:24px 4px;text-align:center;color:#9E9890;font-size:13px;">Generating summary...</div>';
+  try {
+    var r = await Forge.request('POST', '/api/diary/' + id + '/summary');
+    if (r.ok && r.data.success) {
+      var s = r.data.summary;
+      var bulletsHtml = (s.whereItLanded || []).map(function(b) { return '<li style="margin-bottom:3px;">' + escHtml(b) + '</li>'; }).join('');
+      summaryDiv.innerHTML =
+        '<div style="margin-bottom:16px;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:5px;">What this was about</div><div style="font-size:14px;color:#3D3830;line-height:1.5;">' + escHtml(s.whatItWasAbout || '') + '</div></div>' +
+        '<div style="margin-bottom:16px;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:5px;">Where it landed</div><ul style="margin:0;padding-left:18px;font-size:14px;color:#3D3830;line-height:1.5;">' + bulletsHtml + '</ul></div>' +
+        '<div><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:5px;">Where you left off</div><div style="font-size:14px;color:#3D3830;line-height:1.5;">' + escHtml(s.whereYouLeftOff || '') + '</div></div>';
+      summaryDiv.setAttribute('data-loaded', 'true');
+    } else {
+      summaryDiv.innerHTML = '<div style="padding:24px 4px;text-align:center;color:#B0574B;font-size:13px;">Summary temporarily unavailable. Please try again shortly.</div>';
+    }
+  } catch (e) {
+    summaryDiv.innerHTML = '<div style="padding:24px 4px;text-align:center;color:#B0574B;font-size:13px;">Summary temporarily unavailable. Please try again shortly.</div>';
+  }
+}
+window.setEntryReadMode = setEntryReadMode;
+
 function toggleEntry(id) {
   var wasExpanded = expandedIds.has(id);
   if (wasExpanded) { expandedIds.delete(id); } else { expandedIds.add(id); }
   var card = document.getElementById('entry-' + id);
   if (card) card.classList.toggle('expanded');
+  // Summary feature's own "times opened" trigger — fire-and-forget,
+  // since the user shouldn't wait on this tracking call at all. Not
+  // reflected in the currently-loaded entries array until the next
+  // refresh (a deliberate, minor trade-off over duplicating the
+  // once-per-day logic client-side too, for what both would only ever
+  // affect in the rare case of opening the same entry twice in one
+  // session, on two different calendar days, without a reload between).
+  if (!wasExpanded) {
+    Forge.request('POST', '/api/diary/' + id + '/record-open').catch(function() {});
+  }
   // NOTE: added — requested feature: clicking a diary entry should
   // scroll the page so that entry's own position rises to the top of
   // the visible screen (just below the sticky nav bar), regardless of
