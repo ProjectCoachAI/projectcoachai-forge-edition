@@ -1196,7 +1196,18 @@ function renderEntryCard(e) {
         }
         var dataOrigAttr = (!isHosted && origUrl) ? ' data-orig-url="' + origUrl + '"' : '';
         var clickable = clickHandler ? ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;cursor:pointer;" onclick="' + clickHandler + '"' + dataOrigAttr : ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;"';
-        return '<div' + clickable + '>' + icon + ' ' + escHtml(att.filename || 'Attachment') + badge + '</div>';
+        // NOTE: added — attachments can accumulate quickly across a
+        // long-running conversation (confirmed live, a real usage
+        // observation) — this lets one be removed from the entry
+        // individually, without needing to delete the whole entry.
+        // event.stopPropagation() is required: the row itself already
+        // has its own click handler for opening the attachment, and
+        // this button must not also trigger that.
+        var deleteBtn = '<button onclick="event.stopPropagation();deleteAttachment(' + e.id + ',\'' + escHtml(att.filename || '').replace(/'/g, "\\'") + '\',\'' + (att.type || '').replace(/'/g, "\\'") + '\')" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;font-size:13px;padding:2px 6px;flex-shrink:0;">&#10005;</button>';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">' +
+          '<div' + clickable + '>' + icon + ' ' + escHtml(att.filename || 'Attachment') + badge + '</div>' +
+          deleteBtn +
+        '</div>';
       }).join('') + '</div>' : '') +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
@@ -2287,6 +2298,22 @@ async function deleteEntry(id) {
   } catch(_) { showTopToast('Could not delete entry', true); }
 }
 window.deleteEntry = deleteEntry;
+
+// Removes a single attachment from an entry, without deleting the whole
+// entry — see the render block's own comment above for why this exists.
+async function deleteAttachment(id, filename, type) {
+  if (!confirm('Remove "' + filename + '" from this entry?')) return;
+  try {
+    var r = await Forge.request('DELETE', '/api/diary/' + id + '/attachment', { filename: filename, type: type });
+    if (r.ok) {
+      await loadDiary();
+      showTopToast('Attachment removed');
+    } else {
+      showTopToast('Could not remove attachment', true);
+    }
+  } catch (_) { showTopToast('Could not remove attachment', true); }
+}
+window.deleteAttachment = deleteAttachment;
 // ── Quick Answer ──────────────────────────────────────────────────────────────
 var _qaPrompt = '';
 var _qaModel = '';

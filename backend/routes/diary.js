@@ -1383,6 +1383,51 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ── DELETE /api/diary/:id/attachment — remove one attachment ────────────────
+// Attachments can accumulate quickly across a long-running conversation
+// (confirmed live, a real usage observation) — this lets one be removed
+// individually without deleting the whole entry. Also removes the
+// actual R2 object when the attachment was ever hosted, not just the
+// tracked reference, so this genuinely frees storage rather than
+// leaving an orphaned file behind.
+router.delete('/:id/attachment', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { filename, type } = req.body;
+    if (!filename || !type) return res.status(400).json({ success: false, error: 'filename and type are required' });
+
+    const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+    if (!existing.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
+
+    const meta = existing.rows[0].metadata || {};
+    const attachments = meta.attachments || [];
+    const matchIndex = attachments.findIndex(a => a.filename === filename && a.type === type);
+    if (matchIndex === -1) return res.status(404).json({ success: false, error: 'Attachment not found on this entry' });
+
+    const removed = attachments[matchIndex];
+    if (removed.url && process.env.R2_PUBLIC_URL && removed.url.indexOf(process.env.R2_PUBLIC_URL + '/') === 0) {
+      const r2Key = removed.url.slice((process.env.R2_PUBLIC_URL + '/').length);
+      try { await attachmentStorage.remove(r2Key); } catch (e) {
+        console.warn('[Diary] Failed to remove R2 object for deleted attachment:', e.message);
+      }
+    }
+
+    const updatedAttachments = attachments.slice();
+    updatedAttachments.splice(matchIndex, 1);
+
+    await db.query(
+      `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{attachments}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+      [JSON.stringify(updatedAttachments), id, req.userEmail]
+    );
+
+    console.log(`[Diary] Removed attachment "${filename}" from entry ${id}`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[Diary] delete-attachment error:', e.message);
+    res.status(500).json({ success: false, error: e.message || 'Failed to remove attachment' });
+  }
+});
+
 // ── POST /api/diary/pending-prompt — store prompt for provider restore ────────
 router.post('/pending-prompt', requireAuth, async (req, res) => {
   try {
