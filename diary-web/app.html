@@ -112,6 +112,42 @@
       width: fit-content;
       margin-left: auto;
     }
+    /* Long-form questions (a pasted email, a long brief) get a calmer
+       treatment than the short-chat speech-bubble style above —
+       confirmed live: a multi-paragraph pasted email, complete with a
+       signature block, right-aligned inside a wide, solid-color bubble
+       reads as a large, heavy block of color, not a chat message,
+       however light the color itself actually is. A slim left-rule,
+       left-aligned like the surrounding text, with the email's own
+       line breaks preserved, reads calmer at this length — the same
+       direction as a standard blockquote. */
+    .user-bubble-long {
+      display: block;
+      background: none;
+      border-left: 3px solid #D6D2C8;
+      border-radius: 0;
+      padding: 2px 0 2px 14px;
+      margin: 12px 0;
+      max-width: 100%;
+      width: auto;
+      font-size: 13px;
+      color: #4A4035;
+      font-weight: 400;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+    /* Attachment list: delete stays hover-only on devices that actually
+       support hovering, not permanent visual clutter for the normal
+       case of a handful of attachments — misclick risk itself is
+       already handled by the confirm() dialog in deleteAttachment(),
+       this is purely a density/polish concern. Gated to hover-capable
+       devices only: on touch, there's no hover state at all, so an
+       opacity:0-until-hover button would be permanently unreachable —
+       it stays always-visible there instead. */
+    @media (hover: hover) {
+      .attachment-row .attachment-delete-btn { opacity: 0; transition: opacity 0.12s; }
+      .attachment-row:hover .attachment-delete-btn { opacity: 1; }
+    }
     .entry-content { font-size: calc(13px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
     .entry-content p { margin-bottom: 0.5rem; }
     .entry-content h1,.entry-content h2,.entry-content h3 { font-family: Lora,serif; color: #1B2A4A; margin: 0.75rem 0 0.4rem; }
@@ -1177,7 +1213,14 @@ function renderEntryCard(e) {
       // file within a long thread) without that larger lift. Each item
       // is purely informational; there's no file to open directly from
       // here, only via "Open original" for the source conversation.
-      ((_emeta && _emeta.attachments && _emeta.attachments.length) ? '<div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">' + _emeta.attachments.map(function(att) {
+      ((_emeta && _emeta.attachments && _emeta.attachments.length) ?
+        // Priority 8: a clear divider/label separating this from the
+        // Full/Summary content above — previously a dense list of rows
+        // sat directly underneath with no visual boundary at all,
+        // reading as a working-view element bleeding into the reading
+        // flow (the exact Read/Work blur the brief called out).
+        '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;border-top:1px solid #EDE9E0;margin-top:14px;padding-top:10px;margin-bottom:8px;">Attachments</div>' +
+        '<div style="display:flex;flex-direction:column;gap:10px;">' + _emeta.attachments.map(function(att) {
         // NOTE: was deriving the extension from the FILENAME
         // (.split('.').pop()) — confirmed live this was wrong: Claude's
         // displayed filename has no dot/extension at all ("Infor m3
@@ -1220,10 +1263,22 @@ function renderEntryCard(e) {
         // event.stopPropagation() is required: the row itself already
         // has its own click handler for opening the attachment, and
         // this button must not also trigger that.
-        var deleteBtn = '<button onclick="event.stopPropagation();deleteAttachment(' + e.id + ',\'' + escHtml(att.filename || '').replace(/'/g, "\\'") + '\',\'' + (att.type || '').replace(/'/g, "\\'") + '\')" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;font-size:13px;padding:2px 6px;flex-shrink:0;">&#10005;</button>';
-        return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">' +
-          '<div' + clickable + '>' + icon + ' ' + escHtml(att.filename || 'Attachment') + badge + '</div>' +
-          deleteBtn +
+        var deleteBtn = '<button class="attachment-delete-btn" onclick="event.stopPropagation();deleteAttachment(' + e.id + ',\'' + escHtml(att.filename || '').replace(/'/g, "\\'") + '\',\'' + (att.type || '').replace(/'/g, "\\'") + '\')" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;font-size:13px;padding:2px 6px;flex-shrink:0;">&#10005;</button>';
+        // NOTE: added — Priority 8's proactive-notice decision was
+        // designed but never actually implemented in this UI. Before
+        // this, the ONLY visible difference between a captured and a
+        // not-yet-captured attachment was the presence or absence of
+        // "• Read here" — a not-yet-captured row gave no explanation at
+        // all, exactly the bare "dead-end" pattern the brief explicitly
+        // decided against. Tells the user what to do, not just that
+        // it's unavailable.
+        var noticeText = (!isHosted && origUrl) ? '<div style="font-size:11px;color:#B0A99A;margin-top:1px;padding-left:20px;line-height:1.4;">Download this file from the original conversation once, and it\'ll be readable here from then on.</div>' : '';
+        return '<div class="attachment-row">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">' +
+            '<div' + clickable + '>' + icon + ' ' + escHtml(att.filename || 'Attachment') + badge + '</div>' +
+            deleteBtn +
+          '</div>' +
+          noticeText +
         '</div>';
       }).join('') + '</div>' : '') +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
@@ -2855,7 +2910,15 @@ function renderWithBubbles(text) {
     found = true;
     var before = text.slice(lastIndex, m.index).replace(/^\n+|\n+$/g, '');
     if (before) html += Forge.renderMarkdown(before).replace(/<p>\s*<\/p>/g, '');
-    html += '<div class="user-bubble">' + escHtml(m[1]) + '</div>';
+    // Long-form questions (a pasted email, a long brief) get the calmer
+    // .user-bubble-long treatment instead of the short-chat bubble —
+    // see that class's own comment for why. Threshold: either genuinely
+    // long as a single block, or clearly multi-line (a real chat
+    // question is virtually always one line; a pasted email or brief
+    // reliably isn't) — verified against a real, reported case before
+    // relying on it.
+    var isLongQuestion = m[1].length > 150 || (m[1].match(/\n/g) || []).length > 1;
+    html += '<div class="' + (isLongQuestion ? 'user-bubble-long' : 'user-bubble') + '">' + escHtml(m[1]) + '</div>';
     lastIndex = markerRe.lastIndex;
   }
   if (!found) return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '') + sourcesHtml;
