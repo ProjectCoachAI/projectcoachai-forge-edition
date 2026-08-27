@@ -773,10 +773,18 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
 
 
 // ── AI response completion detector via webRequest ────────────────────────────
+// NOTE: fixed — 'https://*.google.com/*' was redundant with (and far
+// broader than) the two entries this list actually needs for Google
+// properties (gemini.google.com, *.googleapis.com — both already
+// listed explicitly below, and both already fully covered by
+// AI_COMPLETION_PATTERNS' own regexes). The bare *.google.com wildcard
+// added no real coverage on top of those, but meant this listener
+// observed — and logged — every request to any Google property visited
+// at all (search, Gmail, Docs, etc.), confirmed live: a plain Google
+// search triggered this listener and its own console.log.
 const AI_URL_PATTERNS = [
   'https://gemini.google.com/*',
   'https://*.googleapis.com/*',
-  'https://*.google.com/*',
   'https://www.perplexity.ai/*',
   'https://*.perplexity.ai/*',
   'https://chat.deepseek.com/*',
@@ -807,7 +815,6 @@ function isAIResponseUrl(url) {
 
 chrome.webRequest.onCompleted.addListener(
   function(details) {
-    console.log('[BG webRequest]', details.url.slice(0,100));
     if (!isAIResponseUrl(details.url)) return;
     if (details.tabId < 0) return;
     console.log('[BG] sending AI_RESPONSE_COMPLETE to tab', details.tabId, details.url.slice(0,60));

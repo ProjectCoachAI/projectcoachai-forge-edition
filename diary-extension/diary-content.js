@@ -479,28 +479,40 @@
         return '';
       },
       // ── Attachment detection (lightweight index, not the files) ──────────
-      // Confirmed live, directly from real DOM captured via Inspect: the
-      // full filename WITH extension sits as the text content of
-      // span.line-clamp-2 — same one-place filename+type pattern as
-      // ChatGPT/Grok, not split across a separate badge like Claude/
-      // Gemini (a sibling role="status" badge does exist showing the
-      // type separately, but isn't needed since the filename span alone
-      // already has everything). Same safety filter as the other
-      // similarly-generic-class providers: only counted as an attachment
-      // if the text genuinely ends in a known file extension, verified
-      // against a decoy element (same class, ordinary non-file text)
-      // before shipping this. Confirmed present in the thread without
-      // clicking or hovering on anything first.
+      // NOTE: fixed — confirmed live, directly from real DOM captured via
+      // Inspect, that the span.line-clamp-2 pattern this previously
+      // relied on no longer matches anything on Mistral's current page
+      // at all: the canvas feature's own export control is a dropdown
+      // offering "Markdown"/"PDF" as generic format labels, with NO
+      // filename anywhere in it — that dropdown was the only thing
+      // actually captured by the earlier selector's assumptions. The
+      // real document title lives entirely separately, in the canvas
+      // panel's own header row, as a plain <span class="...truncate">
+      // with NO file extension in its text at all (e.g. "Finnmaster
+      // Boat Financing in Norway – Brief Summary") — meaning even a
+      // corrected selector alone couldn't have worked with the
+      // old extension-suffix requirement, since that title will never
+      // end in .pdf/.md by design.
+      //
+      // Anchored on button[aria-label="Export as"] — a stable, semantic
+      // attribute — rather than the surrounding utility-class soup,
+      // then walks up to the shared header row to find the title
+      // sibling. Tracks BOTH possible export types (pdf, md) for the
+      // same document, since the user can choose either from that same
+      // dropdown — the real download's own reported MIME type (via
+      // deriveRealFileType in background.js) correctly resolves to
+      // whichever one was actually chosen, no ambiguity in practice.
       getAttachments: function() {
         var attachments = [];
         try {
-          var els = document.querySelectorAll('span.line-clamp-2');
-          var extPattern = /\.(pdf|docx?|xlsx?|pptx?|md)$/i;
-          els.forEach(function(span) {
-            var text = (span.textContent || '').trim();
-            var m = text.match(extPattern);
-            if (m && text.length > m[1].length + 1) {
-              attachments.push({ filename: text, type: m[1].toLowerCase() });
+          var exportBtns = document.querySelectorAll('button[aria-label="Export as"]');
+          exportBtns.forEach(function(btn) {
+            var header = btn.closest('.rounded-t-xl') || (btn.parentElement && btn.parentElement.parentElement);
+            var titleSpan = header ? header.querySelector('span.truncate') : null;
+            var text = titleSpan ? (titleSpan.textContent || '').trim() : '';
+            if (text) {
+              attachments.push({ filename: text, type: 'pdf' });
+              attachments.push({ filename: text, type: 'md' });
             }
           });
         } catch(_) {}
