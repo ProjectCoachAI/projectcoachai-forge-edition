@@ -469,10 +469,10 @@
       <div onclick="shareVia('copy')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
         <div style="font-size:22px;margin-bottom:5px;">📋</div><div style="font-size:12px;color:#6B6559;font-weight:500;">Copy Text</div>
       </div>
-      <div onclick="shareVia('word')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
+      <div id="shareOptionWord" onclick="shareVia('word')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
         <div style="font-size:22px;margin-bottom:5px;">📝</div><div style="font-size:12px;color:#6B6559;font-weight:500;">Word / Doc</div>
       </div>
-      <div onclick="shareVia('print')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
+      <div id="shareOptionPrint" onclick="shareVia('print')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
         <div style="font-size:22px;margin-bottom:5px;">🖨️</div><div style="font-size:12px;color:#6B6559;font-weight:500;">Print / PDF</div>
       </div>
     </div>
@@ -1755,25 +1755,59 @@ async function saveImport() {
   }
 }
 
-var _shareEntry = null;
+var _shareContext = null;
 
 function shareEntry(id) {
-  _shareEntry = (allEntries).find(function(x) { return x.id === id; });
-  if (!_shareEntry) return;
-  document.getElementById('shareModalTitle').textContent = _shareEntry.title || 'Diary Entry';
+  var entry = (allEntries).find(function(x) { return x.id === id; });
+  if (!entry) return;
+  _shareContext = { kind: 'entry', data: entry };
+  document.getElementById('shareModalTitle').textContent = entry.title || 'Diary Entry';
+  document.getElementById('shareOptionWord').style.display = '';
+  document.getElementById('shareOptionPrint').style.display = '';
   document.getElementById('shareModalOverlay').style.display = 'flex';
 }
+
+// Shares a link to a specific, already-hosted attachment — reuses this
+// exact same modal (WhatsApp, Email, Copy) rather than a second,
+// separate custom share UI, or navigator.share() (see this function's
+// former version, shareAttachmentFromReader, for why that changed:
+// confirmed, documented real-world inconsistency in desktop browser
+// support for the Web Share API — e.g. Chrome's own support is
+// reported broken specifically on macOS despite showing as supported —
+// meant this exact button could silently behave differently across
+// Chrome, Firefox, Edge, and Opera even on the SAME machine, not just
+// vary by OS the way native share targets are expected to). Word/Print
+// are hidden for this case: exporting a text body doesn't make sense
+// for a link to an existing file, and the reader already has its own,
+// dedicated Print action for the actual document content.
+function shareAttachment(url, filename) {
+  _shareContext = { kind: 'attachment', data: { url: url, filename: filename } };
+  document.getElementById('shareModalTitle').textContent = filename || 'Attachment';
+  document.getElementById('shareOptionWord').style.display = 'none';
+  document.getElementById('shareOptionPrint').style.display = 'none';
+  document.getElementById('shareModalOverlay').style.display = 'flex';
+}
+window.shareAttachment = shareAttachment;
+
 function closeShareModal() {
   document.getElementById('shareModalOverlay').style.display = 'none';
-  _shareEntry = null;
+  _shareContext = null;
 }
 
 function shareVia(channel) {
-  if (!_shareEntry) return;
-  var title = _shareEntry.title || 'Forge Diary Entry';
+  if (!_shareContext) return;
   var nl = String.fromCharCode(10);
-  var text = (_shareEntry.prompt ? 'Q: ' + _shareEntry.prompt + nl + nl : '') + (_shareEntry.content || '');
-  var encoded = encodeURIComponent(text.slice(0, 2000));
+  var title, body;
+  if (_shareContext.kind === 'attachment') {
+    var att = _shareContext.data;
+    title = att.filename || 'Attachment';
+    body = att.url;
+  } else {
+    var entry = _shareContext.data;
+    title = entry.title || 'Forge Diary Entry';
+    body = (entry.prompt ? 'Q: ' + entry.prompt + nl + nl : '') + (entry.content || '');
+  }
+  var encoded = encodeURIComponent(body.slice(0, 2000));
   var encodedTitle = encodeURIComponent(title);
 
   if (channel === 'whatsapp') {
@@ -1783,21 +1817,23 @@ function shareVia(channel) {
   } else if (channel === 'messenger') {
     window.open('https://www.facebook.com/dialog/send?link=' + encodeURIComponent(window.location.href) + '&app_id=966242223397117&redirect_uri=' + encodeURIComponent(window.location.href), '_blank');
   } else if (channel === 'copy') {
-    navigator.clipboard.writeText(title + nl + nl + text).then(function() {
+    navigator.clipboard.writeText(title + nl + nl + body).then(function() {
       Forge.showToast('Copied to clipboard', 'success');
       closeShareModal();
     });
     return;
   } else if (channel === 'word') {
-    var blob = new Blob(['<html><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(text) : text) + '</body></html>'], {type: 'application/msword'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = title.slice(0,50) + '.doc'; a.click();
-    URL.revokeObjectURL(url);
+    if (_shareContext.kind === 'attachment') { closeShareModal(); return; }
+    var blob = new Blob(['<html><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(body) : body) + '</body></html>'], {type: 'application/msword'});
+    var docUrl = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = docUrl; a.download = title.slice(0,50) + '.doc'; a.click();
+    URL.revokeObjectURL(docUrl);
     closeShareModal();
     return;
   } else if (channel === 'print') {
+    if (_shareContext.kind === 'attachment') { closeShareModal(); return; }
     var w = window.open('', '_blank');
-    w.document.write('<html><head><title>' + title + '</title><style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;font-size:12pt;line-height:1.8}h2{font-size:16pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px}</style></head><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(text) : text) + '</body></html>');
+    w.document.write('<html><head><title>' + title + '</title><style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;font-size:12pt;line-height:1.8}h2{font-size:16pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px}</style></head><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(body) : body) + '</body></html>');
     w.document.close();
     w.print();
     closeShareModal();
@@ -2196,30 +2232,9 @@ function prevSearchMatch() {
 }
 window.prevSearchMatch = prevSearchMatch;
 
-// Uses the native OS share sheet where available (works well on mobile
-// and several desktop browsers) — falls back to copying the link, since
-// there's no universal, reliable share UI otherwise. Deliberately a
-// separate, simpler function rather than reusing the existing
-// shareEntry()/shareVia() modal, which is built specifically around
-// sharing an entry's own TEXT content (WhatsApp/email message bodies, a
-// generated .doc) — none of those channels fit "share a link to this
-// PDF" correctly.
-async function shareAttachmentFromReader() {
-  if (!currentReaderAttachment) return;
-  var shareData = { title: currentReaderAttachment.filename, url: currentReaderAttachment.url };
-  if (navigator.share) {
-    try { await navigator.share(shareData); } catch (e) { /* user cancelled — not an error */ }
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(currentReaderAttachment.url);
-    if (window.Forge && Forge.showToast) Forge.showToast('Link copied to clipboard', 'success');
-  } catch (e) {
-    console.warn('[Diary] Failed to copy attachment link:', e.message);
-  }
-}
-window.shareAttachmentFromReader = shareAttachmentFromReader;
-
+// Reader's Share button now calls shareAttachment() directly (see that
+// function's own comment for the full reasoning) — this dedicated
+// function, and its navigator.share()-based approach, is retired.
 // For PDFs: opens the raw file directly rather than trying to print our
 // own canvas-rendered pages — Chrome's own, built-in PDF viewer already
 // has a fully reliable print flow, and replicating that ourselves would
@@ -3094,7 +3109,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
         <button onclick="printAttachmentFromReader()" aria-label="Print" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Print">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         </button>
-        <button onclick="shareAttachmentFromReader()" aria-label="Share" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Share">
+        <button onclick="shareAttachment(currentReaderAttachment && currentReaderAttachment.url, currentReaderAttachment && currentReaderAttachment.filename)" aria-label="Share" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Share">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
         <button id="attachmentReaderDownload" onclick="downloadAttachmentFromReader()" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;">&#8681; Download</button>
