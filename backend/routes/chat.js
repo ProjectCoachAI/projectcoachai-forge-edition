@@ -41,7 +41,7 @@ function genSessionId() {
 
 // ── POST /api/chat — send a message, get a response (SSE streaming) ────────
 router.post('/', requireAuth, async (req, res) => {
-    const { sessionId, model, message, history, source } = req.body;
+    const { sessionId, model, message, history, source, diaryEntryId } = req.body;
 
     if (!model || !MODEL_CALLERS[model]) {
         return res.status(400).json({ success: false, error: 'Invalid or unsupported model.' });
@@ -59,14 +59,32 @@ router.post('/', requireAuth, async (req, res) => {
     // live feature's behavior as a side effect of Diary's own work,
     // which is a distinct decision explicitly left to whoever owns
     // Forge's cost/business side, not something to bundle in here.
+    //
+    // Two-axis check (see checkAndIncrementChatContinueUsage's own
+    // comment): entries/month (generous, user-facing) and messages/
+    // entry (a guardrail, invisible in normal use) — replacing an
+    // earlier, simpler per-message counter that had a real UX mismatch
+    // (counting messages meant "3 free continues" actually meant "3
+    // messages, ever, across everything combined").
     if (source === 'diary') {
-        const usage = await db.checkAndIncrementChatContinueUsage(req.userEmail);
+        if (!diaryEntryId) {
+            return res.status(400).json({ success: false, error: 'diaryEntryId is required for Diary-sourced continues.' });
+        }
+        const usage = await db.checkAndIncrementChatContinueUsage(req.userEmail, diaryEntryId, sessionId || null);
         if (!usage.allowed) {
+            if (usage.reason === 'message_cap') {
+                return res.status(429).json({
+                    success: false,
+                    error: `This conversation has reached its message limit (${usage.messageCount}/${usage.messageCap}). Continue a different entry, or upgrade for higher limits.`,
+                    reason: 'message_cap'
+                });
+            }
             return res.status(429).json({
                 success: false,
-                error: `Monthly continue-in-Forge limit reached (${usage.used}/${usage.limit}). Upgrade for unlimited continues.`,
-                used: usage.used,
-                limit: usage.limit
+                error: `Monthly continue-in-Forge limit reached (${usage.entriesUsed}/${usage.entryLimit} entries). Upgrade for unlimited continues.`,
+                reason: 'entry_limit',
+                entriesUsed: usage.entriesUsed,
+                entryLimit: usage.entryLimit
             });
         }
     }

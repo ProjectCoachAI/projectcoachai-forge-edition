@@ -75,15 +75,20 @@ CREATE TABLE IF NOT EXISTS synthesis_usage (
 );
 
 -- Continue-in-Forge usage (Diary Priority 9) — see
--- checkAndIncrementChatContinueUsage's own comment for why this is a
--- deliberately separate table/counter from synthesis_usage, not a
--- reuse of it.
-CREATE TABLE IF NOT EXISTS chat_continue_usage (
-  user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
-  year_month  TEXT NOT NULL,
-  used        INTEGER DEFAULT 0,
-  entries     JSONB DEFAULT '[]',
-  PRIMARY KEY (user_email, year_month)
+-- checkAndIncrementChatContinueUsage's own comment for the full,
+-- two-axis design (entries/month, generous and user-facing; messages/
+-- entry, a guardrail against a single conversation's cost growth,
+-- enforced directly against chat_sessions.messages, needing no table
+-- of its own). One row per distinct Diary entry a user has forked in a
+-- given month — a later continuation of the same entry never inserts
+-- again (ON CONFLICT DO NOTHING), which is exactly what makes counting
+-- rows equivalent to counting distinct entries forked.
+CREATE TABLE IF NOT EXISTS chat_continue_entries_usage (
+  user_email       TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  year_month       TEXT NOT NULL,
+  diary_entry_id   INTEGER NOT NULL,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_email, year_month, diary_entry_id)
 );
 
 CREATE TABLE IF NOT EXISTS invites (
@@ -538,42 +543,95 @@ async function getUsage(userEmail) {
 // Deliberately a SEPARATE table/counter from synthesis_usage — confirmed
 // explicit product decision: a continue is its own cost class (a real
 // model call, same as a synthesis) but its own PURPOSE (the free→paid
-// upsell moment, meant to be a narrow taste — "enough to feel the value
-// once or twice, not enough to replace paying"), not the same, more
-// generous, ongoing-regular-use allowance synthesis's own 30/month
-// represents. Folding this into synthesis_usage would silently let a
-// free user's continues eat into (or be masked by) their separate
-// synthesis allowance, undercounting or overcounting either feature
-// depending on order of use — two genuinely different things need two
-// genuinely separate counters. Free (starter) tier gets a small,
-// explicit monthly limit; every paid tier is unlimited but still
-// recorded here for visibility, same as synthesis usage already is.
-async function checkAndIncrementChatContinueUsage(userEmail) {
-  const LIMITS = {
-    starter:3, lite:-1, creator:-1, pro:-1,
-    professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
-  };
-  const user  = await getUser(userEmail);
-  const limit = user ? (LIMITS[user.tier||'starter'] ?? 3) : 3;
-  const ym    = yearMonth();
-  const r     = await query('SELECT used FROM chat_continue_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
-  const used  = r.rows[0]?.used || 0;
-  if (limit !== null && limit !== -1 && used >= limit) return { allowed:false, used, limit };
-  const ts = new Date().toISOString();
-  await query(`INSERT INTO chat_continue_usage(user_email,year_month,used,entries) VALUES($1,$2,1,$3::jsonb)
-    ON CONFLICT(user_email,year_month) DO UPDATE SET used=chat_continue_usage.used+1, entries=chat_continue_usage.entries||$3::jsonb`,
-    [userEmail, ym, JSON.stringify([ts])]);
-  return { allowed:true, used:used+1, limit };
-}
-async function getChatContinueUsage(userEmail) {
-  const LIMITS = {starter:3,lite:-1,creator:-1,pro:-1,professional:-1,'work-like-a-pro':-1,team:-1,enterprise:-1};
-  const ym    = yearMonth();
-  const r     = await query('SELECT used FROM chat_continue_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
+// upsell moment). Two separate axes, per explicit decision, replacing
+// an earlier, simpler per-message counter that had a real UX mismatch:
+// counting raw messages meant "3 free continues" actually meant "3
+// messages, ever, across every entry combined" — confusing against what
+// the number sounds like it promises.
+//
+// - ENTRIES/month (generous, user-facing, marketed): the number a user
+//   actually perceives — "how many conversations can I continue," not
+//   "how many messages." Only charged once per distinct Diary entry per
+//   month, on that entry's FIRST message of the month — a later
+//   continuation of an already-counted entry never charges again, even
+//   across many messages or many separate visits.
+// - MESSAGES/entry (guardrail, not marketed, same for every tier): caps
+//   a single forked conversation's own growth, since the cost data
+//   showed this — not how many entries someone forks — is the actual
+//   cost driver (stateless replay means a long-running conversation's
+//   input tokens grow with every turn). Set comfortably above any
+//   normal back-and-forth, so it's invisible in real use but bounds the
+//   worst case.
+const CHAT_CONTINUE_ENTRY_LIMITS = {
+  starter:10, lite:-1, creator:-1, pro:-1,
+  professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
+};
+const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP = 15;
+
+async function checkAndIncrementChatContinueUsage(userEmail, diaryEntryId, existingSessionId) {
+  // Guardrail axis first: cap growth within a single, already-existing
+  // forked conversation, regardless of tier or the entries/month count
+  // below — this applies even to unlimited-entries paid tiers, since
+  // it's bounding an individual conversation's own cost growth, not
+  // free-vs-paid access to the feature at all.
+  if (existingSessionId) {
+    const sessionR = await query('SELECT messages FROM chat_sessions WHERE session_id=$1 AND user_email=$2', [existingSessionId, userEmail]);
+    const messages = (sessionR.rows[0] && sessionR.rows[0].messages) || [];
+    const userMessageCount = messages.filter(function(m) { return m.role === 'user'; }).length;
+    if (userMessageCount >= CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP) {
+      return { allowed:false, reason:'message_cap', messageCount:userMessageCount, messageCap:CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP };
+    }
+  }
+
   const user  = await getUser(userEmail);
   const tier  = user?.tier || 'starter';
-  const limit = LIMITS[tier] ?? null;
-  const used  = r.rows[0]?.used || 0;
-  return { used, limit, remaining: limit!==null && limit!==-1 ? Math.max(0,limit-used) : null, tier };
+  const entryLimit = CHAT_CONTINUE_ENTRY_LIMITS[tier] ?? 10;
+  const ym    = yearMonth();
+
+  const alreadyForkedR = await query(
+    'SELECT 1 FROM chat_continue_entries_usage WHERE user_email=$1 AND year_month=$2 AND diary_entry_id=$3',
+    [userEmail, ym, diaryEntryId]
+  );
+  const isNewEntryThisMonth = alreadyForkedR.rows.length === 0;
+
+  if (isNewEntryThisMonth && entryLimit !== null && entryLimit !== -1) {
+    const countR = await query(
+      'SELECT COUNT(*) AS total FROM chat_continue_entries_usage WHERE user_email=$1 AND year_month=$2',
+      [userEmail, ym]
+    );
+    const entriesUsed = parseInt((countR.rows[0] && countR.rows[0].total) || 0, 10);
+    if (entriesUsed >= entryLimit) {
+      return { allowed:false, reason:'entry_limit', entriesUsed, entryLimit };
+    }
+  }
+
+  if (isNewEntryThisMonth) {
+    await query(
+      'INSERT INTO chat_continue_entries_usage (user_email, year_month, diary_entry_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING',
+      [userEmail, ym, diaryEntryId]
+    );
+  }
+
+  return { allowed:true };
+}
+
+async function getChatContinueUsage(userEmail) {
+  const ym    = yearMonth();
+  const countR = await query(
+    'SELECT COUNT(*) AS total FROM chat_continue_entries_usage WHERE user_email=$1 AND year_month=$2',
+    [userEmail, ym]
+  );
+  const entriesUsed = parseInt((countR.rows[0] && countR.rows[0].total) || 0, 10);
+  const user  = await getUser(userEmail);
+  const tier  = user?.tier || 'starter';
+  const entryLimit = CHAT_CONTINUE_ENTRY_LIMITS[tier] ?? null;
+  return {
+    entriesUsed,
+    entryLimit,
+    entriesRemaining: entryLimit!==null && entryLimit!==-1 ? Math.max(0, entryLimit-entriesUsed) : null,
+    messageCapPerEntry: CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP,
+    tier
+  };
 }
 
 async function updateStreak(userEmail) {

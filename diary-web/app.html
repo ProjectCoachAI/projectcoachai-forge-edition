@@ -1282,12 +1282,23 @@ function renderEntryCard(e) {
         '</div>';
       }).join('') + '</div>' : '') +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
+      // Priority 9 fork marker — shown only once an entry has actually
+      // been forked (metadata.chatSessionId set by continue.html on
+      // first message sent). Permanent and visible once set, per the
+      // brief's own requirement that the fork be made visible, not
+      // papered over — this entry's own "where you left off" is
+      // scoped to the Diary side only from this point forward; the
+      // Forge-continued conversation now lives independently.
+      (_emeta && _emeta.chatSessionId ? '<div style="font-size:11px;color:#9E9890;margin-top:10px;display:flex;align-items:center;gap:5px;">&#127807; Forked to Forge' +
+        (_emeta.forkedToForgeAt ? ' on ' + new Date(_emeta.forkedToForgeAt).toLocaleDateString(undefined, {month:'short',day:'numeric',year:'numeric'}) : '') +
+      '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
         (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
         (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
+        '<button class="entry-btn" onclick="window.location.href=\'/continue.html?entryId=' + e.id + '\'">&#127807; Continue in Forge</button>' +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
