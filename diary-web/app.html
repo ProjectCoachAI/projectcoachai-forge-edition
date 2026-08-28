@@ -207,7 +207,7 @@
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
     
-.entry-content { font-size: calc(13px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.7; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; white-space: pre-wrap; }
+.entry-content { font-size: calc(13px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.7; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
 
     .diary-empty { text-align: center; padding: 4rem 2rem; color: #9E9890; }
     .diary-empty h3 { font-family: 'Lora', serif; font-size: 18px; font-weight: 400; color: #1B2A4A; margin-bottom: 0.5rem; }
@@ -1289,8 +1289,21 @@ function renderEntryCard(e) {
       // papered over — this entry's own "where you left off" is
       // scoped to the Diary side only from this point forward; the
       // Forge-continued conversation now lives independently.
-      (_emeta && _emeta.chatSessionId ? '<div style="font-size:11px;color:#9E9890;margin-top:10px;display:flex;align-items:center;gap:5px;">&#127807; Forked to Forge' +
+      //
+      // Made more explicit and actionable per direct feedback: the
+      // original, quieter version ("Forked to Forge on [date]") was
+      // technically present but not doing enough to actually
+      // communicate the one-way, no-auto-update nature of a fork —
+      // someone could easily assume this entry would eventually catch
+      // up with what happened in Forge. Now states that plainly, and
+      // links straight back into the same Forge conversation rather
+      // than making the person hunt for the "Continue in Forge" button
+      // again lower in the actions row.
+      (_emeta && _emeta.chatSessionId ? '<div style="font-size:12px;color:#6B6559;margin-top:10px;padding:8px 12px;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.25);border-radius:8px;line-height:1.5;">' +
+        '&#127807; Continued in Forge' +
         (_emeta.forkedToForgeAt ? ' on ' + new Date(_emeta.forkedToForgeAt).toLocaleDateString(undefined, {month:'short',day:'numeric',year:'numeric'}) : '') +
+        ' — this entry\'s own content won\'t include what happens there. ' +
+        '<a href="/continue.html?entryId=' + e.id + '" style="color:#C17D3C;font-weight:500;">Open the Forge conversation &rarr;</a>' +
       '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +

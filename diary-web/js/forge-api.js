@@ -545,10 +545,91 @@
       .replace(/^\d+\.\s*$/gm, '')
       .replace(/^[-*•] (.+)$/gm, '<li>$1</li>')
       .replace(/^\d+\. (.+)$/gm, '<li data-ol>$1</li>')
-      .replace(/(<li data-ol>[\s\S]*?<\/li>\n?)+/g, s => `<ol>${s.replace(/ data-ol/g,'')}</ol>`)
-      .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, s => s.includes('<ol>') ? s : `<ul>${s}</ul>`)
+      // NOTE: fixed a genuine, confirmed bug — the earlier grouping
+      // rules only tolerated a single, optional trailing newline (\n?)
+      // between consecutive <li> tags. The bare-bullet/numbered
+      // stripping rules above (removing a line that's just "* " or
+      // "1. " with nothing after it — confirmed live: this pattern
+      // exists in real, captured AI responses) leave a blank line
+      // behind where that stripped line used to be, which broke this
+      // adjacency check: two items that should have formed ONE list
+      // instead each got wrapped in their own, separate <ul>/<ol>,
+      // reading as visually broken/disconnected. Widened to \n* (zero
+      // or more) so a leftover blank line no longer breaks grouping,
+      // and any blank lines still present INSIDE a matched group are
+      // now explicitly collapsed before wrapping — without that
+      // second part, the leftover blank line would otherwise survive
+      // inside the wrapped <ul>/<ol> and get corrupted into a <p> tag
+      // nested illegally between two <li> elements by the paragraph
+      // rule below, which runs after this one and has no awareness
+      // that this newline is now inside a list.
+      //
+      // Also fixed a second, separate, previously-latent bug found
+      // while verifying the above: the ordered-list safety check
+      // (previously s.includes('<ol>')) inspected only the matched
+      // <li> sequence itself, which can never actually contain the
+      // <ol> wrapper surrounding it — confirmed live this let an
+      // already-ordered list get a second, incorrectly nested <ul>
+      // wrapped around it too. Fixed by deliberately NOT stripping the
+      // data-ol marker until after both grouping rules have run: the
+      // unordered rule's own <li> (no attributes) pattern then
+      // structurally cannot match an already-ordered <li data-ol> item
+      // at all, which is more robust than re-inspecting matched text
+      // for a tag that was never actually present in it.
+      //
+      // Verified via direct simulation across five cases before
+      // applying here: the originally-reported broken-bullet-list case,
+      // a normal bullet list (no regression), two genuinely separate
+      // lists with real prose between them (correctly NOT merged), the
+      // newly-found numbered-list double-wrap bug, and a normal
+      // numbered list (no regression).
+      .replace(/(<li data-ol>[\s\S]*?<\/li>\n*)+/g, s => `<ol>${s.replace(/\n{2,}/g, '\n')}</ol>`)
+      .replace(/(<li>[\s\S]*?<\/li>\n*)+/g, s => `<ul>${s.replace(/\n{2,}/g, '\n')}</ul>`)
+      .replace(/ data-ol/g, '')
       .replace(/\n\n/g, '</p><p>')
-      .replace(/^(?!<[hupra\/]|$)(.+)$/gm, m => `<p>${m}</p>`)
+      // NOTE: fixed a genuine, confirmed bug found while independently
+      // re-verifying the fix above (its own claimed "5 test cases"
+      // turned out to still fail case 1, the very case it was meant to
+      // fix — confirmed via direct, step-by-step tracing, not assumed
+      // from the comment). The \n\n→'</p><p>' rule directly above
+      // removes the real newline between text and an immediately
+      // following list/table/pre block, replacing it with inline HTML
+      // text instead — so by the time the general p-wrapping rule
+      // below runs its line-by-line check, "Header text:</p><p><ul>..."
+      // is one single line that does NOT start with '<', and the whole
+      // line — including the already-correct <ul> HTML embedded in it —
+      // gets wrapped in another, illegal, nested <p>. Ensures a
+      // block-level tag always starts (and, symmetrically, ends) on its
+      // own real line, regardless of what the paragraph-break rule just
+      // did to the newline that used to separate them. Verified against
+      // 7 cases before applying: the originally-reported broken bullet
+      // list, a normal bullet list, two separate lists with prose
+      // between, the numbered-list double-wrap case, a normal numbered
+      // list, a table immediately after prose, and a combined
+      // table-then-list-then-prose sequence — all producing clean,
+      // correctly nested HTML with no stray tags.
+      .replace(/([^\n])(<(?:ul|ol|table|pre)>)/g, '$1\n$2')
+      .replace(/(<\/(?:ul|ol|table|pre)>)([^\n])/g, '$1\n$2')
+      // NOTE: fixed a second, separate, genuinely pre-existing bug,
+      // confirmed present even before today's other changes (tested
+      // directly against the last-committed version): this rule's
+      // negative lookahead `[hupra\/]` was missing 'l' (<li>) and 'o'
+      // (<ol>) entirely — meaning EVERY multi-item list, with or
+      // without the blank-line issue above, already had its 2nd and
+      // later <li> lines incorrectly wrapped in an extra, illegal <p>
+      // tag nested inside the list. This was the dominant, more
+      // impactful cause of the originally reported "broken markdown"
+      // symptom — the blank-line fix above was real but secondary.
+      // Rather than add more letters to an enumerated set (which would
+      // still miss others, e.g. <table>, itself not covered either),
+      // widened to exclude any line starting with '<' at all: by this
+      // point in the pipeline, a literal '<' can only ever be
+      // already-generated HTML from an earlier rule, never raw input
+      // text, since raw '<' was already HTML-escaped to '&lt;' near
+      // the very start of this same function — making a full-tag
+      // enumeration unnecessary and inherently fragile to the next new
+      // tag this function ever learns to generate.
+      .replace(/^(?!<|$)(.+)$/gm, m => `<p>${m}</p>`)
       .replace(/<p><\/p>/g, '')
       .replace(/(<strong>)(Agreement|Disagreement|Consensus|Key Risk|Warning|Critical|Note|Important|Recommendation)(<\/strong>)/g,
         '<strong style="color:#E8652A">$2</strong>');

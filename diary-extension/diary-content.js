@@ -2130,24 +2130,34 @@ function queryAllDeep(selector) {
         }
 
         var prompt = '';
-        // Use provider getPrompt override if available
-        if (PROVIDER_CONFIG.getPrompt) {
-          try { prompt = PROVIDER_CONFIG.getPrompt() || ''; } catch(_) {}
-        }
-        // Claude-specific: fall back to the first question already
-        // reconstructed in historySeed (see parseHistorySeed() in
-        // diary-interceptor.js) BEFORE falling through to any DOM
-        // selector at all — confirmed live this is more reliable than
-        // any DOM-based approach for Claude specifically, since it comes
-        // directly from Claude's own API data, not the page's DOM, and
-        // covers exactly the case getPrompt() above cannot: a reopened,
-        // existing conversation, where no live typing ever happened in
-        // this page session to populate getPrompt()'s own listeners.
-        // boldQuestion() (used to build historySeed's text) wraps each
-        // question in U+2063 + "**...**" + U+2063 — extracting the
+        // Claude-specific: try historySeed's own, true first question
+        // BEFORE the generic getPrompt() override below — confirmed,
+        // precisely-diagnosed bug, not a guess: getPrompt() returns
+        // _prompts[0], the first message TYPED IN THIS PAGE SESSION —
+        // correct for a brand-new conversation (where that IS the
+        // conversation's own first question), but wrong for a reopened,
+        // ongoing conversation where the user types a new, Nth message:
+        // that new message becomes _prompts[0] for this session even
+        // though it's actually the LATEST question, not the first one.
+        // Since getPrompt() is checked with a plain `if (!prompt)`, it
+        // was winning unconditionally whenever ANY message was typed
+        // this session, which meant the historySeed fallback below —
+        // built specifically to handle the reopened-conversation case —
+        // never got a chance to run in exactly that case. Confirmed
+        // live: this caused entry.prompt to get silently overwritten
+        // with the newest question on re-save, which downstream (in
+        // Diary's own Continue-in-Forge feature) then read as a second,
+        // duplicate copy of that latest question, incorrectly inserted
+        // at the very top of the reconstructed conversation. A
+        // historySeed existing at all reliably means this is an
+        // existing, ongoing conversation with a real, known first
+        // question — checking for it first, unconditionally, fixes this
+        // without needing to distinguish "new vs. reopened" any other
+        // way. boldQuestion() (used to build historySeed's text) wraps
+        // each question in U+2063 + "**...**" + U+2063 — extracting the
         // FIRST such wrapped span directly gives the first question,
         // without needing to touch the DOM at all.
-        if (!prompt && PROVIDER === 'claude') {
+        if (PROVIDER === 'claude') {
           try {
             var seedForPrompt = window.__diaryCapture && window.__diaryCapture.historySeed;
             if (seedForPrompt && seedForPrompt.text) {
@@ -2155,6 +2165,13 @@ function queryAllDeep(selector) {
               if (qMatch && qMatch[1]) prompt = qMatch[1].trim().slice(0, 500);
             }
           } catch(_) {}
+        }
+        // Use provider getPrompt override if available — for Claude,
+        // this now only fires when no historySeed existed at all (a
+        // genuinely brand-new conversation), where _prompts[0] IS
+        // correctly the conversation's own first question.
+        if (!prompt && PROVIDER_CONFIG.getPrompt) {
+          try { prompt = PROVIDER_CONFIG.getPrompt() || ''; } catch(_) {}
         }
         // Otherwise use registry promptSelectors
         if (!prompt) {
