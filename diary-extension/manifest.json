@@ -31,7 +31,8 @@
     "https://*.mistral.ai/*",
     "https://*.deepseek.com/*",
     "https://*.meta.ai/*",
-    "https://*.grok.com/*"
+    "https://*.grok.com/*",
+    "https://*.metaaiusercontent.com/*"
   ],
   "background": {
     "service_worker": "background.js"

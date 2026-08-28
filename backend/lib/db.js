@@ -74,6 +74,18 @@ CREATE TABLE IF NOT EXISTS synthesis_usage (
   PRIMARY KEY (user_email, year_month)
 );
 
+-- Continue-in-Forge usage (Diary Priority 9) — see
+-- checkAndIncrementChatContinueUsage's own comment for why this is a
+-- deliberately separate table/counter from synthesis_usage, not a
+-- reuse of it.
+CREATE TABLE IF NOT EXISTS chat_continue_usage (
+  user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  year_month  TEXT NOT NULL,
+  used        INTEGER DEFAULT 0,
+  entries     JSONB DEFAULT '[]',
+  PRIMARY KEY (user_email, year_month)
+);
+
 CREATE TABLE IF NOT EXISTS invites (
   code          TEXT PRIMARY KEY,
   inviter_email TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
@@ -522,6 +534,48 @@ async function getUsage(userEmail) {
   return { used, limit, remaining: limit!==null ? Math.max(0,limit-used) : null, tier };
 }
 
+// ── Continue-in-Forge usage (Diary Priority 9) ──────────────────────────────
+// Deliberately a SEPARATE table/counter from synthesis_usage — confirmed
+// explicit product decision: a continue is its own cost class (a real
+// model call, same as a synthesis) but its own PURPOSE (the free→paid
+// upsell moment, meant to be a narrow taste — "enough to feel the value
+// once or twice, not enough to replace paying"), not the same, more
+// generous, ongoing-regular-use allowance synthesis's own 30/month
+// represents. Folding this into synthesis_usage would silently let a
+// free user's continues eat into (or be masked by) their separate
+// synthesis allowance, undercounting or overcounting either feature
+// depending on order of use — two genuinely different things need two
+// genuinely separate counters. Free (starter) tier gets a small,
+// explicit monthly limit; every paid tier is unlimited but still
+// recorded here for visibility, same as synthesis usage already is.
+async function checkAndIncrementChatContinueUsage(userEmail) {
+  const LIMITS = {
+    starter:3, lite:-1, creator:-1, pro:-1,
+    professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
+  };
+  const user  = await getUser(userEmail);
+  const limit = user ? (LIMITS[user.tier||'starter'] ?? 3) : 3;
+  const ym    = yearMonth();
+  const r     = await query('SELECT used FROM chat_continue_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
+  const used  = r.rows[0]?.used || 0;
+  if (limit !== null && limit !== -1 && used >= limit) return { allowed:false, used, limit };
+  const ts = new Date().toISOString();
+  await query(`INSERT INTO chat_continue_usage(user_email,year_month,used,entries) VALUES($1,$2,1,$3::jsonb)
+    ON CONFLICT(user_email,year_month) DO UPDATE SET used=chat_continue_usage.used+1, entries=chat_continue_usage.entries||$3::jsonb`,
+    [userEmail, ym, JSON.stringify([ts])]);
+  return { allowed:true, used:used+1, limit };
+}
+async function getChatContinueUsage(userEmail) {
+  const LIMITS = {starter:3,lite:-1,creator:-1,pro:-1,professional:-1,'work-like-a-pro':-1,team:-1,enterprise:-1};
+  const ym    = yearMonth();
+  const r     = await query('SELECT used FROM chat_continue_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
+  const user  = await getUser(userEmail);
+  const tier  = user?.tier || 'starter';
+  const limit = LIMITS[tier] ?? null;
+  const used  = r.rows[0]?.used || 0;
+  return { used, limit, remaining: limit!==null && limit!==-1 ? Math.max(0,limit-used) : null, tier };
+}
+
 async function updateStreak(userEmail) {
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -594,7 +648,7 @@ async function libraryDelete(fileId, userEmail) {
   await query('DELETE FROM forge_library WHERE file_id=$1 AND user_email=$2', [fileId, userEmail]);
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, libraryUpload, libraryList, libraryGet, libraryDelete };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, libraryUpload, libraryList, libraryGet, libraryDelete };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

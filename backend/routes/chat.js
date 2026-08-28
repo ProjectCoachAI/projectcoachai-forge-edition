@@ -41,13 +41,34 @@ function genSessionId() {
 
 // ── POST /api/chat — send a message, get a response (SSE streaming) ────────
 router.post('/', requireAuth, async (req, res) => {
-    const { sessionId, model, message, history } = req.body;
+    const { sessionId, model, message, history, source } = req.body;
 
     if (!model || !MODEL_CALLERS[model]) {
         return res.status(400).json({ success: false, error: 'Invalid or unsupported model.' });
     }
     if (!message || !message.trim()) {
         return res.status(400).json({ success: false, error: 'Message is required.' });
+    }
+
+    // Continue-in-Forge gating (Diary Priority 9) — deliberately scoped
+    // to ONLY requests explicitly tagged source:'diary', not applied to
+    // this shared endpoint unconditionally. Forge's own, existing
+    // chat.html already calls this same route today with no source
+    // field at all — gating the endpoint itself, rather than this one
+    // specific caller, would have silently changed a separate, already-
+    // live feature's behavior as a side effect of Diary's own work,
+    // which is a distinct decision explicitly left to whoever owns
+    // Forge's cost/business side, not something to bundle in here.
+    if (source === 'diary') {
+        const usage = await db.checkAndIncrementChatContinueUsage(req.userEmail);
+        if (!usage.allowed) {
+            return res.status(429).json({
+                success: false,
+                error: `Monthly continue-in-Forge limit reached (${usage.used}/${usage.limit}). Upgrade for unlimited continues.`,
+                used: usage.used,
+                limit: usage.limit
+            });
+        }
     }
 
     const forgeKeys = getForgeKeys();
