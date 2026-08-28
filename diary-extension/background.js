@@ -567,12 +567,123 @@ async function fetchBlobDataFromTab(tabId, blobUrl) {
   });
 }
 
+// ── Sync feature (Diary Priority 9) ───────────────────────────────────────
+// Same correlation pattern as pendingBlobRequests/fetchBlobDataFromTab
+// above — a request sent to a tab (TRIGGER_SYNC_SAVE) is matched with its
+// eventual response (SYNC_SAVE_RESULT, relayed back through the isolated-
+// world script the same way BLOB_DATA_RESPONSE already is) via this map,
+// keyed by tabId rather than a URL since multiple entries could in
+// principle be syncing against different tabs concurrently.
+const syncTabResolvers = new Map();
+// Per-entry lock — confirmed necessary per explicit review: nothing
+// otherwise stops a double-click, or two different entries that happen
+// to resolve to the same open tab, from firing two REQUEST_SYNC calls
+// near-simultaneously and racing each other into an inconsistent merge.
+const syncEntryLocks = new Set();
+
+async function fetchSyncResultFromTab(tabId) {
+  return new Promise(function(resolve) {
+    // 45s ceiling — confirmed directly (via a real, live timeout) that
+    // Chrome measurably throttles background (active:false) tabs: fewer
+    // parallel connections during page load (3 vs 6 for a foreground
+    // tab) and clamped setTimeout intervals. Since active:false is a
+    // deliberate, explicit UX choice (never steal focus), the fix is
+    // giving the resulting slower load enough time, not abandoning that
+    // choice — a background tab isn't broken, just slower. Sized to
+    // stay comfortably above diary-content.js's own poll ceiling (also
+    // increased, for the same reason) plus the actual save round-trip.
+    const timeout = setTimeout(function() {
+      syncTabResolvers.delete(tabId);
+      resolve({ success: false, error: 'timeout' });
+    }, 45000);
+    syncTabResolvers.set(tabId, function(result) {
+      clearTimeout(timeout);
+      resolve(result);
+    });
+    chrome.tabs.sendMessage(tabId, { type: 'TRIGGER_SYNC_SAVE' }, function() {
+      // Confirmed live: "Could not establish connection. Receiving end
+      // does not exist" means no content script is listening on this
+      // tab at ALL — most likely because the tab was already open the
+      // last time the extension itself reloaded/updated, leaving its
+      // own connection orphaned (Chrome auto-updates installed
+      // extensions periodically in the background; a user could easily
+      // have a matching tab open when that happens). This is a real,
+      // diagnosable, and specifically recoverable condition — fail
+      // fast here rather than silently consuming the full 30s timeout,
+      // so REQUEST_SYNC's own caller can reload the tab and retry once
+      // instead of just reporting a generic, unexplained timeout.
+      if (chrome.runtime.lastError) {
+        const isNoReceiver = /Receiving end does not exist/.test(chrome.runtime.lastError.message || '');
+        console.log('[Diary Sync DIAG] sendMessage callback lastError for tab', tabId, ':', chrome.runtime.lastError.message, isNoReceiver ? '(failing fast, recoverable)' : '(expected — real response is the separate SYNC_SAVE_RESULT message)');
+        if (isNoReceiver) {
+          clearTimeout(timeout);
+          syncTabResolvers.delete(tabId);
+          resolve({ success: false, error: 'no_receiver' });
+        }
+      }
+    });
+  });
+}
+
+// Finds the tab most likely to reflect the conversation's current, live
+// state — confirmed via explicit review that a deterministic tie-break is
+// needed, not whatever order chrome.tabs.query happens to return: the
+// same conversation open in more than one tab (duplicated tabs, multiple
+// windows) isn't unusual. Sorting by lastAccessed picks the tab the user
+// most recently actually looked at, which is the best available signal
+// for "reflects what's currently there" without reading page content
+// itself just to decide which tab to read.
+//
+// Appends a wildcard to the stored, canonical conversation URL (origin +
+// pathname only, no query/hash — see diary-content.js's own canonicalUrl())
+// rather than matching it exactly, since a live tab's current URL may carry
+// additional query params or a hash the canonical, stored version never
+// included.
+async function findConversationTab(conversationUrl) {
+  const tabs = await chrome.tabs.query({ url: conversationUrl + '*' });
+  if (!tabs.length) return null;
+  tabs.sort(function(a, b) { return (b.lastAccessed || 0) - (a.lastAccessed || 0); });
+  return tabs[0];
+}
+
+// Waits for a freshly-opened tab to actually finish loading before the
+// content script inside it can be expected to have run at all — a fixed
+// delay would either be wasteful (always waiting the worst case) or
+// unreliable (too short for a slow page); this waits for the real,
+// specific signal instead.
+function waitForTabComplete(tabId) {
+  return new Promise(function(resolve) {
+    function listener(updatedTabId, info) {
+      if (updatedTabId === tabId && info.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    }
+    chrome.tabs.onUpdated.addListener(listener);
+    // Ceiling in case the tab never reaches 'complete' for some reason
+    // (e.g. a redirect loop) — don't hang the whole sync forever on it.
+    setTimeout(function() {
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }, 15000);
+  });
+}
+
+
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'BLOB_DATA_RESPONSE' && msg.blobUrl) {
     const pending = pendingBlobRequests.get(msg.blobUrl);
     if (pending) {
       pendingBlobRequests.delete(msg.blobUrl);
       pending(msg.success ? { base64: msg.base64, contentType: msg.contentType } : null);
+    }
+    return;
+  }
+  if (msg.type === 'SYNC_SAVE_RESULT' && sender.tab) {
+    const resolver = syncTabResolvers.get(sender.tab.id);
+    if (resolver) {
+      syncTabResolvers.delete(sender.tab.id);
+      resolver({ success: !!msg.success, error: msg.error });
     }
     return;
   }
@@ -734,7 +845,21 @@ let data;
 // (tabs.onUpdated injection removed — content script uses GET_PENDING_PROMPT via postMessage bridge)
 
 // ── External messages from Diary website ──────────────────────────────────────
-chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) => {
+// NOTE: fixed — a genuine, confirmed bug, not specific to any one
+// handler here. Declaring this listener itself as `async` means it
+// always implicitly returns a Promise; `return true;` inside an async
+// function resolves that Promise to `true` immediately (synchronously,
+// before any await runs) — and Chrome uses that immediate resolution
+// as the actual response, racing with and discarding whatever the
+// real, later, explicit sendResponse() call was meant to deliver.
+// Confirmed live: CHECK_TAB_OPEN was returning the bare boolean `true`
+// to its caller instead of `{isOpen: true/false}`. Every handler
+// below already does its own async work internally (storage
+// callbacks, or REQUEST_SYNC's own inner async IIFE) and calls
+// sendResponse() from there — none of them actually need this outer
+// function to be async at all, so removing it fixes every handler
+// here at once rather than patching each one individually.
+chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'SET_TOKEN_BG' && msg.token) {
     chrome.storage.local.set({ diary_token: msg.token }, () => {
       sendResponse({ ok: true });
@@ -762,6 +887,90 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
     chrome.storage.local.remove(['diary_pending_prompt'], () => {
       sendResponse({ ok: true });
     });
+    return true;
+  }
+
+  // ── Sync feature (Diary Priority 9) ─────────────────────────────────────
+  if (msg.type === 'CHECK_TAB_OPEN' && msg.conversationUrl) {
+    findConversationTab(msg.conversationUrl).then(function(tab) {
+      sendResponse({ isOpen: !!tab });
+    });
+    return true;
+  }
+
+  // Direction: native provider thread -> Diary/Forge, one-way only. Re-
+  // checks tab status at click-time rather than trusting whatever
+  // CHECK_TAB_OPEN reported earlier, since state can genuinely drift
+  // between when a button's label was decided and when it's actually
+  // clicked. Per explicit design decision: never a silent background
+  // tab — chrome.tabs.create below uses active:false (visible in the
+  // tab strip, inspectable, not hidden) but deliberately does NOT steal
+  // window focus away from Diary the moment sync is triggered. On
+  // failure, an opened tab is deliberately left open rather than
+  // closed — gives the user something concrete to look at instead of a
+  // mysterious background failure with no visible cause.
+  if (msg.type === 'REQUEST_SYNC' && msg.conversationUrl && msg.diaryEntryId) {
+    const entryId = msg.diaryEntryId;
+    // Lock check + set happens synchronously, before any await at all —
+    // safe from a race between two near-simultaneous calls by
+    // construction, since JS is single-threaded and nothing yields
+    // between the check and the set.
+    if (syncEntryLocks.has(entryId)) {
+      sendResponse({ success: false, error: 'sync_in_progress' });
+      return false;
+    }
+    syncEntryLocks.add(entryId);
+    (async function() {
+      let openedNewTab = false;
+      let tabId = null;
+      try {
+        console.log('[Diary Sync DIAG] REQUEST_SYNC starting for entry', entryId, 'url:', msg.conversationUrl);
+        const existingTab = await findConversationTab(msg.conversationUrl);
+        if (existingTab) {
+          tabId = existingTab.id;
+          console.log('[Diary Sync DIAG] found existing tab', tabId, '(status:', existingTab.status, ', lastAccessed:', existingTab.lastAccessed, ')');
+        } else {
+          console.log('[Diary Sync DIAG] no existing tab found, opening a new one');
+          const newTab = await chrome.tabs.create({ url: msg.conversationUrl, active: false });
+          tabId = newTab.id;
+          openedNewTab = true;
+          console.log('[Diary Sync DIAG] new tab', tabId, 'created, waiting for it to finish loading');
+          await waitForTabComplete(tabId);
+          console.log('[Diary Sync DIAG] tab', tabId, 'reported complete (or 15s ceiling hit)');
+        }
+        console.log('[Diary Sync DIAG] sending TRIGGER_SYNC_SAVE to tab', tabId);
+        let result = await fetchSyncResultFromTab(tabId);
+        console.log('[Diary Sync DIAG] result from tab', tabId, ':', JSON.stringify(result));
+        // Auto-recovery: a stale, orphaned content-script connection on
+        // an EXISTING tab (most likely: that tab was already open the
+        // last time this extension itself reloaded/updated) is a real,
+        // specifically-recoverable condition, not a genuine failure —
+        // reload the tab once to force a fresh injection, then retry
+        // exactly once. Deliberately NOT applied when openedNewTab is
+        // true: a tab we just created ourselves and already waited on
+        // via waitForTabComplete() failing this same way would indicate
+        // something more fundamentally wrong, not staleness.
+        if (result.error === 'no_receiver' && !openedNewTab) {
+          console.log('[Diary Sync DIAG] tab', tabId, 'had a stale connection — reloading and retrying once');
+          try {
+            await chrome.tabs.reload(tabId);
+            await waitForTabComplete(tabId);
+            result = await fetchSyncResultFromTab(tabId);
+            console.log('[Diary Sync DIAG] retry result from tab', tabId, ':', JSON.stringify(result));
+          } catch (e) {
+            console.log('[Diary Sync DIAG] retry itself threw:', e.message);
+          }
+        }
+        if (openedNewTab && result.success) {
+          try { await chrome.tabs.remove(tabId); } catch(_) {}
+        }
+        sendResponse(result);
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      } finally {
+        syncEntryLocks.delete(entryId);
+      }
+    })();
     return true;
   }
 

@@ -2093,7 +2093,24 @@ function queryAllDeep(selector) {
     btn.onmouseenter = function() { this.style.background = '#ea580c'; this.style.transform = 'translateY(-2px)'; };
     btn.onmouseleave = function() { this.style.background = '#F97316'; this.style.transform = ''; };
 
-    btn.onclick = async function() {
+    // ── Save-to-Diary logic, extracted into a standalone, reusable
+    // function (Sync feature groundwork) ──────────────────────────────
+    // Was previously an inline btn.onclick handler. Extracted so a new
+    // Sync feature can trigger the exact same capture logic remotely
+    // (via a chrome.runtime.onMessage listener below), reusing this
+    // one save path rather than maintaining a second, parallel one that
+    // could drift out of sync with it over time.
+    //
+    // `btn` is now an OPTIONAL parameter — confirmed via direct check
+    // before this refactor: the function has ZERO dependency on the
+    // click event object itself (no event.target, preventDefault(),
+    // stopPropagation(), or focus-state reads anywhere in the body) —
+    // but it DOES close over `btn` throughout, purely for visual
+    // feedback (textContent/disabled/style/remove()). That's fine for a
+    // real click; for a remote trigger (no button was ever clicked at
+    // all), every btn.* reference below is now guarded so it's simply
+    // skipped rather than throwing on a missing element.
+    async function performSaveToDiary(btn) {
       if (PROVIDER === 'mistral') {
         console.log('[Diary DIAG] === Mistral save clicked ===');
         if (window.__diaryCapture && window.__diaryCapture.turns) {
@@ -2105,8 +2122,7 @@ function queryAllDeep(selector) {
         console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
         try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
       }
-      btn.textContent = 'Saving...';
-      btn.disabled = true;
+      if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
       try {
         var token = null;
         await new Promise(function(resolve) {
@@ -2123,10 +2139,12 @@ function queryAllDeep(selector) {
         });
 
         if (!token) {
-          btn.textContent = 'Sign in to Diary first';
-          btn.style.background = '#6B6B88';
-          setTimeout(function() { btn.remove(); }, 3000);
-          return;
+          if (btn) {
+            btn.textContent = 'Sign in to Diary first';
+            btn.style.background = '#6B6B88';
+            setTimeout(function() { btn.remove(); }, 3000);
+          }
+          return { success: false, error: 'not_authenticated' };
         }
 
         var prompt = '';
@@ -2881,19 +2899,38 @@ function queryAllDeep(selector) {
           setTimeout(function() { reject(new Error('timeout')); }, 10000);
         });
         if (data.success) {
-          btn.textContent = String.fromCharCode(10003) + ' Saved to Diary';
-          btn.style.background = '#22c55e';
-          setTimeout(function() { btn.remove(); }, 3000);
+          if (btn) {
+            btn.textContent = String.fromCharCode(10003) + ' Saved to Diary';
+            btn.style.background = '#22c55e';
+            setTimeout(function() { btn.remove(); }, 3000);
+          }
+          return { success: true };
         } else {
           throw new Error(data.error || 'Save failed');
         }
       } catch(e) {
-        btn.textContent = 'Failed — try again';
-        btn.style.background = '#ef4444';
-        btn.disabled = false;
-        setTimeout(function() { btn.remove(); }, 4000);
+        if (btn) {
+          btn.textContent = 'Failed — try again';
+          btn.style.background = '#ef4444';
+          btn.disabled = false;
+          setTimeout(function() { btn.remove(); }, 4000);
+        }
+        return { success: false, error: e.message };
       }
-    };
+    }
+
+    // Expose for remote triggering (Sync feature) — see the new
+    // TRIGGER_SYNC_SAVE listener below, which polls for this to become
+    // available rather than assuming it's already set the instant the
+    // page loads: confirmed directly that this only gets (re-)assigned
+    // once injectSaveDiaryButton() itself has run at least once, which
+    // for an existing, already-completed conversation depends on either
+    // an incidental broad webRequest match on page load (6 of 8
+    // providers) or the dedicated 2s existing-conversation fallback
+    // (Mistral, DeepSeek) — both reliable, but neither instantaneous.
+    window.__diaryPerformSave = performSaveToDiary;
+
+    btn.onclick = () => performSaveToDiary(btn);
 
     document.body.appendChild(btn);
     // NOTE: no auto-removal timeout here. injectSaveDiaryButton() already
@@ -2920,6 +2957,53 @@ function queryAllDeep(selector) {
     }
     if (message.type === 'CHECK_AUTH') {
       window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'AUTH_RESULT', authenticated: isAuthenticated(), provider: PROVIDER }}, '*');
+    }
+    // Sync feature's remote-trigger path — see performSaveToDiary's own
+    // window.__diaryPerformSave exposure comment for why this polls
+    // rather than assumes it's already set: for an existing, already-
+    // completed conversation (exactly what Sync operates on), that
+    // exposure only happens once injectSaveDiaryButton() has itself run
+    // at least once, which depends on either an incidental webRequest
+    // match or a dedicated ~2s fallback timer, neither instantaneous on
+    // page load. Polling briefly rather than firing immediately avoids
+    // a real, likely race: a Sync tab opened fresh, with this message
+    // arriving (per background.js's own design) at document_idle, well
+    // before either of those completion signals has necessarily fired
+    // yet.
+    //
+    // Ceiling raised from 10s to 35s after a confirmed, live timeout:
+    // a genuinely fresh tab opened with active:false (Sync's own,
+    // deliberate "never steal focus" choice) is measurably throttled by
+    // Chrome — fewer parallel connections during its own page load, and
+    // this very setTimeout-based poll itself running slower than its
+    // nominal 500ms interval in a background/hidden tab. The same tab,
+    // once already warmed up by a prior load, succeeded quickly — this
+    // isn't a broken mechanism, just a slower one for a genuinely cold,
+    // backgrounded load.
+    if (message.type === 'TRIGGER_SYNC_SAVE') {
+      console.log('[Diary Sync DIAG] TRIGGER_SYNC_SAVE received on this page. window.__diaryPerformSave already set?', !!window.__diaryPerformSave);
+      var syncPollAttempts = 0;
+      var syncPollMax = 70; // 70 * 500ms = 35s ceiling
+      (function pollForSaveFn() {
+        if (window.__diaryPerformSave) {
+          console.log('[Diary Sync DIAG] window.__diaryPerformSave available after', syncPollAttempts, 'poll attempt(s) — calling it now');
+          window.__diaryPerformSave().then(function(result) {
+            console.log('[Diary Sync DIAG] performSaveToDiary() resolved:', JSON.stringify(result));
+            window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: !!(result && result.success), error: result && result.error } }, '*');
+          }).catch(function(err) {
+            console.log('[Diary Sync DIAG] performSaveToDiary() threw:', err && err.message);
+            window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: false, error: err && err.message } }, '*');
+          });
+          return;
+        }
+        syncPollAttempts++;
+        if (syncPollAttempts >= syncPollMax) {
+          console.log('[Diary Sync DIAG] gave up after', syncPollAttempts, 'poll attempts — window.__diaryPerformSave never became available');
+          window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: false, error: 'save_function_unavailable' } }, '*');
+          return;
+        }
+        setTimeout(pollForSaveFn, 500);
+      })();
     }
   });
 

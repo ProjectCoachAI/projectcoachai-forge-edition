@@ -43,7 +43,8 @@
     if (message.type === 'DIARY_TO_PAGE') {
       window.postMessage({ type: '__DIARY_EXT_DATA__', ...message.data }, '*');
     }
-    if (['INJECT_PROMPT','INJECT_PENDING_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
+    if (['INJECT_PROMPT','INJECT_PENDING_PROMPT','CHECK_AUTH','GET_RESPONSE','TRIGGER_SYNC_SAVE'].includes(message.type)) {
+      if (message.type === 'TRIGGER_SYNC_SAVE') console.log('[Diary Sync DIAG] isolated relay: forwarding TRIGGER_SYNC_SAVE to main world');
       window.postMessage({ type: '__DIARY_FROM_EXT__', payload: message }, '*');
     }
 
