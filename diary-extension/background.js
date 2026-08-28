@@ -756,6 +756,7 @@ let data;
         });
         data = await pR.json();
         data.updated = true;
+        if (data.chatSessionSync) console.log('[Diary Sync DIAG] chatSessionSync result:', JSON.stringify(data.chatSessionSync));
       } else {
         // Step 2b: POST - create new entry
         const pR = await fetch(API + '/api/diary', {

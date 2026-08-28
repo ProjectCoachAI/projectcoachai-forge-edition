@@ -1184,9 +1184,28 @@ router.get('/by-url', requireAuth, async (req, res) => {
   try {
     const { url } = req.query;
     if (!url) return res.json({ success: true, entry: null });
+    // NOTE: fixed a genuine, confirmed bug — this query previously had
+    // NO ordering at all, just LIMIT 1, meaning if more than one entry
+    // ever shares the same conversation URL (confirmed live: a
+    // duplicate created during testing, likely from a transient lookup
+    // failure falling through to "create new" instead of finding the
+    // existing one), which row came back was entirely non-deterministic
+    // — Postgres's own physical row order, not anything meaningful.
+    // This directly broke Sync: a lookup could silently land on an
+    // orphaned duplicate with no chatSessionId, correctly doing nothing
+    // in the merge logic while the real, forked entry never got synced
+    // at all, despite the operation reporting success.
+    // Tie-break: prefer whichever match has already been forked to
+    // Forge (metadata.chatSessionId set) over an orphaned duplicate,
+    // falling back to most-recently-created when neither or both match
+    // that condition — an actively-used, forked entry is the
+    // meaningful one to prioritize regardless of context, not specific
+    // to Sync alone.
     const r = await db.query(
       `SELECT id, prompt, content, metadata FROM diary_entries
-       WHERE user_email=$1 AND (metadata::jsonb)->>'url' = $2 LIMIT 1`,
+       WHERE user_email=$1 AND (metadata::jsonb)->>'url' = $2
+       ORDER BY ((metadata::jsonb)->>'chatSessionId' IS NOT NULL) DESC, created_at DESC
+       LIMIT 1`,
       [req.userEmail, url]
     );
     res.json({ success: true, entry: r.rows[0] || null });
