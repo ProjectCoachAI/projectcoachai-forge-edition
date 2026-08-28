@@ -328,6 +328,58 @@ function prepareImagesForSave(rawImages) {
   });
 }
 
+// ── Sync feature (Diary Priority 9): entry.content -> message list ─────────
+// Server-side port of continue.html's own splitEntryIntoMessages() —
+// same marker regex, same approach, kept in sync deliberately rather
+// than reimplemented differently, since both need to agree on exactly
+// what counts as "the same messages" for their respective jobs (seeding
+// a chat UI there; detecting a clean extension for merging here).
+// entry.content is not a single, isolated assistant response at all —
+// it's the entire, multi-turn conversation thread, with every question
+// after the first wrapped in an invisible U+2063 marker around bolded
+// text (diary-extension's own boldQuestion()). See continue.html's own
+// comment on this same function for the full reasoning, including why
+// the first question needs its own, careful dedup against entry.prompt
+// rather than being unconditionally prepended.
+function splitEntryIntoMessages(entry) {
+  const messages = [];
+  let text = entry.content || '';
+
+  let sourcesText = '';
+  const sourcesMatch = text.match(/\n\n---\n\n\*\*Sources:\*\*\n([\s\S]*)$/);
+  if (sourcesMatch) {
+    sourcesText = text.slice(sourcesMatch.index);
+    text = text.slice(0, sourcesMatch.index);
+  }
+
+  const TITLE_MARK = '\u2063';
+  const markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
+  let lastIndex = 0;
+  let m;
+  while ((m = markerRe.exec(text)) !== null) {
+    const before = text.slice(lastIndex, m.index).replace(/^\n+|\n+$/g, '');
+    if (before) messages.push({ role: 'assistant', content: before });
+    messages.push({ role: 'user', content: m[1] });
+    lastIndex = markerRe.lastIndex;
+  }
+  const rest = text.slice(lastIndex).replace(/^\n+/, '');
+  if (rest) messages.push({ role: 'assistant', content: rest });
+
+  const firstQuestionAlreadyCaptured = messages.length > 0 && messages[0].role === 'user' &&
+    entry.prompt && messages[0].content.trim() === entry.prompt.trim();
+  if (entry.prompt && !firstQuestionAlreadyCaptured) {
+    messages.unshift({ role: 'user', content: entry.prompt });
+  }
+
+  if (sourcesText && messages.length && messages[messages.length - 1].role === 'assistant') {
+    messages[messages.length - 1].content += sourcesText;
+  } else if (sourcesText) {
+    messages.push({ role: 'assistant', content: sourcesText.replace(/^\n+/, '') });
+  }
+
+  return messages;
+}
+
 // ── Semantic search: Voyage AI embeddings ───────────────────────────────────
 // NOTE: Anthropic does not offer its own embedding model at all (confirmed
 // directly from Anthropic's own documentation) — Voyage AI is Anthropic's
@@ -1186,6 +1238,73 @@ router.patch('/:id', requireAuth, async (req, res) => {
       sets.push(`search_text=$${i++}`); params.push(content.slice(0, 500).toLowerCase());
     }
 
+    // ── Sync feature (Diary Priority 9): chat_sessions merge ──────────────
+    // Deliberately runs whenever content is being updated AND this entry
+    // has already been forked to Forge (metadata.chatSessionId exists) —
+    // regardless of whether this specific PATCH came from a manual
+    // re-save click or a remote Sync trigger, since Sync is
+    // architecturally just "the same save, triggered remotely" and both
+    // should behave identically here, not diverge into two paths that
+    // could drift apart.
+    //
+    // Confirmed directly before writing this: this route's own
+    // content!==undefined branch above does a straight REPLACE, not a
+    // merge at all — diary-content.js itself is what already builds the
+    // full, merged conversation text before ever sending it here. So
+    // "the old content" needed for comparison has to be read from the
+    // DB before this update overwrites it, not derived from anything
+    // this route already computes.
+    //
+    // nativeSeedMessageCount (set once, at the moment of forking — see
+    // continue.html's linkChatSessionToDiaryEntry()) is what keeps
+    // native and Forge-side messages correctly ordered relative to each
+    // other: newly-detected native messages are inserted AT that index
+    // in chat_sessions.messages, pushing any existing Forge-only
+    // messages down, rather than naively appended to the end (which
+    // would incorrectly imply the native side spoke after the Forge
+    // continuation did).
+    //
+    // If the old and new message lists don't line up as a clean
+    // extension (provider-side edit, deletion, or compaction rewrote
+    // earlier history) — skip the chat_sessions merge silently rather
+    // than guess at how to reconcile mismatched history, and surface
+    // this in the response so the frontend can tell the user "couldn't
+    // merge automatically" instead of claiming success.
+    let chatSessionSyncResult = null;
+    if (content !== undefined) {
+      const existingForSync = await db.query(
+        'SELECT content, prompt, metadata FROM diary_entries WHERE id=$1 AND user_email=$2',
+        [id, req.userEmail]
+      );
+      if (existingForSync.rows.length) {
+        const oldRow = existingForSync.rows[0];
+        const oldMeta = oldRow.metadata || {};
+        const chatSessionId = oldMeta.chatSessionId;
+        const seedCount = oldMeta.nativeSeedMessageCount;
+        if (chatSessionId && typeof seedCount === 'number') {
+          const oldMessages = splitEntryIntoMessages({ prompt: oldRow.prompt, content: oldRow.content });
+          const newPromptForCompare = prompt !== undefined ? prompt : oldRow.prompt;
+          const newMessages = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
+          const isCleanExtension = oldMessages.length <= newMessages.length &&
+            oldMessages.every(function(m, idx) {
+              return newMessages[idx] && newMessages[idx].role === m.role && newMessages[idx].content === m.content;
+            });
+          if (isCleanExtension && newMessages.length > oldMessages.length) {
+            const trailingNew = newMessages.slice(oldMessages.length);
+            const session = await db.getChatSession(chatSessionId, req.userEmail);
+            if (session) {
+              const merged = session.messages.slice();
+              merged.splice(seedCount, 0, ...trailingNew);
+              await db.updateChatSession(chatSessionId, req.userEmail, merged);
+              chatSessionSyncResult = { merged: true, addedCount: trailingNew.length };
+            }
+          } else if (!isCleanExtension) {
+            chatSessionSyncResult = { merged: false, reason: 'history_mismatch' };
+          }
+        }
+      }
+    }
+
     if (metadata !== undefined) {
       // Merge metadata (attachments accumulate specially — see below)
       const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
@@ -1266,7 +1385,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
       params
     );
 
-    res.json({ success: true });
+    res.json({ success: true, chatSessionSync: chatSessionSyncResult });
 
     // Fire-and-forget — see rehostImagesAndPatch's own comment. Passes
     // the FULL, prepared images array (including any already-'hosted'
