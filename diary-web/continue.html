@@ -234,11 +234,12 @@ window.copyChatThread = copyChatThread;
 // tracked a fork date at all — needed here to show "Forked on [date]"
 // without an extra round-trip to chat_sessions just to read its
 // created_at.
-function linkChatSessionToDiaryEntry(sessionId, isFirstFork) {
+function linkChatSessionToDiaryEntry(sessionId, isFirstFork, nativeSeedCount) {
   if (!chatDiaryEntryId) return;
   var patch = { metadata: { chatSessionId: sessionId } };
   if (isFirstFork) {
     patch.metadata.forkedToForgeAt = new Date().toISOString();
+    patch.metadata.nativeSeedMessageCount = nativeSeedCount;
   }
   Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, patch).catch(function() {});
 }
@@ -258,6 +259,16 @@ async function sendChatMessage() {
   var text = input.value.trim();
   if (!text) return;
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/continue.html'; return; }
+
+  // Captured BEFORE chatHistory is mutated below, deliberately — this is
+  // exactly "how many messages existed natively at the moment of
+  // forking," which must exclude the very message about to be pushed
+  // (the first-ever Forge-side message). Confirmed directly: capturing
+  // this any later — even right after the push, let alone at
+  // linkChatSessionToDiaryEntry()'s own call site further down, after
+  // the assistant's response has ALSO been pushed — would incorrectly
+  // count that first Forge exchange as part of the native seed.
+  var nativeSeedCountAtForkTime = chatHistory.length;
 
   input.value = '';
   autoResizeChatInput(input);
@@ -346,7 +357,7 @@ async function sendChatMessage() {
     chatHistory.push({ role: 'assistant', content: assistantContent });
     if (sid) {
       chatSessionId = sid;
-      linkChatSessionToDiaryEntry(sid, wasFirstMessage);
+      linkChatSessionToDiaryEntry(sid, wasFirstMessage, nativeSeedCountAtForkTime);
     }
   } catch (err) {
     document.getElementById('chatLoading')?.remove();
