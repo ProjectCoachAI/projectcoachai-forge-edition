@@ -574,10 +574,32 @@ async function checkAndIncrementChatContinueUsage(userEmail, diaryEntryId, exist
   // below — this applies even to unlimited-entries paid tiers, since
   // it's bounding an individual conversation's own cost growth, not
   // free-vs-paid access to the feature at all.
+  //
+  // NOTE: fixed a genuine, confirmed bug — this previously counted
+  // EVERY user-role message in chat_sessions.messages, including the
+  // ones seeded directly from the original native conversation at fork
+  // time. For any entry whose native history already had more user
+  // turns than the cap itself (confirmed live: a 44-message-deep
+  // native seed hit "23/15" before a single new Forge message could
+  // even be sent), this made Continue-in-Forge entirely unusable
+  // immediately, not a growth guardrail at all. The cap is meant to
+  // bound NEW, Forge-side growth specifically — using
+  // metadata.nativeSeedMessageCount (the exact index where seeded
+  // content ends and Forge-side content begins, set once at fork time)
+  // to slice those seeded messages off before counting fixes this
+  // precisely, without needing to infer how many of the seed's own
+  // messages happened to be user-role.
   if (existingSessionId) {
     const sessionR = await query('SELECT messages FROM chat_sessions WHERE session_id=$1 AND user_email=$2', [existingSessionId, userEmail]);
     const messages = (sessionR.rows[0] && sessionR.rows[0].messages) || [];
-    const userMessageCount = messages.filter(function(m) { return m.role === 'user'; }).length;
+    let seedCount = 0;
+    if (diaryEntryId) {
+      const entryR = await query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [diaryEntryId, userEmail]);
+      const entryMeta = (entryR.rows[0] && entryR.rows[0].metadata) || {};
+      if (typeof entryMeta.nativeSeedMessageCount === 'number') seedCount = entryMeta.nativeSeedMessageCount;
+    }
+    const newMessagesOnly = messages.slice(seedCount);
+    const userMessageCount = newMessagesOnly.filter(function(m) { return m.role === 'user'; }).length;
     if (userMessageCount >= CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP) {
       return { allowed:false, reason:'message_cap', messageCount:userMessageCount, messageCap:CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP };
     }
