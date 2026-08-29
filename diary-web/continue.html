@@ -490,6 +490,17 @@ window.sendChatMessage = sendChatMessage;
       addMessageToDOM(msg.role, msg.content);
       chatHistory.push(msg);
     });
+    // Same "land inside, ready to type" behavior as the existing-
+    // session restore path below — this covers all three call sites
+    // (no session yet, session lookup failed, session came back empty)
+    // in one place rather than repeating it at each. Uses
+    // getElementById directly rather than the `input` variable, since
+    // that's a LOCAL variable scoped to sendChatMessage() — this
+    // function has no access to it at all, confirmed directly before
+    // writing this (a scope bug plain syntax-checking alone would
+    // never have caught, since JS wouldn't flag it until this code
+    // actually ran).
+    document.getElementById('chatInput')?.focus();
   }
 
   Forge.request('GET', '/api/diary/' + chatDiaryEntryId).then(function(r) {
@@ -513,6 +524,14 @@ window.sendChatMessage = sendChatMessage;
             addMessageToDOM(msg.role, msg.content);
             chatHistory.push(msg);
           });
+          // Land the user INSIDE the conversation on return, not just
+          // looking at it — ready to type immediately, same as Forge
+          // Synthesize already does for its own returning sessions,
+          // rather than requiring an extra click into the input box
+          // before they can continue where they left off. Uses
+          // getElementById directly, not the `input` variable — that's
+          // local to sendChatMessage(), inaccessible here.
+          document.getElementById('chatInput')?.focus();
         } else {
           seedFromEntry(entry);
         }
