@@ -580,6 +580,106 @@ var filteredEntries = [];
 var activeCategory = 'all';
 var activeSource = 'all';
 var activeFavorite = false;
+
+// ── Sync (Diary Priority 9) ─────────────────────────────────────────────────
+// Same helpers as continue.html's own copy — kept deliberately identical
+// in behavior (not literally shared code, since these two pages don't
+// share a JS module at all) so a fork synced from either surface behaves
+// the same way.
+const DIARY_SYNC_EXT_ID = 'momenmcgdmceejapigodolpekonmaedd';
+
+function isDiaryExtAvailable() {
+  return typeof chrome !== 'undefined' && !!chrome.runtime;
+}
+
+function extSyncSendMessage(payload) {
+  return new Promise(function(resolve) {
+    if (!isDiaryExtAvailable()) { resolve(null); return; }
+    try {
+      chrome.runtime.sendMessage(DIARY_SYNC_EXT_ID, payload, function(response) {
+        if (chrome.runtime.lastError) { resolve(null); return; }
+        resolve(response);
+      });
+    } catch (e) { resolve(null); }
+  });
+}
+
+function formatSyncRelativeTime(isoString) {
+  if (!isoString) return null;
+  var then = new Date(isoString).getTime();
+  var diffSec = Math.max(0, Math.round((Date.now() - then) / 1000));
+  if (diffSec < 30) return 'just now';
+  if (diffSec < 90) return '1 min ago';
+  if (diffSec < 3600) return Math.round(diffSec / 60) + ' min ago';
+  if (diffSec < 7200) return '1 hour ago';
+  if (diffSec < 86400) return Math.round(diffSec / 3600) + ' hours ago';
+  return new Date(isoString).toLocaleDateString(undefined, {month:'short', day:'numeric'});
+}
+
+// Lazy, on-demand — NOT called for every forked entry upfront, since
+// renderEntryCard() runs once for ALL entries on page load (the fork
+// badge already exists in the DOM per entry, just CSS-hidden until
+// expanded) — calling CHECK_TAB_OPEN for every forked entry regardless
+// of whether the user ever opens it would be wasteful, potentially
+// dozens of parallel extension messages for a page nobody's looking at
+// yet. Called instead from toggleEntry() itself, only for the specific
+// entry actually being opened.
+async function updateSyncButtonLabelForEntry(entryId) {
+  var btn = document.getElementById('syncBtn-' + entryId);
+  if (!btn) return;
+  if (!isDiaryExtAvailable()) { btn.style.display = 'none'; return; }
+  var entry = (window._diaryEntries || []).find(function(e) { return e.id === entryId; });
+  if (!entry) return;
+  var meta = null;
+  try { meta = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata; } catch(_) {}
+  var conversationUrl = meta && meta.url;
+  if (!conversationUrl) { btn.style.display = 'none'; return; }
+  var syncedText = (meta && meta.lastSyncedAt) ? ('Synced ' + formatSyncRelativeTime(meta.lastSyncedAt)) : 'Never synced';
+  var tabCheck = await extSyncSendMessage({ type: 'CHECK_TAB_OPEN', conversationUrl: conversationUrl });
+  var opensNewTab = !(tabCheck && tabCheck.isOpen);
+  btn.textContent = '\u{1F504} ' + syncedText + (opensNewTab ? ' \u2022 opens original conversation' : '');
+}
+
+async function performEntrySync(entryId) {
+  var btn = document.getElementById('syncBtn-' + entryId);
+  var entry = (window._diaryEntries || []).find(function(e) { return e.id === entryId; });
+  if (!entry) return;
+  var meta = null;
+  try { meta = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata; } catch(_) {}
+  var conversationUrl = meta && meta.url;
+  if (!conversationUrl) return;
+  var previousText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '\u{1F504} Syncing\u2026'; btn.disabled = true; }
+  try {
+    const result = await extSyncSendMessage({ type: 'REQUEST_SYNC', conversationUrl: conversationUrl, diaryEntryId: entryId });
+    if (!result || !result.success) {
+      Forge.showToast((result && result.error) || 'Sync failed — extension may not be installed.', 'error');
+      if (btn) btn.textContent = previousText;
+      return;
+    }
+    const sync = result.chatSessionSync;
+    if (sync && sync.reason === 'history_mismatch') {
+      Forge.showToast('Synced the entry, but couldn\u2019t merge into this Forge conversation automatically — the native and Forge histories no longer line up.', 'error');
+    } else if (sync && sync.merged) {
+      Forge.showToast('Synced — ' + sync.addedCount + ' new message' + (sync.addedCount === 1 ? '' : 's') + ' pulled in.', 'success');
+    } else {
+      Forge.showToast('Synced — nothing new to pull in.', 'success');
+    }
+    // Refresh just this entry's own data (not a full page reload, since
+    // that would collapse every other expanded entry too) — re-fetch
+    // the full list so window._diaryEntries reflects the updated
+    // content/metadata, then update this one card's own badge in place.
+    const r = await Forge.request('GET', '/api/diary');
+    if (r && r.ok && r.data && r.data.entries) {
+      allEntries = r.data.entries;
+      window._diaryEntries = allEntries;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+    updateSyncButtonLabelForEntry(entryId);
+  }
+}
+window.performEntrySync = performEntrySync;
 var activeDateFrom = '';
 var activeDateTo = '';
 
@@ -1304,6 +1404,9 @@ function renderEntryCard(e) {
         (_emeta.forkedToForgeAt ? ' on ' + new Date(_emeta.forkedToForgeAt).toLocaleDateString(undefined, {month:'short',day:'numeric',year:'numeric'}) : '') +
         ' — this entry\'s own content won\'t include what happens there. ' +
         '<a href="/continue.html?entryId=' + e.id + '" style="color:#C17D3C;font-weight:500;">Open the Forge conversation &rarr;</a>' +
+        '<div style="margin-top:6px;">' +
+          '<button class="entry-btn" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">&#128260; Checking&hellip;</button>' +
+        '</div>' +
       '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
@@ -1402,6 +1505,11 @@ function toggleEntry(id) {
   // session, on two different calendar days, without a reload between).
   if (!wasExpanded) {
     Forge.request('POST', '/api/diary/' + id + '/record-open').catch(function() {});
+    // Lazy sync-status check — only for the specific entry actually
+    // being opened, not every forked entry on the page. Harmless no-op
+    // if this entry was never forked at all (the sync button simply
+    // isn't in the DOM for it).
+    updateSyncButtonLabelForEntry(id);
   }
   // NOTE: added — requested feature: clicking a diary entry should
   // scroll the page so that entry's own position rises to the top of
