@@ -341,7 +341,7 @@ function prepareImagesForSave(rawImages) {
 // comment on this same function for the full reasoning, including why
 // the first question needs its own, careful dedup against entry.prompt
 // rather than being unconditionally prepended.
-function splitEntryIntoMessages(entry) {
+function splitEntryIntoMessages(entry, dropSourcesForComparison) {
   const messages = [];
   let text = entry.content || '';
 
@@ -371,10 +371,28 @@ function splitEntryIntoMessages(entry) {
     messages.unshift({ role: 'user', content: entry.prompt });
   }
 
-  if (sourcesText && messages.length && messages[messages.length - 1].role === 'assistant') {
-    messages[messages.length - 1].content += sourcesText;
-  } else if (sourcesText) {
-    messages.push({ role: 'assistant', content: sourcesText.replace(/^\n+/, '') });
+  // NOTE: fixed — confirmed live as a real, reproduced false-positive
+  // history_mismatch. The Sources footer always attaches to whichever
+  // message is LAST at parse time — but that position genuinely shifts
+  // every time a new Q&A pair is appended (the footer that used to
+  // belong to message N now belongs to message N+1 once a new pair
+  // exists). Comparing an old parse against a new parse then found the
+  // SAME, unchanged earlier answer differing character-for-character,
+  // purely because of where the footer happened to land in each parse
+  // — not because any real content changed at all. dropSourcesForComparison,
+  // used only by the old-vs-new clean-extension check in this route's
+  // own PATCH handler (never by continue.html's identical copy, which
+  // has no such comparison to make), skips re-attaching the footer to
+  // any message entirely, so it can never cause a spurious mismatch.
+  // The actual trailing messages inserted into chat_sessions still come
+  // from a normal, full parse (this parameter omitted), so the real,
+  // final content isn't missing its own Sources footer at all.
+  if (!dropSourcesForComparison) {
+    if (sourcesText && messages.length && messages[messages.length - 1].role === 'assistant') {
+      messages[messages.length - 1].content += sourcesText;
+    } else if (sourcesText) {
+      messages.push({ role: 'assistant', content: sourcesText.replace(/^\n+/, '') });
+    }
   }
 
   return messages;
@@ -1301,15 +1319,25 @@ router.patch('/:id', requireAuth, async (req, res) => {
         const chatSessionId = oldMeta.chatSessionId;
         const seedCount = oldMeta.nativeSeedMessageCount;
         if (chatSessionId && typeof seedCount === 'number') {
-          const oldMessages = splitEntryIntoMessages({ prompt: oldRow.prompt, content: oldRow.content });
+          // Comparison uses dropSourcesForComparison — see
+          // splitEntryIntoMessages' own comment for why the Sources
+          // footer's shifting attachment point would otherwise cause a
+          // false-positive mismatch on the very same, unchanged earlier
+          // content. The actual messages inserted into chat_sessions
+          // still come from a normal, full parse of the new content
+          // (newMessagesFull below), so the real, saved message keeps
+          // its own Sources footer intact — only the comparison itself
+          // ignores it.
+          const oldMessagesForCompare = splitEntryIntoMessages({ prompt: oldRow.prompt, content: oldRow.content }, true);
           const newPromptForCompare = prompt !== undefined ? prompt : oldRow.prompt;
-          const newMessages = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
-          const isCleanExtension = oldMessages.length <= newMessages.length &&
-            oldMessages.every(function(m, idx) {
-              return newMessages[idx] && newMessages[idx].role === m.role && newMessages[idx].content === m.content;
+          const newMessagesForCompare = splitEntryIntoMessages({ prompt: newPromptForCompare, content }, true);
+          const isCleanExtension = oldMessagesForCompare.length <= newMessagesForCompare.length &&
+            oldMessagesForCompare.every(function(m, idx) {
+              return newMessagesForCompare[idx] && newMessagesForCompare[idx].role === m.role && newMessagesForCompare[idx].content === m.content;
             });
-          if (isCleanExtension && newMessages.length > oldMessages.length) {
-            const trailingNew = newMessages.slice(oldMessages.length);
+          if (isCleanExtension && newMessagesForCompare.length > oldMessagesForCompare.length) {
+            const newMessagesFull = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
+            const trailingNew = newMessagesFull.slice(oldMessagesForCompare.length);
             const session = await db.getChatSession(chatSessionId, req.userEmail);
             if (session) {
               const merged = session.messages.slice();

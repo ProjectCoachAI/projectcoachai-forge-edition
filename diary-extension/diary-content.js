@@ -2825,6 +2825,29 @@ function queryAllDeep(selector) {
         // post-processing step. Calling it here too would be redundant
         // at best and risk double-marking at worst.
         var contentToSave = stripCitations(fullThread);
+        // Guard MUST come before the diagnostic log below, not after —
+        // confirmed live as the actual, root cause of a "Cannot read
+        // properties of null (reading 'slice')" crash: this pre-
+        // existing log line unconditionally called .slice() on
+        // contentToSave with no null check at all, throwing BEFORE the
+        // guard below ever got a chance to run, in exactly the
+        // no-real-content scenario the guard exists to catch (Sync's
+        // own proactive injectSaveDiaryButton() call can now legitimately
+        // reach this code before a provider's own capture logic has
+        // populated fullThread at all, even after the page reports
+        // 'complete'). The only existing guard in this whole function
+        // was for authentication — none at all for "is there actually
+        // anything here to save," and no reference to contentToSave
+        // before that check can assume it's non-null.
+        if (!contentToSave || contentToSave.trim().length < 10) {
+          console.log('[Diary Sync DIAG] refusing to save — no real content captured (conversation likely deleted or not yet loaded)');
+          if (btn) {
+            btn.textContent = 'Nothing to save';
+            btn.style.background = '#6B6B88';
+            setTimeout(function() { btn.remove(); }, 3000);
+          }
+          return { success: false, error: 'no_content_found' };
+        }
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // saveUrl: use most specific URL available
         //
@@ -2982,18 +3005,32 @@ function queryAllDeep(selector) {
     // backgrounded load.
     if (message.type === 'TRIGGER_SYNC_SAVE') {
       console.log('[Diary Sync DIAG] TRIGGER_SYNC_SAVE received on this page. window.__diaryPerformSave already set?', !!window.__diaryPerformSave);
+      // Confirmed via direct, live testing that passively waiting on
+      // this alone is genuinely unreliable, not just slow: the SAME
+      // scenario succeeded at poll attempt 62/70 once, then failed to
+      // ever become available at all (>70 attempts) on a later,
+      // otherwise-identical run. injectSaveDiaryButton() itself is
+      // directly callable here (confirmed: both are declared within
+      // the same, single, top-level content-script IIFE, so normal JS
+      // function-declaration hoisting makes this safe regardless of
+      // call order) and, critically, doesn't depend on any DOM/network
+      // state to run — it just defines the button and its handler,
+      // synchronously setting window.__diaryPerformSave as a direct
+      // side effect. Calling it proactively here — rather than only
+      // ever reacting to the incidental, unpredictable completion
+      // signal it normally waits for — makes it available immediately
+      // for Sync's own purposes, without waiting on a signal that may
+      // never fire in time (or, per today's live tests, at all) for a
+      // fresh, backgrounded tab load specifically.
+      if (!window.__diaryPerformSave) {
+        try { injectSaveDiaryButton('sync-trigger'); } catch(e) { console.log('[Diary Sync DIAG] proactive injectSaveDiaryButton() call threw:', e.message); }
+      }
       var syncPollAttempts = 0;
       var syncPollMax = 70; // 70 * 500ms = 35s ceiling
       (function pollForSaveFn() {
         if (window.__diaryPerformSave) {
           console.log('[Diary Sync DIAG] window.__diaryPerformSave available after', syncPollAttempts, 'poll attempt(s) — calling it now');
-          window.__diaryPerformSave().then(function(result) {
-            console.log('[Diary Sync DIAG] performSaveToDiary() resolved:', JSON.stringify(result));
-            window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: !!(result && result.success), error: result && result.error } }, '*');
-          }).catch(function(err) {
-            console.log('[Diary Sync DIAG] performSaveToDiary() threw:', err && err.message);
-            window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: false, error: err && err.message } }, '*');
-          });
+          attemptSave(0);
           return;
         }
         syncPollAttempts++;
@@ -3004,6 +3041,37 @@ function queryAllDeep(selector) {
         }
         setTimeout(pollForSaveFn, 500);
       })();
+
+      // Confirmed live as a real, distinct problem from the poll above:
+      // proactively calling injectSaveDiaryButton() makes
+      // window.__diaryPerformSave available immediately, but that
+      // function only sets up the save capability itself — it does NOT
+      // populate the actual captured conversation data
+      // (window.__diaryCapture.turns etc.), which is a separate,
+      // provider-specific mechanism running independently. Confirmed:
+      // a genuinely real Perplexity conversation still correctly
+      // returned no_content_found, meaning performSaveToDiary() ran
+      // before that separate capture logic had populated anything at
+      // all yet. Retrying with a short delay gives it that time,
+      // rather than either failing immediately on the first empty
+      // result, or (the earlier version of this fix) accepting
+      // whatever's there right away regardless of whether real capture
+      // has actually happened.
+      var saveRetryMax = 6; // 6 * 2s = 12s of additional retry window
+      function attemptSave(retryCount) {
+        window.__diaryPerformSave().then(function(result) {
+          if (result && !result.success && result.error === 'no_content_found' && retryCount < saveRetryMax) {
+            console.log('[Diary Sync DIAG] no content captured yet (attempt', retryCount, ') — retrying in 2s');
+            setTimeout(function() { attemptSave(retryCount + 1); }, 2000);
+            return;
+          }
+          console.log('[Diary Sync DIAG] performSaveToDiary() resolved:', JSON.stringify(result));
+          window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: !!(result && result.success), error: result && result.error } }, '*');
+        }).catch(function(err) {
+          console.log('[Diary Sync DIAG] performSaveToDiary() threw:', err && err.message);
+          window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: false, error: err && err.message } }, '*');
+        });
+      }
     }
   });
 

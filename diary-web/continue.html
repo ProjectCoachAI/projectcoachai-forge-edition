@@ -250,7 +250,7 @@ function showLimitBanner(used, limit, customMessage) {
     ? customMessage
     : 'Monthly free entries used (' + used + '/' + limit + '). ';
   el.innerHTML = '<div class="chat-limit-banner">' + text + ' ' +
-    '<a href="/app.html">Upgrade to Forge</a> for unlimited continues.</div>';
+    '<a href="https://forge.projectcoachai.com/pricing.html">Upgrade to Forge</a> for unlimited continues.</div>';
 }
 
 async function sendChatMessage() {
@@ -272,7 +272,7 @@ async function sendChatMessage() {
 
   input.value = '';
   autoResizeChatInput(input);
-  addMessageToDOM('user', text);
+  var lastUserMessageEl = addMessageToDOM('user', text);
   chatHistory.push({ role: 'user', content: text });
 
   chatIsSending = true;
@@ -303,6 +303,16 @@ async function sendChatMessage() {
     if (resp.status === 429) {
       const errData = await resp.json().catch(() => ({}));
       document.getElementById('chatLoading')?.remove();
+      // Restore the typed text and remove the now-stale user bubble —
+      // chatHistory.pop() below already removes this message from
+      // state, but without this the DOM bubble stayed visible,
+      // misleadingly implying the message had sent when it hadn't, and
+      // the text itself was permanently lost from the input box,
+      // forcing a full retype to retry (or to copy elsewhere, e.g. a
+      // different, non-capped entry, per this error's own suggestion).
+      lastUserMessageEl?.remove();
+      input.value = text;
+      autoResizeChatInput(input);
       // Two distinct 429 reasons, per the two-axis gating design — shown
       // differently since they mean genuinely different things to the
       // user: one says "this specific conversation is done growing,
@@ -361,6 +371,15 @@ async function sendChatMessage() {
     }
   } catch (err) {
     document.getElementById('chatLoading')?.remove();
+    // Same restoration as the 429 case above, plus removing this
+    // message from chatHistory too (missing here previously, unlike
+    // the 429 path) — otherwise a failed send left the message stuck
+    // in chatHistory permanently, risking a duplicate if the user
+    // retyped and resent the same text.
+    lastUserMessageEl?.remove();
+    input.value = text;
+    autoResizeChatInput(input);
+    chatHistory.pop();
     addMessageToDOM('assistant', '&#9888; ' + (err.message || 'Something went wrong.'));
     Forge.showToast(err.message || 'Chat request failed.', 'error');
   } finally {
