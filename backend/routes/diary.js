@@ -1319,6 +1319,21 @@ router.patch('/:id', requireAuth, async (req, res) => {
         const chatSessionId = oldMeta.chatSessionId;
         const seedCount = oldMeta.nativeSeedMessageCount;
         if (chatSessionId && typeof seedCount === 'number') {
+          // lastSyncedAt is set whenever this check runs at all,
+          // regardless of outcome (merged, mismatch, or no new content
+          // found) — per the brief's own guidance, "synced as of
+          // [time]" reflects the last time alignment with the native
+          // side was actually checked, not just the last time new
+          // content happened to be found. Written via its own, direct
+          // query rather than relying on this request also including
+          // its own separate metadata update — performSaveToDiary()'s
+          // own PATCH payload shape shouldn't need to be aware of this
+          // at all for it to work correctly.
+          const lastSyncedAt = new Date().toISOString();
+          await db.query(
+            `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncedAt}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+            [JSON.stringify(lastSyncedAt), id, req.userEmail]
+          );
           // Comparison uses dropSourcesForComparison — see
           // splitEntryIntoMessages' own comment for why the Sources
           // footer's shifting attachment point would otherwise cause a
@@ -1343,10 +1358,12 @@ router.patch('/:id', requireAuth, async (req, res) => {
               const merged = session.messages.slice();
               merged.splice(seedCount, 0, ...trailingNew);
               await db.updateChatSession(chatSessionId, req.userEmail, merged);
-              chatSessionSyncResult = { merged: true, addedCount: trailingNew.length };
+              chatSessionSyncResult = { merged: true, addedCount: trailingNew.length, lastSyncedAt };
             }
           } else if (!isCleanExtension) {
-            chatSessionSyncResult = { merged: false, reason: 'history_mismatch' };
+            chatSessionSyncResult = { merged: false, reason: 'history_mismatch', lastSyncedAt };
+          } else {
+            chatSessionSyncResult = { merged: false, reason: 'no_new_content', lastSyncedAt };
           }
         }
       }

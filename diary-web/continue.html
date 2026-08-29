@@ -81,6 +81,7 @@
   <div class="chat-header">
     <a href="/app.html" class="back" id="chatBackLink">&larr; Back to Diary</a>
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <button class="chat-icon-btn" id="syncBtn" onclick="performSync()" title="Pull in anything new from the original conversation">&#128260; Checking&hellip;</button>
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <div class="chat-model-badge" id="modelBadge"><span class="dot"></span><span id="modelBadgeText">Loading&hellip;</span></div>
     </div>
@@ -115,6 +116,113 @@ let chatDiaryEntryId = null;
 let chatHistory = [];
 let chatSessionId = null;
 let chatIsSending = false;
+
+// ── Sync (Diary Priority 9) ─────────────────────────────────────────────────
+const DIARY_EXT_ID = 'momenmcgdmceejapigodolpekonmaedd';
+let chatConversationUrl = null;
+let chatIsSyncing = false;
+
+function isExtensionAvailable() {
+  return typeof chrome !== 'undefined' && !!chrome.runtime;
+}
+
+function extSendMessage(payload) {
+  return new Promise(function(resolve) {
+    if (!isExtensionAvailable()) { resolve(null); return; }
+    try {
+      chrome.runtime.sendMessage(DIARY_EXT_ID, payload, function(response) {
+        if (chrome.runtime.lastError) { resolve(null); return; }
+        resolve(response);
+      });
+    } catch (e) { resolve(null); }
+  });
+}
+
+// Rough, human, non-precise phrasing — "synced as of [time]" is meant
+// to read the same familiar way Dropbox/iCloud/git already do, per the
+// brief's own guidance not to over-explain this.
+function formatRelativeTime(isoString) {
+  if (!isoString) return null;
+  var then = new Date(isoString).getTime();
+  var diffSec = Math.max(0, Math.round((Date.now() - then) / 1000));
+  if (diffSec < 30) return 'just now';
+  if (diffSec < 90) return '1 min ago';
+  if (diffSec < 3600) return Math.round(diffSec / 60) + ' min ago';
+  if (diffSec < 7200) return '1 hour ago';
+  if (diffSec < 86400) return Math.round(diffSec / 3600) + ' hours ago';
+  return new Date(isoString).toLocaleDateString(undefined, {month:'short', day:'numeric'});
+}
+
+// Decided BEFORE any click, never a surprise after — per the explicit
+// design requirement: the button's own label already tells the user
+// whether this will be near-instant or involves opening a visible tab
+// to the original conversation, rather than a tab just appearing
+// unannounced once they've already committed to clicking.
+async function updateSyncButtonLabel() {
+  var btn = document.getElementById('syncBtn');
+  if (!btn) return;
+  if (!isExtensionAvailable()) {
+    btn.style.display = 'none';
+    return;
+  }
+  if (!chatConversationUrl) {
+    btn.textContent = '\u{1F504} Sync';
+    return;
+  }
+  var lastSynced = null;
+  try {
+    var r = await Forge.request('GET', '/api/diary/' + chatDiaryEntryId);
+    if (r && r.ok && r.data && r.data.entry) {
+      var meta = typeof r.data.entry.metadata === 'string' ? JSON.parse(r.data.entry.metadata) : r.data.entry.metadata;
+      lastSynced = meta && meta.lastSyncedAt;
+    }
+  } catch(_) {}
+  var syncedText = lastSynced ? ('Synced ' + formatRelativeTime(lastSynced)) : 'Never synced';
+  var tabCheck = await extSendMessage({ type: 'CHECK_TAB_OPEN', conversationUrl: chatConversationUrl });
+  var opensNewTab = !(tabCheck && tabCheck.isOpen);
+  btn.dataset.syncedText = syncedText;
+  btn.textContent = '\u{1F504} ' + syncedText + (opensNewTab ? ' \u2022 opens original conversation' : '');
+}
+
+async function performSync() {
+  if (chatIsSyncing || !chatConversationUrl) return;
+  var btn = document.getElementById('syncBtn');
+  chatIsSyncing = true;
+  var previousText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '\u{1F504} Syncing\u2026'; btn.disabled = true; }
+  try {
+    const result = await extSendMessage({ type: 'REQUEST_SYNC', conversationUrl: chatConversationUrl, diaryEntryId: chatDiaryEntryId });
+    if (!result || !result.success) {
+      Forge.showToast((result && result.error) || 'Sync failed — extension may not be installed.', 'error');
+      if (btn) btn.textContent = previousText;
+      return;
+    }
+    // Reflect what actually happened, honestly — a sync "succeeding"
+    // (the mechanism ran without error) is a distinct thing from
+    // whether it actually found and merged anything, per the brief's
+    // own emphasis on not overclaiming here. history_mismatch in
+    // particular must surface to the user, not read as a silent,
+    // unremarked success — the whole reason the backend surfaces this
+    // reason at all instead of just quietly skipping the merge.
+    const sync = result.chatSessionSync;
+    if (sync && sync.reason === 'history_mismatch') {
+      Forge.showToast('Synced the entry, but couldn\u2019t merge into this Forge conversation automatically — the native and Forge histories no longer line up.', 'error');
+    } else if (sync && sync.merged) {
+      Forge.showToast('Synced — ' + sync.addedCount + ' new message' + (sync.addedCount === 1 ? '' : 's') + ' pulled in.', 'success');
+    } else {
+      Forge.showToast('Synced — nothing new to pull in.', 'success');
+    }
+    // Reload to reflect whatever actually changed — the simplest,
+    // most reliable way to show a merged conversation without trying
+    // to reconcile partial DOM state by hand.
+    setTimeout(function() { window.location.reload(); }, 900);
+  } finally {
+    chatIsSyncing = false;
+    if (btn) btn.disabled = false;
+    updateSyncButtonLabel();
+  }
+}
+window.performSync = performSync;
 
 function autoResizeChatInput(el) {
   el.style.height = 'auto';
@@ -514,6 +622,8 @@ window.sendChatMessage = sendChatMessage;
     var sourceMap = { claude:'claude', chatgpt:'chatgpt', gemini:'gemini', perplexity:'perplexity', grok:'grok', mistral:'mistral', deepseek:'deepseek', meta:'meta' };
     chatModel = sourceMap[entry.source] || 'claude';
     document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel] || chatModel;
+    chatConversationUrl = meta && meta.url ? meta.url : null;
+    updateSyncButtonLabel();
 
     var sessionId = meta && meta.chatSessionId ? meta.chatSessionId : null;
     if (sessionId) {

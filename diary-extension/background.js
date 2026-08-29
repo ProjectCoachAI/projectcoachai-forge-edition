@@ -683,7 +683,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     const resolver = syncTabResolvers.get(sender.tab.id);
     if (resolver) {
       syncTabResolvers.delete(sender.tab.id);
-      resolver({ success: !!msg.success, error: msg.error });
+      resolver({ success: !!msg.success, error: msg.error, chatSessionSync: msg.chatSessionSync });
     }
     return;
   }
@@ -767,7 +767,7 @@ let data;
         data = await pR.json();
         data.updated = false;
       }
-      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, updated: data.updated, error: data.error } });
+      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, updated: data.updated, error: data.error, chatSessionSync: data.chatSessionSync } });
     } catch(e) {
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
     }

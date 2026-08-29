@@ -2915,7 +2915,7 @@ function queryAllDeep(selector) {
           var handler = function(e) {
             if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
               window.removeEventListener('message', handler);
-              resolve({ success: e.data.success, error: e.data.error });
+              resolve({ success: e.data.success, error: e.data.error, chatSessionSync: e.data.chatSessionSync });
             }
           };
           window.addEventListener('message', handler);
@@ -2927,7 +2927,7 @@ function queryAllDeep(selector) {
             btn.style.background = '#22c55e';
             setTimeout(function() { btn.remove(); }, 3000);
           }
-          return { success: true };
+          return { success: true, chatSessionSync: data.chatSessionSync };
         } else {
           throw new Error(data.error || 'Save failed');
         }
@@ -3066,7 +3066,7 @@ function queryAllDeep(selector) {
             return;
           }
           console.log('[Diary Sync DIAG] performSaveToDiary() resolved:', JSON.stringify(result));
-          window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: !!(result && result.success), error: result && result.error } }, '*');
+          window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: !!(result && result.success), error: result && result.error, chatSessionSync: result && result.chatSessionSync } }, '*');
         }).catch(function(err) {
           console.log('[Diary Sync DIAG] performSaveToDiary() threw:', err && err.message);
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: false, error: err && err.message } }, '*');
