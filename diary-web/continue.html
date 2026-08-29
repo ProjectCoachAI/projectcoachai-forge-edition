@@ -83,6 +83,7 @@
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
       <button class="chat-icon-btn" id="syncBtn" onclick="performSync()" title="Pull in anything new from the original conversation">&#128260; Checking&hellip;</button>
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
+      <button class="chat-icon-btn" onclick="shareConversation()" title="Share this conversation">&#128279; Share</button>
       <div class="chat-model-badge" id="modelBadge"><span class="dot"></span><span id="modelBadgeText">Loading&hellip;</span></div>
     </div>
   </div>
@@ -99,6 +100,33 @@
   <div class="chat-input-row">
     <textarea id="chatInput" class="chat-input" placeholder="Type your message..." rows="1" oninput="autoResizeChatInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button id="chatSendBtn" class="chat-send-btn" onclick="sendChatMessage()">Send</button>
+  </div>
+</div>
+
+<!-- Share Modal — same structure/styling as app.html's own, so sharing
+     feels identical regardless of which surface it's triggered from -->
+<div id="shareModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(27,42,74,0.5);backdrop-filter:blur(4px);z-index:10500;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:12px;padding:2rem;max-width:420px;width:100%;">
+    <div style="font-family:Lora,serif;font-size:20px;font-weight:500;color:#1B2A4A;margin-bottom:0.4rem;">Share conversation</div>
+    <div id="shareModalTitle" style="font-size:13px;color:#9E9890;margin-bottom:1.25rem;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;">
+      <div onclick="shareVia('whatsapp')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
+        <div style="font-size:22px;margin-bottom:5px;">💬</div><div style="font-size:12px;color:#6B6559;font-weight:500;">WhatsApp</div>
+      </div>
+      <div onclick="shareVia('email')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
+        <div style="font-size:22px;margin-bottom:5px;">📧</div><div style="font-size:12px;color:#6B6559;font-weight:500;">Email</div>
+      </div>
+      <div onclick="shareVia('copy')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
+        <div style="font-size:22px;margin-bottom:5px;">📋</div><div style="font-size:12px;color:#6B6559;font-weight:500;">Copy Text</div>
+      </div>
+      <div onclick="shareVia('word')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
+        <div style="font-size:22px;margin-bottom:5px;">📝</div><div style="font-size:12px;color:#6B6559;font-weight:500;">Word / Doc</div>
+      </div>
+      <div onclick="shareVia('print')" style="border:0.5px solid #D6D2C8;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#C17D3C'" onmouseout="this.style.borderColor='#D6D2C8'">
+        <div style="font-size:22px;margin-bottom:5px;">🖨️</div><div style="font-size:12px;color:#6B6559;font-weight:500;">Print / PDF</div>
+      </div>
+    </div>
+    <button onclick="closeShareModal()" style="width:100%;background:none;border:0.5px solid #D6D2C8;border-radius:6px;padding:9px;color:#6B6559;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;">Cancel</button>
   </div>
 </div>
 
@@ -309,8 +337,17 @@ function addMessageToDOM(role, content, opts) {
     div.innerHTML = '<div class="chat-msg-body">' + rendered + '</div>';
   }
 
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  // insertBeforeEl (used only by loadEarlierMessages, prepending an
+  // older batch above what's currently visible) deliberately skips the
+  // auto-scroll below — jumping the user's view down to the bottom
+  // right as they click "load earlier," while looking at the TOP of
+  // the conversation, would be a jarring, backwards scroll hijack.
+  if (opts.insertBeforeEl) {
+    container.insertBefore(div, opts.insertBeforeEl);
+  } else {
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
   return div;
 }
 
@@ -323,15 +360,73 @@ function copyMsgContent(msgId) {
 }
 window.copyMsgContent = copyMsgContent;
 
-function copyChatThread() {
-  var text = chatHistory.map(function(m) {
+function buildChatThreadText() {
+  return chatHistory.map(function(m) {
     return (m.role === 'user' ? 'You: ' : (MODEL_LABELS[chatModel] || chatModel) + ': ') + m.content;
   }).join('\n\n');
+}
+
+function copyChatThread() {
+  var text = buildChatThreadText();
   navigator.clipboard.writeText(text).then(function() {
     Forge.showToast('Conversation copied!', 'success');
   }).catch(function() { Forge.showToast('Copy failed', 'error'); });
 }
 window.copyChatThread = copyChatThread;
+
+// ── Share (same modal/behavior as app.html's own shareEntry(), ported
+// rather than shared as a JS module — these two pages don't share code
+// at all). Deliberately shares the conversation's own TEXT, not a link
+// to this page: unlike a Diary entry, continue.html is private and
+// login-gated, so a shared link would be useless to anyone not signed
+// into this same account.
+function shareConversation() {
+  document.getElementById('shareModalTitle').textContent =
+    'This Forge conversation (' + (MODEL_LABELS[chatModel] || chatModel) + ')';
+  document.getElementById('shareModalOverlay').style.display = 'flex';
+}
+window.shareConversation = shareConversation;
+
+function closeShareModal() {
+  document.getElementById('shareModalOverlay').style.display = 'none';
+}
+window.closeShareModal = closeShareModal;
+
+function shareVia(channel) {
+  var nl = String.fromCharCode(10);
+  var title = 'Forge conversation (' + (MODEL_LABELS[chatModel] || chatModel) + ')';
+  var body = buildChatThreadText();
+  var encoded = encodeURIComponent(body.slice(0, 2000));
+  var encodedTitle = encodeURIComponent(title);
+
+  if (channel === 'whatsapp') {
+    window.open('https://wa.me/?text=' + encodedTitle + '%0A%0A' + encoded, '_blank');
+  } else if (channel === 'email') {
+    window.location.href = 'mailto:?subject=' + encodedTitle + '&body=' + encoded;
+  } else if (channel === 'copy') {
+    navigator.clipboard.writeText(title + nl + nl + body).then(function() {
+      Forge.showToast('Copied to clipboard', 'success');
+      closeShareModal();
+    });
+    return;
+  } else if (channel === 'word') {
+    var blob = new Blob(['<html><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(body) : body) + '</body></html>'], {type: 'application/msword'});
+    var docUrl = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = docUrl; a.download = title.slice(0,50) + '.doc'; a.click();
+    URL.revokeObjectURL(docUrl);
+    closeShareModal();
+    return;
+  } else if (channel === 'print') {
+    var w = window.open('', '_blank');
+    w.document.write('<html><head><title>' + title + '</title><style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;font-size:12pt;line-height:1.8}h2{font-size:16pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px}</style></head><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(body) : body) + '</body></html>');
+    w.document.close();
+    w.print();
+    closeShareModal();
+    return;
+  }
+  closeShareModal();
+}
+window.shareVia = shareVia;
 
 // NOTE: fork-marker write-back — see app.html's own display of this
 // for the visible badge. Writes BOTH the exact same field name Forge's
@@ -523,6 +618,13 @@ window.sendChatMessage = sendChatMessage;
     return;
   }
 
+  // "Back to Diary" previously always landed on the plain, top-of-list
+  // view, with no way for app.html to know which entry the user was
+  // just working with — carrying entryId through fixes this, paired
+  // with app.html's own deep-link handling of the same param.
+  var backLink = document.getElementById('chatBackLink');
+  if (backLink) backLink.href = '/app.html?entryId=' + chatDiaryEntryId;
+
   // NOTE: entry.content is NOT a single, isolated assistant response —
   // it's the entire, multi-turn conversation thread, with every
   // question after the first marked by an invisible U+2063 marker
@@ -592,12 +694,81 @@ window.sendChatMessage = sendChatMessage;
     return messages;
   }
 
+  // ── "Load earlier messages" pagination for long threads ────────────────
+  // Deliberately NOT literal page-1/2/3 pagination — a chat thread isn't
+  // a document or list, and every real chat interface (Slack, WhatsApp,
+  // ChatGPT itself) already uses this same pattern instead: show the
+  // most recent messages by default, load older ones on demand as the
+  // user actually asks for them. Matches what people already expect
+  // here, rather than introducing an unfamiliar mental model to solve
+  // what's really a rendering-performance problem (a long native seed —
+  // confirmed live today at 44 messages deep — rendering everything
+  // into the DOM at once).
+  //
+  // chatHistory itself ALWAYS holds the full conversation regardless of
+  // what's rendered — the model needs complete context to respond
+  // correctly even if the user hasn't scrolled up to see older
+  // messages. This is purely a DOM/rendering concern, never a logical
+  // one.
+  var INITIAL_VISIBLE_MESSAGE_COUNT = 20;
+  var LOAD_EARLIER_BATCH_SIZE = 20;
+  var allLoadedMessages = [];
+  var messagesRenderedFromIndex = 0;
+
+  function renderMessagesWithPagination(messages) {
+    allLoadedMessages = messages.slice();
+    messages.forEach(function(msg) { chatHistory.push(msg); });
+
+    var total = messages.length;
+    var startIndex = Math.max(0, total - INITIAL_VISIBLE_MESSAGE_COUNT);
+    messagesRenderedFromIndex = startIndex;
+
+    if (startIndex > 0) renderLoadEarlierButton();
+    for (var i = startIndex; i < total; i++) {
+      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content);
+    }
+  }
+
+  function renderLoadEarlierButton() {
+    var container = document.getElementById('chatMessages');
+    var existing = document.getElementById('loadEarlierBtn');
+    if (existing) existing.remove();
+    var btn = document.createElement('button');
+    btn.id = 'loadEarlierBtn';
+    btn.className = 'chat-icon-btn';
+    btn.style.cssText = 'display:block;margin:0 auto 16px;';
+    btn.textContent = 'Load earlier messages (' + messagesRenderedFromIndex + ' more)';
+    btn.onclick = loadEarlierMessages;
+    container.insertBefore(btn, container.firstChild);
+  }
+
+  function loadEarlierMessages() {
+    var newStart = Math.max(0, messagesRenderedFromIndex - LOAD_EARLIER_BATCH_SIZE);
+    var container = document.getElementById('chatMessages');
+    var btn = document.getElementById('loadEarlierBtn');
+    // Insert each newly-revealed message directly after the button
+    // (i.e. right before whatever was previously the FIRST visible
+    // message) — walking backwards from the most-recent-of-the-newly-
+    // revealed-batch so each insertBefore() lands them in the correct,
+    // original chronological order rather than reversed.
+    var anchor = btn ? btn.nextSibling : container.firstChild;
+    for (var i = messagesRenderedFromIndex - 1; i >= newStart; i--) {
+      var msg = allLoadedMessages[i];
+      var el = addMessageToDOM(msg.role, msg.content, { insertBeforeEl: anchor });
+      anchor = el;
+    }
+    messagesRenderedFromIndex = newStart;
+    if (newStart === 0) {
+      if (btn) btn.remove();
+    } else if (btn) {
+      btn.textContent = 'Load earlier messages (' + newStart + ' more)';
+    }
+  }
+  window.loadEarlierMessages = loadEarlierMessages;
+
   function seedFromEntry(entry) {
     var messages = splitEntryIntoMessages(entry);
-    messages.forEach(function(msg) {
-      addMessageToDOM(msg.role, msg.content);
-      chatHistory.push(msg);
-    });
+    renderMessagesWithPagination(messages);
     // Same "land inside, ready to type" behavior as the existing-
     // session restore path below — this covers all three call sites
     // (no session yet, session lookup failed, session came back empty)
@@ -630,10 +801,7 @@ window.sendChatMessage = sendChatMessage;
       Forge.request('GET', '/api/chat/' + sessionId).then(function(sr) {
         if (sr && sr.ok && sr.data && sr.data.session && sr.data.session.messages && sr.data.session.messages.length) {
           chatSessionId = sessionId;
-          sr.data.session.messages.forEach(function(msg) {
-            addMessageToDOM(msg.role, msg.content);
-            chatHistory.push(msg);
-          });
+          renderMessagesWithPagination(sr.data.session.messages);
           // Land the user INSIDE the conversation on return, not just
           // looking at it — ready to type immediately, same as Forge
           // Synthesize already does for its own returning sessions,

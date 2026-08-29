@@ -796,6 +796,20 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
   }
   await loadDiary();
   await loadCategories();
+  // Deep-link from continue.html's own "Back to Diary" — land the user
+  // directly back in the specific entry they were just working with,
+  // not the generic top-of-list view. toggleEntry() already handles
+  // both expansion AND scroll-to-position together (confirmed directly
+  // before reusing it here, rather than duplicating that logic) — one
+  // call does the whole job. Cleared from the URL afterward so a
+  // refresh doesn't keep re-triggering the same jump.
+  (function() {
+    var openEntryId = new URLSearchParams(window.location.search).get('entryId');
+    if (openEntryId) {
+      history.replaceState({}, '', '/app.html');
+      setTimeout(function() { toggleEntry(parseInt(openEntryId, 10)); }, 100);
+    }
+  })();
 })();
 
 async function loadDiary() {
@@ -1276,7 +1290,7 @@ function renderEntryCard(e) {
         '</div>'
       : '') +
 
-      '<div class="entry-content md" id="entry-content-' + e.id + '">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
+      '<div class="entry-content md" id="entry-content-' + e.id + '">' + (Forge.renderMarkdown ? renderEntryContentHtml(e) : escHtml(e.content || '')) + '</div>' +
       '<div id="entry-summary-' + e.id + '" style="display:none;"></div>' +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
@@ -1496,6 +1510,22 @@ function toggleEntry(id) {
   if (wasExpanded) { expandedIds.delete(id); } else { expandedIds.add(id); }
   var card = document.getElementById('entry-' + id);
   if (card) card.classList.toggle('expanded');
+  // Auto-reset "Load earlier" state on re-expand — confirmed live as a
+  // real gap: toggleEntry() only ever toggles a CSS class, it never
+  // rebuilds the entry's own content at all, so whatever pagination
+  // state existed before collapsing (e.g. having clicked "Load
+  // earlier" a few times) just sat there in memory, reappearing
+  // unchanged every time the entry was reopened — "stuck on the last
+  // result." Only resets if the state has actually diverged from its
+  // own initial position (renderedFromIndex !== initialIndex), so
+  // reopening an entry nobody ever paginated at all doesn't cause
+  // needless DOM churn.
+  if (!wasExpanded) {
+    var paginationState = window._entryContentSegments && window._entryContentSegments[id];
+    if (paginationState && paginationState.renderedFromIndex !== paginationState.initialIndex) {
+      resetEntryContentPagination(id);
+    }
+  }
   // Summary feature's own "times opened" trigger — fire-and-forget,
   // since the user shouldn't wait on this tracking call at all. Not
   // reflected in the currently-loaded entries array until the next
@@ -3001,19 +3031,15 @@ async function continueOnProvider(btn) {
 }
 window.continueOnProvider = continueOnProvider;
 
-function renderWithBubbles(text) {
-  // Priority: collapsible Sources footer — split off BEFORE any of the
-  // bubble-marker logic below runs at all, since diary-extension's own
-  // stripCitations() always appends this at the very end of the
-  // ENTIRE, raw text, in one fixed, predictable shape:
-  // "\n\n---\n\n**Sources:**\n1. [label](url)\n2. ...". Splitting it
-  // off first means the rest of this function's existing logic
-  // (bubble-splitting, etc.) only ever operates on the remaining,
-  // shorter text — this collapsible version is rendered separately and
-  // appended once, at the very end, regardless of how many bubble
-  // segments the main text itself split into. Collapsed by default —
-  // a long source list otherwise dominates an entry's visible space
-  // for something most people only want to check occasionally.
+// Segment-returning version of the logic below — one HTML string per
+// Q&A turn, rather than one, single concatenated string — needed so
+// the calling code can decide how many of the MOST RECENT turns to
+// show by default, with a "Load earlier" option for the rest (same
+// pattern continue.html already uses for its own long threads, and for
+// the same underlying reason: a long entry rendered all at once into
+// the DOM at once can genuinely get slow and unwieldy — confirmed live
+// today at 44 messages deep in one real conversation).
+function renderWithBubblesSegments(text) {
   var sourcesHtml = '';
   var sourcesMatch = text.match(/\n\n---\n\n\*\*Sources:\*\*\n([\s\S]*)$/);
   if (sourcesMatch) {
@@ -3031,48 +3057,129 @@ function renderWithBubbles(text) {
     '</div>';
   }
 
-  // NOTE: rebuilt again — extended from title-only to EVERY question
-  // getting the bubble treatment, per explicit product decision:
-  // subsequent questions in a multi-turn conversation were otherwise
-  // visually indistinguishable from the AI's own bolded section headers
-  // within its answers, even though the underlying saved data was
-  // always correct. diary-extension now marks every genuine question
-  // (not just the first) with the same invisible Unicode marker
-  // (U+2063) at its actual point of insertion — this function finds
-  // every occurrence, not just the first, splitting the text into
-  // alternating plain-markdown and bubble segments in document order.
-  // A genuine, unmarked bolded header within an answer (e.g. "**Key
-  // Risks**") is untouched by this and correctly renders as plain
-  // <strong> text, since only diary-extension's own marker triggers
-  // bubble treatment — never bare bold-text shape alone. Degrades
-  // safely to plain markdown rendering if no marker is present at all
-  // (older saved entries from before this marking existed).
   var TITLE_MARK = '\u2063';
   var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
-  var html = '';
+  var segments = [];
+  var current = '';
   var lastIndex = 0;
   var m;
   var found = false;
   while ((m = markerRe.exec(text)) !== null) {
     found = true;
     var before = text.slice(lastIndex, m.index).replace(/^\n+|\n+$/g, '');
-    if (before) html += Forge.renderMarkdown(before).replace(/<p>\s*<\/p>/g, '');
-    // Long-form questions (a pasted email, a long brief) get the calmer
-    // .user-bubble-long treatment instead of the short-chat bubble —
-    // see that class's own comment for why. Threshold: either genuinely
-    // long as a single block, or clearly multi-line (a real chat
-    // question is virtually always one line; a pasted email or brief
-    // reliably isn't) — verified against a real, reported case before
-    // relying on it.
+    if (before) current += Forge.renderMarkdown(before).replace(/<p>\s*<\/p>/g, '');
+    // A non-empty `current` here means the PREVIOUS turn (its question
+    // bubble plus the answer that just completed it) is done — push it
+    // and start fresh for this new question. On the very first marker,
+    // `current` is still empty (nothing preceded the first question at
+    // all), so nothing spurious gets pushed here.
+    if (current) { segments.push(current); current = ''; }
     var isLongQuestion = m[1].length > 150 || (m[1].match(/\n/g) || []).length > 1;
-    html += '<div class="' + (isLongQuestion ? 'user-bubble-long' : 'user-bubble') + '">' + escHtml(m[1]) + '</div>';
+    current += '<div class="' + (isLongQuestion ? 'user-bubble-long' : 'user-bubble') + '">' + escHtml(m[1]) + '</div>';
     lastIndex = markerRe.lastIndex;
   }
-  if (!found) return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '') + sourcesHtml;
+  if (!found) return [Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '') + sourcesHtml];
   var rest = text.slice(lastIndex).replace(/^\n+/, '');
-  if (rest) html += Forge.renderMarkdown(rest).replace(/<p>\s*<\/p>/g, '');
-  return html + sourcesHtml;
+  if (rest) current += Forge.renderMarkdown(rest).replace(/<p>\s*<\/p>/g, '');
+  // Sources always attaches to the LAST turn specifically — it stays
+  // visible regardless of pagination state, since the last turn is
+  // always part of the initially-visible, most-recent set.
+  current += sourcesHtml;
+  segments.push(current);
+  return segments;
 }
+
+function renderWithBubbles(text) {
+  return renderWithBubblesSegments(text).join('');
+}
+
+// ── "Load earlier" for a single entry's own long content ───────────────────
+// Same pattern as continue.html's own long-thread handling (most recent
+// shown by default, older content loaded on demand) — but per-entry,
+// since app.html can have many entries' own content visible/expandable
+// at once, each needing independent pagination state. A "turn" here
+// (one question-bubble plus its own answer) is typically much larger
+// and more content-dense than a single chat message, so the initial
+// visible count is deliberately much smaller than continue.html's own
+// 20-message default.
+var ENTRY_INITIAL_VISIBLE_TURNS = 3;
+var ENTRY_LOAD_EARLIER_BATCH = 3;
+window._entryContentSegments = window._entryContentSegments || {};
+
+function renderEntryContentHtml(e) {
+  var segments = renderWithBubblesSegments(e.content || '');
+  var total = segments.length;
+  var startIndex = Math.max(0, total - ENTRY_INITIAL_VISIBLE_TURNS);
+  // initialIndex kept alongside renderedFromIndex specifically so
+  // resetEntryContentPagination() (and toggleEntry()'s own call to it)
+  // can tell whether anything has actually changed since this initial
+  // render — avoids needless DOM churn (losing scroll position, an
+  // open Sources dropdown, etc.) when the user never clicked "Load
+  // earlier" at all.
+  window._entryContentSegments[e.id] = { segments: segments, renderedFromIndex: startIndex, initialIndex: startIndex };
+  var html = '';
+  if (startIndex > 0) {
+    html += '<div id="loadEarlierWrap-' + e.id + '" style="margin:0 0 14px;">' +
+      '<button class="entry-btn" id="loadEarlierEntryBtn-' + e.id + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + e.id + ')" style="font-size:12px;">' +
+        'Load earlier (' + startIndex + ' more)' +
+      '</button>' +
+      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + e.id + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">&#128260;</button>' +
+    '</div>';
+  }
+  for (var i = startIndex; i < total; i++) html += segments[i];
+  return html;
+}
+
+// Shared by the manual refresh icon and toggleEntry()'s own auto-reset
+// on re-expand — collapses this entry's content back to its original,
+// most-recent-only state, exactly as if it had just been rendered for
+// the first time. Genuinely re-derives from window._diaryEntries rather
+// than reusing the already-parsed segments in state, since the entry's
+// own content may have changed since the last render (e.g. a Sync just
+// pulled in new native messages) — a stale re-render would silently
+// miss that.
+function resetEntryContentPagination(entryId) {
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+  var container = document.getElementById('entry-content-' + entryId);
+  if (!entry || !container) return;
+  container.innerHTML = renderEntryContentHtml(entry);
+}
+window.resetEntryContentPagination = resetEntryContentPagination;
+
+function loadEarlierEntryContent(entryId) {
+  var state = window._entryContentSegments[entryId];
+  if (!state) return;
+  var newStart = Math.max(0, state.renderedFromIndex - ENTRY_LOAD_EARLIER_BATCH);
+  var container = document.getElementById('entry-content-' + entryId);
+  // Anchor against the WRAPPER div (holding both the "Load earlier" and
+  // refresh buttons together), not the inner button itself — inserting
+  // 'afterend' the button directly would land the newly-revealed
+  // content inside that same wrapper, between/after the two buttons,
+  // rather than as proper sibling content in the entry itself.
+  var wrap = document.getElementById('loadEarlierWrap-' + entryId);
+  if (!container) return;
+  // Build the newly-revealed segments (newStart..renderedFromIndex) as
+  // one HTML chunk, in correct chronological order, and insert the
+  // whole chunk right after the button in one go — simpler and safer
+  // here than continue.html's own one-DOM-node-at-a-time insertion,
+  // since these are raw HTML strings (from renderWithBubblesSegments),
+  // not individually-tracked DOM elements to begin with.
+  var revealedHtml = '';
+  for (var i = newStart; i < state.renderedFromIndex; i++) revealedHtml += state.segments[i];
+  var btn = document.getElementById('loadEarlierEntryBtn-' + entryId);
+  if (wrap) {
+    wrap.insertAdjacentHTML('afterend', revealedHtml);
+  } else {
+    container.insertAdjacentHTML('afterbegin', revealedHtml);
+  }
+  state.renderedFromIndex = newStart;
+  if (newStart === 0) {
+    if (btn) btn.remove();
+  } else if (btn) {
+    btn.textContent = 'Load earlier (' + newStart + ' more)';
+  }
+}
+window.loadEarlierEntryContent = loadEarlierEntryContent;
 
 function panelOpenOriginal() {
   var origBtn = document.getElementById('panelOriginalBtn');
