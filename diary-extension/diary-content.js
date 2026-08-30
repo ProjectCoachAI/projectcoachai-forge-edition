@@ -2725,6 +2725,7 @@ function queryAllDeep(selector) {
             var clipSuccessCount = 0;
             var firstUserClip = ''; // used for the title, replacing the old DOM-based getPrompt() path
             var sawFirstUser = false;
+            var lastGenuineClipText = originalClipboard; // updated after each GENUINE success
 
             for (var ti = 0; ti < allTurnEls.length; ti++) {
               var turnEl = allTurnEls[ti];
@@ -2738,7 +2739,31 @@ function queryAllDeep(selector) {
               await new Promise(function(r){ setTimeout(r, 400); }); // let the clipboard write complete
               try {
                 var clipText = await navigator.clipboard.readText();
-                if (clipText && clipText.trim().length > 0) {
+                // Confirmed live as a real, serious bug — not cosmetic:
+                // this previously only checked "is clipText non-empty,"
+                // with no check at all that the clipboard actually,
+                // genuinely changed as a result of clicking Copy above.
+                // When the write silently fails (as it always will here —
+                // this window never has document focus at all), the read
+                // simply returns whatever was ALREADY on the user's own,
+                // completely unrelated clipboard beforehand — and since
+                // that's typically non-empty, the old check wrongly
+                // treated it as a successful, genuine capture. Reproduced
+                // live: unrelated terminal/git output the user had
+                // copied for an entirely different purpose ended up
+                // saved into a Diary entry as if it were the AI's own
+                // response. Compares against lastGenuineClipText — the
+                // most recent value we KNOW genuinely changed — not just
+                // the original, pre-loop value: if turn 1's copy
+                // genuinely succeeds but turn 2's silently fails, turn 2
+                // would read back turn 1's own text, which differs from
+                // the ORIGINAL clipboard but is still stale, not turn 2's
+                // own content — comparing only against the original would
+                // miss this and incorrectly duplicate turn 1's text as
+                // turn 2's.
+                if (clipText === lastGenuineClipText) {
+                  console.error('[Diary] ChatGPT clipboard unchanged after Copy click on', role, 'turn at position', ti, '— write silently failed (no document focus); refusing to trust stale clipboard content');
+                } else if (clipText && clipText.trim().length > 0) {
                   var ct = clipText.trim();
                   if (role === 'user') {
                     clipParts.push(boldQuestion(ct.slice(0, 2000)));
@@ -2747,6 +2772,7 @@ function queryAllDeep(selector) {
                     clipParts.push(ct);
                   }
                   clipSuccessCount++;
+                  lastGenuineClipText = clipText;
                 } else {
                   console.error('[Diary] ChatGPT clipboard empty on', role, 'turn at position', ti);
                 }
@@ -2818,12 +2844,21 @@ function queryAllDeep(selector) {
               var convMatch = window.location.pathname.match(/\/c\/([a-f0-9-]+)/i);
               if (convMatch && window.__diaryParseChatGPTHistorySeed) {
                 var histLastText = null;
-                for (var histAttempt = 0; histAttempt < 5; histAttempt++) {
+                // Reduced from 5 attempts to 2 — confirmed live, across
+                // multiple, separate ChatGPT tests today, that this
+                // endpoint 404s consistently and reliably for this
+                // last-resort path, never once succeeding partway
+                // through the retry window. 5 attempts x 1500ms meant up
+                // to 6 seconds of pure, wasted waiting on a failure that
+                // never actually resolved. 2 attempts keeps a small
+                // safety margin for a genuinely transient case, without
+                // the same, confirmed-unnecessary cost.
+                for (var histAttempt = 0; histAttempt < 2; histAttempt++) {
                   var histResp = await fetch('/backend-api/conversation/' + convMatch[1]);
                   if (!histResp.ok) {
                     console.error('[Diary] ChatGPT last-resort history-fetch got HTTP', histResp.status, 'on attempt', histAttempt + 1);
                     histLastText = null;
-                    if (histAttempt < 4) await new Promise(function(r){ setTimeout(r, 1500); });
+                    if (histAttempt < 1) await new Promise(function(r){ setTimeout(r, 1500); });
                     continue;
                   }
                   var histJson = await histResp.json();
@@ -2835,7 +2870,7 @@ function queryAllDeep(selector) {
                     break;
                   }
                   histLastText = histText;
-                  if (histAttempt < 4) await new Promise(function(r){ setTimeout(r, 1500); });
+                  if (histAttempt < 1) await new Promise(function(r){ setTimeout(r, 1500); });
                 }
                 if (!fullThread && histLastText && histLastText.length > 50) {
                   fullThread = histLastText;

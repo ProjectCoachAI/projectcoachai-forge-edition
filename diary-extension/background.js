@@ -928,21 +928,24 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
   // checks tab status at click-time rather than trusting whatever
   // CHECK_TAB_OPEN reported earlier, since state can genuinely drift
   // between when a button's label was decided and when it's actually
-  // clicked.
+  // clicked. Per explicit design decision: never a silent background
+  // tab — chrome.tabs.create below uses active:false (visible in the
+  // tab strip, inspectable, not hidden) but deliberately does NOT steal
+  // window focus away from Diary the moment sync is triggered.
   //
-  // Uses a minimized, unfocused POPUP WINDOW rather than a tab in the
-  // user's own browser window — reversing an earlier, deliberate design
-  // decision (a visible tab was originally chosen specifically so a
-  // failure had something concrete to inspect). Confirmed live: that
-  // visible tab was itself confusing in normal use — a new tab
-  // appearing unannounced, occasionally alongside a raw
-  // "document not focused" clipboard error in the console, reads as
-  // something going wrong even when sync is working correctly. A
-  // separate window, created already-minimized, never appears in the
-  // user's own tab strip at all. On failure, the window is still left
-  // open (not closed) for exactly the same inspectability reason as
-  // before — it simply sits minimized rather than visibly interrupting
-  // the user's own browsing.
+  // NOTE: briefly tried an off-screen, unfocused POPUP WINDOW instead
+  // (chrome.windows.create with off-screen coordinates), specifically
+  // to avoid a new tab appearing in the user's own tab strip at all.
+  // Reverted — confirmed live that creating a genuinely separate OS-
+  // level window (even off-screen, even unfocused) produced a
+  // real, jarring flash to the full provider page before settling,
+  // which is a worse user experience than a background tab that never
+  // visibly interrupts anything. The active:false tab below has none
+  // of that problem — it just sits in the strip, uninvolved, unless the
+  // user chooses to look at it. On failure, an opened tab is
+  // deliberately left open rather than closed — gives the user
+  // something concrete to look at instead of a mysterious background
+  // failure with no visible cause.
   if (msg.type === 'REQUEST_SYNC' && msg.conversationUrl && msg.diaryEntryId) {
     const entryId = msg.diaryEntryId;
     // Lock check + set happens synchronously, before any await at all —
@@ -955,8 +958,7 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
     }
     syncEntryLocks.add(entryId);
     (async function() {
-      let openedNewWindow = false;
-      let windowId = null;
+      let openedNewTab = false;
       let tabId = null;
       try {
         console.log('[Diary Sync DIAG] REQUEST_SYNC starting for entry', entryId, 'url:', msg.conversationUrl);
@@ -965,12 +967,11 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
           tabId = existingTab.id;
           console.log('[Diary Sync DIAG] found existing tab', tabId, '(status:', existingTab.status, ', lastAccessed:', existingTab.lastAccessed, ')');
         } else {
-          console.log('[Diary Sync DIAG] no existing tab found, opening a minimized, unfocused window');
-          const newWindow = await chrome.windows.create({ url: msg.conversationUrl, focused: false, state: 'minimized', type: 'popup' });
-          windowId = newWindow.id;
-          tabId = newWindow.tabs[0].id;
-          openedNewWindow = true;
-          console.log('[Diary Sync DIAG] new window', windowId, '(tab', tabId, ') created, waiting for it to finish loading');
+          console.log('[Diary Sync DIAG] no existing tab found, opening a new one');
+          const newTab = await chrome.tabs.create({ url: msg.conversationUrl, active: false });
+          tabId = newTab.id;
+          openedNewTab = true;
+          console.log('[Diary Sync DIAG] new tab', tabId, 'created, waiting for it to finish loading');
           await waitForTabComplete(tabId);
           console.log('[Diary Sync DIAG] tab', tabId, 'reported complete (or 15s ceiling hit)');
         }
@@ -982,11 +983,11 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         // last time this extension itself reloaded/updated) is a real,
         // specifically-recoverable condition, not a genuine failure —
         // reload the tab once to force a fresh injection, then retry
-        // exactly once. Deliberately NOT applied when openedNewWindow is
+        // exactly once. Deliberately NOT applied when openedNewTab is
         // true: a tab we just created ourselves and already waited on
         // via waitForTabComplete() failing this same way would indicate
         // something more fundamentally wrong, not staleness.
-        if (result.error === 'no_receiver' && !openedNewWindow) {
+        if (result.error === 'no_receiver' && !openedNewTab) {
           console.log('[Diary Sync DIAG] tab', tabId, 'had a stale connection — reloading and retrying once');
           try {
             await chrome.tabs.reload(tabId);
@@ -997,8 +998,8 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
             console.log('[Diary Sync DIAG] retry itself threw:', e.message);
           }
         }
-        if (openedNewWindow && result.success) {
-          try { await chrome.windows.remove(windowId); } catch(_) {}
+        if (openedNewTab && result.success) {
+          try { await chrome.tabs.remove(tabId); } catch(_) {}
         }
         sendResponse(result);
       } catch (e) {

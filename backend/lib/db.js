@@ -562,11 +562,61 @@ async function getUsage(userEmail) {
 //   input tokens grow with every turn). Set comfortably above any
 //   normal back-and-forth, so it's invisible in real use but bounds the
 //   worst case.
+// starter raised from 10 to 20 — confirmed live as a real correction:
+// an earlier claim that this already matched the agreed 20/month
+// figure was mistaken; the code still had the original, pre-decision
+// value. 20 is the deliberately generous, visible number from today's
+// final structure (paired with the tightened, invisible 8-message/
+// entry guardrail above) — the number free users actually perceive
+// and compare, not the cost-control lever.
 const CHAT_CONTINUE_ENTRY_LIMITS = {
-  starter:10, lite:-1, creator:-1, pro:-1,
-  professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
+  starter:20, lite:-1, creator:-1, pro:-1,
+  professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1,
+  'diary-pro':-1, 'diary-pro-monthly':-1, 'diary-pro-yearly':-1
 };
-const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP = 15;
+// Lowered from 15 to 8 — confirmed via full cost modeling (including
+// prompt-caching-adjusted projections across a range of engagement
+// assumptions, from a conservative 15% up to market-typical 60-85%)
+// that this "invisible" guardrail axis is the one that can absorb a
+// meaningful cost reduction without touching the visible, user-facing
+// entries/month number at all. 8 sits comfortably above the ~3-5
+// messages a realistic, ordinary conversation actually needs — stays
+// genuinely invisible in normal use, per R&D's own original framing
+// ("a guardrail, not user-facing marketing") — while still bounding
+// the small minority of long-tail conversations that drive
+// disproportionate cost (input tokens grow ~500/message due to
+// stateless history replay, so cost compounds specifically with
+// conversation length, not with how many separate entries someone
+// continues).
+const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP = 8;
+
+// Diary's own, dedicated subscription check — reads the per-product
+// subscriptions table (see routes/stripe.js's own comment for why it
+// exists at all: "a single users.tier column can't represent
+// 'subscribed to Sweep AND Forge at once' — the most recent purchase
+// just overwrites whatever was there before" — since Continue-in-Forge
+// is specifically a Diary entitlement, checking Diary's own, dedicated
+// row here is immune to that risk entirely, rather than trusting
+// whichever product happened to be purchased most recently). Falls
+// back to the shared tier column only if no dedicated Diary
+// subscription row exists at all (e.g. a user who predates this
+// per-product table). Confirmed live, directly reported: a genuine
+// Diary Pro subscriber was still capped at the free-tier limit here —
+// confirmed the immediate cause was CHAT_CONTINUE_ENTRY_LIMITS itself
+// not recognizing 'diary-pro-monthly'/'diary-pro-yearly' as keys at
+// all (now added above), but reading from the per-product table here
+// too closes the same, deeper gap for good, not just this one symptom.
+async function getDiaryTier(userEmail) {
+  try {
+    const subR = await query(
+      "SELECT tier FROM subscriptions WHERE user_email=$1 AND product='diary' AND status='active'",
+      [userEmail]
+    );
+    if (subR.rows.length) return subR.rows[0].tier;
+  } catch(_) {}
+  const user = await getUser(userEmail);
+  return user?.tier || 'starter';
+}
 
 async function checkAndIncrementChatContinueUsage(userEmail, diaryEntryId, existingSessionId) {
   // Guardrail axis first: cap growth within a single, already-existing
@@ -605,9 +655,12 @@ async function checkAndIncrementChatContinueUsage(userEmail, diaryEntryId, exist
     }
   }
 
-  const user  = await getUser(userEmail);
-  const tier  = user?.tier || 'starter';
-  const entryLimit = CHAT_CONTINUE_ENTRY_LIMITS[tier] ?? 10;
+  const tier  = await getDiaryTier(userEmail);
+  // Fallback (for any tier string not found in the map above) kept
+  // consistent with starter's own value — 20, not the earlier 10 —
+  // since an unrecognized tier defaulting to a DIFFERENT number than
+  // the actual free tier would itself be a confusing inconsistency.
+  const entryLimit = CHAT_CONTINUE_ENTRY_LIMITS[tier] ?? 20;
   const ym    = yearMonth();
 
   const alreadyForkedR = await query(
@@ -644,8 +697,7 @@ async function getChatContinueUsage(userEmail) {
     [userEmail, ym]
   );
   const entriesUsed = parseInt((countR.rows[0] && countR.rows[0].total) || 0, 10);
-  const user  = await getUser(userEmail);
-  const tier  = user?.tier || 'starter';
+  const tier  = await getDiaryTier(userEmail);
   const entryLimit = CHAT_CONTINUE_ENTRY_LIMITS[tier] ?? null;
   return {
     entriesUsed,

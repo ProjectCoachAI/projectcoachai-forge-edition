@@ -242,8 +242,15 @@ async function performSync() {
     }
     // Reload to reflect whatever actually changed — the simplest,
     // most reliable way to show a merged conversation without trying
-    // to reconcile partial DOM state by hand.
-    setTimeout(function() { window.location.reload(); }, 900);
+    // to reconcile partial DOM state by hand. Delay raised from 900ms
+    // — confirmed live as a real, concrete bug: showToast()'s own
+    // default display duration is 3500ms, so the old delay reloaded
+    // the whole page (wiping the toast out) while it was still
+    // actively showing, before the user had any real chance to notice
+    // or read it at all. 2000ms is enough time to actually see a
+    // short status message without making the page feel slow to
+    // refresh afterward.
+    setTimeout(function() { window.location.reload(); }, 2000);
   } finally {
     chatIsSyncing = false;
     if (btn) btn.disabled = false;
