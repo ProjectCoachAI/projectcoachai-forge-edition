@@ -673,6 +673,24 @@ async function performEntrySync(entryId) {
     if (r && r.ok && r.data && r.data.entries) {
       allEntries = r.data.entries;
       window._diaryEntries = allEntries;
+      // Confirmed live as a real, concrete bug: re-fetching the data
+      // alone was never enough — the entry's own visible content div was
+      // never re-rendered at all, so a successful sync that pulled in
+      // new turns (e.g. "4 new messages") left the on-screen content
+      // frozen at its old, shorter, pre-sync state. Since that old state
+      // may have had fewer than ENTRY_INITIAL_VISIBLE_TURNS turns total,
+      // "Load earlier" never got the chance to appear even once the
+      // underlying data genuinely warranted it — exactly the
+      // inconsistent behavior reported. Re-rendering here, from the
+      // freshly-updated entry, also naturally resets pagination back to
+      // showing the most recent turns, which is correct regardless: the
+      // content just changed, so any previously-expanded "Load earlier"
+      // state was already stale.
+      var updatedEntry = allEntries.find(function(e) { return e.id === entryId; });
+      var contentEl = document.getElementById('entry-content-' + entryId);
+      if (updatedEntry && contentEl) {
+        contentEl.innerHTML = Forge.renderMarkdown ? renderEntryContentHtml(updatedEntry) : escHtml(updatedEntry.content || '');
+      }
     }
   } finally {
     if (btn) btn.disabled = false;

@@ -2239,6 +2239,17 @@ function queryAllDeep(selector) {
 
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
+        // Force a fresh DOM re-read before building fullThread from
+        // window.__diaryCapture.turns below — see
+        // refreshLatestDomCaptureForRetry()'s own comment for the full
+        // rationale. Called here, unconditionally, for every non-Claude
+        // provider (not just on Sync's own retries) so a normal, manual
+        // save benefits from the same freshness guarantee — genuinely
+        // harmless on a first, non-retried call too, since it no-ops
+        // entirely when nothing has changed since the last capture.
+        // Claude is unaffected: it has no DOM_SELECTORS entry at all, so
+        // this reads nothing and returns immediately for it.
+        if (PROVIDER !== 'claude') { try { refreshLatestDomCaptureForRetry(); } catch(e) {} }
         if (PROVIDER === 'claude') {
           // ChatGPT moved to the DOM-provider branch below (see the 'else'
           // clause) — confirmed via live evidence that ChatGPT delivers
@@ -2320,6 +2331,23 @@ function queryAllDeep(selector) {
             var curUrl = canonicalUrl();
             return t.url === curUrl || /\/new(\?|$)/.test(t.url);
           });
+          // Sort by capture timestamp — confirmed live as a real, necessary
+          // fix, not a defensive-only safeguard: when a tab is reused
+          // across multiple, SEPARATE Sync attempts (rather than freshly
+          // reloaded each time), turns can genuinely accumulate out of
+          // chronological order — each attempt captures whatever's
+          // visible AT THAT MOMENT, in the order those attempts happened
+          // to run, not the order those turns actually occurred in the
+          // conversation itself. The interleaving logic below processes
+          // captureTurns via a plain forEach, in array order, and uses
+          // promptCountAtCapture to decide which questions precede each
+          // turn's own text — an out-of-order array silently produces a
+          // garbled thread (the newest turn consuming the FIRST question
+          // slot instead of the last), with the newest answer's own text
+          // never correctly appearing at all despite being fully, cleanly
+          // captured. Sorting first makes the array's own push order
+          // irrelevant to the final result.
+          captureTurns.sort(function(a, b) { return a.ts - b.ts; });
           if (captureTurns.length) {
             // DOM providers: merge ALL captured snapshots into one growing
             // thread per conversation (reverted from a brief "one entry
@@ -2848,6 +2876,34 @@ function queryAllDeep(selector) {
           }
           return { success: false, error: 'no_content_found' };
         }
+        // Guard against a DIFFERENT, more subtle incomplete-capture case
+        // than "nothing at all" — confirmed live for ChatGPT specifically,
+        // whose own comment in DOM_SELECTORS explains why: its responses
+        // arrive via inline, streaming script tags executing during page
+        // load, with NO network-based fallback at all (unlike Claude's own
+        // historySeed) — meaning capture depends entirely on the DOM
+        // already being fully rendered at the moment of reading it. A
+        // long conversation can report the page as 'complete' in the
+        // browser's own, technical sense while React is still hydrating
+        // the very latest response — confirmed directly: a real, live
+        // conversation had its final question's answer fully visible on
+        // the actual page, yet completely absent from what got captured
+        // moments earlier. If the captured text ends right at a marked
+        // question with nothing substantial after it, that's a strong,
+        // specific signal the last answer wasn't there yet when this ran.
+        var TITLE_MARK_CHECK = '\u2063';
+        var endsWithUnansweredQuestionRe = new RegExp(TITLE_MARK_CHECK + '\\*\\*[^*]+\\*\\*' + TITLE_MARK_CHECK + '\\s*$');
+        if (endsWithUnansweredQuestionRe.test(contentToSave)) {
+          console.log('[Diary Sync DIAG] refusing to save — captured text ends at a question with no answer after it (likely still rendering)');
+          console.log('[Diary Sync DIAG] DIAGNOSTIC — full contentToSave length:', contentToSave.length, '| last 400 chars:', JSON.stringify(contentToSave.slice(-400)));
+          console.log('[Diary Sync DIAG] DIAGNOSTIC — window.__diaryCapture.turns:', JSON.stringify((window.__diaryCapture && window.__diaryCapture.turns || []).map(function(t){ return {url:t.url, len:t.text.length, preview:t.text.slice(0,60)}; })));
+          if (btn) {
+            btn.textContent = 'Still loading…';
+            btn.style.background = '#6B6B88';
+            setTimeout(function() { btn.remove(); }, 3000);
+          }
+          return { success: false, error: 'incomplete_response' };
+        }
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // saveUrl: use most specific URL available
         //
@@ -3005,6 +3061,26 @@ function queryAllDeep(selector) {
     // backgrounded load.
     if (message.type === 'TRIGGER_SYNC_SAVE') {
       console.log('[Diary Sync DIAG] TRIGGER_SYNC_SAVE received on this page. window.__diaryPerformSave already set?', !!window.__diaryPerformSave);
+      // Reset turns (not the whole window.__diaryCapture object — leaves
+      // historySeed, relevant for Claude, untouched) at the START of
+      // every Sync-triggered save. Confirmed live as a real, necessary
+      // fix, not defensive-only: when the SAME tab is reused across
+      // multiple, separate Sync attempts (rather than a fresh tab each
+      // time), turns accumulates entries from different, unrelated
+      // attempts — each capturing whatever was visible AT THAT MOMENT,
+      // in the order those attempts happened to run, not the order those
+      // turns actually occurred in the conversation. This corrupts BOTH
+      // the array's own order AND the promptCountAtCapture values tagged
+      // onto each entry (computed from turns.length at push time, which
+      // is itself unreliable once entries span unrelated attempts) —
+      // reproduced live: a newest, fully-captured, complete answer
+      // ending up silently absent from the final saved content, despite
+      // sitting right there in turns with the correct, full text. This
+      // reset doesn't lose anything the entry itself would still need:
+      // Sync's whole purpose is finding content NEW since the last save
+      // — the earlier, already-saved part is separately preserved via
+      // the backend's own existing-content merge, not via turns at all.
+      if (window.__diaryCapture) window.__diaryCapture.turns = [];
       // Confirmed via direct, live testing that passively waiting on
       // this alone is genuinely unreliable, not just slow: the SAME
       // scenario succeeded at poll attempt 62/70 once, then failed to
@@ -3057,11 +3133,29 @@ function queryAllDeep(selector) {
       // result, or (the earlier version of this fix) accepting
       // whatever's there right away regardless of whether real capture
       // has actually happened.
-      var saveRetryMax = 6; // 6 * 2s = 12s of additional retry window
+      //
+      // Also retries on 'incomplete_response' — a different, more subtle
+      // case than "nothing at all," confirmed live for ChatGPT
+      // specifically: a real conversation's final answer was fully
+      // visible on the actual page, yet completely missing from what got
+      // captured moments earlier, because ChatGPT's own response
+      // rendering (inline streaming script tags, no network-based
+      // fallback at all) can still be hydrating the latest turn even
+      // after the page reports 'complete'.
+      // Raised from 6 (12s) — confirmed live as genuinely insufficient
+      // for a specific, real combined scenario: a stale-connection
+      // recovery reloads the tab from scratch, and a long ChatGPT
+      // conversation's entire history can take meaningfully longer to
+      // fully render on a cold, just-reloaded tab than on one that was
+      // already warm — waitForTabComplete() only waits for the
+      // browser's own technical 'complete' status, not for ChatGPT's
+      // own, slower client-side hydration of a long conversation.
+      var saveRetryMax = 10; // 10 * 2s = 20s of additional retry window
       function attemptSave(retryCount) {
         window.__diaryPerformSave().then(function(result) {
-          if (result && !result.success && result.error === 'no_content_found' && retryCount < saveRetryMax) {
-            console.log('[Diary Sync DIAG] no content captured yet (attempt', retryCount, ') — retrying in 2s');
+          var retryableErrors = result && (result.error === 'no_content_found' || result.error === 'incomplete_response');
+          if (result && !result.success && retryableErrors && retryCount < saveRetryMax) {
+            console.log('[Diary Sync DIAG] capture not ready yet (' + result.error + ', attempt', retryCount, ') — retrying in 2s');
             setTimeout(function() { attemptSave(retryCount + 1); }, 2000);
             return;
           }
@@ -3881,6 +3975,55 @@ function queryAllDeep(selector) {
     window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
       detail: { url: canonicalUrl() }
     }));
+  }
+
+  // Forces a fresh DOM re-read of the CURRENT, latest turn specifically —
+  // for Sync's own retry loop, which calls performSaveToDiary() repeatedly
+  // but, without this, would just keep re-reading whatever captureDomTurn()
+  // last, passively pushed via its own trigger (a webRequest completion
+  // signal, or — ChatGPT only — a reactive MutationObserver settling once).
+  // Confirmed live as a real, reproduced bug on ChatGPT specifically: its
+  // own observer settled on an incomplete render before the answer had
+  // actually finished, and nothing ever re-checked the live DOM again —
+  // ten retries just re-read that same frozen snapshot ten times.
+  // Deliberately generalized to ANY DOM-based provider here, not gated to
+  // ChatGPT — even a provider with a reliable, network-level completion
+  // signal (AI_COMPLETION_PATTERNS) could plausibly fire that signal
+  // before the DOM has visually finished rendering (streaming text still
+  // typing out, an animation not yet settled), hitting an analogous
+  // "captured too early" case via a different, earlier trigger. Safe to
+  // call unconditionally on every retry: no-ops entirely if the text is
+  // unchanged since the last read (nothing new to report), and REPLACES
+  // (rather than appends to) the existing latest turn when it has changed
+  // — an updated read of the same turn, not a separate, new one — so
+  // repeated calls can never accumulate duplicate-content entries the way
+  // naively calling captureDomTurn() on every retry would have.
+  function refreshLatestDomCaptureForRetry() {
+    var text = readDomResponse();
+    if (!text || text.length <= 50) {
+      console.log('[Diary DOM] fresh retry capture SKIPPED — readDomResponse() returned', text ? ('only ' + text.length + ' chars') : 'nothing at all');
+      return;
+    }
+    if (!window.__diaryCapture) window.__diaryCapture = { turns: [] };
+    var turns = window.__diaryCapture.turns;
+    var curUrl = canonicalUrl();
+    var lastIdx = -1;
+    for (var i = turns.length - 1; i >= 0; i--) {
+      if (turns[i].url === curUrl || /\/new(\?|$)/.test(turns[i].url)) { lastIdx = i; break; }
+    }
+    if (lastIdx === -1) {
+      var host = window.location.hostname;
+      var config = DOM_SELECTORS[host];
+      var imgUrls = getCurrentTurnImageUrls(config);
+      turns.push({ text: text, url: curUrl, ts: Date.now(), images: imgUrls, promptCountAtCapture: turns.length + 1 });
+      try { getAllCapturedPrompts(); } catch(e) {}
+      console.log('[Diary DOM] fresh retry capture (first for this conversation):', text.slice(0, 80));
+      return;
+    }
+    if (turns[lastIdx].text === text) return; // genuinely nothing new
+    turns[lastIdx].text = text;
+    turns[lastIdx].ts = Date.now();
+    console.log('[Diary DOM] fresh retry capture (updated latest turn):', text.slice(0, 80));
   }
 
 // ── ChatGPT: MutationObserver-based capture ────────────────────────────────

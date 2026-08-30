@@ -796,6 +796,23 @@ window.sendChatMessage = sendChatMessage;
     chatConversationUrl = meta && meta.url ? meta.url : null;
     updateSyncButtonLabel();
 
+    // Honest, visible disclosure — not a missing-feature apology, a
+    // real correctness warning: if the user showed the original model
+    // an image and then continues here, Forge has no way to know that
+    // image ever existed, and may respond as if it hadn't — exactly
+    // the "why doesn't it know what I already told it" confusion this
+    // whole feature exists to prevent. Shown only when this specific
+    // entry actually has images at all (meta.images.length, the same
+    // check app.html's own entry card already uses) — never as
+    // needless noise on a fork with nothing to disclose.
+    if (meta && meta.images && meta.images.length) {
+      var imgNote = document.createElement('div');
+      imgNote.style.cssText = 'font-size:12px;color:#6B6559;margin:0 20px 12px;padding:8px 12px;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.25);border-radius:8px;line-height:1.5;';
+      imgNote.innerHTML = '&#128444;&#65039; This conversation included ' + meta.images.length + ' image' + (meta.images.length === 1 ? '' : 's') + ' — images aren\u2019t carried over here yet, so Forge won\u2019t know about anything shown only in a picture from the original conversation.';
+      var messagesEl = document.getElementById('chatMessages');
+      messagesEl.parentNode.insertBefore(imgNote, messagesEl);
+    }
+
     var sessionId = meta && meta.chatSessionId ? meta.chatSessionId : null;
     if (sessionId) {
       Forge.request('GET', '/api/chat/' + sessionId).then(function(sr) {

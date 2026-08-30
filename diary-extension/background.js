@@ -583,19 +583,18 @@ const syncEntryLocks = new Set();
 
 async function fetchSyncResultFromTab(tabId) {
   return new Promise(function(resolve) {
-    // 45s ceiling — confirmed directly (via a real, live timeout) that
-    // Chrome measurably throttles background (active:false) tabs: fewer
-    // parallel connections during page load (3 vs 6 for a foreground
-    // tab) and clamped setTimeout intervals. Since active:false is a
-    // deliberate, explicit UX choice (never steal focus), the fix is
-    // giving the resulting slower load enough time, not abandoning that
-    // choice — a background tab isn't broken, just slower. Sized to
-    // stay comfortably above diary-content.js's own poll ceiling (also
-    // increased, for the same reason) plus the actual save round-trip.
+    // Raised to 60s from 45s — confirmed live as still insufficient for
+    // a specific, real combined scenario: a stale-connection recovery
+    // reloads the tab from scratch, and a long ChatGPT conversation's
+    // entire history can take meaningfully longer to fully render on a
+    // cold, just-reloaded tab than on an already-warm one — on top of
+    // diary-content.js's own retry window (also raised, for the same
+    // reason, from 12s to 20s). Sized to stay comfortably above that
+    // combined worst case, not just the common, fast-path save.
     const timeout = setTimeout(function() {
       syncTabResolvers.delete(tabId);
       resolve({ success: false, error: 'timeout' });
-    }, 45000);
+    }, 60000);
     syncTabResolvers.set(tabId, function(result) {
       clearTimeout(timeout);
       resolve(result);
@@ -746,7 +745,33 @@ let data;
             // rather than duplicating it.
             patchContent = existingContent;
           } else {
-            patchContent = existingContent.trim() + '\n\n---\n\n' + patchContent.trim();
+            // Confirmed live as a real, serious bug: this used to blindly
+            // concatenate here regardless of any overlap at the boundary,
+            // producing an actual, saved duplicate — the same question
+            // (and its Sources footer) appearing twice in a row. A partial
+            // post-reload capture can legitimately re-start at a question
+            // that was already saved (e.g. it now has the answer that
+            // wasn't ready yet last time) without being fully contained in
+            // existingContent as a whole, so the check above alone wasn't
+            // enough. Find the LAST marked question already in
+            // existingContent and, if the new capture starts at (or very
+            // near) that same text, keep only what comes after it — not
+            // the whole thing.
+            let trimmedNew = patchContent.trim();
+            const TITLE_MARK_MERGE = '\u2063';
+            const markerRe2 = new RegExp(TITLE_MARK_MERGE + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK_MERGE, 'g');
+            let lastMarkerMatch = null, mm;
+            while ((mm = markerRe2.exec(existingContent)) !== null) lastMarkerMatch = mm;
+            if (lastMarkerMatch) {
+              const overlapMarker = lastMarkerMatch[0];
+              const overlapIdx = trimmedNew.indexOf(overlapMarker);
+              if (overlapIdx !== -1 && overlapIdx < 50) {
+                trimmedNew = trimmedNew.slice(overlapIdx + overlapMarker.length).replace(/^\n+/, '');
+              }
+            }
+            patchContent = trimmedNew
+              ? existingContent.trim() + '\n\n---\n\n' + trimmedNew
+              : existingContent; // nothing genuinely new left after trimming the overlap
           }
         }
         const pR = await fetch(API + '/api/diary/' + existingId, {
@@ -903,13 +928,21 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
   // checks tab status at click-time rather than trusting whatever
   // CHECK_TAB_OPEN reported earlier, since state can genuinely drift
   // between when a button's label was decided and when it's actually
-  // clicked. Per explicit design decision: never a silent background
-  // tab — chrome.tabs.create below uses active:false (visible in the
-  // tab strip, inspectable, not hidden) but deliberately does NOT steal
-  // window focus away from Diary the moment sync is triggered. On
-  // failure, an opened tab is deliberately left open rather than
-  // closed — gives the user something concrete to look at instead of a
-  // mysterious background failure with no visible cause.
+  // clicked.
+  //
+  // Uses a minimized, unfocused POPUP WINDOW rather than a tab in the
+  // user's own browser window — reversing an earlier, deliberate design
+  // decision (a visible tab was originally chosen specifically so a
+  // failure had something concrete to inspect). Confirmed live: that
+  // visible tab was itself confusing in normal use — a new tab
+  // appearing unannounced, occasionally alongside a raw
+  // "document not focused" clipboard error in the console, reads as
+  // something going wrong even when sync is working correctly. A
+  // separate window, created already-minimized, never appears in the
+  // user's own tab strip at all. On failure, the window is still left
+  // open (not closed) for exactly the same inspectability reason as
+  // before — it simply sits minimized rather than visibly interrupting
+  // the user's own browsing.
   if (msg.type === 'REQUEST_SYNC' && msg.conversationUrl && msg.diaryEntryId) {
     const entryId = msg.diaryEntryId;
     // Lock check + set happens synchronously, before any await at all —
@@ -922,7 +955,8 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
     }
     syncEntryLocks.add(entryId);
     (async function() {
-      let openedNewTab = false;
+      let openedNewWindow = false;
+      let windowId = null;
       let tabId = null;
       try {
         console.log('[Diary Sync DIAG] REQUEST_SYNC starting for entry', entryId, 'url:', msg.conversationUrl);
@@ -931,11 +965,12 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
           tabId = existingTab.id;
           console.log('[Diary Sync DIAG] found existing tab', tabId, '(status:', existingTab.status, ', lastAccessed:', existingTab.lastAccessed, ')');
         } else {
-          console.log('[Diary Sync DIAG] no existing tab found, opening a new one');
-          const newTab = await chrome.tabs.create({ url: msg.conversationUrl, active: false });
-          tabId = newTab.id;
-          openedNewTab = true;
-          console.log('[Diary Sync DIAG] new tab', tabId, 'created, waiting for it to finish loading');
+          console.log('[Diary Sync DIAG] no existing tab found, opening a minimized, unfocused window');
+          const newWindow = await chrome.windows.create({ url: msg.conversationUrl, focused: false, state: 'minimized', type: 'popup' });
+          windowId = newWindow.id;
+          tabId = newWindow.tabs[0].id;
+          openedNewWindow = true;
+          console.log('[Diary Sync DIAG] new window', windowId, '(tab', tabId, ') created, waiting for it to finish loading');
           await waitForTabComplete(tabId);
           console.log('[Diary Sync DIAG] tab', tabId, 'reported complete (or 15s ceiling hit)');
         }
@@ -947,11 +982,11 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         // last time this extension itself reloaded/updated) is a real,
         // specifically-recoverable condition, not a genuine failure —
         // reload the tab once to force a fresh injection, then retry
-        // exactly once. Deliberately NOT applied when openedNewTab is
+        // exactly once. Deliberately NOT applied when openedNewWindow is
         // true: a tab we just created ourselves and already waited on
         // via waitForTabComplete() failing this same way would indicate
         // something more fundamentally wrong, not staleness.
-        if (result.error === 'no_receiver' && !openedNewTab) {
+        if (result.error === 'no_receiver' && !openedNewWindow) {
           console.log('[Diary Sync DIAG] tab', tabId, 'had a stale connection — reloading and retrying once');
           try {
             await chrome.tabs.reload(tabId);
@@ -962,8 +997,8 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
             console.log('[Diary Sync DIAG] retry itself threw:', e.message);
           }
         }
-        if (openedNewTab && result.success) {
-          try { await chrome.tabs.remove(tabId); } catch(_) {}
+        if (openedNewWindow && result.success) {
+          try { await chrome.windows.remove(windowId); } catch(_) {}
         }
         sendResponse(result);
       } catch (e) {
