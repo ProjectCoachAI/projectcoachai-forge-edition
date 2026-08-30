@@ -24,7 +24,13 @@ const PRICE_IDS = {
   // operations. Yearly kept at the same, already-confirmed-warranted 30%
   // discount ($100.72 = $143.88 x 0.70).
   'diary-pro-monthly': process.env.STRIPE_DIARY_PRO_MONTHLY || 'price_1UACAoD9SDC8fk3BLCNx7VRB',
-  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || 'price_1UACECD9SDC8fk3BpOZWhIh5',
+  // Yearly price replaced — the original (price_1UACECD9SDC8fk3BpOZWhIh5)
+  // was confirmed live to have been created with a MONTHLY billing
+  // interval by mistake, not yearly — it would have charged $100.72
+  // every month ($1,208.64/year) rather than once a year. Caught before
+  // any customer could be charged. New price object created directly in
+  // Stripe with the correct yearly interval, same $100.72 amount.
+  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || 'price_1UACdRD9SDC8fk3B8KQUOnee',
   // Sweep Pro
   'sweep-pro':         process.env.STRIPE_SWEEP_PRO_MONTHLY || 'price_1TrMESD9SDC8fk3BhhJhp45J',
   'sweep-pro-yearly':  process.env.STRIPE_SWEEP_PRO_YEARLY  || 'price_1TrMO5D9SDC8fk3BABJJdDoe'
