@@ -695,7 +695,7 @@
           <span class="featured-badge">Most popular</span>
           <p class="card-name">Pro</p>
           <div class="card-price">
-            <span class="price-amount" id="pro-price">$6.99</span>
+            <span class="price-amount" id="pro-price">$11.99</span>
             <span class="price-period">/month</span>
           </div>
           <p class="price-annual" id="pro-annual">&nbsp;</p>
@@ -740,10 +740,19 @@
         labelYearly.classList.toggle('active', isYearly);
         saveBadge.style.display = isYearly ? 'inline-block' : 'none';
         if (isYearly) {
-          proPrice.textContent = '$4.92'; proAnnual.textContent = 'Billed as $59/year — 2 months free';
+          // Updated to the $11.99/mo repricing (from $6.99) — confirmed via
+          // full cost modeling once Continue-in-Forge's own, genuine
+          // per-use API cost was factored in. Yearly monthly-equivalent
+          // recalculated from the new $100.72/year price (same,
+          // already-confirmed-warranted 30% discount). "2 months free"
+          // corrected to "Save 30%" — the actual savings at 30% off work
+          // out to ~3.6 months' worth, not 2; this was already inaccurate
+          // before this repricing, fixed here since this line was already
+          // being touched.
+          proPrice.textContent = '$8.39'; proAnnual.textContent = 'Billed as $100.72/year — Save 30%';
           forgePrice.textContent = '$12.49'; forgeAnnual.textContent = 'Billed as $149/year — 2 months free';
         } else {
-          proPrice.textContent = '$6.99'; proAnnual.innerHTML = '&nbsp;';
+          proPrice.textContent = '$11.99'; proAnnual.innerHTML = '&nbsp;';
           forgePrice.textContent = '$14.99'; forgeAnnual.innerHTML = '&nbsp;';
         }
       });
@@ -779,7 +788,7 @@
   <div class="close-wrap" id="pricing">
     <div class="close">
       <h2 class="close-headline">Find it instantly.<br>Keep it forever.</h2>
-      <p class="close-sub">Start free. Upgrade to Pro for $6.99/month.<br></p>
+      <p class="close-sub">Start free. Upgrade to Pro for $11.99/month.<br></p>
       <a href="#" onclick="installExtension(event)" class="close-cta" id="closeCta">Add to Chrome — Free</a>
     </div>
   </div>
@@ -839,7 +848,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('forge_token') },
           body: JSON.stringify({
-            priceId: tierId === 'diary-pro-monthly' ? 'price_1TnO15D9SDC8fk3BmqPDbjdd' : 'price_1TnO5LD9SDC8fk3BMOXOndRV',
+            priceId: tierId === 'diary-pro-monthly' ? 'price_1UACAoD9SDC8fk3BLCNx7VRB' : 'price_1UACECD9SDC8fk3BpOZWhIh5',
             tierId: 'diary-pro',
             successUrl: 'https://diary.projectcoachai.com/app.html?upgraded=true',
             cancelUrl: 'https://diary.projectcoachai.com/#pricing'
