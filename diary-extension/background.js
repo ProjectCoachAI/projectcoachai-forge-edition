@@ -583,18 +583,16 @@ const syncEntryLocks = new Set();
 
 async function fetchSyncResultFromTab(tabId) {
   return new Promise(function(resolve) {
-    // Raised to 60s from 45s — confirmed live as still insufficient for
-    // a specific, real combined scenario: a stale-connection recovery
-    // reloads the tab from scratch, and a long ChatGPT conversation's
-    // entire history can take meaningfully longer to fully render on a
-    // cold, just-reloaded tab than on an already-warm one — on top of
-    // diary-content.js's own retry window (also raised, for the same
-    // reason, from 12s to 20s). Sized to stay comfortably above that
-    // combined worst case, not just the common, fast-path save.
+    // Raised to 90s from 60s — confirmed live, on Meta AI, that a
+    // genuine, legitimate response could take longer than the previous
+    // ceiling allowed for. diary-content.js's own retry window was
+    // raised in parallel (20s -> 50s, for the same reason) — this stays
+    // comfortably above that new window plus the poll-loop and tab-load
+    // overhead that also happen within this same timeout.
     const timeout = setTimeout(function() {
       syncTabResolvers.delete(tabId);
       resolve({ success: false, error: 'timeout' });
-    }, 60000);
+    }, 90000);
     syncTabResolvers.set(tabId, function(result) {
       clearTimeout(timeout);
       resolve(result);

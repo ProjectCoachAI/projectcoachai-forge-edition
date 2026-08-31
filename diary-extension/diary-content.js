@@ -1277,13 +1277,32 @@ function queryAllDeep(selector) {
       var els = document.querySelectorAll(opts.combinedSelector);
       if (!els.length) return null;
       var parts = [];
+      // Tracks the most recently pushed QUESTION text specifically (not
+      // just "the last thing pushed") — confirmed live as a real,
+      // reproduced bug on Meta AI: the same first question appeared
+      // twice, back to back, in an otherwise clean capture. A
+      // transient DOM state (e.g. React briefly rendering both an
+      // optimistic and a settled copy of the same message during a
+      // re-render) can make querySelectorAll genuinely return two
+      // separate nodes for what's really one question. A real
+      // conversation never legitimately asks the exact same question
+      // twice in a row with nothing in between, so skipping an
+      // immediate repeat is safe and can't drop genuine content.
+      var lastQuestionText = null;
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (opts.isQuestion(el)) {
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText) parts.push(boldQuestion(qText.slice(0, 2000)));
+          if (qText && qText === lastQuestionText) continue;
+          if (qText) { parts.push(boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
         } else {
+          // Reset the consecutive-question tracker the moment a real
+          // answer is seen — the dedup above must only ever catch a
+          // question immediately repeated with NOTHING in between, not
+          // a genuine, deliberate repeat where the user asked the same
+          // thing twice with a real answer given in between.
+          lastQuestionText = null;
           // NOTE: querySelectorAll instead of querySelector — confirmed
           // live via diagnostic logging that a single Meta AI answer
           // turn can contain MULTIPLE separate .ur-markdown blocks (2 in
@@ -2249,7 +2268,11 @@ function queryAllDeep(selector) {
         // entirely when nothing has changed since the last capture.
         // Claude is unaffected: it has no DOM_SELECTORS entry at all, so
         // this reads nothing and returns immediately for it.
-        if (PROVIDER !== 'claude') { try { refreshLatestDomCaptureForRetry(); } catch(e) {} }
+        console.log('[Diary Sync DIAG] about to call refreshLatestDomCaptureForRetry() — PROVIDER:', PROVIDER);
+        if (PROVIDER !== 'claude') {
+          try { refreshLatestDomCaptureForRetry(); }
+          catch(e) { console.log('[Diary Sync DIAG] refreshLatestDomCaptureForRetry() THREW:', e && e.message, e && e.stack); }
+        }
         if (PROVIDER === 'claude') {
           // ChatGPT moved to the DOM-provider branch below (see the 'else'
           // clause) — confirmed via live evidence that ChatGPT delivers
@@ -3134,7 +3157,26 @@ function queryAllDeep(selector) {
       // never fire in time (or, per today's live tests, at all) for a
       // fresh, backgrounded tab load specifically.
       if (!window.__diaryPerformSave) {
-        try { injectSaveDiaryButton('sync-trigger'); } catch(e) { console.log('[Diary Sync DIAG] proactive injectSaveDiaryButton() call threw:', e.message); }
+        // Delayed rather than immediate — confirmed live as a real,
+        // separate cause on Meta AI specifically: injecting a DOM
+        // element (the button) this early — right when the page merely
+        // reports the browser's own 'complete' status, which says
+        // nothing about whether a React/Next.js app has actually
+        // finished its own initial hydration pass yet — is a
+        // well-documented trigger for React's hydration-mismatch error
+        // (#418: server-rendered HTML no longer matches the live DOM
+        // once something external has already modified it). Reproduced
+        // live: immediately after this proactive injection ran, Meta
+        // AI's own app threw exactly that error, and its normal
+        // AI_RESPONSE_COMPLETE signal only fired well afterward — well
+        // past this retry window's own ceiling. A short, fixed delay
+        // gives hydration time to genuinely finish before any DOM
+        // injection happens at all, for every provider, not just Meta
+        // AI — low-risk for the providers already confirmed working
+        // today, since they'd still succeed, just slightly later.
+        setTimeout(function() {
+          try { injectSaveDiaryButton('sync-trigger'); } catch(e) { console.log('[Diary Sync DIAG] proactive injectSaveDiaryButton() call threw:', e.message); }
+        }, 1500);
       }
       var syncPollAttempts = 0;
       var syncPollMax = 70; // 70 * 500ms = 35s ceiling
@@ -3185,7 +3227,19 @@ function queryAllDeep(selector) {
       // already warm — waitForTabComplete() only waits for the
       // browser's own technical 'complete' status, not for ChatGPT's
       // own, slower client-side hydration of a long conversation.
-      var saveRetryMax = 10; // 10 * 2s = 20s of additional retry window
+      // Raised from 10 (20s) — confirmed live, on Meta AI, that this
+      // window was genuinely too short, not caused by React hydration
+      // timing as an earlier fix here assumed. Traced the actual event
+      // order directly: performSaveToDiary() had already resolved with
+      // incomplete_response BEFORE a real, separate React error even
+      // fired on the page — the error was coincidental, not the cause.
+      // The genuine explanation is simpler: this provider's own
+      // response can legitimately take longer to finish than 20
+      // seconds, and this window gave up before that genuine
+      // completion signal ever arrived. Raised to 25 attempts (50s),
+      // leaving real margin within the overall 60s ceiling for tab
+      // load and other overhead.
+      var saveRetryMax = 25; // 25 * 2s = 50s of additional retry window
       function attemptSave(retryCount) {
         window.__diaryPerformSave().then(function(result) {
           var retryableErrors = result && (result.error === 'no_content_found' || result.error === 'incomplete_response');
@@ -3365,7 +3419,30 @@ function queryAllDeep(selector) {
     setTimeout(tryInjectBar, 3000);
     setTimeout(tryInjectBar, 6000);
     setTimeout(tryInjectBar, 10000);
-
+  }
+  // ^ Closes the Forge Control Bar's own bare block (opened above at its
+  // section header) — confirmed live, via direct AST parsing (acorn), as
+  // a real, genuine, pre-existing bug: this closing brace was missing
+  // entirely, so the bare block never actually closed here at all — it
+  // silently absorbed the ENTIRE REST OF THE FILE as its own body
+  // instead (confirmed: this single block's true end, before this fix,
+  // was line 4436 — everything from the DOM reader section onward,
+  // including readDomResponse, refreshLatestDomCaptureForRetry, the
+  // ChatGPT MutationObserver logic, and the SPA-navigation bar
+  // re-injection logic at the very end of the file, was all nested
+  // inside it). Function declarations inside a bare block are
+  // block-scoped in strict mode, not hoisted to the enclosing function —
+  // so none of that code was ever visible to anything defined earlier in
+  // the file. This had never caused a visible problem before, since
+  // nothing outside this region previously needed to call into it —
+  // until refreshLatestDomCaptureForRetry() was wired to be called from
+  // performSaveToDiary() (defined much earlier, outside this block),
+  // causing a genuine, reproduced "is not defined" ReferenceError on
+  // DeepSeek specifically (the provider whose retry path most directly
+  // depends on this call succeeding). The matching closing brace that
+  // used to sit at the true end of this block (previously line 4436, at
+  // the end of the file) has been removed as part of this same fix —
+  // see the matching note there.
 
   // ── DOM reader for providers not captured by fetch interceptor ───────────────
   // Triggered by webRequest completion signal from background.js
@@ -3602,9 +3679,10 @@ function queryAllDeep(selector) {
   function readDomResponse() {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
-    if (!config) return null;
+    if (!config) { console.log('[Diary Sync DIAG] readDomResponse: no DOM_SELECTORS config for host:', host); return null; }
 
     var els = document.querySelectorAll(config.response);
+    console.log('[Diary Sync DIAG] readDomResponse: host:', host, '| selector:', config.response, '| matched elements:', els.length);
     if (!els.length) return null;
 
     // Read ALL response elements joined - full conversation, one growing
@@ -3880,8 +3958,11 @@ function queryAllDeep(selector) {
       }
       return plain;
     }).filter(function(t) {
-      if (t.length < 20) return false;
+      var tooShort = t.length < 20;
       var key = t.slice(0, 50);
+      var isDupe = !tooShort && !!seen[key];
+      console.log('[Diary Sync DIAG] readDomResponse part: length', t.length, '| tooShort:', tooShort, '| duplicateKey:', isDupe, '| preview:', t.slice(0, 60));
+      if (tooShort) return false;
       if (seen[key]) return false;
       seen[key] = true;
       return true;
@@ -4034,6 +4115,7 @@ function queryAllDeep(selector) {
   // repeated calls can never accumulate duplicate-content entries the way
   // naively calling captureDomTurn() on every retry would have.
   function refreshLatestDomCaptureForRetry() {
+    console.log('[Diary Sync DIAG] refreshLatestDomCaptureForRetry() ENTERED');
     var text = readDomResponse();
     if (!text || text.length <= 50) {
       console.log('[Diary DOM] fresh retry capture SKIPPED — readDomResponse() returned', text ? ('only ' + text.length + ' chars') : 'nothing at all');
@@ -4058,6 +4140,20 @@ function queryAllDeep(selector) {
     if (turns[lastIdx].text === text) return; // genuinely nothing new
     turns[lastIdx].text = text;
     turns[lastIdx].ts = Date.now();
+    // Also refresh promptCountAtCapture to the CURRENT, full prompt count
+    // — confirmed live as a real, genuine bug on DeepSeek without this:
+    // readDomResponse() joins ALL response elements on the page into one
+    // growing string, so this single turn's text can come to contain
+    // several separate answers' worth of content over successive
+    // retries, while its own promptCountAtCapture tag stayed frozen at
+    // whatever it was when the turn was FIRST pushed. The interleaving
+    // logic then associated only the earliest question with this
+    // (now-expanded) turn, leaving later questions unclaimed — they got
+    // appended as trailing "leftover" questions at the very end, after
+    // their own answers, instead of correctly preceding them. Since this
+    // turn's text is already the full, cumulative joined text at this
+    // point, tagging it with the full, current prompt count is correct.
+    try { turns[lastIdx].promptCountAtCapture = getAllCapturedPrompts().length; } catch(e) {}
     console.log('[Diary DOM] fresh retry capture (updated latest turn):', text.slice(0, 80));
   }
 
@@ -4374,6 +4470,11 @@ function queryAllDeep(selector) {
       }
     });
     navObserver.observe(document.body, { childList: true, subtree: true });
-  }
+  // ^ No brace here — this used to be the accidental, misplaced closing
+  // brace for the Forge Control Bar's own bare block (see the matching
+  // note near that block's real opening/closing, earlier in the file).
+  // Removed as part of the same fix: adding the correct closing brace at
+  // its genuine, intended location meant this one became redundant and
+  // would otherwise have prematurely closed the top-level IIFE itself.
 
 })()
