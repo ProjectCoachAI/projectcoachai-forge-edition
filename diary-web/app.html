@@ -173,7 +173,10 @@
     .entry-btn.danger:hover { background: #FEF2F2; }
     .entry-source-icon { font-size: 18px; flex-shrink: 0; }
     .entry-meta { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
-    .entry-title { font-family: Lora,serif; font-size: 14px; font-weight: 500; color: #1B2A4A; line-height: 1.2; margin-bottom: 0; width: 320px; }
+    .entry-title { font-family: Lora,serif; font-size: 14px; font-weight: 500; color: #1B2A4A; line-height: 1.2; margin-bottom: 0; }
+    .entry-title-block { display: flex; flex-direction: column; gap: 3px; width: 320px; min-width: 0; }
+    .entry-snippet { font-size: 12px; color: #6B6559; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .entry-snippet mark { background: rgba(193,125,60,0.22); color: inherit; border-radius: 2px; padding: 0 1px; }
     .entry-sub { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; font-size: 11px; color: #9E9890; overflow: hidden; margin-left: auto; }
     .entry-category { background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); padding: 1px 7px; border-radius: 20px; font-size: 10px; display: inline-block; width: 145px; text-align: center; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .entry-source { display: inline-block; width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1161,10 +1164,19 @@ async function searchDiary(q) {
       entriesEl.innerHTML = previousHtml;
       showTopToast(r.data.message || 'Too many search attempts. Please try again later.', true);
     } else {
+      // Was silent — confirmed as a real, concrete gap: a genuine
+      // failure here (server error, unexpected status) reverted to the
+      // previous view with no message at all, leaving no way to tell
+      // "my search found nothing" apart from "the search itself broke."
+      // Uses the same showTopToast() already used for the 402/429 cases
+      // just above, for a consistent, honest signal regardless of which
+      // way a search fails.
       entriesEl.innerHTML = previousHtml;
+      showTopToast('Search failed. Please try again.', true);
     }
   } catch(_) {
     entriesEl.innerHTML = previousHtml;
+    showTopToast('Search failed. Please check your connection and try again.', true);
   } finally {
     input.disabled = false;
     if (icon) icon.style.pointerEvents = '';
@@ -1269,7 +1281,20 @@ function renderEntryCard(e) {
     '<div class="entry-card-header" onclick="toggleEntry(' + e.id + ')">' +
       '<span class="entry-source-icon">' + icon + '</span>' +
       '<div class="entry-meta">' +
-        '<div class="entry-title">' + escHtml(title) + '</div>' +
+        '<div class="entry-title-block">' +
+          '<div class="entry-title">' + escHtml(title) + '</div>' +
+          // NOTE: search-result snippet — shown only when the backend
+          // provided one (search results specifically; a plain browse-by-
+          // filter response has no `snippet` field at all, per that route's
+          // own logic). Placed directly under the title, visible before any
+          // click at all, so a result can be evaluated at a glance instead
+          // of requiring a full click-and-scan of the entire entry just to
+          // find out why it matched — confirmed as the actual, concrete gap
+          // via direct review: this is semantic search, so a result can
+          // genuinely match on meaning with no literal query word in its
+          // (often auto-generated) title at all.
+          (e.snippet ? '<div class="entry-snippet">' + highlightSnippet(e.snippet, searchQuery) + '</div>' : '') +
+        '</div>' +
         '<div class="entry-sub">' +
           '<span class="entry-category">' + (e.category || 'General') + '</span>' +
           '<span class="entry-source">' + sourceLabel + '</span>' +
@@ -1458,6 +1483,29 @@ function renderEntryCard(e) {
 
 function escHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Escapes first, THEN wraps case-insensitive matches of the current search
+// query's words in <mark> — in that order specifically, so a query
+// containing HTML-special characters (e.g. searching for "a < b") can never
+// result in unescaped, unsafe markup slipping through via the match itself.
+// Splits the query the same simple way the search box's own words are
+// meant to be read (whitespace-separated), and escapes each word with the
+// same escHtml() before building the regex, so a literal "<" or "&" typed
+// into the search box is matched as the literal escaped text it becomes
+// after the content itself is escaped, not as literal regex/HTML syntax.
+function highlightSnippet(text, query) {
+  var escaped = escHtml(text);
+  var terms = (query || '').split(/\s+/).map(function(w) { return w.trim(); }).filter(function(w) { return w.length > 1; });
+  if (!terms.length) return escaped;
+  var pattern = terms.map(function(w) {
+    return escHtml(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex special chars
+  }).join('|');
+  try {
+    return escaped.replace(new RegExp('(' + pattern + ')', 'gi'), '<mark>$1</mark>');
+  } catch(_e) {
+    return escaped; // malformed pattern (e.g. from unusual input) — show unhighlighted rather than break rendering
+  }
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────

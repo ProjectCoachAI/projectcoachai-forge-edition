@@ -656,7 +656,74 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // ── GET /api/diary/search — multi-term intent-based search ──────────────────
+// ── Search result snippet extraction ────────────────────────────────────────
+// Confirmed as a real, significant gap via direct review: search results
+// previously showed only title/category/source/date, with no indication AT
+// ALL of why a given entry matched — meaning every result required a full
+// click-and-scan of the entire entry just to evaluate it. Especially costly
+// here specifically because this is semantic (embedding-based) search — a
+// result can genuinely match on meaning without the literal query words
+// appearing anywhere in its (often auto-generated, unrelated-looking) title.
+// Strips basic markdown syntax first so a short, isolated snippet doesn't
+// show raw "**word**"/"### heading" symbols out of context — those render
+// fine inline within a full markdown document, but look like noise in a
+// short, plain-text excerpt with nothing else around them.
+function stripMarkdownForSnippet(text) {
+  return (text || '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')      // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')   // links -> just the label text
+    .replace(/^#{1,6}\s+/gm, '')                // heading markers
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')         // bold
+    .replace(/(\*|_)(.*?)\1/g, '$2')            // italic
+    .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')      // inline/block code marks
+    .replace(/^>\s?/gm, '')                     // blockquote markers
+    .replace(/^[-*]\s+/gm, '')                  // bullet markers
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Finds the first genuine, literal occurrence of any search term (phrases
+// checked before individual words, since a phrase match is more specific and
+// more informative to show) and returns a short window of surrounding text.
+// Deliberately returns PLAIN text only, with no markup of any kind — keeping
+// all escaping and <mark> highlighting on the frontend, the same way title
+// (via escHtml) is already handled, rather than trying to safely thread HTML
+// through a value that also needs JSON-serializing and could, in principle,
+// contain a saved conversation that happens to itself discuss HTML/code.
+// Falls back to the start of the content when no literal term is found at
+// all — the expected, correct outcome for a genuinely semantic-only match —
+// so even that case shows something concretely useful rather than nothing.
+function extractSnippet(content, prompt, words, phrases) {
+  const plainContent = stripMarkdownForSnippet(content);
+  const terms = [...phrases, ...words].filter(t => t && t.length > 1);
+  const lowerContent = plainContent.toLowerCase();
+
+  const WINDOW = 90; // chars of context on each side of the match
+  for (const term of terms) {
+    const idx = lowerContent.indexOf(term.toLowerCase());
+    if (idx === -1) continue;
+    let start = Math.max(0, idx - WINDOW);
+    let end = Math.min(plainContent.length, idx + term.length + WINDOW);
+    // Trim to whole-word boundaries so the snippet doesn't open/close
+    // mid-word — walks outward from the raw cut point to the nearest space.
+    while (start > 0 && plainContent[start] !== ' ') start--;
+    while (end < plainContent.length && plainContent[end] !== ' ') end++;
+    let snippet = plainContent.slice(start, end).trim();
+    if (start > 0) snippet = '…' + snippet;
+    if (end < plainContent.length) snippet = snippet + '…';
+    return snippet;
+  }
+
+  // No literal match — genuinely semantic-only result. Fall back to the
+  // prompt (usually the most concise, informative single line available)
+  // if there's no query-term overlap at all, else the start of the content.
+  const fallbackSource = prompt ? stripMarkdownForSnippet(prompt) : plainContent;
+  const fallback = fallbackSource.slice(0, WINDOW * 2).trim();
+  return fallback.length < fallbackSource.length ? fallback + '…' : fallback;
+}
+
 router.get('/search', requireAuth, async (req, res) => {
+
   try {
     const { q, tz, source, category, date_from, date_to } = req.query;
     // NOTE: no longer requires q to be non-empty — filters (source,
@@ -911,6 +978,19 @@ router.get('/search', requireAuth, async (req, res) => {
     );
 
     const foundResults = r.rows.length > 0;
+    // Adds `snippet` to each result — the actual fix for the "no
+    // indication of why this matched" gap. Computed here rather than in
+    // SQL since it needs the same words/phrases already parsed above from
+    // the query, and stripping markdown is far simpler in JS than in a
+    // SQL expression. Only computed when q was genuinely provided — a
+    // pure filter-only browse (source/category/date with no text query)
+    // has no "why did this match" question to answer at all.
+    if (q) {
+      for (const row of r.rows) {
+        row.snippet = extractSnippet(row.content, row.prompt, words, phrases);
+      }
+    }
+
     if (!isPaid && today) {
       // NOTE: recentDuplicate check added — confirmed as a real, fair
       // refinement following the same principle as the results-only fix:
