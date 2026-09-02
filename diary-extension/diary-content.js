@@ -3118,7 +3118,54 @@ function queryAllDeep(selector) {
     // isn't a broken mechanism, just a slower one for a genuinely cold,
     // backgrounded load.
     if (message.type === 'TRIGGER_SYNC_SAVE') {
-      console.log('[Diary Sync DIAG] TRIGGER_SYNC_SAVE received on this page. window.__diaryPerformSave already set?', !!window.__diaryPerformSave);
+      console.log('[Diary Sync DIAG] TRIGGER_SYNC_SAVE received (isRetry:', !!message.isRetry, '). window.__diaryPerformSave already set?', !!window.__diaryPerformSave);
+      // Confirmed live as a real, genuine, serious bug: this lock alone
+      // (no expiry) can get stuck HELD INDEFINITELY if the underlying
+      // performSaveToDiary() promise itself never resolves — which is
+      // exactly what a genuinely throttled/frozen tab does. Every
+      // subsequent retry message then gets silently ignored while
+      // background.js keeps waiting on a call that may never finish
+      // without the tab being brought into focus first — reproduced
+      // live: sync would only ever complete the instant the user
+      // clicked into the tab's own DevTools, at which point the
+      // ORIGINAL, still-pending call finally resolved once throttling
+      // lifted, not because of anything the retry messages themselves
+      // did. A staleness window fixes this without removing the
+      // lock's own, still-genuinely-necessary protection against real,
+      // fast, overlapping concurrent calls (which is what actually
+      // caused yesterday's confirmed data corruption) — an attempt
+      // considered stuck for this long is either doomed or waiting on
+      // exactly the kind of focus-dependent recovery this whole retry
+      // mechanism exists to avoid requiring, so letting a fresh attempt
+      // through is the safer choice. Set comfortably above
+      // background.js's own 10s per-attempt timeout, so a genuinely
+      // slow-but-working attempt still gets a fair, undisrupted chance
+      // to finish first.
+      var LOCK_STALE_MS = 12000;
+      if (window.__diarySyncAttemptInProgress && (Date.now() - (window.__diarySyncAttemptStartedAt || 0)) < LOCK_STALE_MS) {
+        console.log('[Diary Sync DIAG] ignoring TRIGGER_SYNC_SAVE — an attempt is already in progress on this tab (age:', Date.now() - window.__diarySyncAttemptStartedAt, 'ms)');
+        return;
+      }
+      if (window.__diarySyncAttemptInProgress) {
+        console.log('[Diary Sync DIAG] previous attempt exceeded staleness window (', Date.now() - window.__diarySyncAttemptStartedAt, 'ms) — treating as stuck, allowing a fresh attempt through');
+      }
+      // isRetry distinguishes background.js's own re-sent retry messages
+      // from the original, first trigger for this sync attempt — part of
+      // moving the retry loop out of this tab entirely (see the note on
+      // attemptSaveOnce() below for the full rationale). Only the FIRST
+      // message should do the one-time setup below; a retry message
+      // skips straight to a single attempt, since window.__diaryPerformSave
+      // is already set up by then, AND because re-running the turns
+      // reset on every retry would silently reintroduce the exact
+      // promptCountAtCapture bug fixed yesterday — resetting turns to
+      // empty on every attempt would make refreshLatestDomCaptureForRetry()
+      // always take its "first turn for this conversation" branch, which
+      // always tags promptCountAtCapture as 1 regardless of how many
+      // prompts have actually accumulated by then.
+      if (message.isRetry) {
+        attemptSaveOnce();
+        return;
+      }
       // Reset turns (not the whole window.__diaryCapture object — leaves
       // historySeed, relevant for Claude, untouched) at the START of
       // every Sync-triggered save. Confirmed live as a real, necessary
@@ -3183,7 +3230,7 @@ function queryAllDeep(selector) {
       (function pollForSaveFn() {
         if (window.__diaryPerformSave) {
           console.log('[Diary Sync DIAG] window.__diaryPerformSave available after', syncPollAttempts, 'poll attempt(s) — calling it now');
-          attemptSave(0);
+          attemptSaveOnce();
           return;
         }
         syncPollAttempts++;
@@ -3239,20 +3286,57 @@ function queryAllDeep(selector) {
       // completion signal ever arrived. Raised to 25 attempts (50s),
       // leaving real margin within the overall 60s ceiling for tab
       // load and other overhead.
-      var saveRetryMax = 25; // 25 * 2s = 50s of additional retry window
-      function attemptSave(retryCount) {
+      //
+      // RETRY LOOP MOVED OUT OF THIS FILE ENTIRELY — confirmed live, on
+      // both ChatGPT and DeepSeek specifically, as a genuine, real,
+      // production-affecting bug (not a console-testing artifact —
+      // reproduced identically via an actual Sync button click): Chrome
+      // documents especially aggressive throttling of CHAINED setTimeout
+      // calls in a background (active:false) tab specifically, and this
+      // exact retry loop was precisely that pattern (each attempt
+      // scheduling the next via its own setTimeout). Confirmed the
+      // stall was real and complete, not just slow — the loop never
+      // progressed at all until the tab was manually clicked into
+      // focus. The six other providers never triggered this because
+      // they each succeed within the first attempt or two (a real
+      // network completion signal, or Meta AI's own direct DOM-pairing
+      // triggered off the genuine completion event) — ChatGPT and
+      // DeepSeek are the two structurally forced to lean hardest on
+      // this exact mechanism, since neither has a reliable completion
+      // signal for Sync's specific "revisit an already-finished
+      // conversation" scenario. background.js's own service-worker
+      // context isn't a regular tab and isn't subject to the same
+      // tab-freezing rules, so it now owns the retry timing instead —
+      // this function performs exactly ONE attempt per TRIGGER_SYNC_SAVE
+      // message and reports the result immediately; see
+      // fetchSyncResultFromTab() in background.js for the retry loop
+      // itself.
+      function attemptSaveOnce() {
+        // Token-based release — confirmed necessary to avoid a second,
+        // related race: if the OLD, stale attempt eventually resolves
+        // after a fresh attempt has already started (past the
+        // staleness window above), its own finally() would otherwise
+        // blindly clear the lock — potentially while the NEW attempt is
+        // still genuinely, actively in progress, defeating the lock's
+        // whole purpose right after fixing its staleness problem. Each
+        // attempt only ever clears the lock if it's still the current,
+        // active one by the time it finishes.
+        var myToken = Date.now() + '_' + Math.random();
+        window.__diarySyncAttemptInProgress = true;
+        window.__diarySyncAttemptStartedAt = Date.now();
+        window.__diarySyncAttemptToken = myToken;
         window.__diaryPerformSave().then(function(result) {
-          var retryableErrors = result && (result.error === 'no_content_found' || result.error === 'incomplete_response');
-          if (result && !result.success && retryableErrors && retryCount < saveRetryMax) {
-            console.log('[Diary Sync DIAG] capture not ready yet (' + result.error + ', attempt', retryCount, ') — retrying in 2s');
-            setTimeout(function() { attemptSave(retryCount + 1); }, 2000);
-            return;
-          }
           console.log('[Diary Sync DIAG] performSaveToDiary() resolved:', JSON.stringify(result));
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: !!(result && result.success), error: result && result.error, chatSessionSync: result && result.chatSessionSync } }, '*');
         }).catch(function(err) {
           console.log('[Diary Sync DIAG] performSaveToDiary() threw:', err && err.message);
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: false, error: err && err.message } }, '*');
+        }).finally(function() {
+          if (window.__diarySyncAttemptToken === myToken) {
+            window.__diarySyncAttemptInProgress = false;
+          } else {
+            console.log('[Diary Sync DIAG] a stale attempt finally resolved after being superseded — not clearing the current attempt\'s lock');
+          }
         });
       }
     }
@@ -4061,7 +4145,26 @@ function queryAllDeep(selector) {
     var turns = window.__diaryCapture.turns;
     var last = turns.length ? turns[turns.length - 1] : null;
     var tooSoon = last && (Date.now() - last.ts < 2000);
-    if (!tooSoon) {
+    // Also skip if the text is genuinely, byte-for-byte unchanged from
+    // the last captured turn — confirmed live as a real, necessary fix,
+    // not defensive-only: the `tooSoon` check above only ever guards a
+    // short, fixed 2-second window, but ChatGPT's own MutationObserver
+    // (the only capture trigger it has, given no reliable network
+    // completion signal exists for it at all) watches the ENTIRE page
+    // subtree and can genuinely fire again well after that window —
+    // triggered by any DOM change at all, not necessarily a real,
+    // new answer. Reproduced live: four separate, fully identical
+    // duplicate turns (same text, same length) accumulated over one
+    // long sync attempt, each one a separate, independent firing of
+    // this same observer well more than 2 seconds apart each time.
+    // refreshLatestDomCaptureForRetry() already had this same, correct
+    // check for its own, similar "did this genuinely change" question;
+    // this had never been an equivalent risk here before today, since
+    // the retry window that gives this repeated-firing pattern time to
+    // actually manifest didn't exist until today's own refactor
+    // extended it substantially.
+    var unchanged = last && last.text === text;
+    if (!tooSoon && !unchanged) {
       var host = window.location.hostname;
       var config = DOM_SELECTORS[host];
       var imgUrls = getCurrentTurnImageUrls(config);
@@ -4186,6 +4289,18 @@ function queryAllDeep(selector) {
     }
 
     function _chatgptCheckStable() {
+      // Direct, empirical timestamp logging — added specifically to
+      // confirm or rule out background-tab timer throttling as the
+      // actual cause of remaining slowness, rather than assuming it
+      // from Chrome's general documentation alone. This poll is
+      // requested at a fixed 2000ms interval; if throttling is genuinely
+      // affecting it, the actual elapsed time between consecutive calls
+      // (logged here directly) will measurably exceed that request.
+      var _nowTs = Date.now();
+      if (window.__chatgptLastCheckTs) {
+        console.log('[Diary Sync DIAG] _chatgptCheckStable actual interval:', (_nowTs - window.__chatgptLastCheckTs), 'ms (requested: 2000ms)');
+      }
+      window.__chatgptLastCheckTs = _nowTs;
       var text = readDomResponse();
       var hasRawMarker = text && /image_group|entity[\uE000-\uF8FF\[]/.test(text);
       _chatgptWaitCount++;
@@ -4423,22 +4538,32 @@ function queryAllDeep(selector) {
       }, 2000);
     }
 
-    // Watch for auth loading late
-    const authObserver = new MutationObserver(() => {
-      if (!document.getElementById(BAR_ID) && isAuthenticated()) injectForgeBar();
-    });
-    authObserver.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => authObserver.disconnect(), 15000);
+    // Watch for auth loading late — REMOVED. This called into
+    // injectForgeBar(), which is itself already a deliberate no-op
+    // ("Replaced by provider-dock.js" — see that function's own
+    // comment), so this observer never did anything observable even
+    // before this removal. Confirmed live as a genuine, real regression
+    // from an earlier fix elsewhere in this file: BAR_ID/FORGE_URL/
+    // injectForgeBar are declared inside the Forge Control Bar's own
+    // bare block, which now correctly closes right after that block's
+    // initial setup — but this code sat physically further down the
+    // file, past that closing brace, so it lost access to those
+    // block-scoped declarations and threw "BAR_ID is not defined" the
+    // moment this MutationObserver's callback ever fired. Since the
+    // call this genuinely guarded is already inert, removing the dead
+    // reference outright is simpler and lower-risk than re-plumbing
+    // scope just to keep calling a function that does nothing.
 
     // ── SPA navigation — re-inject bar when URL changes (claude.ai is a SPA) ──
     let _lastUrl = location.href;
     const navObserver = new MutationObserver(() => {
       if (location.href !== _lastUrl) {
         _lastUrl = location.href;
-        if (!document.getElementById(BAR_ID)) {
-          setTimeout(tryInjectBar, 800);
-          setTimeout(tryInjectBar, 2500);
-        }
+        // The BAR_ID/tryInjectBar re-injection branch that used to sit
+        // here has been removed for the same reason as authObserver
+        // above (same broken, block-scope reference; same underlying
+        // no-op it was guarding) — the Mistral/DeepSeek re-scan logic
+        // below is untouched and unrelated to any of that.
         // Mistral and DeepSeek specifically: re-run the same page-load
         // existing-content scan on SPA navigation to a different
         // conversation (e.g. clicking a different chat in the

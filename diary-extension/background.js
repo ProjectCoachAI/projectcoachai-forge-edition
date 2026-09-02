@@ -303,12 +303,15 @@ async function resolveConversationUrl(referrer) {
 
 // Matches a real download event against ONE specific, not-yet-hosted
 // attachment already tracked on the matched Diary entry. Deliberately
-// conservative: narrows by type (from mime) first, resolves immediately
-// if that leaves exactly one candidate, and only falls back to filename
-// comparison when genuinely needed to disambiguate multiple attachments
-// of the same type on one entry. Returns null — never a guess — when the
-// match is still ambiguous after that, since attaching bytes to the
-// wrong tracked attachment would be worse than not attaching them at all.
+// conservative: narrows by type (from mime) first, then requires an
+// actual filename match whenever a candidate name is available —
+// including when only one un-hosted candidate remains, not just when
+// several do (hardened after confirming live that "exactly one open
+// slot" isn't reliable proof by itself when the download's own mime is
+// too generic to have narrowed by type at all). Returns null — never a
+// guess — when the match is still ambiguous or unverifiable after that,
+// since attaching bytes to the wrong tracked attachment would be worse
+// than not attaching them at all.
 function matchDownloadToAttachment(attachments, downloadItem) {
   const mime = (downloadItem.mime || '').split(';')[0].trim().toLowerCase();
   const typeFromMime = MIME_TO_ATTACHMENT_TYPE[mime];
@@ -322,7 +325,33 @@ function matchDownloadToAttachment(attachments, downloadItem) {
   });
 
   if (pool.length === 0) return null;
-  if (pool.length === 1) return pool[0];
+  if (pool.length === 1) {
+    // Hardened: no longer trusts "exactly one candidate left" as proof
+    // by itself — confirmed live as a genuine, real risk, not just
+    // theoretical: Claude's own download endpoint commonly reports a
+    // generic mime ("application/octet-stream"), meaning typeFromMime
+    // is never set and the type-based narrowing above never actually
+    // narrows anything at all — "one candidate left" in that case just
+    // means "one attachment happens to still be un-hosted right now",
+    // not "this download is confirmed to belong to it". Two downloads
+    // for the same entry close together (their own onCreated events,
+    // and each one's own lookup of the entry's current attachment
+    // state, both racing independently) could each see a stale
+    // snapshot and each resolve to the same lone open slot. Now
+    // requires an actual filename match whenever a candidate name is
+    // available, exactly like the multi-candidate branch below already
+    // did — only skips this check when no filename could be determined
+    // at all, since there'd be nothing to verify against either way.
+    if (!candidateName) return pool[0];
+    const normalizedSingle = normalizeForMatch(pool[0].filename);
+    if (normalizeForMatch(candidateName) === normalizedSingle) return pool[0];
+    // Falls through to the same null return below — the caller already
+    // falls back to the pending-capture path on null, so a genuine,
+    // correct download still isn't lost outright; it just waits for a
+    // later save/re-save to adopt it properly instead of risking a
+    // silent mismatch right now.
+    return null;
+  }
 
   if (candidateName) {
     const normalizedCandidate = normalizeForMatch(candidateName);
@@ -396,15 +425,77 @@ chrome.downloads.onCreated.addListener(async function(item) {
     });
     const lookupData = await lookupResp.json();
 
+    // Extracted so the SAME pending-capture fallback can be reused from
+    // multiple call sites below — originally only reachable when no
+    // Diary entry existed for this conversation at all. Confirmed live
+    // as a real, genuine gap, not just a defensive addition: an entry
+    // CAN already exist (with its own, already-tracked, already-hosted
+    // attachments from an earlier save) while a NEW file generated
+    // later in that same conversation is downloaded before the entry
+    // is ever re-opened/re-saved — which is the only thing that would
+    // re-run the page's own attachment-detection scan and add this new
+    // file to the tracked list. Reproduced live: a download for a
+    // clearly different, new file ("...Combined_Findings.pdf") against
+    // an entry whose own tracked attachments were three entirely
+    // different, already-hosted files — correctly, but unhelpfully,
+    // matched nothing and was silently skipped, with the download's own
+    // bytes never captured anywhere at all. Falling back to the same
+    // pending-capture mechanism already used for "no entry yet" means a
+    // later save/re-save (which DOES re-scan and pick up the new file
+    // as a genuine tracked attachment) can adopt it automatically via
+    // adoptPendingCaptures(), exactly as it already does for that other
+    // case — rather than the file being lost outright just because the
+    // entry happened to already exist.
+    async function fallBackToPendingCapture(logContext) {
+      let urlFilename = extractFilenameFromDownloadUrl(item.url) || item.filename;
+      if (!urlFilename && item.url.indexOf('blob:') === 0) {
+        // blob: URLs carry no filename information themselves — this
+        // waits for Chrome's own onDeterminingFilename event instead,
+        // which reflects the page's real, intended filename (see that
+        // listener's own comment).
+        urlFilename = await waitForDeterminedFilename(item.id);
+      }
+      if (!urlFilename) { console.log('[Diary BG] Skipped:', logContext, '— and no filename could be determined for this download'); return; }
+
+      const typeGuess = deriveRealFileType(item, urlFilename);
+      if (!typeGuess) { console.log('[Diary BG] Skipped:', logContext, '— and file type could not be determined'); return; }
+
+      // See the sibling call site above for the full reasoning — this
+      // resolves via whichever mechanism the download actually needs.
+      const fileData = await resolveDownloadFileData(item);
+      if (!fileData) { console.log('[Diary BG] Skipped:', logContext, '— and could not resolve file data for this download'); return; }
+      const pendingBody = Object.assign({ conversation_url: conversationUrl, filename: urlFilename, type: typeGuess }, fileData);
+
+      const pendingResp = await fetch(API + '/api/diary/pending-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(pendingBody)
+      });
+      const pendingData = await pendingResp.json();
+      if (pendingData.success) {
+        console.log('[Diary BG] Pending-captured (' + logContext + '):', urlFilename);
+      } else {
+        console.warn('[Diary BG] Failed to pending-capture (' + logContext + '):', urlFilename, '—', pendingData.error);
+      }
+    }
+
     if (lookupData.success && lookupData.entry) {
       // Existing path: an entry already exists — match this download
       // against its own tracked, not-yet-hosted attachments.
       const entry = lookupData.entry;
       const attachments = (entry.metadata && entry.metadata.attachments) || [];
-      if (!attachments.length) { console.log('[Diary BG] Skipped: entry has no tracked attachments'); return; }
+      if (!attachments.length) {
+        console.log('[Diary BG] Entry has no tracked attachments — falling back to pending-capture');
+        await fallBackToPendingCapture('entry exists, no tracked attachments');
+        return;
+      }
 
       const matched = matchDownloadToAttachment(attachments, item);
-      if (!matched) { console.log('[Diary BG] Skipped: no matching tracked attachment for this download (or ambiguous)', JSON.stringify(attachments)); return; }
+      if (!matched) {
+        console.log('[Diary BG] No matching tracked attachment for this download (or ambiguous) — falling back to pending-capture', JSON.stringify(attachments));
+        await fallBackToPendingCapture('entry exists, no matching tracked attachment');
+        return;
+      }
 
       // realType: derived directly from the download itself, separate
       // from matched.type (the TRACKED, possibly-stale type used only
@@ -444,36 +535,7 @@ chrome.downloads.onCreated.addListener(async function(item) {
       // backend for how a later save picks this up automatically, and
       // this file's own comment for why nothing gets silently saved to
       // Diary here: that must stay the user's own, deliberate choice.
-      let urlFilename = extractFilenameFromDownloadUrl(item.url) || item.filename;
-      if (!urlFilename && item.url.indexOf('blob:') === 0) {
-        // blob: URLs carry no filename information themselves — this
-        // waits for Chrome's own onDeterminingFilename event instead,
-        // which reflects the page's real, intended filename (see that
-        // listener's own comment).
-        urlFilename = await waitForDeterminedFilename(item.id);
-      }
-      if (!urlFilename) { console.log('[Diary BG] Skipped: no entry yet, and no filename could be determined for this download'); return; }
-
-      const typeGuess = deriveRealFileType(item, urlFilename);
-      if (!typeGuess) { console.log('[Diary BG] Skipped: no entry yet, and file type could not be determined'); return; }
-
-      // See the sibling call site above for the full reasoning — this
-      // resolves via whichever mechanism the download actually needs.
-      const fileData = await resolveDownloadFileData(item);
-      if (!fileData) { console.log('[Diary BG] Skipped: could not resolve file data for this download'); return; }
-      const pendingBody = Object.assign({ conversation_url: conversationUrl, filename: urlFilename, type: typeGuess }, fileData);
-
-      const pendingResp = await fetch(API + '/api/diary/pending-capture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(pendingBody)
-      });
-      const pendingData = await pendingResp.json();
-      if (pendingData.success) {
-        console.log('[Diary BG] Pending-captured (no entry yet):', urlFilename);
-      } else {
-        console.warn('[Diary BG] Failed to pending-capture:', urlFilename, '—', pendingData.error);
-      }
+      await fallBackToPendingCapture('no entry yet');
     }
   } catch (e) {
     console.warn('[Diary BG] Download-capture error:', e.message);
@@ -581,23 +643,27 @@ const syncTabResolvers = new Map();
 // near-simultaneously and racing each other into an inconsistent merge.
 const syncEntryLocks = new Set();
 
-async function fetchSyncResultFromTab(tabId) {
+// Sends ONE TRIGGER_SYNC_SAVE message and resolves with that single
+// attempt's own SYNC_SAVE_RESULT (or a timeout/no_receiver failure) — no
+// retrying at this level; retrying across attempts is fetchSyncResultFromTab()'s
+// own job now (see below).
+async function sendOneSyncAttempt(tabId, isRetry) {
   return new Promise(function(resolve) {
-    // Raised to 90s from 60s — confirmed live, on Meta AI, that a
-    // genuine, legitimate response could take longer than the previous
-    // ceiling allowed for. diary-content.js's own retry window was
-    // raised in parallel (20s -> 50s, for the same reason) — this stays
-    // comfortably above that new window plus the poll-loop and tab-load
-    // overhead that also happen within this same timeout.
+    // Per-attempt timeout — generous for a single performSaveToDiary()
+    // call (one DOM read plus one backend PATCH), not a multi-retry
+    // chain anymore. Only matters as a safety net for a tab that's
+    // stopped responding entirely (crashed, navigated away) — the
+    // common case (success, or a quick no_content_found/
+    // incomplete_response) should resolve well under this.
     const timeout = setTimeout(function() {
       syncTabResolvers.delete(tabId);
       resolve({ success: false, error: 'timeout' });
-    }, 90000);
+    }, 10000);
     syncTabResolvers.set(tabId, function(result) {
       clearTimeout(timeout);
       resolve(result);
     });
-    chrome.tabs.sendMessage(tabId, { type: 'TRIGGER_SYNC_SAVE' }, function() {
+    chrome.tabs.sendMessage(tabId, { type: 'TRIGGER_SYNC_SAVE', isRetry: !!isRetry }, function() {
       // Confirmed live: "Could not establish connection. Receiving end
       // does not exist" means no content script is listening on this
       // tab at ALL — most likely because the tab was already open the
@@ -606,8 +672,8 @@ async function fetchSyncResultFromTab(tabId) {
       // extensions periodically in the background; a user could easily
       // have a matching tab open when that happens). This is a real,
       // diagnosable, and specifically recoverable condition — fail
-      // fast here rather than silently consuming the full 30s timeout,
-      // so REQUEST_SYNC's own caller can reload the tab and retry once
+      // fast here rather than silently consuming the full timeout, so
+      // REQUEST_SYNC's own caller can reload the tab and retry once
       // instead of just reporting a generic, unexplained timeout.
       if (chrome.runtime.lastError) {
         const isNoReceiver = /Receiving end does not exist/.test(chrome.runtime.lastError.message || '');
@@ -620,6 +686,99 @@ async function fetchSyncResultFromTab(tabId) {
       }
     });
   });
+}
+
+function sleep(ms) {
+  return new Promise(function(resolve) { setTimeout(resolve, ms); });
+}
+
+// Drives the full retry loop itself — moved here from diary-content.js.
+// Confirmed live, on both ChatGPT and DeepSeek specifically, as a
+// genuine, real, production-affecting bug (not a console-testing
+// artifact — reproduced identically via an actual Sync button click):
+// Chrome documents especially aggressive throttling of CHAINED setTimeout
+// calls in a background (active:false) tab specifically, and the
+// original retry loop (living inside diary-content.js, in the
+// potentially-throttled tab itself) was precisely that pattern — each
+// attempt scheduling the next via its own setTimeout. Confirmed the
+// stall was real and complete, not just slow: the loop never progressed
+// at all until the tab was manually clicked into focus. The six other
+// providers never triggered this because they each succeed within the
+// first attempt or two (a real network completion signal, or Meta AI's
+// own direct DOM-pairing triggered off the genuine completion event) —
+// ChatGPT and DeepSeek are the two structurally forced to lean hardest
+// on this exact mechanism, since neither has a reliable completion
+// signal for Sync's specific "revisit an already-finished conversation"
+// scenario. This service worker isn't a regular tab and isn't subject
+// to the same tab-freezing rules, so retry timing now lives here
+// instead — diary-content.js performs exactly one attempt per message
+// and reports back immediately.
+//
+// Genuine, direct confirmation replacing the earlier uncertainty above:
+// researched Chrome's own documentation directly rather than continuing
+// to guess from indirect symptoms. Two facts, together, are decisive —
+// (1) messages sent to an already-frozen tab only ever queue; they do
+// NOT wake it up, and (2) a frozen tab only unfreezes when brought back
+// into actual focus. This means resending TRIGGER_SYNC_SAVE (the whole
+// mechanism above) can only ever help a merely THROTTLED tab (delayed
+// timers, still executing) — never a genuinely FROZEN one. Chrome 132+
+// exposes a direct, definitive `frozen` property on chrome.tabs, so
+// this now checks that directly instead of inferring freezing from
+// repeated timeouts. When a tab IS confirmed frozen, retrying the same
+// tab further is confirmed pointless — instead this closes it and opens
+// a fresh one at the same URL. A fresh tab's own background-time clock
+// starts at zero, and Chrome's own documented policy only allows
+// freezing after at least 5 minutes in the background, so a fresh tab
+// cannot have crossed that threshold yet — this addresses the root
+// cause directly rather than working around the frozen state after the
+// fact. Returns { success, error, chatSessionSync, tabId } — tabId
+// included since it can genuinely change if a frozen tab gets replaced
+// mid-loop; callers must use the returned tabId from here on, not
+// whatever they originally passed in.
+async function fetchSyncResultFromTab(tabId, conversationUrl) {
+  var saveRetryMax = 25; // matches diary-content.js's own previous ceiling
+  var result = await sendOneSyncAttempt(tabId, false);
+  var retryCount = 0;
+  while (result && !result.success && retryCount < saveRetryMax) {
+    // 'timeout' added as retryable — confirmed live as a genuine, real
+    // bug in this same refactor: a throttled/frozen tab's very FIRST
+    // attempt can itself time out (10s) before ever producing a
+    // substantive no_content_found/incomplete_response at all, since
+    // the tab's own JS execution — not just its setTimeout calls — may
+    // be delayed. 'timeout' wasn't originally in this list, meaning
+    // exactly that scenario broke the loop immediately after a single
+    // attempt, never giving the tab the repeated, separate wake-up
+    // attempts this whole mechanism exists to provide. Reproduced live
+    // on ChatGPT: one TRIGGER_SYNC_SAVE sent, one timeout, loop exited
+    // — no retries at all.
+    var retryableErrors = result.error === 'no_content_found' || result.error === 'incomplete_response' || result.error === 'timeout';
+    if (!retryableErrors) break;
+
+    // Direct, definitive check — not inference — before deciding how to
+    // retry. A tab that's actually frozen gets replaced outright rather
+    // than retried in place, since retrying a frozen tab is now
+    // confirmed structurally pointless.
+    try {
+      var tabState = await chrome.tabs.get(tabId);
+      if (tabState && tabState.frozen) {
+        console.log('[Diary Sync DIAG] tab', tabId, 'confirmed FROZEN (chrome.tabs.get) — replacing with a fresh tab rather than continuing to retry a tab that cannot wake itself up');
+        try { await chrome.tabs.remove(tabId); } catch(_) {}
+        var freshTab = await chrome.tabs.create({ url: conversationUrl, active: false });
+        tabId = freshTab.id;
+        await waitForTabComplete(tabId);
+        console.log('[Diary Sync DIAG] fresh replacement tab', tabId, 'ready — resuming retries on it');
+      }
+    } catch (e) {
+      console.log('[Diary Sync DIAG] frozen-check itself threw (tab may have closed):', e.message);
+    }
+
+    console.log('[Diary Sync DIAG] capture not ready yet (' + result.error + ', attempt', retryCount, ') — retrying in 2s, driven from background.js');
+    await sleep(2000);
+    retryCount++;
+    result = await sendOneSyncAttempt(tabId, true);
+  }
+  result.tabId = tabId;
+  return result;
 }
 
 // Finds the tab most likely to reflect the conversation's current, live
@@ -960,12 +1119,41 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
       let tabId = null;
       try {
         console.log('[Diary Sync DIAG] REQUEST_SYNC starting for entry', entryId, 'url:', msg.conversationUrl);
-        const existingTab = await findConversationTab(msg.conversationUrl);
+        let existingTab = await findConversationTab(msg.conversationUrl);
+        // Confirmed live, via direct research, why this whole class of
+        // ChatGPT/DeepSeek/Meta AI stall happened at all: Chrome's own
+        // docs state background tabs can only be frozen after sitting
+        // in the background for at least 5 minutes (Chrome's own
+        // TabFreezingEnabled enterprise policy documents this exact
+        // threshold), AND — critically — that messages sent to an
+        // already-frozen tab only ever queue; they do NOT wake it up.
+        // Only bringing a tab back into actual focus does that. This
+        // means resending TRIGGER_SYNC_SAVE (this file's whole retry
+        // mechanism) can only ever help with a merely THROTTLED tab
+        // (delayed timers, still executing), never a genuinely FROZEN
+        // one — and reusing the SAME tab across a slow first attempt
+        // and a later, separate second attempt is exactly how a tab
+        // ends up sitting in the background long enough to cross that
+        // 5-minute threshold in the first place, entirely because of
+        // our own retrying, not anything the user did. Rather than
+        // requiring focus at all, this closes and replaces a stale
+        // existing tab with a fresh one — a fresh tab's own background
+        // clock starts at zero, so it can't have crossed the freeze
+        // threshold yet. STALE_TAB_MAX_AGE_MS set well under the 5-
+        // minute policy threshold itself, since the sync attempt that
+        // follows still needs its own time budget on top of however
+        // long the tab already sat before this check ran.
+        const STALE_TAB_MAX_AGE_MS = 2 * 60 * 1000;
+        if (existingTab && existingTab.lastAccessed && (Date.now() - existingTab.lastAccessed) > STALE_TAB_MAX_AGE_MS) {
+          console.log('[Diary Sync DIAG] existing tab', existingTab.id, 'is stale (', Math.round((Date.now() - existingTab.lastAccessed) / 1000), 's since last accessed) — closing and opening a fresh one instead, to stay well under the 5-minute freeze threshold');
+          try { await chrome.tabs.remove(existingTab.id); } catch(_) {}
+          existingTab = null;
+        }
         if (existingTab) {
           tabId = existingTab.id;
           console.log('[Diary Sync DIAG] found existing tab', tabId, '(status:', existingTab.status, ', lastAccessed:', existingTab.lastAccessed, ')');
         } else {
-          console.log('[Diary Sync DIAG] no existing tab found, opening a new one');
+          console.log('[Diary Sync DIAG] no existing (non-stale) tab found, opening a new one');
           const newTab = await chrome.tabs.create({ url: msg.conversationUrl, active: false });
           tabId = newTab.id;
           openedNewTab = true;
@@ -974,7 +1162,128 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
           console.log('[Diary Sync DIAG] tab', tabId, 'reported complete (or 15s ceiling hit)');
         }
         console.log('[Diary Sync DIAG] sending TRIGGER_SYNC_SAVE to tab', tabId);
-        let result = await fetchSyncResultFromTab(tabId);
+
+        // EXPERIMENTAL TEST — narrower hypothesis, not yet a committed
+        // fix: ChatGPT's own primary capture method (per-turn native
+        // "Copy" button + clipboard read) is already built and, per its
+        // own comment, was "100% clean in every manual test" before it
+        // started failing specifically with a clipboard NotAllowedError
+        // in a backgrounded tab. The Clipboard API's own documented
+        // requirement is that the document be focused AT THE MOMENT
+        // read/writeText is called — a point-in-time condition, not a
+        // "held for the whole operation" one. If that's genuinely all
+        // that's needed, briefly focusing the tab just long enough for
+        // this one attempt, then immediately restoring whatever the
+        // user was looking at, could let the already-built clipboard
+        // method work directly — sidestepping the DOM-render-speed
+        // question (and all of today's retry/lock machinery for it)
+        // entirely for ChatGPT specifically. Testing this narrow,
+        // reversible hypothesis before committing to holding focus for
+        // an entire, longer render duration. Deliberately restores
+        // focus after a short, FIXED window (independent of the retry
+        // loop's own, potentially much longer duration) — genuinely
+        // testing "just a moment" rather than accidentally testing
+        // "held for however long the whole sync takes", which would
+        // answer a different question than the one actually being asked.
+        // Confirmed live as a real, genuine bug: a single restore
+        // attempt can transiently fail with Chrome's own "Tabs cannot
+        // be edited right now (user may be dragging a tab)" error and
+        // was never retried — leaving the user genuinely stranded on
+        // the sync tab's own window in that case. One short retry
+        // covers this, since it's a transient condition that resolves
+        // on its own almost immediately.
+        async function restoreFocusWithRetry(target) {
+          for (let i = 0; i < 2; i++) {
+            try {
+              await chrome.windows.update(target.windowId, { focused: true });
+              await chrome.tabs.update(target.tabId, { active: true });
+              console.log('[Diary Sync DIAG] [EXPERIMENT] restored original focus to tab', target.tabId);
+              return;
+            } catch (e) {
+              console.log('[Diary Sync DIAG] [EXPERIMENT] restore-focus attempt', i, 'threw:', e.message);
+              if (i === 0) await sleep(500);
+            }
+          }
+        }
+
+        let restoreFocus = null;
+        // Extended to DeepSeek — confirmed via direct code inspection
+        // that this is a genuinely DIFFERENT hypothesis than the
+        // ChatGPT case, not literally the same mechanism: DeepSeek has
+        // no clipboard-based capture path at all (that's exclusively a
+        // ChatGPT-specific method) — its only path is the same,
+        // DOM-dependent readDomResponse() every other DOM-fallback
+        // provider uses. DeepSeek DOES have a genuine network-based
+        // text-extraction path (unlike ChatGPT), but that only captures
+        // a LIVE, currently-streaming response — Sync's own scenario
+        // (a fresh tab revisiting an already-complete conversation) has
+        // no live stream running in it at all, so that path isn't
+        // actually available here either. The shared, underlying
+        // question worth testing either way: does briefly focusing the
+        // tab let the DOM's own rendering pipeline run at genuine, full,
+        // unthrottled speed, rather than unblocking a focus-gated API
+        // call specifically. If the result comes back fast while
+        // focused, that's real evidence for this hypothesis; if it
+        // still takes the full retry chain regardless, that's real
+        // evidence against it — either way, the same restore-on-result
+        // logic below applies safely regardless of which mechanism ends
+        // up being the actual explanation.
+        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl) || /gemini\.google\.com/.test(msg.conversationUrl)) {
+          try {
+            const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            const originalTab = activeTabs && activeTabs[0];
+            if (originalTab) restoreFocus = { tabId: originalTab.id, windowId: originalTab.windowId };
+            const targetTab = await chrome.tabs.get(tabId);
+            await chrome.windows.update(targetTab.windowId, { focused: true });
+            await chrome.tabs.update(tabId, { active: true });
+            console.log('[Diary Sync DIAG] [EXPERIMENT] briefly focused tab', tabId, '(testing whether focus speeds up DOM rendering / unblocks clipboard, depending on provider)');
+          } catch (e) {
+            console.log('[Diary Sync DIAG] [EXPERIMENT] brief-focus attempt threw:', e.message);
+          }
+        }
+        // Confirmed live as a real, genuine bug: a fixed 8s wait,
+        // regardless of how quickly the actual sync itself finished, was
+        // the real source of the disruption — the clipboard method
+        // succeeded near-instantly (no retries at all in the log), yet
+        // the tab stayed focused for the full 8s anyway. Restoring as
+        // soon as the genuine result comes back — rather than on a
+        // fixed timer disconnected from it — keeps the visible
+        // disruption matched to the actual, real sync duration. Still
+        // races against a short fallback ceiling so a slower, DOM-
+        // fallback path (if the clipboard method doesn't succeed) can't
+        // strand the user on the tab for its own, potentially much
+        // longer full retry duration.
+        let restoredAlready = false;
+        const restoreOnce = restoreFocus ? (async function() {
+          if (restoredAlready) return;
+          restoredAlready = true;
+          await restoreFocusWithRetry(restoreFocus);
+        }) : (async function() {});
+        // Fixed from 3000ms — confirmed live as a genuine, direct
+        // mistake, not just a number worth revisiting: a short fallback
+        // shorter than the clipboard method's own genuine completion
+        // time actively PULLS FOCUS AWAY MID-OPERATION, causing its own
+        // navigator.clipboard calls to fail for lack of focus — directly
+        // forcing the fallback into the same, much slower DOM-polling
+        // path this whole experiment was meant to avoid. Reproduced
+        // live: log order was "briefly focused" -> "restored focus" ->
+        // THEN the first timeout appeared, confirming the restore
+        // itself broke the very thing it was supposed to let finish.
+        // The clipboard method does multiple, sequential per-turn
+        // copy-and-read cycles with their own real delays, and takes
+        // genuinely longer as a conversation grows more turns — 3s was
+        // never a safe, general number, just a lucky result from one
+        // earlier, shorter test. Aligned instead with the SAME 10s
+        // ceiling sendOneSyncAttempt() itself already uses for this
+        // exact attempt, so the fallback can never fire before the
+        // attempt it's meant to bound has had its own, full, fair
+        // chance to genuinely finish.
+        const fallbackRestoreTimer = restoreFocus ? setTimeout(restoreOnce, 10500) : null;
+
+        let result = await fetchSyncResultFromTab(tabId, msg.conversationUrl);
+        tabId = result.tabId || tabId;
+        if (fallbackRestoreTimer) clearTimeout(fallbackRestoreTimer);
+        await restoreOnce();
         console.log('[Diary Sync DIAG] result from tab', tabId, ':', JSON.stringify(result));
         // Auto-recovery: a stale, orphaned content-script connection on
         // an EXISTING tab (most likely: that tab was already open the
@@ -990,14 +1299,29 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
           try {
             await chrome.tabs.reload(tabId);
             await waitForTabComplete(tabId);
-            result = await fetchSyncResultFromTab(tabId);
+            result = await fetchSyncResultFromTab(tabId, msg.conversationUrl);
+            tabId = result.tabId || tabId;
             console.log('[Diary Sync DIAG] retry result from tab', tabId, ':', JSON.stringify(result));
           } catch (e) {
             console.log('[Diary Sync DIAG] retry itself threw:', e.message);
           }
         }
         if (openedNewTab && result.success) {
-          try { await chrome.tabs.remove(tabId); } catch(_) {}
+          // Was a silent try/catch — confirmed live as a real gap in
+          // visibility: a report that the tab didn't close after a
+          // genuinely successful sync had no way to be diagnosed at all,
+          // since any failure here was discarded without a trace. Now
+          // logs explicitly either way, so a future "didn't close"
+          // report can actually be confirmed or ruled out directly
+          // rather than guessed at.
+          try {
+            await chrome.tabs.remove(tabId);
+            console.log('[Diary Sync DIAG] closed tab', tabId, 'after successful sync');
+          } catch (e) {
+            console.log('[Diary Sync DIAG] chrome.tabs.remove(', tabId, ') failed:', e.message);
+          }
+        } else {
+          console.log('[Diary Sync DIAG] leaving tab', tabId, 'open (openedNewTab:', openedNewTab, ', success:', result.success, ')');
         }
         sendResponse(result);
       } catch (e) {
