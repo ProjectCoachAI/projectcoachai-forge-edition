@@ -1438,6 +1438,25 @@ router.patch('/:id', requireAuth, async (req, res) => {
               const merged = session.messages.slice();
               merged.splice(seedCount, 0, ...trailingNew);
               await db.updateChatSession(chatSessionId, req.userEmail, merged);
+              // Confirmed as a real, genuine bug via direct review before
+              // building the unified Diary view on top of this value:
+              // nativeSeedMessageCount was NEVER updated after a
+              // successful sync, despite trailingNew genuinely being
+              // spliced in ahead of the stored boundary each time. Left
+              // unfixed, every entry that syncs more than once after
+              // forking accumulates a growing gap between the real
+              // native/Forge boundary and what this field claims it is —
+              // the exact load-bearing value the unified view's own
+              // native-vs-Forge split depends on. Updated here to the
+              // new, genuine boundary (old value + however many native
+              // messages were just inserted ahead of it), so it keeps
+              // growing correctly with every future sync, not just this
+              // one.
+              const newSeedCount = seedCount + trailingNew.length;
+              await db.query(
+                `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{nativeSeedMessageCount}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+                [JSON.stringify(newSeedCount), id, req.userEmail]
+              );
               chatSessionSyncResult = { merged: true, addedCount: trailingNew.length, lastSyncedAt };
             }
           } else if (!isCleanExtension) {
@@ -2234,5 +2253,15 @@ router.post('/pending-capture', requireAuth, async (req, res) => {
     res.status(status).json({ success: false, error: e.message || 'Capture failed' });
   }
 });
+
+// Exposed for reuse by the one-time nativeSeedMessageCount backfill script
+// (scripts/backfill-native-seed-count.js) — attached directly onto the
+// router object itself (an Express router is just a function, so this adds
+// a property without disturbing its normal use as router middleware at
+// all) rather than duplicating this parsing logic in a second place, which
+// is exactly the kind of drift risk flagged earlier for the unified view
+// itself: two independent implementations of "parse entry.content into
+// messages" that could quietly disagree over time.
+router.splitEntryIntoMessages = splitEntryIntoMessages;
 
 module.exports = router;
