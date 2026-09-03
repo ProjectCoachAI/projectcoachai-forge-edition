@@ -106,7 +106,16 @@
 
   <div id="chatLimitBanner"></div>
 
+  <div id="chatImagePreviewRow" style="display:none;align-items:center;gap:8px;padding:8px 20px 0;">
+    <img id="chatImagePreviewThumb" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:0.5px solid #D6D2C8;"/>
+    <span id="chatImagePreviewName" style="font-size:12px;color:#6B6559;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    <span style="font-size:11px;color:#9E9890;">Analyzed now — not saved for later</span>
+    <button onclick="clearChatImageAttachment()" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:15px;" title="Remove image">&times;</button>
+  </div>
+
   <div class="chat-input-row">
+    <input type="file" id="chatImageFileInput" accept="image/*" style="display:none;" onchange="handleChatImageSelected(this.files[0])"/>
+    <button id="chatImageAttachBtn" class="chat-icon-btn" onclick="document.getElementById('chatImageFileInput').click()" title="Attach an image" style="flex-shrink:0;">&#128206;</button>
     <textarea id="chatInput" class="chat-input" placeholder="Type your message..." rows="1" oninput="autoResizeChatInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button id="chatSendBtn" class="chat-send-btn" onclick="sendChatMessage()">Send</button>
   </div>
@@ -149,6 +158,64 @@ const MODEL_LABELS = {
 };
 
 let chatModel = 'claude';
+
+// Matches backend/routes/chat.js's own IMAGE_CAPABLE_MODELS exactly —
+// kept as a literal, separate constant here rather than fetched from the
+// server, since it's small, static, and rarely changes; if a provider is
+// ever added/removed there, this needs updating too (this duplication is
+// a real, accepted trade-off — not something automatically kept in sync).
+const IMAGE_CAPABLE_MODELS = new Set(['claude', 'chatgpt', 'gemini']);
+let chatAttachedImage = null; // { base64, mimeType, filename } while staged, before sending
+
+function updateChatImageAttachButtonState() {
+  var btn = document.getElementById('chatImageAttachBtn');
+  if (!btn) return;
+  var capable = IMAGE_CAPABLE_MODELS.has(chatModel);
+  btn.disabled = !capable;
+  btn.style.opacity = capable ? '1' : '0.35';
+  btn.style.cursor = capable ? 'pointer' : 'not-allowed';
+  btn.title = capable ? 'Attach an image' : 'Image uploads aren\'t supported for ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet';
+  if (!capable) clearChatImageAttachment();
+}
+
+function handleChatImageSelected(file) {
+  if (!file) return;
+  if (!file.type || !file.type.startsWith('image/')) {
+    Forge.showToast('Please choose an image file.', 'error');
+    return;
+  }
+  // 8MB is a conservative, round ceiling comfortably under every target
+  // provider's own base64-encoded request-size limits, not a precisely
+  // researched per-provider maximum — errs safe rather than risking a
+  // provider-side rejection after the user has already waited for a
+  // response.
+  if (file.size > 8 * 1024 * 1024) {
+    Forge.showToast('Image is too large (max 8MB).', 'error');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function() {
+    chatAttachedImage = { base64: reader.result, mimeType: file.type, filename: file.name };
+    document.getElementById('chatImagePreviewThumb').src = reader.result;
+    document.getElementById('chatImagePreviewName').textContent = file.name;
+    document.getElementById('chatImagePreviewRow').style.display = 'flex';
+  };
+  reader.onerror = function() {
+    Forge.showToast('Could not read that image — please try again.', 'error');
+  };
+  reader.readAsDataURL(file);
+}
+window.handleChatImageSelected = handleChatImageSelected;
+
+function clearChatImageAttachment() {
+  chatAttachedImage = null;
+  var row = document.getElementById('chatImagePreviewRow');
+  if (row) row.style.display = 'none';
+  var fileInput = document.getElementById('chatImageFileInput');
+  if (fileInput) fileInput.value = '';
+}
+window.clearChatImageAttachment = clearChatImageAttachment;
+
 let chatDiaryEntryId = null;
 let chatHistory = [];
 let chatSessionId = null;
@@ -350,7 +417,8 @@ function addMessageToDOM(role, content, opts) {
         '<div class="chat-msg-footer"><button class="chat-icon-btn" onclick="copyMsgContent(\'' + msgId + '\')">&#128203; Copy</button><button class="chat-icon-btn" onclick="printMsgContent(\'' + msgId + '\')" style="margin-left:6px;">&#128424;&#65039; Print / PDF</button></div>';
     }
   } else {
-    div.innerHTML = '<div class="chat-msg-body">' + rendered + '</div>';
+    var imgHtml = opts.imagePreviewURL ? '<img src="' + opts.imagePreviewURL + '" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:6px;"/>' : '';
+    div.innerHTML = '<div class="chat-msg-body">' + imgHtml + rendered + '</div>';
   }
 
   // insertBeforeEl (used only by loadEarlierMessages, prepending an
@@ -521,9 +589,15 @@ async function sendChatMessage() {
   // count that first Forge exchange as part of the native seed.
   var nativeSeedCountAtForkTime = chatHistory.length;
 
+  // Captured and cleared here, deliberately BEFORE the request is even
+  // sent — a slow or failed response shouldn't leave a stale image
+  // attached to whatever the user types next by accident.
+  var imageForThisSend = chatAttachedImage;
+  clearChatImageAttachment();
+
   input.value = '';
   autoResizeChatInput(input);
-  var lastUserMessageEl = addMessageToDOM('user', text);
+  var lastUserMessageEl = addMessageToDOM('user', text, imageForThisSend ? { imagePreviewURL: imageForThisSend.base64 } : {});
   chatHistory.push({ role: 'user', content: text });
 
   chatIsSending = true;
@@ -547,7 +621,8 @@ async function sendChatMessage() {
         message: text,
         history: chatHistory.slice(0, -1),
         source: 'diary',
-        diaryEntryId: chatDiaryEntryId
+        diaryEntryId: chatDiaryEntryId,
+        imageData: imageForThisSend ? { base64: imageForThisSend.base64, mimeType: imageForThisSend.mimeType } : undefined
       })
     });
 
@@ -974,6 +1049,7 @@ window.sendChatMessage = sendChatMessage;
     var sourceMap = { claude:'claude', chatgpt:'chatgpt', gemini:'gemini', perplexity:'perplexity', grok:'grok', mistral:'mistral', deepseek:'deepseek', meta:'meta' };
     chatModel = sourceMap[entry.source] || 'claude';
     document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel] || chatModel;
+    updateChatImageAttachButtonState();
     chatConversationUrl = meta && meta.url ? meta.url : null;
     updateSyncButtonLabel();
 

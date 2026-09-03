@@ -25,9 +25,9 @@ function getForgeKeys() {
 
 // Model -> caller function (all support array-of-messages as of compare.js update)
 const MODEL_CALLERS = {
-    claude:     (messages, key) => cmp.callClaudeAPI(messages, key),
-    chatgpt:    (messages, key) => cmp.callOpenAIAPI(messages, key),
-    gemini:     (messages, key) => cmp.callGeminiAPI(messages, key),
+    claude:     (messages, key, imageData) => cmp.callClaudeAPI(messages, key, 4096, imageData),
+    chatgpt:    (messages, key, imageData) => cmp.callOpenAIAPI(messages, key, imageData),
+    gemini:     (messages, key, imageData) => cmp.callGeminiAPI(messages, key, imageData),
     mistral:    (messages, key) => cmp.callMistralAPI(messages, key),
     deepseek:   (messages, key) => cmp.callDeepSeekAPI(messages, key),
     perplexity: (messages, key) => cmp.callPerplexityAPI(messages, key),
@@ -35,19 +35,34 @@ const MODEL_CALLERS = {
     meta:       (messages, key) => cmp.callMetaAPI(messages, key),
 };
 
+// Confirmed directly against compare.js: only these three callXAPI
+// functions accept an imageData parameter at all today (claude, chatgpt,
+// gemini) — the other five have no image-handling code path whatsoever.
+// Scoped explicitly here, rather than inferred implicitly from each
+// caller's own arity, so this stays correct and obvious if a caller's
+// signature ever changes for an unrelated reason.
+const IMAGE_CAPABLE_MODELS = new Set(['claude', 'chatgpt', 'gemini']);
+
 function genSessionId() {
     return 'chat_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
 }
 
 // ── POST /api/chat — send a message, get a response (SSE streaming) ────────
 router.post('/', requireAuth, async (req, res) => {
-    const { sessionId, model, message, history, source, diaryEntryId } = req.body;
+    const { sessionId, model, message, history, source, diaryEntryId, imageData } = req.body;
 
     if (!model || !MODEL_CALLERS[model]) {
         return res.status(400).json({ success: false, error: 'Invalid or unsupported model.' });
     }
     if (!message || !message.trim()) {
         return res.status(400).json({ success: false, error: 'Message is required.' });
+    }
+    // Confirmed image support only exists for these three providers today
+    // (see IMAGE_CAPABLE_MODELS above) — rejecting explicitly here, with an
+    // honest reason, rather than silently ignoring the image or letting an
+    // unsupported provider's own caller throw an unrelated-looking error.
+    if (imageData && !IMAGE_CAPABLE_MODELS.has(model)) {
+        return res.status(400).json({ success: false, error: `Image uploads aren't supported for ${model} yet — try Claude, ChatGPT, or Gemini.` });
     }
 
     // Continue-in-Forge gating (Diary Priority 9) — deliberately scoped
@@ -109,14 +124,23 @@ router.post('/', requireAuth, async (req, res) => {
         chatgpt: ['claude'], claude: ['chatgpt']
     };
 
-    async function callWithFallback(primaryModel, messages) {
+    async function callWithFallback(primaryModel, messages, imageData) {
         const forgeKeys = getForgeKeys();
         const tryModels = [primaryModel, ...(FALLBACKS[primaryModel] || [])];
         for (const m of tryModels) {
             const key = forgeKeys[m];
             if (!key || !MODEL_CALLERS[m]) continue;
             try {
-                const result = await MODEL_CALLERS[m](messages, key);
+                // Only ever passed to a model actually in IMAGE_CAPABLE_MODELS
+                // — confirmed safe to pass uniformly through every fallback
+                // attempt here specifically because every fallback target for
+                // claude/chatgpt/gemini (the only models imageData can ever
+                // be set for, per the route's own validation above) is also
+                // image-capable. A caller that doesn't accept a 3rd argument
+                // (mistral, deepseek, etc.) simply ignores the extra
+                // parameter, per normal JS semantics — but those models can
+                // never be reached with imageData set in the first place.
+                const result = await MODEL_CALLERS[m](messages, key, imageData);
                 if (m !== primaryModel) {
                     console.log(`[Chat] Fell back from ${primaryModel} to ${m}`);
                     try {
@@ -137,7 +161,7 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     try {
-        const content = await callWithFallback(model, messages);
+        const content = await callWithFallback(model, messages, imageData);
         messages.push({ role: 'assistant', content });
 
         // Persist session
