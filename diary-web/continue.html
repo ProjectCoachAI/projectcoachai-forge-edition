@@ -74,6 +74,19 @@
     .chat-msg .chat-msg-body { max-width:90%; }
   }
 </style>
+<!-- pdf.js — same loader/version as app.html's own, for the ported
+     attachment reader below. Confirmed there, directly against cdnjs's
+     own file listing: modern pdf.js ships ONLY as ES modules, so this
+     must use type="module" + a real import, then bridge it onto window
+     for the rest of this plain script to call normally. Worker path set
+     here, inside the module — module scripts defer until after parsing,
+     so setting it in the main script block would run before this
+     import completes. -->
+<script type="module">
+  import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108/pdf.min.mjs';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108/pdf.worker.min.mjs';
+  window.pdfjsLib = pdfjsLib;
+</script>
 </head>
 <body>
 
@@ -450,8 +463,17 @@ function addMessageToDOM(role, content, opts) {
     }
   } else {
     var previewUrls = opts.imagePreviewURLs || (opts.imagePreviewURL ? [opts.imagePreviewURL] : []);
-    var imgHtml = previewUrls.map(function(u) { return '<img src="' + u + '" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:6px;"/>'; }).join('');
-    div.innerHTML = '<div class="chat-msg-body">' + imgHtml + rendered + '</div>';
+    var imgHtml = previewUrls.map(function(u) {
+      return '<img src="' + u + '" onclick="event.stopPropagation();openImageZoom(\'' + u.replace(/'/g, "\\'") + '\')" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:6px;cursor:zoom-in;"/>';
+    }).join('');
+    // PDF chips — clickable, opening the reader modal above. Distinct
+    // from the pre-send preview chip (which disappears once sent): this
+    // is the persistent, in-message representation, since a PDF has no
+    // meaningful inline thumbnail the way an image does.
+    var pdfChipsHtml = (opts.pdfAttachments || []).map(function(p) {
+      return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + p.url.replace(/'/g, "\\'") + '\',\'' + (p.filename || 'document.pdf').replace(/'/g, "\\'") + '\',\'pdf\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">&#128196; ' + escHtmlChat(p.filename || 'document.pdf') + '</div>';
+    }).join('<br/>');
+    div.innerHTML = '<div class="chat-msg-body">' + imgHtml + pdfChipsHtml + rendered + '</div>';
   }
 
   // insertBeforeEl (used only by loadEarlierMessages, prepending an
@@ -630,12 +652,16 @@ async function sendChatMessage() {
 
   input.value = '';
   autoResizeChatInput(input);
-  // Only image attachments get a visual preview in the sent bubble — PDFs
-  // don't have a meaningful inline thumbnail the same way, so they're
-  // represented purely by the (already-shown, now-cleared) preview chip
-  // before sending, not duplicated into the message bubble itself.
+  // Images get a visual preview; PDFs get a clickable chip (opening the
+  // reader modal) — both persist in the sent bubble now that the reader
+  // exists, unlike the earlier, pre-reader version of this code where
+  // PDFs were only ever shown in the temporary pre-send preview.
   var imagePreviewsForBubble = filesForThisSend.filter(function(f) { return f.type !== 'pdf'; }).map(function(f) { return f.base64; });
-  var lastUserMessageEl = addMessageToDOM('user', text, imagePreviewsForBubble.length ? { imagePreviewURLs: imagePreviewsForBubble } : {});
+  var pdfsForBubble = filesForThisSend.filter(function(f) { return f.type === 'pdf'; }).map(function(f) { return { url: f.base64, filename: f.filename }; });
+  var lastUserMessageEl = addMessageToDOM('user', text, Object.assign(
+    imagePreviewsForBubble.length ? { imagePreviewURLs: imagePreviewsForBubble } : {},
+    pdfsForBubble.length ? { pdfAttachments: pdfsForBubble } : {}
+  ));
   chatHistory.push({ role: 'user', content: text });
 
   chatIsSending = true;
@@ -887,7 +913,11 @@ window.sendChatMessage = sendChatMessage;
     if (startIndex > 0) renderLoadEarlierButton();
     for (var i = startIndex; i < total; i++) {
       var msgImageUrls = (allLoadedMessages[i].attachmentUrls || []).filter(function(a) { return a.type !== 'pdf'; }).map(function(a) { return a.url; });
-      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content, msgImageUrls.length ? { imagePreviewURLs: msgImageUrls } : {});
+      var msgPdfs = (allLoadedMessages[i].attachmentUrls || []).filter(function(a) { return a.type === 'pdf'; }).map(function(a) { return { url: a.url, filename: a.filename || 'document.pdf' }; });
+      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content, Object.assign(
+        msgImageUrls.length ? { imagePreviewURLs: msgImageUrls } : {},
+        msgPdfs.length ? { pdfAttachments: msgPdfs } : {}
+      ));
     }
   }
 
@@ -1050,7 +1080,11 @@ window.sendChatMessage = sendChatMessage;
     for (var i = messagesRenderedFromIndex - 1; i >= newStart; i--) {
       var msg = allLoadedMessages[i];
       var msgImageUrls2 = (msg.attachmentUrls || []).filter(function(a) { return a.type !== 'pdf'; }).map(function(a) { return a.url; });
-      var el = addMessageToDOM(msg.role, msg.content, Object.assign({ insertBeforeEl: anchor }, msgImageUrls2.length ? { imagePreviewURLs: msgImageUrls2 } : {}));
+      var msgPdfs2 = (msg.attachmentUrls || []).filter(function(a) { return a.type === 'pdf'; }).map(function(a) { return { url: a.url, filename: a.filename || 'document.pdf' }; });
+      var el = addMessageToDOM(msg.role, msg.content, Object.assign({ insertBeforeEl: anchor },
+        msgImageUrls2.length ? { imagePreviewURLs: msgImageUrls2 } : {},
+        msgPdfs2.length ? { pdfAttachments: msgPdfs2 } : {}
+      ));
       anchor = el;
     }
     messagesRenderedFromIndex = newStart;
@@ -1135,6 +1169,186 @@ window.sendChatMessage = sendChatMessage;
     document.getElementById('chatEmpty').innerHTML = '<h2>Something went wrong</h2><p>Could not load this Diary entry.</p>';
   });
 })();
+</script>
+
+<!-- Image zoom / attachment reader — ported from app.html's own,
+     already-working components (same overlay/close conventions, same
+     ids reused for the pdf.js render logic) rather than building new
+     ones, for genuine UX and code consistency between the Diary app and
+     Continue Conversation. Deliberately narrower than app.html's own
+     version: search-within-document, print, and share are already
+     handled elsewhere in THIS page (Continue Conversation's own
+     search/print/share), so they're intentionally not duplicated here
+     — just the core view+zoom experience, plus download. -->
+<div id="imageZoomModal" onclick="if(event.target===this)closeImageZoom()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;cursor:zoom-out;">
+  <button onclick="closeImageZoom()" aria-label="Close" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;font-family:Inter,sans-serif;">&times;</button>
+  <img id="imageZoomImg" src="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.5);cursor:default;" onclick="event.stopPropagation();"/>
+</div>
+
+<div id="attachmentReaderModal" onclick="if(event.target===this)closeAttachmentReader()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#F5F3EE;width:min(880px,92vw);height:88vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;">
+      <div id="attachmentReaderTitle" style="font-size:14px;font-weight:600;color:#1B2A4A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;font-family:Inter,sans-serif;"></div>
+      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+        <div id="pdfZoomControls" style="display:none;align-items:center;gap:8px;">
+          <button onclick="zoomPdfOut()" aria-label="Zoom out" style="background:none;border:0.5px solid #D6D2C8;border-radius:5px;color:#6B6559;cursor:pointer;padding:2px 8px;font-size:14px;line-height:1.4;" title="Zoom out">&minus;</button>
+          <span id="pdfZoomLevel" style="font-size:11px;color:#9E9890;min-width:36px;text-align:center;">100%</span>
+          <button onclick="zoomPdfIn()" aria-label="Zoom in" style="background:none;border:0.5px solid #D6D2C8;border-radius:5px;color:#6B6559;cursor:pointer;padding:2px 8px;font-size:14px;line-height:1.4;" title="Zoom in">&plus;</button>
+        </div>
+        <button id="attachmentReaderDownload" onclick="downloadAttachmentFromReader()" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;">&#8681; Download</button>
+        <button onclick="closeAttachmentReader()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+      </div>
+    </div>
+    <div id="attachmentReaderBody" style="flex:1;overflow:auto;padding:24px;">
+      <div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openImageZoom(url) {
+  var modal = document.getElementById('imageZoomModal');
+  var img = document.getElementById('imageZoomImg');
+  img.src = url;
+  modal.style.display = 'flex';
+}
+window.openImageZoom = openImageZoom;
+
+function closeImageZoom() {
+  var modal = document.getElementById('imageZoomModal');
+  if (modal) modal.style.display = 'none';
+}
+window.closeImageZoom = closeImageZoom;
+
+var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
+var currentReaderAttachment = null;
+var currentPdfDoc = null;
+var currentPdfScale = 1.4;
+var currentPdfReaderBody = null;
+
+function escHtmlReader(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function openAttachmentReader(url, filename, type) {
+  var modal = document.getElementById('attachmentReaderModal');
+  var titleEl = document.getElementById('attachmentReaderTitle');
+  var body = document.getElementById('attachmentReaderBody');
+  if (!modal || !titleEl || !body) return;
+
+  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase() };
+  titleEl.textContent = filename || 'Document';
+  body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
+  modal.style.display = 'flex';
+
+  var t = (type || '').toLowerCase();
+  var zoomControls = document.getElementById('pdfZoomControls');
+  if (zoomControls) zoomControls.style.display = t === 'pdf' ? 'flex' : 'none';
+  try {
+    if (t === 'pdf') {
+      await renderPdfIntoReader(url, body);
+    } else if (ATTACHMENT_READER_TEXT_TYPES.indexOf(t) !== -1) {
+      await renderTextIntoReader(url, body);
+    } else {
+      body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This file type can\'t be previewed here yet. <a href="' + escHtmlReader(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+    }
+  } catch (e) {
+    console.warn('[Chat] Attachment reader failed to render:', e.message);
+    body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Couldn\'t load this file for preview. <a href="' + escHtmlReader(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+  }
+}
+window.openAttachmentReader = openAttachmentReader;
+
+function closeAttachmentReader() {
+  var modal = document.getElementById('attachmentReaderModal');
+  if (modal) modal.style.display = 'none';
+  var body = document.getElementById('attachmentReaderBody');
+  if (body) body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
+  currentReaderAttachment = null;
+  currentPdfDoc = null;
+  currentPdfScale = 1.4;
+  currentPdfReaderBody = null;
+}
+window.closeAttachmentReader = closeAttachmentReader;
+
+function downloadAttachmentFromReader() {
+  if (!currentReaderAttachment) return;
+  var a = document.createElement('a');
+  a.href = currentReaderAttachment.url;
+  a.download = currentReaderAttachment.filename;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+window.downloadAttachmentFromReader = downloadAttachmentFromReader;
+
+async function renderTextIntoReader(url, body) {
+  var resp = await fetch(url);
+  if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
+  var text = await resp.text();
+  body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;">' + escHtmlReader(text) + '</pre>';
+}
+
+async function renderPdfIntoReader(url, body) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js failed to load');
+  currentPdfReaderBody = body;
+  currentPdfScale = 1.4;
+  currentPdfDoc = await pdfjsLib.getDocument({ url: url }).promise;
+  await renderPdfAtCurrentScale();
+}
+
+async function renderPdfAtCurrentScale() {
+  if (!currentPdfDoc || !currentPdfReaderBody) return;
+  if (renderPdfAtCurrentScale._busy) { renderPdfAtCurrentScale._pending = true; return; }
+  renderPdfAtCurrentScale._busy = true;
+  var body = currentPdfReaderBody;
+  var zoomLevelEl = document.getElementById('pdfZoomLevel');
+  if (zoomLevelEl) zoomLevelEl.textContent = Math.round((currentPdfScale / 1.4) * 100) + '%';
+  body.innerHTML = '';
+  for (var pageNum = 1; pageNum <= currentPdfDoc.numPages; pageNum++) {
+    var page = await currentPdfDoc.getPage(pageNum);
+    var viewport = page.getViewport({ scale: currentPdfScale });
+
+    var pageWrapper = document.createElement('div');
+    pageWrapper.style.position = 'relative';
+    pageWrapper.style.margin = '0 auto 16px auto';
+    pageWrapper.style.width = viewport.width + 'px';
+    pageWrapper.style.height = viewport.height + 'px';
+    pageWrapper.style.boxShadow = '0 2px 10px rgba(0,0,0,0.15)';
+    pageWrapper.style.background = '#fff';
+
+    var canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.display = 'block';
+    pageWrapper.appendChild(canvas);
+
+    body.appendChild(pageWrapper);
+
+    var ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+  }
+  renderPdfAtCurrentScale._busy = false;
+  if (renderPdfAtCurrentScale._pending) {
+    renderPdfAtCurrentScale._pending = false;
+    renderPdfAtCurrentScale();
+  }
+}
+
+function zoomPdfIn() {
+  if (!currentPdfDoc) return;
+  currentPdfScale = Math.min(3.0, Math.round((currentPdfScale + 0.2) * 10) / 10);
+  renderPdfAtCurrentScale();
+}
+window.zoomPdfIn = zoomPdfIn;
+
+function zoomPdfOut() {
+  if (!currentPdfDoc) return;
+  currentPdfScale = Math.max(0.6, Math.round((currentPdfScale - 0.2) * 10) / 10);
+  renderPdfAtCurrentScale();
+}
+window.zoomPdfOut = zoomPdfOut;
 </script>
 
 </body>

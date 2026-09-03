@@ -2289,6 +2289,14 @@ function closeAttachmentReader() {
   var body = document.getElementById('attachmentReaderBody');
   if (body) body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
   currentReaderAttachment = null;
+  // Reset zoom state — a stale currentPdfDoc/scale from whatever was just
+  // closed shouldn't leak into the next, different attachment opened
+  // afterward (e.g. zoom-in clicks on a freshly-opened text file
+  // silently re-rendering the PREVIOUS pdf into a body that no longer
+  // shows it at all).
+  currentPdfDoc = null;
+  currentPdfScale = 1.4;
+  currentPdfReaderBody = null;
   // Reset search state — the body's own innerHTML replacement above
   // already discards any <mark> elements, but readerSearchMatches would
   // otherwise still reference those now-detached nodes, and a
@@ -2321,6 +2329,8 @@ async function openAttachmentReader(url, filename, type) {
   modal.style.display = 'flex';
 
   var t = (type || '').toLowerCase();
+  var zoomControls = document.getElementById('pdfZoomControls');
+  if (zoomControls) zoomControls.style.display = t === 'pdf' ? 'flex' : 'none';
   try {
     if (t === 'pdf') {
       await renderPdfIntoReader(url, body);
@@ -2542,19 +2552,42 @@ async function renderTextIntoReader(url, body) {
 // directly over the rendered PDF, matching the brief's "searchable,
 // selectable/copyable" requirement without needing pdf.js's full,
 // separate viewer application just for this one piece.
+// Zoom state for the PDF reader — module-level so zoomPdfIn/Out (wired to
+// the reader's own +/- buttons) can access whatever's currently open
+// without needing it threaded through every call site. Reset in
+// closeAttachmentReader() below so a stale scale/doc doesn't leak into
+// the next, different attachment opened afterward.
+var currentPdfDoc = null;
+var currentPdfScale = 1.4; // matches the original, pre-zoom fixed scale exactly, so the very first render looks identical to before this change
+var currentPdfReaderBody = null;
+
 async function renderPdfIntoReader(url, body) {
   if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js failed to load');
+  currentPdfReaderBody = body;
+  currentPdfScale = 1.4;
+  currentPdfDoc = await pdfjsLib.getDocument({ url: url }).promise;
+  await renderPdfAtCurrentScale();
+}
+
+// Extracted from the original renderPdfIntoReader's own per-page loop —
+// now reusable so zoom in/out can simply re-run this at a new scale
+// against the already-loaded currentPdfDoc, instead of re-fetching and
+// re-parsing the PDF from scratch on every zoom click.
+async function renderPdfAtCurrentScale() {
+  if (!currentPdfDoc || !currentPdfReaderBody) return;
+  // Guards against overlapping renders if zoom is clicked again before
+  // the previous re-render finishes — without this, two concurrent
+  // passes could both clear/rebuild body.innerHTML, wasting work and
+  // risking a visibly glitchy, half-rendered page.
+  if (renderPdfAtCurrentScale._busy) { renderPdfAtCurrentScale._pending = true; return; }
+  renderPdfAtCurrentScale._busy = true;
+  var body = currentPdfReaderBody;
+  var zoomLevelEl = document.getElementById('pdfZoomLevel');
+  if (zoomLevelEl) zoomLevelEl.textContent = Math.round((currentPdfScale / 1.4) * 100) + '%';
   body.innerHTML = '';
-  // NOTE: fixed — was calling getDocument(url) with a bare string.
-  // Confirmed live: this version rejects that shorthand outright
-  // ("expected either data, range, or url parameter"), unlike some
-  // older pdf.js releases that accepted a plain string as shorthand for
-  // { url }. The explicit options-object form is unambiguous and the
-  // one actually documented for this version.
-  var pdf = await pdfjsLib.getDocument({ url: url }).promise;
-  for (var pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    var page = await pdf.getPage(pageNum);
-    var viewport = page.getViewport({ scale: 1.4 });
+  for (var pageNum = 1; pageNum <= currentPdfDoc.numPages; pageNum++) {
+    var page = await currentPdfDoc.getPage(pageNum);
+    var viewport = page.getViewport({ scale: currentPdfScale });
 
     var pageWrapper = document.createElement('div');
     pageWrapper.style.position = 'relative';
@@ -2602,7 +2635,32 @@ async function renderPdfIntoReader(url, body) {
       textLayerDiv.appendChild(span);
     });
   }
+  renderPdfAtCurrentScale._busy = false;
+  if (renderPdfAtCurrentScale._pending) {
+    renderPdfAtCurrentScale._pending = false;
+    renderPdfAtCurrentScale();
+  }
 }
+
+// Genuine zoom in/out controls — confirmed this was a real, missing gap
+// before adding it: the reader previously only ever rendered at a fixed
+// 1.4 scale with no way to adjust it at all. Bounded 0.6x-3.0x so
+// clicking repeatedly can't shrink a page to unreadable or blow it up
+// past what's actually useful; steps of 0.2 are a deliberately small,
+// smooth increment rather than large jumps between renders.
+function zoomPdfIn() {
+  if (!currentPdfDoc) return;
+  currentPdfScale = Math.min(3.0, Math.round((currentPdfScale + 0.2) * 10) / 10);
+  renderPdfAtCurrentScale();
+}
+window.zoomPdfIn = zoomPdfIn;
+
+function zoomPdfOut() {
+  if (!currentPdfDoc) return;
+  currentPdfScale = Math.max(0.6, Math.round((currentPdfScale - 0.2) * 10) / 10);
+  renderPdfAtCurrentScale();
+}
+window.zoomPdfOut = zoomPdfOut;
 
 // NOTE: rewritten entirely to use a SINGLE, shared #citePopup element
 // (attached directly to <body>, see the bottom of this file) instead of
@@ -3440,6 +3498,11 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;">
       <div id="attachmentReaderTitle" style="font-size:14px;font-weight:600;color:#1B2A4A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;font-family:Inter,sans-serif;"></div>
       <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+        <div id="pdfZoomControls" style="display:none;align-items:center;gap:8px;">
+          <button onclick="zoomPdfOut()" aria-label="Zoom out" style="background:none;border:0.5px solid #D6D2C8;border-radius:5px;color:#6B6559;cursor:pointer;padding:2px 8px;font-size:14px;line-height:1.4;" title="Zoom out">&minus;</button>
+          <span id="pdfZoomLevel" style="font-size:11px;color:#9E9890;min-width:36px;text-align:center;">100%</span>
+          <button onclick="zoomPdfIn()" aria-label="Zoom in" style="background:none;border:0.5px solid #D6D2C8;border-radius:5px;color:#6B6559;cursor:pointer;padding:2px 8px;font-size:14px;line-height:1.4;" title="Zoom in">&plus;</button>
+        </div>
         <button onclick="toggleAttachmentSearch()" aria-label="Search" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Search in document">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>

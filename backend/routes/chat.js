@@ -163,7 +163,7 @@ router.post('/', requireAuth, async (req, res) => {
                     userEmail: req.userEmail,
                     filenameHint: 'chat-upload'
                 });
-                storedAttachmentUrls.push({ url: stored.url, type: att.type || 'image' });
+                storedAttachmentUrls.push({ url: stored.url, type: att.type || 'image', filename: att.filename || null });
             } catch (storeErr) {
                 // Genuinely non-fatal per-file — the AI call below still
                 // works from the raw base64 regardless of whether storage
