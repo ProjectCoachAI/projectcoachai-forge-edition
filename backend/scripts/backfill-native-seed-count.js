@@ -51,8 +51,17 @@
 // of its proposed changes against real entries before trusting it with
 // production data is a required step, not an optional nicety.
 
-const db = require('../backend/lib/db');
-const diaryRoutes = require('../backend/routes/diary');
+// Path updated — this script must live at backend/scripts/ specifically,
+// not a repo-root scripts/ folder, confirmed directly against a live
+// container: railway.toml's start command ('node server.js', no backend/
+// prefix) combined with server.js actually living at backend/server.js
+// means the service's Root Directory is set to backend/ in the Railway
+// dashboard — so the deployed container's own filesystem root IS
+// backend/'s contents, not the full repo. A file outside backend/ never
+// reaches the running container at all, confirmed by a real
+// MODULE_NOT_FOUND when this lived at the repo-root scripts/ instead.
+const db = require('../lib/db');
+const diaryRoutes = require('../routes/diary');
 const splitEntryIntoMessages = diaryRoutes.splitEntryIntoMessages;
 
 if (typeof splitEntryIntoMessages !== 'function') {
