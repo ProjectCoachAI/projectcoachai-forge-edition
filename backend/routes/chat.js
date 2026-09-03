@@ -8,6 +8,7 @@ const router  = express.Router();
 const db      = require('../lib/db');
 const { requireAuth } = require('../middleware/auth');
 const cmp     = require('./compare');
+const attachmentStorage = require('../lib/attachmentStorage');
 
 // Forge's own keys (same pattern as compare.js / synthesize.js)
 function getForgeKeys() {
@@ -112,7 +113,43 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Build message history: prior history (if any) + new user message
     let messages = Array.isArray(history) ? history.slice() : [];
-    messages.push({ role: 'user', content: message });
+    const newUserMessage = { role: 'user', content: message };
+    messages.push(newUserMessage);
+
+    // Confirmed as a real, concrete fix (not the original design): earlier
+    // this genuinely never persisted the uploaded image at all — only used
+    // for the live API call, then discarded. But attachmentStorage.js
+    // (the same, existing infrastructure already used for captured
+    // PDFs/images elsewhere) makes real persistence straightforward, so
+    // there's no good reason to keep discarding it. Stored BEFORE the AI
+    // call below so a slow/failed AI response can't leave an uploaded
+    // image with nowhere to go — the image is saved regardless of whether
+    // the AI call itself succeeds. Attached to newUserMessage specifically
+    // (the exact object already being pushed into messages/history above)
+    // so no separate re-matching step is needed — persisting the
+    // reference is just setting one extra field on an object already
+    // being saved.
+    if (imageData && imageData.base64) {
+        try {
+            const commaIdx = imageData.base64.indexOf(',');
+            const rawBase64 = commaIdx !== -1 ? imageData.base64.slice(commaIdx + 1) : imageData.base64;
+            const buffer = Buffer.from(rawBase64, 'base64');
+            const stored = await attachmentStorage.store({
+                buffer,
+                contentType: imageData.mimeType || 'image/jpeg',
+                userEmail: req.userEmail,
+                filenameHint: 'chat-upload'
+            });
+            newUserMessage.imageUrl = stored.url;
+        } catch (storeErr) {
+            // Genuinely non-fatal — the AI call below still works from
+            // the raw base64 regardless of whether storage succeeded, so
+            // a storage failure shouldn't block the actual response the
+            // user is waiting for. Just means this specific image won't
+            // be restorable on a later revisit.
+            console.error('[Chat] image storage failed (non-fatal, continuing without persistence):', storeErr.message);
+        }
+    }
 
     const isStreaming = req.headers['accept'] === 'text/event-stream';
 

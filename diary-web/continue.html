@@ -109,7 +109,6 @@
   <div id="chatImagePreviewRow" style="display:none;align-items:center;gap:8px;padding:8px 20px 0;">
     <img id="chatImagePreviewThumb" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:0.5px solid #D6D2C8;"/>
     <span id="chatImagePreviewName" style="font-size:12px;color:#6B6559;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-    <span style="font-size:11px;color:#9E9890;">Analyzed now — not saved for later</span>
     <button onclick="clearChatImageAttachment()" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:15px;" title="Remove image">&times;</button>
   </div>
 
@@ -848,7 +847,7 @@ window.sendChatMessage = sendChatMessage;
 
     if (startIndex > 0) renderLoadEarlierButton();
     for (var i = startIndex; i < total; i++) {
-      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content);
+      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content, allLoadedMessages[i].imageUrl ? { imagePreviewURL: allLoadedMessages[i].imageUrl } : {});
     }
   }
 
@@ -1010,7 +1009,7 @@ window.sendChatMessage = sendChatMessage;
     var anchor = btn ? btn.nextSibling : container.firstChild;
     for (var i = messagesRenderedFromIndex - 1; i >= newStart; i--) {
       var msg = allLoadedMessages[i];
-      var el = addMessageToDOM(msg.role, msg.content, { insertBeforeEl: anchor });
+      var el = addMessageToDOM(msg.role, msg.content, Object.assign({ insertBeforeEl: anchor }, msg.imageUrl ? { imagePreviewURL: msg.imageUrl } : {}));
       anchor = el;
     }
     messagesRenderedFromIndex = newStart;
