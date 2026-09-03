@@ -59,32 +59,47 @@ function incrementRateLimit(req) {
 
 // ===== AI API CALLERS =====
 
-function callClaudeAPI(prompt, apiKey, maxTokens = 4096, imageData = null) {
+// Normalizes the attachments parameter across all three vision/document-
+// capable callers below: accepts either a single attachment object (the
+// existing, unchanged shape compare.js's own callers already pass — with
+// no `type` field at all, defaulting to 'image' here to preserve that
+// exact, existing behavior) or an array of them (the new multi-attachment
+// path used by chat.js). Always returns an array, so every caller can
+// write one, single loop regardless of which shape it was actually given.
+function normalizeAttachments(attachments) {
+  if (!attachments) return [];
+  const arr = Array.isArray(attachments) ? attachments : [attachments];
+  return arr.filter(a => a && a.base64).map(a => ({ type: a.type || 'image', base64: a.base64, mimeType: a.mimeType }));
+}
+
+function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null) {
     return new Promise((resolve, reject) => {
+        const files = normalizeAttachments(attachments);
+        // Confirmed directly against Anthropic's own API docs: images use a
+        // {type:'image', source:{...}} block; PDFs use a DIFFERENT block
+        // type entirely — {type:'document', source:{...}} — not a variant
+        // of the image block. Building both here rather than assuming one
+        // shape covers both file kinds.
+        const fileBlocks = files.map(f => f.type === 'pdf'
+          ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64.split(',')[1] || f.base64 } }
+          : { type: 'image', source: { type: 'base64', media_type: f.mimeType || 'image/jpeg', data: f.base64.split(',')[1] || f.base64 } }
+        );
         let messages;
         if (Array.isArray(prompt)) {
             // Multi-turn chat history passed directly: [{role, content}, ...]
             messages = prompt.slice();
-            if (imageData && imageData.base64 && messages.length) {
-                const base64 = imageData.base64.split(',')[1];
+            if (fileBlocks.length && messages.length) {
                 const last = messages[messages.length - 1];
                 messages[messages.length - 1] = {
                     role: last.role,
-                    content: [
-                        { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: base64 } },
-                        { type: 'text', text: last.content }
-                    ]
+                    content: [...fileBlocks, { type: 'text', text: last.content }]
                 };
             }
         } else {
             // Single-shot prompt (existing behavior)
             let userContent;
-            if (imageData && imageData.base64) {
-                const base64 = imageData.base64.split(',')[1];
-                userContent = [
-                    { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: base64 } },
-                    { type: 'text', text: prompt }
-                ];
+            if (fileBlocks.length) {
+                userContent = [...fileBlocks, { type: 'text', text: prompt }];
             } else {
                 userContent = prompt;
             }
@@ -135,36 +150,38 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, imageData = null) {
     });
 }
 
-function callOpenAIAPI(prompt, apiKey, imageData = null) {
+function callOpenAIAPI(prompt, apiKey, attachments = null) {
     return new Promise((resolve, reject) => {
+        const files = normalizeAttachments(attachments);
+        // Confirmed directly against OpenAI's own docs: PDFs use a distinct
+        // {type:'file', file:{file_data:...}} block — NOT a variant of
+        // image_url — while images keep using image_url as before.
+        const fileBlocks = files.map(f => f.type === 'pdf'
+          ? { type: 'file', file: { file_data: f.base64, filename: f.filename || 'document.pdf' } }
+          : { type: 'image_url', image_url: { url: f.base64 } }
+        );
         const sysMsg = { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' };
         let messages;
         if (Array.isArray(prompt)) {
             messages = [sysMsg, ...prompt];
-            if (imageData && imageData.base64 && messages.length) {
+            if (fileBlocks.length && messages.length) {
                 const last = messages[messages.length - 1];
                 messages[messages.length - 1] = {
                     role: last.role,
-                    content: [
-                        { type: 'text', text: last.content },
-                        { type: 'image_url', image_url: { url: imageData.base64 } }
-                    ]
+                    content: [{ type: 'text', text: last.content }, ...fileBlocks]
                 };
             }
         } else {
             let userContent;
-            if (imageData && imageData.base64) {
-                userContent = [
-                    { type: 'text', text: prompt },
-                    { type: 'image_url', image_url: { url: imageData.base64 } }
-                ];
+            if (fileBlocks.length) {
+                userContent = [{ type: 'text', text: prompt }, ...fileBlocks];
             } else {
                 userContent = prompt;
             }
             messages = [sysMsg, { role: 'user', content: userContent }];
         }
         const body = JSON.stringify({
-            model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
+            model: files.length ? 'gpt-4o' : 'gpt-4o-mini',
             max_tokens: 4096,
             temperature: 0.3,
             messages
@@ -206,29 +223,30 @@ function callOpenAIAPI(prompt, apiKey, imageData = null) {
     });
 }
 
-function callGeminiAPI(prompt, apiKey, imageData = null) {
+function callGeminiAPI(prompt, apiKey, attachments = null) {
     return new Promise((resolve, reject) => {
+        const files = normalizeAttachments(attachments);
+        // Confirmed directly against Gemini's own API: unlike Claude/OpenAI,
+        // Gemini uses the SAME inline_data structure for both images and
+        // PDFs — only mime_type differs ('application/pdf' vs 'image/jpeg')
+        // — so, unlike the other two providers, no separate block-type
+        // branching is needed here at all.
+        const fileParts = files.map(f => ({ inline_data: { mime_type: f.type === 'pdf' ? 'application/pdf' : (f.mimeType || 'image/jpeg'), data: f.base64.split(',')[1] || f.base64 } }));
         let contents;
         if (Array.isArray(prompt)) {
             // Multi-turn: map {role:'user'|'assistant', content:string} -> Gemini {role:'user'|'model', parts:[{text}]}
             contents = prompt.map((m, i) => {
                 const role = m.role === 'assistant' ? 'model' : 'user';
                 const parts = [];
-                if (imageData && imageData.base64 && i === prompt.length - 1) {
-                    const base64 = imageData.base64.split(',')[1];
-                    parts.push({ inline_data: { mime_type: imageData.mimeType || 'image/jpeg', data: base64 } });
+                if (fileParts.length && i === prompt.length - 1) {
+                    parts.push(...fileParts);
                 }
                 parts.push({ text: m.content });
                 return { role, parts };
             });
         } else {
-            // Build parts — text only or text + image
-            const parts = [];
-            if (imageData && imageData.base64) {
-                const base64 = imageData.base64.split(',')[1];
-                parts.push({ inline_data: { mime_type: imageData.mimeType || 'image/jpeg', data: base64 } });
-            }
-            parts.push({ text: prompt });
+            // Build parts — text only or text + attachments
+            const parts = [...fileParts, { text: prompt }];
             contents = [{ parts }];
         }
         const body = JSON.stringify({

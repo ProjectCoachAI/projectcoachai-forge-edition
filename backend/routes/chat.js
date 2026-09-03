@@ -26,9 +26,9 @@ function getForgeKeys() {
 
 // Model -> caller function (all support array-of-messages as of compare.js update)
 const MODEL_CALLERS = {
-    claude:     (messages, key, imageData) => cmp.callClaudeAPI(messages, key, 4096, imageData),
-    chatgpt:    (messages, key, imageData) => cmp.callOpenAIAPI(messages, key, imageData),
-    gemini:     (messages, key, imageData) => cmp.callGeminiAPI(messages, key, imageData),
+    claude:     (messages, key, attachments) => cmp.callClaudeAPI(messages, key, 4096, attachments),
+    chatgpt:    (messages, key, attachments) => cmp.callOpenAIAPI(messages, key, attachments),
+    gemini:     (messages, key, attachments) => cmp.callGeminiAPI(messages, key, attachments),
     mistral:    (messages, key) => cmp.callMistralAPI(messages, key),
     deepseek:   (messages, key) => cmp.callDeepSeekAPI(messages, key),
     perplexity: (messages, key) => cmp.callPerplexityAPI(messages, key),
@@ -36,8 +36,19 @@ const MODEL_CALLERS = {
     meta:       (messages, key) => cmp.callMetaAPI(messages, key),
 };
 
+// Per-message attachment ceiling. Chosen against real, verified provider
+// limits, not a round guess: Claude allows up to 100 images/request,
+// Gemini up to ~900, but OpenAI/GPT-4o caps at 10 images CUMULATIVE
+// across the entire conversation history (not just one message) — the
+// most restrictive of the three, confirmed directly against Microsoft's
+// published Azure OpenAI quota reference. 5 per message leaves headroom
+// for at least two separate attachment turns in a conversation before
+// nearing that ceiling, while still being a meaningful, genuine
+// improvement over the previous one-at-a-time limit.
+const MAX_ATTACHMENTS_PER_MESSAGE = 5;
+
 // Confirmed directly against compare.js: only these three callXAPI
-// functions accept an imageData parameter at all today (claude, chatgpt,
+// functions accept an attachments parameter at all today (claude, chatgpt,
 // gemini) — the other five have no image-handling code path whatsoever.
 // Scoped explicitly here, rather than inferred implicitly from each
 // caller's own arity, so this stays correct and obvious if a caller's
@@ -50,7 +61,7 @@ function genSessionId() {
 
 // ── POST /api/chat — send a message, get a response (SSE streaming) ────────
 router.post('/', requireAuth, async (req, res) => {
-    const { sessionId, model, message, history, source, diaryEntryId, imageData } = req.body;
+    const { sessionId, model, message, history, source, diaryEntryId, attachments } = req.body;
 
     if (!model || !MODEL_CALLERS[model]) {
         return res.status(400).json({ success: false, error: 'Invalid or unsupported model.' });
@@ -58,12 +69,20 @@ router.post('/', requireAuth, async (req, res) => {
     if (!message || !message.trim()) {
         return res.status(400).json({ success: false, error: 'Message is required.' });
     }
-    // Confirmed image support only exists for these three providers today
-    // (see IMAGE_CAPABLE_MODELS above) — rejecting explicitly here, with an
-    // honest reason, rather than silently ignoring the image or letting an
-    // unsupported provider's own caller throw an unrelated-looking error.
-    if (imageData && !IMAGE_CAPABLE_MODELS.has(model)) {
-        return res.status(400).json({ success: false, error: `Image uploads aren't supported for ${model} yet — try Claude, ChatGPT, or Gemini.` });
+    // Confirmed file-attachment support (images AND PDFs — see
+    // IMAGE_CAPABLE_MODELS above, which now also covers PDF support since
+    // all three of these providers were separately confirmed to support
+    // PDF input too) only exists for these three providers today —
+    // rejecting explicitly here, with an honest reason, rather than
+    // silently ignoring the attachment or letting an unsupported
+    // provider's own caller throw an unrelated-looking error.
+    if (Array.isArray(attachments) && attachments.length) {
+        if (!IMAGE_CAPABLE_MODELS.has(model)) {
+            return res.status(400).json({ success: false, error: `File uploads aren't supported for ${model} yet — try Claude, ChatGPT, or Gemini.` });
+        }
+        if (attachments.length > MAX_ATTACHMENTS_PER_MESSAGE) {
+            return res.status(400).json({ success: false, error: `Please attach at most ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.` });
+        }
     }
 
     // Continue-in-Forge gating (Diary Priority 9) — deliberately scoped
@@ -117,39 +136,46 @@ router.post('/', requireAuth, async (req, res) => {
     messages.push(newUserMessage);
 
     // Confirmed as a real, concrete fix (not the original design): earlier
-    // this genuinely never persisted the uploaded image at all — only used
-    // for the live API call, then discarded. But attachmentStorage.js
-    // (the same, existing infrastructure already used for captured
-    // PDFs/images elsewhere) makes real persistence straightforward, so
-    // there's no good reason to keep discarding it. Stored BEFORE the AI
-    // call below so a slow/failed AI response can't leave an uploaded
-    // image with nowhere to go — the image is saved regardless of whether
-    // the AI call itself succeeds. Attached to newUserMessage specifically
-    // (the exact object already being pushed into messages/history above)
-    // so no separate re-matching step is needed — persisting the
-    // reference is just setting one extra field on an object already
-    // being saved.
-    if (imageData && imageData.base64) {
-        try {
-            const commaIdx = imageData.base64.indexOf(',');
-            const rawBase64 = commaIdx !== -1 ? imageData.base64.slice(commaIdx + 1) : imageData.base64;
-            const buffer = Buffer.from(rawBase64, 'base64');
-            const stored = await attachmentStorage.store({
-                buffer,
-                contentType: imageData.mimeType || 'image/jpeg',
-                userEmail: req.userEmail,
-                filenameHint: 'chat-upload'
-            });
-            newUserMessage.imageUrl = stored.url;
-        } catch (storeErr) {
-            // Genuinely non-fatal — the AI call below still works from
-            // the raw base64 regardless of whether storage succeeded, so
-            // a storage failure shouldn't block the actual response the
-            // user is waiting for. Just means this specific image won't
-            // be restorable on a later revisit.
-            console.error('[Chat] image storage failed (non-fatal, continuing without persistence):', storeErr.message);
+    // this genuinely never persisted an uploaded image at all — only used
+    // for the live API call, then discarded. attachmentStorage.js (the
+    // same, existing infrastructure already used for captured PDFs/images
+    // elsewhere) makes real persistence straightforward, so there's no
+    // good reason to keep discarding it. Stored BEFORE the AI call below
+    // so a slow/failed AI response can't leave an upload with nowhere to
+    // go — files are saved regardless of whether the AI call succeeds.
+    // Each stored URL is attached to newUserMessage.attachmentUrls
+    // (plural — this now supports multiple files per message, up to
+    // MAX_ATTACHMENTS_PER_MESSAGE), the exact object already being pushed
+    // into messages/history above, so no separate re-matching step is
+    // needed — persisting the reference is just setting one extra field
+    // on an object already being saved.
+    const storedAttachmentUrls = [];
+    if (Array.isArray(attachments) && attachments.length) {
+        for (const att of attachments.slice(0, MAX_ATTACHMENTS_PER_MESSAGE)) {
+            if (!att || !att.base64) continue;
+            try {
+                const commaIdx = att.base64.indexOf(',');
+                const rawBase64 = commaIdx !== -1 ? att.base64.slice(commaIdx + 1) : att.base64;
+                const buffer = Buffer.from(rawBase64, 'base64');
+                const stored = await attachmentStorage.store({
+                    buffer,
+                    contentType: att.mimeType || (att.type === 'pdf' ? 'application/pdf' : 'image/jpeg'),
+                    userEmail: req.userEmail,
+                    filenameHint: 'chat-upload'
+                });
+                storedAttachmentUrls.push({ url: stored.url, type: att.type || 'image' });
+            } catch (storeErr) {
+                // Genuinely non-fatal per-file — the AI call below still
+                // works from the raw base64 regardless of whether storage
+                // succeeded, so one file's storage failure shouldn't block
+                // either the response or the other files in the same
+                // message. Just means this specific file won't be
+                // restorable on a later revisit.
+                console.error('[Chat] attachment storage failed (non-fatal, continuing):', storeErr.message);
+            }
         }
     }
+    if (storedAttachmentUrls.length) newUserMessage.attachmentUrls = storedAttachmentUrls;
 
     const isStreaming = req.headers['accept'] === 'text/event-stream';
 
@@ -161,7 +187,7 @@ router.post('/', requireAuth, async (req, res) => {
         chatgpt: ['claude'], claude: ['chatgpt']
     };
 
-    async function callWithFallback(primaryModel, messages, imageData) {
+    async function callWithFallback(primaryModel, messages, attachments) {
         const forgeKeys = getForgeKeys();
         const tryModels = [primaryModel, ...(FALLBACKS[primaryModel] || [])];
         for (const m of tryModels) {
@@ -171,13 +197,13 @@ router.post('/', requireAuth, async (req, res) => {
                 // Only ever passed to a model actually in IMAGE_CAPABLE_MODELS
                 // — confirmed safe to pass uniformly through every fallback
                 // attempt here specifically because every fallback target for
-                // claude/chatgpt/gemini (the only models imageData can ever
+                // claude/chatgpt/gemini (the only models attachments can ever
                 // be set for, per the route's own validation above) is also
                 // image-capable. A caller that doesn't accept a 3rd argument
                 // (mistral, deepseek, etc.) simply ignores the extra
                 // parameter, per normal JS semantics — but those models can
-                // never be reached with imageData set in the first place.
-                const result = await MODEL_CALLERS[m](messages, key, imageData);
+                // never be reached with attachments set in the first place.
+                const result = await MODEL_CALLERS[m](messages, key, attachments);
                 if (m !== primaryModel) {
                     console.log(`[Chat] Fell back from ${primaryModel} to ${m}`);
                     try {
@@ -198,7 +224,7 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     try {
-        const content = await callWithFallback(model, messages, imageData);
+        const content = await callWithFallback(model, messages, attachments);
         messages.push({ role: 'assistant', content });
 
         // Persist session

@@ -106,15 +106,11 @@
 
   <div id="chatLimitBanner"></div>
 
-  <div id="chatImagePreviewRow" style="display:none;align-items:center;gap:8px;padding:8px 20px 0;">
-    <img id="chatImagePreviewThumb" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:0.5px solid #D6D2C8;"/>
-    <span id="chatImagePreviewName" style="font-size:12px;color:#6B6559;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-    <button onclick="clearChatImageAttachment()" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:15px;" title="Remove image">&times;</button>
-  </div>
+  <div id="chatImagePreviewRow" style="display:none;align-items:center;gap:8px;padding:8px 20px 0;flex-wrap:wrap;"></div>
 
   <div class="chat-input-row">
-    <input type="file" id="chatImageFileInput" accept="image/*" style="display:none;" onchange="handleChatImageSelected(this.files[0])"/>
-    <button id="chatImageAttachBtn" class="chat-icon-btn" onclick="document.getElementById('chatImageFileInput').click()" title="Attach an image" style="flex-shrink:0;">&#128206;</button>
+    <input type="file" id="chatImageFileInput" accept="image/*,application/pdf" multiple style="display:none;" onchange="handleChatFilesSelected(this.files)"/>
+    <button id="chatImageAttachBtn" class="chat-icon-btn" onclick="document.getElementById('chatImageFileInput').click()" title="Attach images or PDFs" style="flex-shrink:0;">&#128206;</button>
     <textarea id="chatInput" class="chat-input" placeholder="Type your message..." rows="1" oninput="autoResizeChatInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button id="chatSendBtn" class="chat-send-btn" onclick="sendChatMessage()">Send</button>
   </div>
@@ -164,7 +160,8 @@ let chatModel = 'claude';
 // ever added/removed there, this needs updating too (this duplication is
 // a real, accepted trade-off — not something automatically kept in sync).
 const IMAGE_CAPABLE_MODELS = new Set(['claude', 'chatgpt', 'gemini']);
-let chatAttachedImage = null; // { base64, mimeType, filename } while staged, before sending
+const MAX_CHAT_ATTACHMENTS = 5; // matches backend's own MAX_ATTACHMENTS_PER_MESSAGE exactly — see chat.js for the researched provider-limit rationale
+let chatAttachedFiles = []; // [{ base64, mimeType, filename, type: 'image'|'pdf' }] while staged, before sending
 
 function updateChatImageAttachButtonState() {
   var btn = document.getElementById('chatImageAttachBtn');
@@ -173,43 +170,79 @@ function updateChatImageAttachButtonState() {
   btn.disabled = !capable;
   btn.style.opacity = capable ? '1' : '0.35';
   btn.style.cursor = capable ? 'pointer' : 'not-allowed';
-  btn.title = capable ? 'Attach an image' : 'Image uploads aren\'t supported for ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet';
+  btn.title = capable ? 'Attach images or PDFs' : 'File uploads aren\'t supported for ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet';
   if (!capable) clearChatImageAttachment();
 }
 
-function handleChatImageSelected(file) {
-  if (!file) return;
-  if (!file.type || !file.type.startsWith('image/')) {
-    Forge.showToast('Please choose an image file.', 'error');
-    return;
-  }
-  // 8MB is a conservative, round ceiling comfortably under every target
-  // provider's own base64-encoded request-size limits, not a precisely
-  // researched per-provider maximum — errs safe rather than risking a
-  // provider-side rejection after the user has already waited for a
-  // response.
-  if (file.size > 8 * 1024 * 1024) {
-    Forge.showToast('Image is too large (max 8MB).', 'error');
-    return;
-  }
-  var reader = new FileReader();
-  reader.onload = function() {
-    chatAttachedImage = { base64: reader.result, mimeType: file.type, filename: file.name };
-    document.getElementById('chatImagePreviewThumb').src = reader.result;
-    document.getElementById('chatImagePreviewName').textContent = file.name;
-    document.getElementById('chatImagePreviewRow').style.display = 'flex';
-  };
-  reader.onerror = function() {
-    Forge.showToast('Could not read that image — please try again.', 'error');
-  };
-  reader.readAsDataURL(file);
+function renderChatAttachmentPreviews() {
+  var row = document.getElementById('chatImagePreviewRow');
+  if (!row) return;
+  if (!chatAttachedFiles.length) { row.style.display = 'none'; row.innerHTML = ''; return; }
+  row.style.display = 'flex';
+  row.innerHTML = chatAttachedFiles.map(function(f, i) {
+    var thumb = f.type === 'pdf'
+      ? '<div style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;font-size:16px;background:#F5F3EE;">&#128196;</div>'
+      : '<img src="' + f.base64 + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:0.5px solid #D6D2C8;"/>';
+    return '<div style="display:flex;align-items:center;gap:6px;background:#F5F3EE;border-radius:8px;padding:4px 8px 4px 4px;">' + thumb +
+      '<span style="font-size:12px;color:#6B6559;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtmlChat(f.filename) + '</span>' +
+      '<button onclick="removeChatAttachment(' + i + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 2px;font-size:14px;" title="Remove">&times;</button>' +
+    '</div>';
+  }).join('');
 }
-window.handleChatImageSelected = handleChatImageSelected;
+
+// Minimal, local escape helper — kept separate from any shared escHtml
+// elsewhere in this file to avoid assuming one exists with the exact
+// same name/behavior; filenames are the only untrusted text rendered
+// into this specific preview row.
+function escHtmlChat(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function handleChatFilesSelected(fileList) {
+  var files = Array.prototype.slice.call(fileList || []);
+  if (!files.length) return;
+  if (chatAttachedFiles.length + files.length > MAX_CHAT_ATTACHMENTS) {
+    Forge.showToast('You can attach up to ' + MAX_CHAT_ATTACHMENTS + ' files per message.', 'error');
+    return;
+  }
+  files.forEach(function(file) {
+    var isImage = file.type && file.type.startsWith('image/');
+    var isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) {
+      Forge.showToast(file.name + ': only images and PDFs are supported.', 'error');
+      return;
+    }
+    // 8MB is a conservative, round ceiling comfortably under every target
+    // provider's own base64-encoded request-size limits, not a precisely
+    // researched per-provider maximum — errs safe rather than risking a
+    // provider-side rejection after the user has already waited for a
+    // response.
+    if (file.size > 8 * 1024 * 1024) {
+      Forge.showToast(file.name + ' is too large (max 8MB).', 'error');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function() {
+      chatAttachedFiles.push({ base64: reader.result, mimeType: file.type, filename: file.name, type: isPdf ? 'pdf' : 'image' });
+      renderChatAttachmentPreviews();
+    };
+    reader.onerror = function() {
+      Forge.showToast('Could not read ' + file.name + ' — please try again.', 'error');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+window.handleChatFilesSelected = handleChatFilesSelected;
+
+function removeChatAttachment(index) {
+  chatAttachedFiles.splice(index, 1);
+  renderChatAttachmentPreviews();
+}
+window.removeChatAttachment = removeChatAttachment;
 
 function clearChatImageAttachment() {
-  chatAttachedImage = null;
-  var row = document.getElementById('chatImagePreviewRow');
-  if (row) row.style.display = 'none';
+  chatAttachedFiles = [];
+  renderChatAttachmentPreviews();
   var fileInput = document.getElementById('chatImageFileInput');
   if (fileInput) fileInput.value = '';
 }
@@ -416,7 +449,8 @@ function addMessageToDOM(role, content, opts) {
         '<div class="chat-msg-footer"><button class="chat-icon-btn" onclick="copyMsgContent(\'' + msgId + '\')">&#128203; Copy</button><button class="chat-icon-btn" onclick="printMsgContent(\'' + msgId + '\')" style="margin-left:6px;">&#128424;&#65039; Print / PDF</button></div>';
     }
   } else {
-    var imgHtml = opts.imagePreviewURL ? '<img src="' + opts.imagePreviewURL + '" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:6px;"/>' : '';
+    var previewUrls = opts.imagePreviewURLs || (opts.imagePreviewURL ? [opts.imagePreviewURL] : []);
+    var imgHtml = previewUrls.map(function(u) { return '<img src="' + u + '" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:6px;"/>'; }).join('');
     div.innerHTML = '<div class="chat-msg-body">' + imgHtml + rendered + '</div>';
   }
 
@@ -589,14 +623,19 @@ async function sendChatMessage() {
   var nativeSeedCountAtForkTime = chatHistory.length;
 
   // Captured and cleared here, deliberately BEFORE the request is even
-  // sent — a slow or failed response shouldn't leave a stale image
+  // sent — a slow or failed response shouldn't leave stale attachments
   // attached to whatever the user types next by accident.
-  var imageForThisSend = chatAttachedImage;
+  var filesForThisSend = chatAttachedFiles.slice();
   clearChatImageAttachment();
 
   input.value = '';
   autoResizeChatInput(input);
-  var lastUserMessageEl = addMessageToDOM('user', text, imageForThisSend ? { imagePreviewURL: imageForThisSend.base64 } : {});
+  // Only image attachments get a visual preview in the sent bubble — PDFs
+  // don't have a meaningful inline thumbnail the same way, so they're
+  // represented purely by the (already-shown, now-cleared) preview chip
+  // before sending, not duplicated into the message bubble itself.
+  var imagePreviewsForBubble = filesForThisSend.filter(function(f) { return f.type !== 'pdf'; }).map(function(f) { return f.base64; });
+  var lastUserMessageEl = addMessageToDOM('user', text, imagePreviewsForBubble.length ? { imagePreviewURLs: imagePreviewsForBubble } : {});
   chatHistory.push({ role: 'user', content: text });
 
   chatIsSending = true;
@@ -621,7 +660,7 @@ async function sendChatMessage() {
         history: chatHistory.slice(0, -1),
         source: 'diary',
         diaryEntryId: chatDiaryEntryId,
-        imageData: imageForThisSend ? { base64: imageForThisSend.base64, mimeType: imageForThisSend.mimeType } : undefined
+        attachments: filesForThisSend.length ? filesForThisSend.map(function(f) { return { base64: f.base64, mimeType: f.mimeType, type: f.type }; }) : undefined
       })
     });
 
@@ -847,7 +886,8 @@ window.sendChatMessage = sendChatMessage;
 
     if (startIndex > 0) renderLoadEarlierButton();
     for (var i = startIndex; i < total; i++) {
-      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content, allLoadedMessages[i].imageUrl ? { imagePreviewURL: allLoadedMessages[i].imageUrl } : {});
+      var msgImageUrls = (allLoadedMessages[i].attachmentUrls || []).filter(function(a) { return a.type !== 'pdf'; }).map(function(a) { return a.url; });
+      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content, msgImageUrls.length ? { imagePreviewURLs: msgImageUrls } : {});
     }
   }
 
@@ -1009,7 +1049,8 @@ window.sendChatMessage = sendChatMessage;
     var anchor = btn ? btn.nextSibling : container.firstChild;
     for (var i = messagesRenderedFromIndex - 1; i >= newStart; i--) {
       var msg = allLoadedMessages[i];
-      var el = addMessageToDOM(msg.role, msg.content, Object.assign({ insertBeforeEl: anchor }, msg.imageUrl ? { imagePreviewURL: msg.imageUrl } : {}));
+      var msgImageUrls2 = (msg.attachmentUrls || []).filter(function(a) { return a.type !== 'pdf'; }).map(function(a) { return a.url; });
+      var el = addMessageToDOM(msg.role, msg.content, Object.assign({ insertBeforeEl: anchor }, msgImageUrls2.length ? { imagePreviewURLs: msgImageUrls2 } : {}));
       anchor = el;
     }
     messagesRenderedFromIndex = newStart;
