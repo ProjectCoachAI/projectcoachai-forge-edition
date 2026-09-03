@@ -82,10 +82,19 @@
     <a href="/app.html" class="back" id="chatBackLink">&larr; Back to Diary</a>
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
       <button class="chat-icon-btn" id="syncBtn" onclick="performSync()" title="Pull in anything new from the original conversation">&#128260; Checking&hellip;</button>
+      <button class="chat-icon-btn" onclick="toggleChatSearch()" title="Search this conversation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px;"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <button class="chat-icon-btn" onclick="shareConversation()" title="Share this conversation">&#128279; Share</button>
       <div class="chat-model-badge" id="modelBadge"><span class="dot"></span><span id="modelBadgeText">Loading&hellip;</span></div>
     </div>
+  </div>
+
+  <div id="chatSearchBar" style="display:none;align-items:center;gap:8px;padding:8px 20px;background:#F5F3EE;border-bottom:0.5px solid #D6D2C8;">
+    <input id="chatSearchInput" type="text" placeholder="Search this conversation..." oninput="runChatSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){prevChatSearchMatch()}else{nextChatSearchMatch()}}else if(event.key==='Escape'){toggleChatSearch()}" style="flex:1;font-size:13px;padding:6px 10px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>
+    <span id="chatSearchCounter" style="font-size:11px;color:#9E9890;white-space:nowrap;min-width:52px;text-align:center;"></span>
+    <button onclick="prevChatSearchMatch()" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:15px;">&#8593;</button>
+    <button onclick="nextChatSearchMatch()" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:15px;">&#8595;</button>
+    <button onclick="toggleChatSearch()" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:16px;">&times;</button>
   </div>
 
   <div class="chat-messages" id="chatMessages">
@@ -767,6 +776,139 @@ window.sendChatMessage = sendChatMessage;
       addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content);
     }
   }
+
+  // ── Search within this conversation ──────────────────────────────────
+  // Direct port of the same, already-working feature in app.html
+  // (runEntrySearch() etc.) — same TreeWalker-based highlight/navigate
+  // mechanism, adapted for this page's single, ongoing conversation
+  // rather than per-entry parameterization (no entry `id` needed here,
+  // since there's only ever one conversation on this page at a time).
+  //
+  // Confirmed BEFORE writing this, not discovered as a bug afterward:
+  // this page paginates its messages the exact same way app.html's own
+  // entry content did (messagesRenderedFromIndex tracks not-yet-rendered
+  // earlier messages) — so this expands everything into the DOM first,
+  // same fix as expandAllEntryContentForSearch() there, avoiding
+  // shipping the same, already-known gap into a brand new feature.
+  var chatSearchState = { matches: [], index: -1 };
+
+  function expandAllChatContentForSearch() {
+    var guard = 0;
+    while (messagesRenderedFromIndex > 0 && guard < 200) {
+      loadEarlierMessages();
+      guard++;
+    }
+  }
+
+  function toggleChatSearch() {
+    var bar = document.getElementById('chatSearchBar');
+    var isHidden = bar.style.display === 'none' || !bar.style.display;
+    bar.style.display = isHidden ? 'flex' : 'none';
+    var input = document.getElementById('chatSearchInput');
+    if (isHidden) {
+      if (input) input.focus();
+    } else {
+      if (input) input.value = '';
+      clearChatSearchHighlights();
+    }
+  }
+  window.toggleChatSearch = toggleChatSearch;
+
+  function clearChatSearchHighlights() {
+    var container = document.getElementById('chatMessages');
+    if (container) {
+      var marks = container.querySelectorAll('mark.chat-search-hit');
+      marks.forEach(function(m) {
+        var parent = m.parentNode;
+        if (!parent) return;
+        parent.replaceChild(document.createTextNode(m.textContent), m);
+        parent.normalize();
+      });
+    }
+    chatSearchState = { matches: [], index: -1 };
+    updateChatSearchCounter();
+  }
+
+  function updateChatSearchCounter() {
+    var counter = document.getElementById('chatSearchCounter');
+    var input = document.getElementById('chatSearchInput');
+    if (!counter) return;
+    if (!input || !input.value.trim()) { counter.textContent = ''; return; }
+    var matches = chatSearchState.matches;
+    counter.textContent = matches.length ? (chatSearchState.index + 1) + ' of ' + matches.length : '0 of 0';
+  }
+
+  function runChatSearch() {
+    expandAllChatContentForSearch();
+    clearChatSearchHighlights();
+    var input = document.getElementById('chatSearchInput');
+    var query = input ? input.value.trim() : '';
+    if (!query) return;
+    var container = document.getElementById('chatMessages');
+    if (!container) return;
+
+    var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+    var textNodes = [];
+    var node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue && node.nodeValue.trim()) textNodes.push(node);
+    }
+
+    var lowerQuery = query.toLowerCase();
+    textNodes.forEach(function(textNode) {
+      var text = textNode.nodeValue;
+      var lowerText = text.toLowerCase();
+      if (lowerText.indexOf(lowerQuery) === -1) return;
+
+      var frag = document.createDocumentFragment();
+      var lastEnd = 0;
+      var idx = lowerText.indexOf(lowerQuery);
+      while (idx !== -1) {
+        frag.appendChild(document.createTextNode(text.slice(lastEnd, idx)));
+        var mark = document.createElement('mark');
+        mark.className = 'chat-search-hit';
+        mark.style.background = '#FFE58A';
+        mark.style.borderRadius = '2px';
+        mark.textContent = text.slice(idx, idx + query.length);
+        frag.appendChild(mark);
+        lastEnd = idx + query.length;
+        idx = lowerText.indexOf(lowerQuery, lastEnd);
+      }
+      frag.appendChild(document.createTextNode(text.slice(lastEnd)));
+      textNode.parentNode.replaceChild(frag, textNode);
+    });
+
+    var matches = Array.prototype.slice.call(container.querySelectorAll('mark.chat-search-hit'));
+    chatSearchState = { matches: matches, index: matches.length ? 0 : -1 };
+    updateChatSearchCounter();
+    focusCurrentChatSearchMatch();
+  }
+  window.runChatSearch = runChatSearch;
+
+  function focusCurrentChatSearchMatch() {
+    chatSearchState.matches.forEach(function(m, i) {
+      m.style.background = i === chatSearchState.index ? '#FFA500' : '#FFE58A';
+    });
+    if (chatSearchState.index >= 0 && chatSearchState.matches[chatSearchState.index]) {
+      chatSearchState.matches[chatSearchState.index].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
+  function nextChatSearchMatch() {
+    if (!chatSearchState.matches.length) return;
+    chatSearchState.index = (chatSearchState.index + 1) % chatSearchState.matches.length;
+    updateChatSearchCounter();
+    focusCurrentChatSearchMatch();
+  }
+  window.nextChatSearchMatch = nextChatSearchMatch;
+
+  function prevChatSearchMatch() {
+    if (!chatSearchState.matches.length) return;
+    chatSearchState.index = (chatSearchState.index - 1 + chatSearchState.matches.length) % chatSearchState.matches.length;
+    updateChatSearchCounter();
+    focusCurrentChatSearchMatch();
+  }
+  window.prevChatSearchMatch = prevChatSearchMatch;
 
   function renderLoadEarlierButton() {
     var container = document.getElementById('chatMessages');
