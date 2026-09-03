@@ -1457,11 +1457,43 @@ router.patch('/:id', requireAuth, async (req, res) => {
                 `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{nativeSeedMessageCount}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
                 [JSON.stringify(newSeedCount), id, req.userEmail]
               );
+              // Clears any prior diverged flag — a later, genuinely
+              // successful sync resolves whatever divergence a previous
+              // history_mismatch left behind, so the unified view's own
+              // "still syncing" indicator (added alongside this) shouldn't
+              // keep showing once the two sides are demonstrably back in
+              // sync.
+              await db.query(
+                `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'false'::jsonb) WHERE id=$1 AND user_email=$2`,
+                [id, req.userEmail]
+              );
               chatSessionSyncResult = { merged: true, addedCount: trailingNew.length, lastSyncedAt };
             }
           } else if (!isCleanExtension) {
+            // Confirmed as a real, necessary addition before building the
+            // unified view on top of this: previously, ONLY lastSyncedAt
+            // (a timestamp) was ever persisted here — the actual outcome
+            // (history_mismatch vs. genuine success) existed only in this
+            // one API response and was gone the moment it was sent. That
+            // meant a later visit to this same entry had no way to know
+            // it was in a diverged state at all. Persisted here so the
+            // unified Diary view can show a light, honest "still syncing
+            // the Forge side" indicator instead of silently displaying a
+            // native portion that's ahead of what the Forge-only portion
+            // reflects, with no explanation.
+            await db.query(
+              `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'true'::jsonb) WHERE id=$1 AND user_email=$2`,
+              [id, req.userEmail]
+            );
             chatSessionSyncResult = { merged: false, reason: 'history_mismatch', lastSyncedAt };
           } else {
+            // Genuine "nothing new to merge" is not a divergence — clears
+            // any stale diverged flag from an earlier, since-resolved
+            // mismatch, same reasoning as the merged:true branch above.
+            await db.query(
+              `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'false'::jsonb) WHERE id=$1 AND user_email=$2`,
+              [id, req.userEmail]
+            );
             chatSessionSyncResult = { merged: false, reason: 'no_new_content', lastSyncedAt };
           }
         }

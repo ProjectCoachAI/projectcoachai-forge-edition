@@ -1591,6 +1591,13 @@ function toggleEntry(id) {
     if (paginationState && paginationState.renderedFromIndex !== paginationState.initialIndex) {
       resetEntryContentPagination(id);
     }
+    // Unified view — fetches and renders on expansion, not eagerly at
+    // page-load time (see renderUnifiedEntryContent's own comment for
+    // why). Genuinely a no-op for any entry without a chatSessionId at
+    // all — the function itself checks and falls back to the existing,
+    // native-only render, so this is safe to call unconditionally here
+    // rather than needing its own guard at each call site.
+    renderUnifiedEntryContent(id);
   }
   // Summary feature's own "times opened" trigger — fire-and-forget,
   // since the user shouldn't wait on this tracking call at all. Not
@@ -3248,6 +3255,137 @@ function renderWithBubblesSegments(text) {
 function renderWithBubbles(text) {
   return renderWithBubblesSegments(text).join('');
 }
+
+// Direct parallel to renderWithBubblesSegments() above, but for
+// chat_sessions.messages' own [{role, content}, ...] array format
+// instead of a single, marker-delimited text string — used by the
+// unified Diary view below to render both the native and Forge-only
+// portions of a forked conversation with the same visual bubble style
+// already used everywhere else, without needing to first reconstruct a
+// marker-delimited string from the array just to reuse the text parser.
+function renderMessagesAsSegments(messages) {
+  var segments = [];
+  var current = '';
+  (messages || []).forEach(function(m) {
+    if (m.role === 'user') {
+      if (current) { segments.push(current); current = ''; }
+      var isLongQuestion = (m.content || '').length > 150 || ((m.content || '').match(/\n/g) || []).length > 1;
+      current += '<div class="' + (isLongQuestion ? 'user-bubble-long' : 'user-bubble') + '">' + escHtml(m.content || '') + '</div>';
+    } else {
+      current += (Forge.renderMarkdown ? Forge.renderMarkdown(m.content || '') : escHtml(m.content || '')).replace(/<p>\s*<\/p>/g, '');
+    }
+  });
+  if (current) segments.push(current);
+  return segments;
+}
+
+// The unified Diary view — confirmed sound and approved before building:
+// renders chat_sessions.messages directly, split at the entry's own,
+// now-correctly-maintained nativeSeedMessageCount, rather than a second,
+// separate merge/assembly step (avoiding the exact kind of duplicated
+// "combine native and Forge content" logic that could drift from Sync's
+// own, already-solved ordering over time). Deliberately keeps native and
+// Forge-only content visually distinct — "unified location, not unified
+// appearance" — rather than blending them as one continuous thread, the
+// same honesty-first principle behind the fork marker, the sync
+// timestamp, and the images-disclosure banner elsewhere in this feature.
+// Only ever called on-demand, at expansion time (see toggleEntry()'s own
+// call site) — NOT during the eager, page-load-time render every entry
+// card already gets — so opening the Diary page doesn't fire one network
+// request per forked entry regardless of whether the user ever opens it.
+async function renderUnifiedEntryContent(entryId) {
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+  var container = document.getElementById('entry-content-' + entryId);
+  if (!entry || !container) return;
+  var meta = entry.metadata || {};
+  var chatSessionId = meta.chatSessionId;
+  var seedCount = meta.nativeSeedMessageCount;
+
+  // Not forked, or missing the data this view depends on — the existing,
+  // native-only render is already correct and complete for this entry;
+  // no reason to attempt a unified view that has nothing to unify.
+  if (!chatSessionId || typeof seedCount !== 'number') {
+    container.innerHTML = renderEntryContentHtml(entry);
+    return;
+  }
+
+  var session = null;
+  try {
+    var resp = await Forge.request('GET', '/api/chat/' + chatSessionId);
+    if (resp && resp.ok && resp.data && resp.data.success && resp.data.session) session = resp.data.session;
+  } catch (e) {
+    console.warn('[Diary] Unified view: failed to fetch chat session, falling back to native-only:', e.message);
+  }
+
+  // Fetch failed, or the session's own message count somehow doesn't
+  // even reach the seed boundary (shouldn't happen given the backfill,
+  // but falling back safely here rather than rendering a broken split
+  // if it somehow does) — native-only render is still a correct,
+  // complete result on its own.
+  if (!session || !Array.isArray(session.messages) || session.messages.length < seedCount) {
+    container.innerHTML = renderEntryContentHtml(entry);
+    return;
+  }
+
+  var nativeMessages = session.messages.slice(0, seedCount);
+  var forgeMessages = session.messages.slice(seedCount);
+
+  var nativeSegments = renderMessagesAsSegments(nativeMessages);
+  var total = nativeSegments.length;
+  var startIndex = Math.max(0, total - ENTRY_INITIAL_VISIBLE_TURNS);
+  window._entryContentSegments[entryId] = { segments: nativeSegments, renderedFromIndex: startIndex, initialIndex: startIndex };
+
+  var html = '';
+  if (startIndex > 0) {
+    html += '<div id="loadEarlierWrap-' + entryId + '" style="margin:0 0 14px;">' +
+      '<button class="entry-btn" id="loadEarlierEntryBtn-' + entryId + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + entryId + ')" style="font-size:12px;">' +
+        'Load earlier (' + startIndex + ' more)' +
+      '</button>' +
+      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + entryId + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">&#128260;</button>' +
+    '</div>';
+  }
+  for (var i = startIndex; i < total; i++) html += nativeSegments[i];
+
+  // Images-disclosure banner — reworded here specifically for the
+  // unified view, where there's now a real, visible boundary to be
+  // precise about. The single-thread version of this banner ("Forge
+  // won't know about images from the original conversation") no longer
+  // fits once the native portion with its own images is directly, visibly
+  // shown right above the Forge-only portion that lacks them — this
+  // version names that actual boundary instead of speaking generically.
+  if (meta.images && meta.images.length && forgeMessages.length) {
+    html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
+      '&#128444;&#65039; Images from the native conversation are shown above; anything continued in Forge below won\'t include or reference them.' +
+    '</div>';
+  }
+
+  // "Still syncing" indicator — a real, honest signal for a real,
+  // possible state: content's own save can succeed independently of
+  // whether the session-merge did (a genuine history_mismatch), meaning
+  // the native portion shown here could be more current than what
+  // synced into the Forge-only portion below reflects. Shown rather than
+  // silently letting the two sides look inconsistent with no
+  // explanation, the same honesty-first principle as the rest of this
+  // feature set.
+  if (meta.lastSyncDiverged === true) {
+    html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
+      '&#8987; Still syncing the Forge side — the native conversation above may be slightly ahead of what\'s reflected below.' +
+    '</div>';
+  }
+
+  if (forgeMessages.length) {
+    var forgeSegments = renderMessagesAsSegments(forgeMessages);
+    html += '<div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px;">' +
+      '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
+      '<span style="font-size:11px;color:#9E9890;white-space:nowrap;">&#127807; Continued in Forge</span>' +
+      '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
+    '</div>' +
+    '<div style="background:#FBF9F4;border-radius:10px;padding:14px;">' + forgeSegments.join('') + '</div>';
+  }
+
+  container.innerHTML = html;
+}
+window.renderUnifiedEntryContent = renderUnifiedEntryContent;
 
 // ── "Load earlier" for a single entry's own long content ───────────────────
 // Same pattern as continue.html's own long-thread handling (most recent
