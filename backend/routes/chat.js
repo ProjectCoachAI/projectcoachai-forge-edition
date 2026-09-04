@@ -9,7 +9,7 @@ const db      = require('../lib/db');
 const { requireAuth } = require('../middleware/auth');
 const cmp     = require('./compare');
 const attachmentStorage = require('../lib/attachmentStorage');
-const { voyageEmbed, toVectorLiteral } = require('../lib/embeddings');
+const { voyageEmbed, toVectorLiteral, getLastEmbedFailureReason } = require('../lib/embeddings');
 
 // Forge's own keys (same pattern as compare.js / synthesize.js)
 function getForgeKeys() {
@@ -128,7 +128,7 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
         if (!alreadyEmbedded) {
             const texts = olderMessages.map(m => typeof m.content === 'string' ? m.content : '');
             const embeddings = await voyageEmbed(texts, 'document');
-            if (!embeddings) return { success: false, reason: 'voyage_embed_document_failed' }; // Voyage unavailable — degrade to the existing error message below
+            if (!embeddings) return { success: false, reason: 'voyage_embed_document_failed', error: getLastEmbedFailureReason() }; // Voyage unavailable — degrade to the existing error message below
             for (let i = 0; i < olderMessages.length; i++) {
                 const vec = toVectorLiteral(embeddings[i]);
                 if (!vec) continue; // an individual embed can fail without failing the whole batch
@@ -140,7 +140,7 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
         }
 
         const queryEmbedding = await voyageEmbed(typeof newMessage.content === 'string' ? newMessage.content : '', 'query');
-        if (!queryEmbedding) return { success: false, reason: 'voyage_embed_query_failed' };
+        if (!queryEmbedding) return { success: false, reason: 'voyage_embed_query_failed', error: getLastEmbedFailureReason() };
         const queryVec = toVectorLiteral(queryEmbedding);
 
         // Exact cosine distance, scoped to this one session via the

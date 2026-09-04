@@ -24,14 +24,31 @@
 // otherwise fails — semantic search is an enhancement on top of the
 // existing, fully-functional keyword search, never a hard dependency
 // that could break saving or searching if Voyage is unavailable.
+// Tracks WHY the most recent call returned null, without changing
+// voyageEmbed()'s own return shape at all — its existing callers (both
+// here and in diary.js) already correctly treat a plain null as "not
+// available, degrade gracefully," and changing that shape to carry
+// richer detail would mean touching every one of those call sites too.
+// A separate, read-after-the-fact getter lets chat.js's own bridging
+// logic (which genuinely needs to distinguish "no API key" from "input
+// was empty" from "the request itself failed" from "timed out") surface
+// the real reason directly in a response body, without requiring
+// diary.js's own simpler, semantic-search use of this function to
+// change at all.
+let _lastFailureReason = null;
+function getLastEmbedFailureReason() { return _lastFailureReason; }
+
 async function voyageEmbed(texts, inputType) {
+  _lastFailureReason = null;
   const apiKey = process.env.VOYAGE_API_KEY;
   if (!apiKey) {
+    _lastFailureReason = 'no_api_key';
     console.warn('[Embeddings] VOYAGE_API_KEY is not set — embeddings unavailable.');
     return null;
   }
   const inputs = Array.isArray(texts) ? texts : [texts];
   if (!inputs.length || inputs.every(t => !t || !t.trim())) {
+    _lastFailureReason = 'empty_input';
     console.warn('[Embeddings] voyageEmbed called with no usable (non-empty) text input.');
     return null;
   }
@@ -53,13 +70,17 @@ async function voyageEmbed(texts, inputType) {
     });
     clearTimeout(timeout);
     if (!resp.ok) {
-      console.warn('[Embeddings] Voyage embedding request failed:', resp.status);
+      let bodyText = '';
+      try { bodyText = (await resp.text()).slice(0, 300); } catch(_) {}
+      _lastFailureReason = `api_error_${resp.status}: ${bodyText}`;
+      console.warn('[Embeddings] Voyage embedding request failed:', resp.status, bodyText);
       return null;
     }
     const json = await resp.json();
     const embeddings = (json.data || []).sort((a, b) => a.index - b.index).map(d => d.embedding);
     return Array.isArray(texts) ? embeddings : (embeddings[0] || null);
   } catch(e) {
+    _lastFailureReason = `exception: ${e.message}`;
     console.warn('[Embeddings] Voyage embedding error:', e.message);
     return null;
   }
@@ -71,4 +92,4 @@ function toVectorLiteral(embedding) {
   return '[' + embedding.join(',') + ']';
 }
 
-module.exports = { voyageEmbed, toVectorLiteral };
+module.exports = { voyageEmbed, toVectorLiteral, getLastEmbedFailureReason };
