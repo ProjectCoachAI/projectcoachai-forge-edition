@@ -33,7 +33,12 @@
     .diary-layout { display: flex; max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 58px); }
 
     /* SIDEBAR */
-    .diary-sidebar { width: 200px; flex-shrink: 0; border-right: 0.5px solid #D6D2C8; padding: 1.5rem 1rem; position: sticky; top: 58px; height: calc(100vh - 58px); overflow-y: auto; }
+    .diary-sidebar { width: 200px; flex-shrink: 0; border-right: 0.5px solid #D6D2C8; padding: 1.5rem 1rem; position: sticky; top: 58px; height: calc(100vh - 58px); overflow-y: auto; transition: margin-left 0.2s ease, transform 0.25s ease; }
+    /* Collapsed via a NEGATIVE margin rather than display:none, so the
+       sidebar's own collapse can be genuinely animated — display:none has
+       no meaningful transition at all, it just snaps instantly. */
+    .diary-sidebar.sidebar-collapsed { margin-left: -232px; } /* 200px width + 1rem*2 padding + border, so nothing peeks out */
+    .sidebar-backdrop { display: none; }
     .sidebar-title { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #9E9890; margin-bottom: 0.6rem; padding: 0 0.5rem; }
     .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #6B6559; transition: all 0.15s; margin-bottom: 2px; }
     .cat-item:hover { background: #EDEAE3; color: #1B2A4A; }
@@ -54,8 +59,16 @@
     .src-chip.active { background: #1B2A4A; color: #F5F3EE; border-color: #1B2A4A; }
 
     /* QUICK ANSWER */
-    .qa-section { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
-    .qa-title { font-family: Lora,serif; font-size: 16px; font-weight: 500; color: #1B2A4A; margin-bottom: 0.75rem; }
+    .qa-section { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+    .qa-title { font-family: Lora,serif; font-size: 16px; font-weight: 500; color: #1B2A4A; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+    .qa-collapse-btn { background: none; border: none; color: #9E9890; cursor: pointer; padding: 2px 4px; font-size: 12px; transition: transform 0.15s; }
+    /* Collapsed state hides everything below the title row (input, and
+       whatever answer/note area might be visible) — a real, additional
+       space-saving option beyond the answer area's own, already-existing
+       auto-hide-when-empty behavior, for anyone who wants to reclaim
+       even the compact, single input row's own space. */
+    .qa-section.qa-collapsed .qa-row, .qa-section.qa-collapsed .qa-answer { display: none !important; }
+    .qa-section.qa-collapsed .qa-collapse-btn { transform: rotate(-90deg); }
     .qa-row { display: flex; gap: 8px; }
     .qa-input { flex: 1; background: #F5F3EE; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 9px 12px; font-size: 13px; color: #1B2A4A; font-family: Inter,sans-serif; outline: none; }
     .qa-input:focus { border-color: #C17D3C; }
@@ -92,7 +105,7 @@
     .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
     .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 0; }
     .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
-    .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
+    .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 0.7rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 11px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
     .entry-card.expanded .entry-chevron { transform: rotate(180deg); }
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
@@ -169,6 +182,14 @@
     .entry-btn { font-size: 11px; padding: 4px 10px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: Inter,sans-serif; transition: all 0.15s; }
     .entry-btn:hover { border-color: #1B2A4A; color: #1B2A4A; }
     .entry-btn.primary { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
+    /* High-contrast accent style, matching the existing "Back to Claude"
+       button's own orange treatment — confirmed via direct feedback as
+       a specific, real request: Continue in Forge, Sync, and Share are
+       genuinely key, action-oriented moments that were previously
+       visually identical to lower-stakes actions like Copy or Move to,
+       buried in the same, undifferentiated row. */
+    .entry-btn.accent { background: #C17D3C; color: #fff; border-color: #C17D3C; }
+    .entry-btn.accent:hover { background: #A5682F; border-color: #A5682F; }
     .entry-btn.danger { color: #B91C1C; border-color: #FCA5A5; }
     .entry-btn.danger:hover { background: #FEF2F2; }
     .entry-source-icon { font-size: 18px; flex-shrink: 0; }
@@ -204,7 +225,7 @@
     .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
     .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 0; }
     .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
-    .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
+    .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 0.7rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 12px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; }
     .entry-card.expanded .entry-chevron { transform: rotate(180deg); }
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
@@ -292,7 +313,16 @@
     .footer-link:hover { color: #1B2A4A; }
 
     @media (max-width: 768px) {
-      .diary-sidebar { display: none; }
+      /* On narrow screens the sidebar becomes a genuine, fixed overlay
+         drawer rather than a permanently-hidden-with-no-way-back panel
+         (the previous behavior — display:none with no toggle at all).
+         Hidden off-screen by default via transform, slid in via
+         .sidebar-open, with the backdrop below providing a tap-outside-
+         to-close affordance, the same as any standard drawer pattern. */
+      .diary-sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 200; margin-left: 0; transform: translateX(-100%); box-shadow: 2px 0 20px rgba(0,0,0,0.15); background: #FBF9F4; }
+      .diary-sidebar.sidebar-open { transform: translateX(0); }
+      .diary-sidebar.sidebar-collapsed { margin-left: 0; } /* the desktop collapse rule doesn't apply here — transform above is what hides it */
+      .sidebar-backdrop.sidebar-backdrop-visible { display: block; position: fixed; inset: 0; background: rgba(20,20,20,0.4); z-index: 199; }
       .diary-main { padding: 1rem; }
       .forge-upsell { flex-direction: column; text-align: center; }
     }
@@ -360,8 +390,14 @@
 </div>
 
 <div class="diary-layout">
+  <!-- Backdrop for the sidebar's mobile, slide-out overlay mode — only
+       ever visible (via .sidebar-backdrop-visible below) on narrow
+       screens with the sidebar open, letting a tap outside the sidebar
+       close it, same as any standard drawer pattern. -->
+  <div id="sidebarBackdrop" onclick="toggleDiarySidebar()" class="sidebar-backdrop"></div>
+
   <!-- Sidebar -->
-  <div class="diary-sidebar">
+  <div class="diary-sidebar" id="diarySidebar">
     <div class="sidebar-title">Categories</div>
     <div id="categoryList">
       <div class="cat-item active" onclick="filterCategory('all')" id="cat-all">
@@ -386,8 +422,11 @@
       <div class="cat-item" onclick="filterSource('external')" id="src-external"><span>Other AI</span></div>
     </div>
     <div class="sidebar-divider"></div>
-    <div class="sidebar-title">Date range</div>
-    <div style="padding:0 4px;display:flex;flex-direction:column;gap:6px;">
+    <div class="sidebar-title" onclick="toggleDateRangeSection()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+      <span>Date range</span>
+      <span id="dateRangeCollapseIcon" style="font-size:10px;color:#9E9890;transition:transform 0.15s;">&#9660;</span>
+    </div>
+    <div id="dateRangeFields" style="padding:0 4px;display:flex;flex-direction:column;gap:6px;">
       <input type="date" id="dateFromInput" style="font-size:12px;padding:5px 6px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:'Inter',sans-serif;color:#1B2A4A;" onchange="applyDateFilter()" />
       <input type="date" id="dateToInput" style="font-size:12px;padding:5px 6px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:'Inter',sans-serif;color:#1B2A4A;" onchange="applyDateFilter()" />
       <a href="#" onclick="clearDateFilter();return false;" id="dateFilterClear" style="display:none;font-size:11px;color:#9E9890;text-decoration:none;">&times; Clear date range</a>
@@ -399,11 +438,16 @@
   <!-- Main -->
   <div class="diary-main">
     <div class="diary-header">
-      <div>
-        <div class="diary-heading">Your Diary</div>
-        <div class="diary-count" id="entryCount">Loading...</div>
-        <div id="favoriteDiffCounter" style="font-size:11px;color:#9E9890;margin-top:2px;"></div>
-        <div id="savesCounter" style="font-size:11px;color:#9E9890;margin-top:2px;display:none;"></div>
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <button onclick="toggleDiarySidebar()" id="sidebarToggleBtn" title="Show/hide filters" aria-label="Toggle sidebar" style="background:none;border:0.5px solid #D6D2C8;border-radius:6px;width:32px;height:32px;flex-shrink:0;cursor:pointer;color:#4A4035;display:flex;align-items:center;justify-content:center;margin-top:2px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <div class="diary-heading">Your Diary</div>
+          <div class="diary-count" id="entryCount">Loading...</div>
+          <div id="favoriteDiffCounter" style="font-size:11px;color:#9E9890;margin-top:2px;"></div>
+          <div id="savesCounter" style="font-size:11px;color:#9E9890;margin-top:2px;display:none;"></div>
+        </div>
       </div>
     </div>
     <!-- Bulk action bar -->
@@ -420,8 +464,11 @@
     </label>
 
     <!-- Quick Answer -->
-    <div class="qa-section">
-      <div class="qa-title">&#9889; Quick Answer</div>
+    <div class="qa-section" id="qaSection">
+      <div class="qa-title" onclick="toggleQuickAnswerSection()">
+        <span>&#9889; Quick Answer</span>
+        <button class="qa-collapse-btn" aria-label="Collapse Quick Answer" title="Show/hide Quick Answer">&#9660;</button>
+      </div>
       <div class="qa-row">
         <input type="text" id="qaInput" class="qa-input" placeholder="Ask anything — answer saves straight to your Diary..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){askQuick();event.preventDefault();}" />
         <select id="qaModel" class="qa-select">
@@ -704,7 +751,95 @@ window.performEntrySync = performEntrySync;
 var activeDateFrom = '';
 var activeDateTo = '';
 
-// ── Diary entry text size (requested for accessibility) ────────────────────
+// ── Quick Answer collapse/expand ─────────────────────────────────────────
+// Persisted (same "wants it everywhere" reasoning as the sidebar/font
+// preferences above) — someone who wants this section out of the way
+// for focused reading shouldn't have to re-collapse it every visit.
+function toggleQuickAnswerSection() {
+  var section = document.getElementById('qaSection');
+  if (!section) return;
+  var collapsed = section.classList.toggle('qa-collapsed');
+  localStorage.setItem('qaSectionCollapsed', collapsed ? '1' : '0');
+}
+window.toggleQuickAnswerSection = toggleQuickAnswerSection;
+(function applyInitialQuickAnswerState() {
+  var section = document.getElementById('qaSection');
+  if (section && localStorage.getItem('qaSectionCollapsed') === '1') {
+    section.classList.add('qa-collapsed');
+  }
+})();
+
+
+// On wide screens: a genuine, user-controlled show/hide toggle, persisted
+// across visits (same "wants it everywhere, every time" reasoning as the
+// font-scale feature above) — someone who prefers more reading width
+// shouldn't have to re-collapse it every single visit. On narrow screens
+// specifically: the sidebar becomes a fixed, slide-out overlay drawer
+// (see the matching @media rule) rather than the PREVIOUS behavior —
+// permanently hidden via display:none with no way to ever access it at
+// all. The overlay itself is intentionally NOT persisted across visits —
+// a drawer defaulting to open on every fresh page load would be
+// genuinely unexpected for this pattern; only the wide-screen
+// collapsed/expanded preference is.
+function isNarrowScreenForSidebar() {
+  return window.innerWidth <= 768;
+}
+function toggleDiarySidebar() {
+  var sidebar = document.getElementById('diarySidebar');
+  var backdrop = document.getElementById('sidebarBackdrop');
+  if (!sidebar) return;
+  if (isNarrowScreenForSidebar()) {
+    var opening = !sidebar.classList.contains('sidebar-open');
+    sidebar.classList.toggle('sidebar-open', opening);
+    if (backdrop) backdrop.classList.toggle('sidebar-backdrop-visible', opening);
+  } else {
+    var collapsed = sidebar.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('diarySidebarCollapsed', collapsed ? '1' : '0');
+  }
+}
+window.toggleDiarySidebar = toggleDiarySidebar;
+(function applyInitialSidebarState() {
+  var sidebar = document.getElementById('diarySidebar');
+  if (!sidebar) return;
+  if (!isNarrowScreenForSidebar() && localStorage.getItem('diarySidebarCollapsed') === '1') {
+    sidebar.classList.add('sidebar-collapsed');
+  }
+  // Narrow screens: no class added at all here — the CSS's own default
+  // (transform: translateX(-100%), no .sidebar-open) already, correctly
+  // starts it closed, matching the stated "not persisted" behavior above.
+})();
+
+// ── Date range filter collapse/expand ────────────────────────────────────
+// Defaults to COLLAPSED specifically — confirmed via direct feedback that
+// this is genuinely the least-used sidebar filter compared to
+// category/source. Not persisted across visits the way the sidebar/QA
+// preferences above are — this one's tied to whether a date filter is
+// actively set, which itself resets on reload, so a stored "user prefers
+// this expanded" flag would go stale immediately. Starts expanded
+// instead if a date filter already has a value at load, so an active
+// filter is never hidden from view.
+function toggleDateRangeSection() {
+  var fields = document.getElementById('dateRangeFields');
+  var icon = document.getElementById('dateRangeCollapseIcon');
+  if (!fields) return;
+  var collapsed = fields.style.display !== 'none';
+  fields.style.display = collapsed ? 'none' : 'flex';
+  if (icon) icon.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+}
+window.toggleDateRangeSection = toggleDateRangeSection;
+(function applyInitialDateRangeState() {
+  var fromInput = document.getElementById('dateFromInput');
+  var toInput = document.getElementById('dateToInput');
+  var hasActiveFilter = (fromInput && fromInput.value) || (toInput && toInput.value);
+  if (!hasActiveFilter) {
+    var fields = document.getElementById('dateRangeFields');
+    var icon = document.getElementById('dateRangeCollapseIcon');
+    if (fields) fields.style.display = 'none';
+    if (icon) icon.style.transform = 'rotate(-90deg)';
+  }
+})();
+
+
 // NOTE: global and persistent, not per-entry — the person wanting larger
 // text wants it everywhere, every time they visit, not something they'd
 // want to keep re-adjusting per entry. Scoped specifically to entry
@@ -1462,7 +1597,7 @@ function renderEntryCard(e) {
         ' — this entry\'s own content won\'t include what happens there. ' +
         '<a href="/continue.html?entryId=' + e.id + '" style="color:#C17D3C;font-weight:500;">Open the Forge conversation &rarr;</a>' +
         '<div style="margin-top:6px;">' +
-          '<button class="entry-btn" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">&#128260; Checking&hellip;</button>' +
+          '<button class="entry-btn accent" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">&#128260; Checking&hellip;</button>' +
         '</div>' +
       '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
@@ -1471,8 +1606,8 @@ function renderEntryCard(e) {
       '<div class="entry-actions">' +
         (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
         (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
-        '<button class="entry-btn" onclick="window.location.href=\'/continue.html?entryId=' + e.id + '\'">&#127807; Continue in Forge</button>' +
-        '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
+        '<button class="entry-btn accent" onclick="window.location.href=\'/continue.html?entryId=' + e.id + '\'">&#127807; Continue in Forge</button>' +
+        '<button class="entry-btn accent" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
         '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
@@ -1508,7 +1643,44 @@ function highlightSnippet(text, query) {
   }
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
+// ── Auto-load earlier content on scroll-to-top ──────────────────────────
+// Confirmed as a real, direct gap in the existing "Load earlier" button:
+// it only ever sits at the TOP of an expanded entry's own content, so
+// someone who's scrolled down while reading has to scroll all the way
+// back up just to reach it. Attaches a scroll listener directly to the
+// entry's own, already-scrollable content container (it has max-height
+// + overflow-y:auto already) that triggers the same, existing
+// loadEarlierEntryContent() automatically once scrolled near the top —
+// genuinely reusing that function rather than a second, separate
+// loading implementation. Guarded with a data-attribute so re-expanding
+// an entry never attaches a second, duplicate listener on top of one
+// already there from an earlier expansion.
+function attachEntryScrollAutoLoad(entryId) {
+  var container = document.getElementById('entry-content-' + entryId);
+  if (!container || container.dataset.autoLoadAttached === 'true') return;
+  container.dataset.autoLoadAttached = 'true';
+  var isLoading = false;
+  container.addEventListener('scroll', function() {
+    if (isLoading) return;
+    var state = window._entryContentSegments && window._entryContentSegments[entryId];
+    if (!state || state.renderedFromIndex <= 0) return;
+    if (container.scrollTop > 40) return;
+    isLoading = true;
+    // Preserves the user's own visual scroll position — new content is
+    // inserted ABOVE what's currently visible, so without this
+    // adjustment the browser would keep scrollTop numerically fixed,
+    // which visually jerks everything already on screen further down
+    // by exactly however tall the newly-inserted content is.
+    var prevScrollHeight = container.scrollHeight;
+    loadEarlierEntryContent(entryId);
+    var newScrollHeight = container.scrollHeight;
+    container.scrollTop = container.scrollTop + (newScrollHeight - prevScrollHeight);
+    isLoading = false;
+  });
+}
+window.attachEntryScrollAutoLoad = attachEntryScrollAutoLoad;
+
+
 // NOTE: added — remembers each entry's scroll position from the exact
 // moment it's expanded, keyed by entry id, so closing that same entry
 // again can restore the user back to wherever they actually were in
@@ -1598,6 +1770,7 @@ function toggleEntry(id) {
     // native-only render, so this is safe to call unconditionally here
     // rather than needing its own guard at each call site.
     renderUnifiedEntryContent(id);
+    attachEntryScrollAutoLoad(id);
   }
   // Summary feature's own "times opened" trigger — fire-and-forget,
   // since the user shouldn't wait on this tracking call at all. Not
@@ -2304,6 +2477,15 @@ function closeAttachmentReader() {
   currentPdfDoc = null;
   currentPdfScale = 1.4;
   currentPdfReaderBody = null;
+  // Reset panel size — a previously-opened, orientation-adjusted size
+  // (see renderPdfIntoReader's own auto-detection above) shouldn't leak
+  // into whatever, possibly differently-shaped attachment gets opened
+  // next. Resets to the SAME explicit values as the original HTML
+  // default, not an empty string — clearing to '' would remove the width
+  // property entirely rather than restore it, since setting it via JS
+  // already overwrote whatever the original, static HTML value was.
+  var panel = document.getElementById('attachmentReaderPanel');
+  if (panel) { panel.style.width = 'min(880px,92vw)'; panel.style.height = '88vh'; }
   // Reset search state — the body's own innerHTML replacement above
   // already discards any <mark> elements, but readerSearchMatches would
   // otherwise still reference those now-detached nodes, and a
@@ -2573,6 +2755,39 @@ async function renderPdfIntoReader(url, body) {
   currentPdfReaderBody = body;
   currentPdfScale = 1.4;
   currentPdfDoc = await pdfjsLib.getDocument({ url: url }).promise;
+
+  // Auto-detect page orientation from the first page and size the modal
+  // panel accordingly — confirmed as a real, genuine gap before adding
+  // this: the panel previously stayed at one fixed size (880px wide)
+  // regardless of the document's own shape, so a landscape page was
+  // cramped into a portrait-shaped box and vice versa. Uses the
+  // UNSCALED viewport (scale: 1) specifically to read the page's own,
+  // genuine aspect ratio, independent of whatever zoom level is
+  // currently active.
+  try {
+    var firstPage = await currentPdfDoc.getPage(1);
+    var nativeViewport = firstPage.getViewport({ scale: 1 });
+    var panel = document.getElementById('attachmentReaderPanel');
+    if (panel) {
+      if (nativeViewport.width > nativeViewport.height) {
+        // Landscape — wider, shorter panel
+        panel.style.width = 'min(1100px, 94vw)';
+        panel.style.height = '78vh';
+      } else {
+        // Portrait (or square) — narrower, taller panel; also the
+        // existing, original default, so this branch doubles as a safe
+        // fallback if orientation detection itself is ever ambiguous
+        panel.style.width = 'min(700px, 90vw)';
+        panel.style.height = '90vh';
+      }
+    }
+  } catch (e) {
+    // Non-fatal — the document still renders at the existing, original
+    // default size below if orientation detection itself fails for any
+    // reason; readability just isn't optimized for this one document.
+    console.warn('[Diary] PDF orientation detection failed (non-fatal, using default size):', e.message);
+  }
+
   await renderPdfAtCurrentScale();
 }
 
@@ -3632,7 +3847,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
      above; a document needs a readable-width panel rather than a
      full-bleed image, so this uses a centered, page-like card instead. -->
 <div id="attachmentReaderModal" onclick="if(event.target===this)closeAttachmentReader()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
-  <div style="background:#F5F3EE;width:min(880px,92vw);height:88vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
+  <div id="attachmentReaderPanel" style="background:#F5F3EE;width:min(880px,92vw);height:88vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;transition:width 0.2s ease, height 0.2s ease;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;">
       <div id="attachmentReaderTitle" style="font-size:14px;font-weight:600;color:#1B2A4A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;font-family:Inter,sans-serif;"></div>
       <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
