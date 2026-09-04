@@ -119,7 +119,7 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
         if (!alreadyEmbedded) {
             const texts = olderMessages.map(m => typeof m.content === 'string' ? m.content : '');
             const embeddings = await voyageEmbed(texts, 'document');
-            if (!embeddings) return { success: false }; // Voyage unavailable — degrade to the existing error message below
+            if (!embeddings) return { success: false, reason: 'voyage_embed_document_failed' }; // Voyage unavailable — degrade to the existing error message below
             for (let i = 0; i < olderMessages.length; i++) {
                 const vec = toVectorLiteral(embeddings[i]);
                 if (!vec) continue; // an individual embed can fail without failing the whole batch
@@ -131,7 +131,7 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
         }
 
         const queryEmbedding = await voyageEmbed(typeof newMessage.content === 'string' ? newMessage.content : '', 'query');
-        if (!queryEmbedding) return { success: false };
+        if (!queryEmbedding) return { success: false, reason: 'voyage_embed_query_failed' };
         const queryVec = toVectorLiteral(queryEmbedding);
 
         // Exact cosine distance, scoped to this one session via the
@@ -146,7 +146,7 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
             [archivedSessionId, queryVec, BRIDGE_TOP_K_RETRIEVED]
         );
         const retrieved = retrievedR.rows;
-        if (!retrieved.length) return { success: false }; // nothing usable retrieved — don't bridge into an empty context
+        if (!retrieved.length) return { success: false, reason: 'no_embeddings_retrieved' }; // nothing usable retrieved — don't bridge into an empty context
 
         // Recent turns kept verbatim, unsummarized — the part of the
         // conversation someone's most likely referring to with "it"/
@@ -185,8 +185,8 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
 
         return { success: true, newSessionId, seededMessages, archivedSessionId };
     } catch (e) {
-        console.warn('[Chat] Conversation bridging failed (falling back to the oversized-conversation error):', e.message);
-        return { success: false };
+        console.warn('[Chat] Conversation bridging failed with an exception:', e.message, e.stack);
+        return { success: false, reason: 'exception', error: e.message };
     }
 }
 
@@ -440,12 +440,14 @@ router.post('/', requireAuth, async (req, res) => {
                     chars: typeof m.content === 'string' ? m.content.length : 0,
                     preview: (typeof m.content === 'string' ? m.content : '').slice(0, 80)
                 }));
-                console.error(`[Chat] Oversized conversation detected AND bridging failed: ~${approxTokenCount} tokens across ${messagesForApi.length} messages. sessionId=${sessionId || '(new)'}`, JSON.stringify(perMessageBreakdown));
+                console.error(`[Chat] Oversized conversation detected AND bridging failed: ~${approxTokenCount} tokens across ${messagesForApi.length} messages. sessionId=${sessionId || '(new)'} bridgeFailureReason=${bridgeResult.reason || '(unknown)'} bridgeFailureError=${bridgeResult.error || '(none)'}`, JSON.stringify(perMessageBreakdown));
                 return res.status(400).json({
                     success: false,
                     error: `This conversation has grown to roughly ${approxTokenCount.toLocaleString()} tokens — a sign you've been using it exactly as intended, without ever needing to restart. At this size, though, it's beyond what any AI model here can process in a single request yet, and we couldn't automatically continue it in a new, linked conversation just now. Please try again in a moment, or start a fresh conversation to keep going.`,
                     debugBreakdown: perMessageBreakdown,
                     debugSessionId: sessionId || null,
+                    debugBridgeFailureReason: bridgeResult.reason || null,
+                    debugBridgeFailureError: bridgeResult.error || null,
                     debugFirstMessages: messagesForApi.slice(0, 3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content })),
                     debugLastMessages: messagesForApi.slice(-3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content }))
                 });
