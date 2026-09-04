@@ -38,6 +38,46 @@
 let _lastFailureReason = null;
 function getLastEmbedFailureReason() { return _lastFailureReason; }
 
+// Voyage's own hard limit — confirmed directly via a real, live failure:
+// "Request to model 'voyage-4' failed. The batch size limit is 1000.
+// Your batch size is 3663." A genuinely long bridged conversation (or,
+// in principle, a large diary.js backfill run) can easily exceed this
+// in one call; texts are chunked below rather than trusting any single
+// caller to stay under the limit itself.
+const VOYAGE_MAX_BATCH_SIZE = 1000;
+
+// The actual, single HTTP call to Voyage — unchanged from before this
+// batching fix, just extracted so voyageEmbed() itself can call it once
+// per chunk instead of assuming the whole input always fits in one
+// request.
+async function voyageEmbedBatch(apiKey, batchTexts, inputType) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  const resp = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      input: batchTexts.map(t => (t || '').slice(0, 8000)), // Voyage has its own input length limits; keep well under
+      model: 'voyage-4',
+      input_type: inputType
+    }),
+    signal: controller.signal
+  });
+  clearTimeout(timeout);
+  if (!resp.ok) {
+    let bodyText = '';
+    try { bodyText = (await resp.text()).slice(0, 300); } catch(_) {}
+    _lastFailureReason = `api_error_${resp.status}: ${bodyText}`;
+    console.warn('[Embeddings] Voyage embedding request failed:', resp.status, bodyText);
+    return null;
+  }
+  const json = await resp.json();
+  return (json.data || []).sort((a, b) => a.index - b.index).map(d => d.embedding);
+}
+
 async function voyageEmbed(texts, inputType) {
   _lastFailureReason = null;
   const apiKey = process.env.VOYAGE_API_KEY;
@@ -53,32 +93,21 @@ async function voyageEmbed(texts, inputType) {
     return null;
   }
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    const resp = await fetch('https://api.voyageai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        input: inputs.map(t => (t || '').slice(0, 8000)), // Voyage has its own input length limits; keep well under
-        model: 'voyage-4',
-        input_type: inputType // 'document' at save time, 'query' at search time
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) {
-      let bodyText = '';
-      try { bodyText = (await resp.text()).slice(0, 300); } catch(_) {}
-      _lastFailureReason = `api_error_${resp.status}: ${bodyText}`;
-      console.warn('[Embeddings] Voyage embedding request failed:', resp.status, bodyText);
-      return null;
+    // Chunked sequentially, not in parallel — Voyage may separately
+    // rate-limit concurrent requests, and a real case here is only
+    // ~4 chunks (3663 items / 1000), so sequential stays fast enough
+    // without risking that. If ANY chunk fails, the whole call fails —
+    // a partial embeddings array would silently misalign with the
+    // indices callers (chat.js's own bridging logic in particular)
+    // depend on to match embeddings back to their original messages.
+    const allEmbeddings = [];
+    for (let i = 0; i < inputs.length; i += VOYAGE_MAX_BATCH_SIZE) {
+      const batch = inputs.slice(i, i + VOYAGE_MAX_BATCH_SIZE);
+      const batchEmbeddings = await voyageEmbedBatch(apiKey, batch, inputType);
+      if (!batchEmbeddings) return null; // _lastFailureReason already set inside voyageEmbedBatch
+      allEmbeddings.push(...batchEmbeddings);
     }
-    const json = await resp.json();
-    const embeddings = (json.data || []).sort((a, b) => a.index - b.index).map(d => d.embedding);
-    return Array.isArray(texts) ? embeddings : (embeddings[0] || null);
+    return Array.isArray(texts) ? allEmbeddings : (allEmbeddings[0] || null);
   } catch(e) {
     _lastFailureReason = `exception: ${e.message}`;
     console.warn('[Embeddings] Voyage embedding error:', e.message);
