@@ -1315,7 +1315,7 @@ window.sendChatMessage = sendChatMessage;
 </div>
 
 <div id="attachmentReaderModal" onclick="if(event.target===this)closeAttachmentReader()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
-  <div id="attachmentReaderPanel" style="background:#F5F3EE;width:min(880px,92vw);height:auto;max-height:95vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:auto;transition:width 0.2s ease, height 0.2s ease;">
+  <div id="attachmentReaderPanel" style="background:#F5F3EE;width:min(1200px,95vw);height:auto;max-height:95vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:auto;transition:width 0.2s ease, height 0.2s ease;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;">
       <div id="attachmentReaderTitle" style="font-size:14px;font-weight:600;color:#1B2A4A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;font-family:Inter,sans-serif;"></div>
       <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
@@ -1405,7 +1405,7 @@ function closeAttachmentReader() {
   // entirely rather than restore it, since setting it via JS already
   // overwrote whatever the original, static HTML value was.
   var panel = document.getElementById('attachmentReaderPanel');
-  if (panel) { panel.style.width = 'min(880px,92vw)'; panel.style.height = 'auto'; panel.style.maxHeight = '95vh'; }
+  if (panel) { panel.style.width = 'min(1200px,95vw)'; panel.style.height = 'auto'; panel.style.maxHeight = '95vh'; }
 }
 window.closeAttachmentReader = closeAttachmentReader;
 
@@ -1445,11 +1445,11 @@ async function renderPdfIntoReader(url, body) {
     var panel = document.getElementById('attachmentReaderPanel');
     if (panel) {
       if (nativeViewport.width > nativeViewport.height) {
-        panel.style.width = 'min(1100px, 94vw)';
+        panel.style.width = 'min(1200px, 95vw)';
         panel.style.height = 'auto';
         panel.style.maxHeight = '95vh';
       } else {
-        panel.style.width = 'min(700px, 90vw)';
+        panel.style.width = 'min(1200px, 95vw)';
         panel.style.height = 'auto';
         panel.style.maxHeight = '95vh';
       }
