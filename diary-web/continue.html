@@ -737,7 +737,14 @@ async function sendChatMessage() {
   if (chatIsSending) return;
   var input = document.getElementById('chatInput');
   var text = input.value.trim();
-  if (!text) return;
+  // Confirmed as a real, direct bug: this previously required non-empty
+  // typed text unconditionally, even when a file was genuinely attached
+  // — someone attaching a .txt/image/PDF with no additional typed
+  // message at all (a completely reasonable thing to do — "here's my
+  // document, take a look") would click Send and see nothing happen,
+  // with no error at all, since this returned silently before ever
+  // reaching the attachment logic further down.
+  if (!text && !chatAttachedFiles.length) return;
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/continue.html'; return; }
 
   // Captured BEFORE chatHistory is mutated below, deliberately — this is
@@ -773,6 +780,20 @@ async function sendChatMessage() {
   txtFilesForThisSend.forEach(function(f) {
     messageToSend += '\n\n--- Attached file: ' + f.filename + ' ---\n' + f.textContent;
   });
+  // Backend rejects a genuinely empty message outright (separate check
+  // there, not just this page's own guard above) — .txt attachments
+  // already make messageToSend non-empty via the append above, but an
+  // image/PDF sent completely alone (no typed text, no .txt file) would
+  // still leave it blank at this point, so a plain default fills that
+  // gap rather than leaving the send to fail one step further down.
+  if (!messageToSend.trim() && filesForThisSend.length) {
+    messageToSend = 'Please take a look at the attached file' + (filesForThisSend.length > 1 ? 's' : '') + '.';
+  }
+  // Trims any leading whitespace left over specifically when text was
+  // empty and a .txt file's own content was appended directly onto it
+  // above (e.g. "\n\n--- Attached file...") — cosmetic only, but a
+  // clean send is worth the one extra call.
+  messageToSend = messageToSend.trim();
   var nonTxtFilesForThisSend = filesForThisSend.filter(function(f) { return f.type !== 'txt'; });
 
   // Images get a visual preview; PDFs get a clickable chip (opening the
