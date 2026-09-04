@@ -782,6 +782,61 @@ async function listChatSessions(userEmail, limit = 20) {
   return r.rows;
 }
 
+// ── Chat message embeddings (conversation-bridging retrieval) ──────────────
+// Confirmed as launch-blocking: a real, month-long conversation (~1,835
+// turns) genuinely hit the oversized-conversation ceiling with no way
+// forward except abandoning all prior context — exactly the failure
+// Continue-in-Forge exists to prevent. This table backs the fix:
+// automatic session-bridging at the ceiling (Option B, not full
+// per-message continuous retrieval — see chat.js's own comment on that
+// distinction and why B is the launch-blocking scope, A the post-launch
+// quality improvement).
+//
+// Deliberately self-healing/lazy, same pattern as diary.js's own
+// ensureRatingColumn — NOT placed in the main schema block above, since
+// this table depends on the `vector` extension, which diary.js's own
+// pgvector setup enables separately at its own startup point; creating
+// this table there risks running before that extension is guaranteed
+// available, depending on file load order. Called lazily instead, only
+// the first time a bridge actually needs to happen — by then the server
+// has already been running, so `vector` is already confirmed enabled.
+//
+// btree on session_id, NOT ivfflat/hnsw — confirmed directly: every real
+// query here is already scoped to one session_id first (see chat.js's
+// own bridging logic), and a single session's embedded turns are at
+// most a few thousand rows even for genuine outlier conversations —
+// nowhere near where an approximate index earns its cost. ivfflat/hnsw
+// build one global approximate index across ALL sessions' embeddings
+// mixed together; filtering by session_id afterward means searching
+// that global index and discarding non-matches, which is both slower
+// and can have WORSE recall than exact search (the globally-nearest
+// candidates aren't necessarily the true nearest within one session
+// once most of them get filtered out). A plain btree lets Postgres
+// filter down to one session's own rows fast, then compute exact
+// cosine distance over that small, already-narrowed set — perfect
+// recall, no index-tuning/rebuild maintenance burden, and simpler.
+let _chatMessageEmbeddingsTableEnsured = false;
+async function ensureChatMessageEmbeddingsTable() {
+  if (_chatMessageEmbeddingsTableEnsured) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_message_embeddings (
+        id            SERIAL PRIMARY KEY,
+        session_id    TEXT NOT NULL REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
+        message_index INT NOT NULL,
+        role          TEXT NOT NULL,
+        content       TEXT NOT NULL,
+        embedding     vector(1024),
+        created_at    TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_chat_message_embeddings_session ON chat_message_embeddings(session_id, message_index)`);
+    _chatMessageEmbeddingsTableEnsured = true;
+  } catch(e) {
+    console.warn('[Chat] chat_message_embeddings table setup failed (bridging will be unavailable until this succeeds):', e.message);
+  }
+}
+
 // ── Forge Library (file storage) ────────────────────────────────────────────
 async function libraryUpload(userEmail, fileId, filename, fileType, fileSize, fileData) {
   await query(
@@ -810,7 +865,7 @@ async function libraryDelete(fileId, userEmail) {
   await query('DELETE FROM forge_library WHERE file_id=$1 AND user_email=$2', [fileId, userEmail]);
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, libraryUpload, libraryList, libraryGet, libraryDelete };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

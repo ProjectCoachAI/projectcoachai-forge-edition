@@ -804,6 +804,9 @@ async function sendChatMessage() {
     const contentType = resp.headers.get('content-type') || '';
     var assistantContent = '';
     var sid = null;
+    var bridged = false;
+    var bridgedFromSessionId = null;
+    var seededMessages = null;
 
     if (contentType.includes('text/event-stream')) {
       const reader = resp.body.getReader();
@@ -819,7 +822,7 @@ async function sendChatMessage() {
           if (!line.startsWith('data: ')) continue;
           try {
             const event = JSON.parse(line.slice(6));
-            if (event.type === 'message') { assistantContent = event.content; sid = event.sessionId; }
+            if (event.type === 'message') { assistantContent = event.content; sid = event.sessionId; bridged = event.bridged; bridgedFromSessionId = event.bridgedFromSessionId; seededMessages = event.seededMessages; }
             if (event.type === 'error') throw new Error(event.error);
           } catch (e) { if (e.message) throw e; }
         }
@@ -829,11 +832,41 @@ async function sendChatMessage() {
       if (!data.success) throw new Error(data.error || 'Chat failed');
       assistantContent = data.content;
       sid = data.sessionId;
+      bridged = data.bridged;
+      bridgedFromSessionId = data.bridgedFromSessionId;
+      seededMessages = data.seededMessages;
     }
 
     document.getElementById('chatLoading')?.remove();
+    // Bridge marker — shown BEFORE the assistant's own response, at the
+    // point where the actual bridge happened, same "honest, visible
+    // seam" principle as the existing fork-marker divider elsewhere in
+    // this app (see app.html's own "Continued in Forge" divider) —
+    // reusing that precedent rather than inventing a new pattern, per
+    // the explicit design guidance this was built against.
+    if (bridged) {
+      var bridgeMarkerEl = document.createElement('div');
+      bridgeMarkerEl.style.cssText = 'display:flex;align-items:center;gap:10px;margin:20px 0 14px;';
+      bridgeMarkerEl.innerHTML = '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
+        '<span style="font-size:11px;color:#9E9890;white-space:nowrap;">&#128279; Conversation continued automatically — it grew too long to keep going, so relevant earlier context was carried forward into a new, linked conversation</span>' +
+        '<div style="flex:1;height:1px;background:#E8DCC8;"></div>';
+      document.getElementById('chatMessages').appendChild(bridgeMarkerEl);
+    }
     addMessageToDOM('assistant', assistantContent);
-    chatHistory.push({ role: 'assistant', content: assistantContent });
+    if (bridged && Array.isArray(seededMessages)) {
+      // chatHistory itself must be reset here, not just appended to —
+      // otherwise the NEXT message send would still slice() the old,
+      // massive pre-bridge history as `history` in the request body,
+      // re-triggering the same oversized check (and a wasteful,
+      // redundant re-embed) on every subsequent message instead of
+      // just once. seededMessages already includes this exchange's own
+      // assistant response (it's `messages` server-side, captured after
+      // that push), so this replaces the usual, separate
+      // chatHistory.push() below entirely rather than running both.
+      chatHistory = seededMessages;
+    } else {
+      chatHistory.push({ role: 'assistant', content: assistantContent });
+    }
     if (sid) {
       chatSessionId = sid;
       linkChatSessionToDiaryEntry(sid, wasFirstMessage, nativeSeedCountAtForkTime);

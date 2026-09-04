@@ -9,6 +9,7 @@ const db      = require('../lib/db');
 const { requireAuth } = require('../middleware/auth');
 const cmp     = require('./compare');
 const attachmentStorage = require('../lib/attachmentStorage');
+const { voyageEmbed, toVectorLiteral } = require('../lib/embeddings');
 
 // Forge's own keys (same pattern as compare.js / synthesize.js)
 function getForgeKeys() {
@@ -59,9 +60,139 @@ function genSessionId() {
     return 'chat_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
 }
 
+// ── Conversation bridging (Option B: automatic session-bridging at the
+// oversized-conversation ceiling) ───────────────────────────────────────────
+// Confirmed launch-blocking: a real, month-long conversation (~1,835
+// turns) hit the size ceiling with zero path forward except abandoning
+// all prior context — exactly what Continue-in-Forge exists to prevent.
+// This is deliberately Option B (bridge once, at the ceiling), not
+// Option A (retrieval on every single message, forever, in every long
+// conversation) — B closes the actual risk (nobody ever gets stranded
+// with no way forward) with a much smaller, safer surface: retrieval
+// only ever runs once per bridge event, not on every send. A remains
+// real, valuable, prioritized post-launch work — continuous per-message
+// retrieval quality is a refinement on top of a system that already
+// never leaves anyone stranded, not a blocker to shipping that system.
+//
+// Old session's own messages are ALWAYS preserved as-is (never edited,
+// never deleted) — a session with two unrelated features' messages
+// genuinely interleaved couldn't be safely un-mixed by algorithm, so a
+// bridge doesn't attempt to; it archives the original, then starts a
+// new, seeded one. If oldSessionId is null (the exact real case
+// confirmed live: the very first message of a brand-new session,
+// already oversized from its own native seed, with nothing in
+// chat_sessions yet at all), the old content is persisted as a genuine
+// session first — so it's preserved and embeddable — before bridging
+// from it.
+const BRIDGE_RECENT_MESSAGES_TO_KEEP = 20; // ~10 turns verbatim, unsummarized
+const BRIDGE_TOP_K_RETRIEVED = 15; // older turns pulled in via retrieval
+async function bridgeConversation(oldSessionId, allMessages, model, userEmail, diaryEntryId) {
+    try {
+        await db.ensureChatMessageEmbeddingsTable();
+
+        // Ensure the old session genuinely exists in chat_sessions —
+        // needed both to preserve it (per the "archive, don't discard"
+        // requirement) and because chat_message_embeddings' own foreign
+        // key requires a real row to reference.
+        let archivedSessionId = oldSessionId;
+        if (!archivedSessionId) {
+            archivedSessionId = genSessionId();
+            await db.createChatSession(archivedSessionId, userEmail, model, allMessages, (allMessages[0] && allMessages[0].content || '').slice(0, 80));
+        } else {
+            await db.updateChatSession(archivedSessionId, userEmail, allMessages);
+        }
+
+        // The new message that triggered the overflow is the LAST
+        // element — it's the query to retrieve against, not one of the
+        // "older turns" to embed as a document alongside everything
+        // before it.
+        const olderMessages = allMessages.slice(0, -1);
+        const newMessage = allMessages[allMessages.length - 1];
+
+        // Skip re-embedding if this exact session was already bridged
+        // from once before (e.g. a retried request after a prior,
+        // partial failure) — genuinely non-fatal to check, and avoids
+        // paying for duplicate embedding calls on retry.
+        const existing = await db.query('SELECT COUNT(*) AS total FROM chat_message_embeddings WHERE session_id=$1', [archivedSessionId]);
+        const alreadyEmbedded = parseInt((existing.rows[0] && existing.rows[0].total) || 0, 10) > 0;
+
+        if (!alreadyEmbedded) {
+            const texts = olderMessages.map(m => typeof m.content === 'string' ? m.content : '');
+            const embeddings = await voyageEmbed(texts, 'document');
+            if (!embeddings) return { success: false }; // Voyage unavailable — degrade to the existing error message below
+            for (let i = 0; i < olderMessages.length; i++) {
+                const vec = toVectorLiteral(embeddings[i]);
+                if (!vec) continue; // an individual embed can fail without failing the whole batch
+                await db.query(
+                    `INSERT INTO chat_message_embeddings (session_id, message_index, role, content, embedding) VALUES ($1,$2,$3,$4,$5::vector)`,
+                    [archivedSessionId, i, olderMessages[i].role, olderMessages[i].content, vec]
+                );
+            }
+        }
+
+        const queryEmbedding = await voyageEmbed(typeof newMessage.content === 'string' ? newMessage.content : '', 'query');
+        if (!queryEmbedding) return { success: false };
+        const queryVec = toVectorLiteral(queryEmbedding);
+
+        // Exact cosine distance, scoped to this one session via the
+        // btree index on session_id — see ensureChatMessageEmbeddingsTable's
+        // own comment for why this is deliberately NOT an approximate
+        // (ivfflat/hnsw) index: a single session's embedded turns are at
+        // most a few thousand rows even for genuine outliers, nowhere
+        // near where an approximate index earns its cost, and exact
+        // search here gives perfect recall with no tuning burden.
+        const retrievedR = await db.query(
+            `SELECT role, content FROM chat_message_embeddings WHERE session_id=$1 AND embedding IS NOT NULL ORDER BY embedding <=> $2::vector ASC LIMIT $3`,
+            [archivedSessionId, queryVec, BRIDGE_TOP_K_RETRIEVED]
+        );
+        const retrieved = retrievedR.rows;
+        if (!retrieved.length) return { success: false }; // nothing usable retrieved — don't bridge into an empty context
+
+        // Recent turns kept verbatim, unsummarized — the part of the
+        // conversation someone's most likely referring to with "it"/
+        // "that"/vague follow-ups, which retrieval alone handles poorly.
+        const recentMessages = olderMessages.slice(-BRIDGE_RECENT_MESSAGES_TO_KEEP);
+
+        // Excludes anything already covered by the verbatim recent
+        // window, so the model doesn't see the same turn twice — a
+        // small, deliberate imprecision (matches by exact content
+        // string, not position, since retrievedR doesn't carry back its
+        // own message_index): a coincidental duplicate string elsewhere
+        // could be over-excluded, but worst case is one retrieved turn
+        // omitted, never an incorrect one included.
+        const retrievedFiltered = retrieved.filter(r => !recentMessages.some(rm => rm.content === r.content));
+
+        const bridgeIntro = {
+            role: 'user',
+            content: 'This conversation has grown very long, so here are relevant excerpts retrieved from earlier in it, since they may be relevant to what I ask going forward:\n\n' +
+                retrievedFiltered.map(m => `[${m.role === 'user' ? 'You' : 'AI'} said earlier]: ${m.content}`).join('\n\n')
+        };
+        const bridgeAck = { role: 'assistant', content: 'Understood — I have that earlier context in mind.' };
+
+        const seededMessages = [bridgeIntro, bridgeAck, ...recentMessages, newMessage];
+
+        const newSessionId = genSessionId();
+        await db.createChatSession(newSessionId, userEmail, model, seededMessages, (newMessage.content || '').slice(0, 80));
+
+        if (diaryEntryId) {
+            await db.query(
+                `UPDATE diary_entries SET metadata = jsonb_set(jsonb_set(jsonb_set(jsonb_set(COALESCE(metadata, '{}'::jsonb),
+                    '{chatSessionId}', $1::jsonb), '{bridgedFromSessionId}', $2::jsonb), '{bridgedAt}', $3::jsonb), '{nativeSeedMessageCount}', $4::jsonb)
+                 WHERE id=$5 AND user_email=$6`,
+                [JSON.stringify(newSessionId), JSON.stringify(archivedSessionId), JSON.stringify(new Date().toISOString()), JSON.stringify(seededMessages.length - 1), diaryEntryId, userEmail]
+            );
+        }
+
+        return { success: true, newSessionId, seededMessages, archivedSessionId };
+    } catch (e) {
+        console.warn('[Chat] Conversation bridging failed (falling back to the oversized-conversation error):', e.message);
+        return { success: false };
+    }
+}
+
 // ── POST /api/chat — send a message, get a response (SSE streaming) ────────
 router.post('/', requireAuth, async (req, res) => {
-    const { sessionId, model, message, history, source, diaryEntryId, attachments } = req.body;
+    let { sessionId, model, message, history, source, diaryEntryId, attachments } = req.body;
 
     if (!model || !MODEL_CALLERS[model]) {
         return res.status(400).json({ success: false, error: 'Invalid or unsupported model.' });
@@ -245,7 +376,7 @@ router.post('/', requireAuth, async (req, res) => {
         // not permitted"). Stripped here into a separate, clean copy
         // for the actual API call only — the original `messages` array
         // used for persistence below is untouched.
-        const messagesForApi = messages.map(m => {
+        let messagesForApi = messages.map(m => {
             if (!m.attachmentUrls) return m;
             const { attachmentUrls, ...clean } = m;
             return clean;
@@ -270,33 +401,55 @@ router.post('/', requireAuth, async (req, res) => {
         const approxCharCount = messagesForApi.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0);
         const approxTokenCount = Math.ceil(approxCharCount / 4);
         const MAX_SAFE_TOKENS = 100000;
+        let bridged = false;
+        let bridgedFromSessionId = null;
         if (approxTokenCount > MAX_SAFE_TOKENS) {
-            // Diagnostic breakdown — added after a report that this check
-            // fired on a conversation the user was confident was NOT
-            // actually that long, meaning the real cause might not be a
-            // genuinely oversized native seed at all, but something else
-            // inflating the count (a duplication bug, a runaway single
-            // message, etc.). Included directly in the response itself
-            // (not just server logs, which need separate Railway access)
-            // so the very next occurrence is immediately diagnosable from
-            // the browser's own network tab — pinpointing exactly which
-            // message(s) are responsible, rather than only the aggregate
-            // total.
-            const perMessageBreakdown = messagesForApi.map((m, i) => ({
-                index: i,
-                role: m.role,
-                chars: typeof m.content === 'string' ? m.content.length : 0,
-                preview: (typeof m.content === 'string' ? m.content : '').slice(0, 80)
-            }));
-            console.error(`[Chat] Oversized conversation detected: ~${approxTokenCount} tokens across ${messagesForApi.length} messages. sessionId=${sessionId || '(new)'}`, JSON.stringify(perMessageBreakdown));
-            return res.status(400).json({
-                success: false,
-                error: `This conversation is too long to continue — it's grown to roughly ${approxTokenCount.toLocaleString()} tokens, beyond what any AI model here can process in one request. This usually means it was forked from an already very long native conversation. Try forking a shorter one, or starting a fresh conversation instead.`,
-                debugBreakdown: perMessageBreakdown,
-                debugSessionId: sessionId || null,
-                debugFirstMessages: messagesForApi.slice(0, 3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content })),
-                debugLastMessages: messagesForApi.slice(-3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content }))
-            });
+            // Attempt to bridge BEFORE falling back to the oversized-
+            // conversation error — see bridgeConversation's own comment
+            // for the full reasoning. On success, messagesForApi/messages/
+            // sid below are all replaced with the new, seeded session's
+            // own values, and the request proceeds normally as if this
+            // had simply been the first message of the new session —
+            // only a bridged:true flag in the final response (plus the
+            // pre-existing sessionId field, now the NEW session's own id)
+            // signals to the frontend that this happened at all.
+            const bridgeResult = await bridgeConversation(sessionId || null, messagesForApi, model, req.userEmail, diaryEntryId);
+            if (bridgeResult.success) {
+                bridged = true;
+                bridgedFromSessionId = bridgeResult.archivedSessionId;
+                messagesForApi = bridgeResult.seededMessages;
+                messages = bridgeResult.seededMessages.slice();
+                sessionId = bridgeResult.newSessionId;
+            } else {
+                // Diagnostic breakdown — investigated after a report of this
+                // check firing on a conversation the user was confident was
+                // NOT that long. Traced via debugSessionId (null, ruling out
+                // any shared/cross-product database session) and confirmed
+                // directly against the source Diary entry ("Load earlier
+                // 1815 more") — this was a real, legitimate month-long
+                // native thread, ~1,835 turns, not a bug of any kind. Kept
+                // here regardless, since a future occurrence may not be:
+                // this still distinguishes a genuinely oversized
+                // conversation from some other, real cause inflating the
+                // count. Reached now only if bridging itself genuinely
+                // failed (e.g. Voyage unavailable) — a real degrade path,
+                // not the default outcome for a large conversation anymore.
+                const perMessageBreakdown = messagesForApi.map((m, i) => ({
+                    index: i,
+                    role: m.role,
+                    chars: typeof m.content === 'string' ? m.content.length : 0,
+                    preview: (typeof m.content === 'string' ? m.content : '').slice(0, 80)
+                }));
+                console.error(`[Chat] Oversized conversation detected AND bridging failed: ~${approxTokenCount} tokens across ${messagesForApi.length} messages. sessionId=${sessionId || '(new)'}`, JSON.stringify(perMessageBreakdown));
+                return res.status(400).json({
+                    success: false,
+                    error: `This conversation has grown to roughly ${approxTokenCount.toLocaleString()} tokens — a sign you've been using it exactly as intended, without ever needing to restart. At this size, though, it's beyond what any AI model here can process in a single request yet, and we couldn't automatically continue it in a new, linked conversation just now. Please try again in a moment, or start a fresh conversation to keep going.`,
+                    debugBreakdown: perMessageBreakdown,
+                    debugSessionId: sessionId || null,
+                    debugFirstMessages: messagesForApi.slice(0, 3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content })),
+                    debugLastMessages: messagesForApi.slice(-3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content }))
+                });
+            }
         }
 
         const content = await callWithFallback(model, messagesForApi, attachments);
@@ -326,12 +479,19 @@ router.post('/', requireAuth, async (req, res) => {
             res.setHeader('Connection', 'keep-alive');
             res.setHeader('X-Accel-Buffering', 'no');
             res.flushHeaders();
-            res.write(`data: ${JSON.stringify({ type: 'message', content, sessionId: sid })}\n\n`);
+            // bridged/bridgedFromSessionId — so the frontend can show a
+            // visible marker when a conversation was automatically
+            // bridged (see bridgeConversation's own comment). Included
+            // in both this streaming event and the non-streaming
+            // response below; previously neither path carried this at
+            // all, since bridging didn't exist yet when this response
+            // shape was first built.
+            res.write(`data: ${JSON.stringify({ type: 'message', content, sessionId: sid, bridged, bridgedFromSessionId, seededMessages: bridged ? messages : undefined })}\n\n`);
             res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
             return res.end();
         }
 
-        res.json({ success: true, content, sessionId: sid });
+        res.json({ success: true, content, sessionId: sid, bridged, bridgedFromSessionId, seededMessages: bridged ? messages : undefined });
     } catch (err) {
         console.error(`[Chat] ${model} error:`, err.message);
         const isRateLimit = err.message && err.message.toLowerCase().includes('rate limit');
