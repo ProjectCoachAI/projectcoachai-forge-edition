@@ -440,7 +440,7 @@
     <div class="diary-header">
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <button onclick="toggleDiarySidebar()" id="sidebarToggleBtn" title="Show/hide filters" aria-label="Toggle sidebar" style="background:none;border:0.5px solid #D6D2C8;border-radius:6px;width:32px;height:32px;flex-shrink:0;cursor:pointer;color:#4A4035;display:flex;align-items:center;justify-content:center;margin-top:2px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <div>
           <div class="diary-heading">Your Diary</div>
@@ -582,11 +582,11 @@
 
   </div>
   <div class="entry-panel-actions">
-    <button class="share-btn" onclick="panelCopy()">&#128203; Copy</button>
+    <button class="share-btn" onclick="panelCopy()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5A3.375 3.375 0 0 0 6.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0 0 15 2.25h-1.5a2.251 2.251 0 0 0-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 0 0-9-9Z"/></svg> Copy</button>
     <button class="share-btn" onclick="panelWhatsApp()">&#128172; WhatsApp</button>
     <button class="share-btn" onclick="panelEmail()">&#9993; Email</button>
     <button class="share-btn" onclick="panelPrint()">&#128424; Print</button>
-    <button class="share-btn" id="panelOriginalBtn" style="display:none" onclick="panelOpenOriginal()">&#128279; Open original &#8599;</button>
+    <button class="share-btn" id="panelOriginalBtn" style="display:none" onclick="panelOpenOriginal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/></svg> Open original &#8599;</button>
   </div>
 </div>
 
@@ -751,7 +751,35 @@ window.performEntrySync = performEntrySync;
 var activeDateFrom = '';
 var activeDateTo = '';
 
-// ── Quick Answer collapse/expand ─────────────────────────────────────────
+// ── Heroicons (outline, 24x24, stroke-width 1.5) ────────────────────────
+// Real path data, fetched directly from Heroicons' own official GitHub
+// repo (tailwindlabs/heroicons) — not reproduced from memory, since SVG
+// path coordinates are precise, multi-decimal strings not safe to guess
+// at. Scoped to header/action-bar icons first (Sync, Share, Copy, Move,
+// Delete, Continue in Forge), per direct confirmation — NOT a full,
+// all-at-once emoji replacement across the whole app, which risks
+// visual inconsistency if done in one uncontrolled pass. A single,
+// shared helper (rather than embedding full <svg> markup at every call
+// site) keeps each icon's real path data defined exactly once, so a
+// later fix or size change never risks the copies quietly drifting out
+// of sync with each other.
+var HEROICONS = {
+  'arrow-path': 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99',
+  'link': 'M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244',
+  'clipboard-document': 'M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5A3.375 3.375 0 0 0 6.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0 0 15 2.25h-1.5a2.251 2.251 0 0 0-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 0 0-9-9Z',
+  'folder': 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z',
+  'trash': 'm14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0',
+  'chat-bubble-left-right': 'M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155',
+  'magnifying-glass': 'm21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z'
+};
+function heroicon(name, size) {
+  size = size || 14;
+  var d = HEROICONS[name];
+  if (!d) { console.warn('[Heroicons] Unknown icon:', name); return ''; }
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="' + d + '"/></svg>';
+}
+
+
 // Persisted (same "wants it everywhere" reasoning as the sidebar/font
 // preferences above) — someone who wants this section out of the way
 // for focused reading shouldn't have to re-collapse it every visit.
@@ -1441,7 +1469,7 @@ function renderEntryCard(e) {
     '<div class="entry-body">' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">' +
         '<button onclick="event.stopPropagation();toggleEntrySearch(' + e.id + ')" title="Search in this entry" style="background:none;border:none;color:#9E9890;cursor:pointer;padding:2px 4px;display:flex;align-items:center;">' +
-          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
         '</button>' +
       '</div>' +
       '<div id="entry-search-bar-' + e.id + '" style="display:none;align-items:center;gap:8px;padding:6px 8px;margin-bottom:10px;background:#F5F3EE;border-radius:6px;">' +
@@ -1597,20 +1625,20 @@ function renderEntryCard(e) {
         ' — this entry\'s own content won\'t include what happens there. ' +
         '<a href="/continue.html?entryId=' + e.id + '" style="color:#C17D3C;font-weight:500;">Open the Forge conversation &rarr;</a>' +
         '<div style="margin-top:6px;">' +
-          '<button class="entry-btn accent" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">&#128260; Checking&hellip;</button>' +
+          '<button class="entry-btn accent" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">' + heroicon('arrow-path') + ' Checking&hellip;</button>' +
         '</div>' +
       '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
-        (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
-        '<button class="entry-btn accent" onclick="window.location.href=\'/continue.html?entryId=' + e.id + '\'">&#127807; Continue in Forge</button>' +
-        '<button class="entry-btn accent" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
-        '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
-        '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
-        '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
+        (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">' + heroicon('link') + ' Open original &#8599;</button>' : '') +
+        (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">' + heroicon('link') + ' New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
+        '<button class="entry-btn accent" onclick="window.location.href=\'/continue.html?entryId=' + e.id + '\'">' + heroicon('chat-bubble-left-right') + ' Continue in Forge</button>' +
+        '<button class="entry-btn accent" onclick="shareEntry(' + e.id + ')">' + heroicon('link') + ' Share</button>' +
+        '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">' + heroicon('clipboard-document') + ' Copy</button>' +
+        '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">' + heroicon('folder') + ' Move to…</button>' +
+        '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">' + heroicon('trash') + ' Delete</button>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -3556,7 +3584,7 @@ async function renderUnifiedEntryContent(entryId) {
       '<button class="entry-btn" id="loadEarlierEntryBtn-' + entryId + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + entryId + ')" style="font-size:12px;">' +
         'Load earlier (' + startIndex + ' more)' +
       '</button>' +
-      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + entryId + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">&#128260;</button>' +
+      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + entryId + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">' + heroicon('arrow-path') + '</button>' +
     '</div>';
   }
   for (var i = startIndex; i < total; i++) html += nativeSegments[i];
@@ -3632,7 +3660,7 @@ function renderEntryContentHtml(e) {
       '<button class="entry-btn" id="loadEarlierEntryBtn-' + e.id + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + e.id + ')" style="font-size:12px;">' +
         'Load earlier (' + startIndex + ' more)' +
       '</button>' +
-      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + e.id + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">&#128260;</button>' +
+      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + e.id + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">' + heroicon('arrow-path') + '</button>' +
     '</div>';
   }
   for (var i = startIndex; i < total; i++) html += segments[i];
@@ -3857,7 +3885,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
           <button onclick="zoomPdfIn()" aria-label="Zoom in" style="background:none;border:0.5px solid #D6D2C8;border-radius:5px;color:#6B6559;cursor:pointer;padding:2px 8px;font-size:14px;line-height:1.4;" title="Zoom in">&plus;</button>
         </div>
         <button onclick="toggleAttachmentSearch()" aria-label="Search" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Search in document">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
         <button onclick="printAttachmentFromReader()" aria-label="Print" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Print">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
