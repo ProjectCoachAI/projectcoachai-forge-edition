@@ -278,11 +278,14 @@ router.post('/', requireAuth, async (req, res) => {
                 chars: typeof m.content === 'string' ? m.content.length : 0,
                 preview: (typeof m.content === 'string' ? m.content : '').slice(0, 80)
             }));
-            console.error(`[Chat] Oversized conversation detected: ~${approxTokenCount} tokens across ${messagesForApi.length} messages.`, JSON.stringify(perMessageBreakdown));
+            console.error(`[Chat] Oversized conversation detected: ~${approxTokenCount} tokens across ${messagesForApi.length} messages. sessionId=${sessionId || '(new)'}`, JSON.stringify(perMessageBreakdown));
             return res.status(400).json({
                 success: false,
                 error: `This conversation is too long to continue — it's grown to roughly ${approxTokenCount.toLocaleString()} tokens, beyond what any AI model here can process in one request. This usually means it was forked from an already very long native conversation. Try forking a shorter one, or starting a fresh conversation instead.`,
-                debugBreakdown: perMessageBreakdown
+                debugBreakdown: perMessageBreakdown,
+                debugSessionId: sessionId || null,
+                debugFirstMessages: messagesForApi.slice(0, 3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content })),
+                debugLastMessages: messagesForApi.slice(-3).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 500) : m.content }))
             });
         }
 
