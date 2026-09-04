@@ -276,12 +276,17 @@ function renderChatAttachmentPreviews() {
     if (f.type === 'pdf') {
       thumb = '<div onclick="event.stopPropagation();openAttachmentReader(\'' + f.base64 + '\',\'' + escapedFilename + '\',\'pdf\')" style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;background:#F5F3EE;cursor:zoom-in;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg></div>';
     } else if (f.type === 'txt') {
-      // Not clickable-to-preview like PDF/image — this is staged, raw
-      // text with no server URL yet at all (unlike PDF/image, which
-      // still work from local base64 directly), and building a separate
-      // "preview raw text before sending" modal just for this case would
-      // be real scope creep beyond what was flagged as a trivial add.
-      thumb = '<div style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;background:#F5F3EE;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg></div>';
+      // Now clickable, same as PDF/image — confirmed directly the
+      // earlier "no server URL yet at all" reasoning doesn't actually
+      // block this: the same data: URL technique already proven to
+      // work for the sent-message chip (openAttachmentReader's own
+      // renderTextIntoReader does a plain fetch(url).then(r=>r.text()),
+      // and fetch() genuinely supports data: URLs directly) works
+      // exactly as well here, from the same, already-available
+      // f.textContent — no server upload needed at all, before or
+      // after sending.
+      var txtDataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(f.textContent || '');
+      thumb = '<div onclick="event.stopPropagation();openAttachmentReader(\'' + txtDataUrl.replace(/'/g, "\\'") + '\',\'' + escapedFilename + '\',\'txt\')" style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;background:#F5F3EE;cursor:zoom-in;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg></div>';
     } else {
       thumb = '<img onclick="event.stopPropagation();openImageZoom(\'' + f.base64 + '\')" src="' + f.base64 + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:0.5px solid #D6D2C8;cursor:zoom-in;"/>';
     }
@@ -298,6 +303,40 @@ function renderChatAttachmentPreviews() {
 // into this specific preview row.
 function escHtmlChat(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Splits a persisted message's own content back into the user's
+// original typed text plus any .txt attachment(s) folded into it at
+// send time — confirmed as a real, direct gap: the immediate-send bubble
+// already correctly showed just the original text plus a chip (using the
+// in-memory file data available at that exact moment), but the
+// RE-RENDER paths (loading an existing session on page load, or
+// revisiting it) render straight from the persisted, full content
+// string, which has no separate memory of "this was originally a
+// chip" at all — only the raw "--- Attached file: X.txt ---\n<content>"
+// text baked directly into it. Parsed back out here via the same,
+// exact delimiter format used when building it at send time, so both
+// paths now show a consistent chip regardless of when the message is
+// rendered.
+function extractTxtAttachmentsFromContent(content) {
+  var text = typeof content === 'string' ? content : '';
+  // Leading \n\n is deliberately OPTIONAL here (\n{0,2}, not \n\n) —
+  // confirmed as a real, direct edge case: if the user's own typed text
+  // was empty to start with, the appended "\n\n--- Attached file..."
+  // portion becomes the very start of the string, and the final
+  // .trim() at send time strips those leading newlines off entirely
+  // before persisting. A regex requiring them unconditionally would
+  // silently fail to match this exact, real case.
+  var re = /\n{0,2}--- Attached file: (.+?) ---\n([\s\S]*?)(?=\n{0,2}--- Attached file: |$)/g;
+  var attachments = [];
+  var match;
+  var firstMatchIndex = -1;
+  while ((match = re.exec(text)) !== null) {
+    if (firstMatchIndex === -1) firstMatchIndex = match.index;
+    attachments.push({ filename: match[1], textContent: match[2] });
+  }
+  var displayText = firstMatchIndex === -1 ? text : text.slice(0, firstMatchIndex);
+  return { displayText: displayText, txtAttachments: attachments };
 }
 
 function handleChatFilesSelected(fileList) {
@@ -579,17 +618,20 @@ function addMessageToDOM(role, content, opts) {
     var pdfChipsHtml = (opts.pdfAttachments || []).map(function(p) {
       return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + p.url.replace(/'/g, "\\'") + '\',\'' + (p.filename || 'document.pdf').replace(/'/g, "\\'") + '\',\'pdf\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>' + escHtmlChat(p.filename || 'document.pdf') + '</div>';
     }).join('<br/>');
-    // .txt chips — confirmed as a real, direct gap: since a .txt file's
-    // own content is folded directly into the sent message text (not
-    // displayed inline, to avoid clutter), the sent bubble previously
-    // showed no trace at all that a file was ever attached, unlike
-    // images/PDFs which always keep a persistent, visible chip. Not
-    // clickable-to-preview like PDF/image — this is genuinely, already
-    // sent as part of the message itself, and there's no separate
-    // server URL for it at all to build a preview modal from; a plain,
-    // visible chip is enough to confirm what was attached.
+    // .txt chips — clickable, opening the same reader modal as PDF, via
+    // a data: URL built directly from the file's own text content
+    // (openAttachmentReader's own renderTextIntoReader does a plain
+    // fetch(url).then(r => r.text()), and fetch() genuinely supports
+    // data: URLs directly — no server upload needed at all for this,
+    // unlike images/PDFs, since the full text is already available
+    // right here). Revisited from an earlier, more conservative
+    // decision to make this non-clickable — confirmed directly that a
+    // clickable, consistent-with-PDF/image chip is what was actually
+    // expected here, and the data: URL approach makes it just as
+    // achievable as the plain, non-clickable version.
     var txtChipsHtml = (opts.txtAttachments || []).map(function(t) {
-      return '<div style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;font-size:12px;color:#6B6559;">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>' + escHtmlChat(t.filename || 'document.txt') + '</div>';
+      var dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(t.textContent || '');
+      return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (t.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'txt\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>' + escHtmlChat(t.filename || 'document.txt') + '</div>';
     }).join('<br/>');
     div.innerHTML = '<div class="chat-msg-body">' + imgHtml + pdfChipsHtml + txtChipsHtml + rendered + '</div>';
   }
@@ -1128,9 +1170,15 @@ window.sendChatMessage = sendChatMessage;
     for (var i = startIndex; i < total; i++) {
       var msgImageUrls = (allLoadedMessages[i].attachmentUrls || []).filter(function(a) { return a.type !== 'pdf'; }).map(function(a) { return a.url; });
       var msgPdfs = (allLoadedMessages[i].attachmentUrls || []).filter(function(a) { return a.type === 'pdf'; }).map(function(a) { return { url: a.url, filename: a.filename || 'document.pdf' }; });
-      addMessageToDOM(allLoadedMessages[i].role, allLoadedMessages[i].content, Object.assign(
+      // .txt attachments have no separate attachmentUrls entry at all —
+      // unlike images/PDFs, their own content was only ever folded
+      // directly into the message's own persisted content string, so
+      // it's parsed back out here rather than read from a field.
+      var msgParsed = extractTxtAttachmentsFromContent(allLoadedMessages[i].content);
+      addMessageToDOM(allLoadedMessages[i].role, msgParsed.displayText, Object.assign(
         msgImageUrls.length ? { imagePreviewURLs: msgImageUrls } : {},
-        msgPdfs.length ? { pdfAttachments: msgPdfs } : {}
+        msgPdfs.length ? { pdfAttachments: msgPdfs } : {},
+        msgParsed.txtAttachments.length ? { txtAttachments: msgParsed.txtAttachments } : {}
       ));
     }
   }
@@ -1299,9 +1347,11 @@ window.sendChatMessage = sendChatMessage;
       var msg = allLoadedMessages[i];
       var msgImageUrls2 = (msg.attachmentUrls || []).filter(function(a) { return a.type !== 'pdf'; }).map(function(a) { return a.url; });
       var msgPdfs2 = (msg.attachmentUrls || []).filter(function(a) { return a.type === 'pdf'; }).map(function(a) { return { url: a.url, filename: a.filename || 'document.pdf' }; });
-      var el = addMessageToDOM(msg.role, msg.content, Object.assign({ insertBeforeEl: anchor },
+      var msgParsed2 = extractTxtAttachmentsFromContent(msg.content);
+      var el = addMessageToDOM(msg.role, msgParsed2.displayText, Object.assign({ insertBeforeEl: anchor },
         msgImageUrls2.length ? { imagePreviewURLs: msgImageUrls2 } : {},
-        msgPdfs2.length ? { pdfAttachments: msgPdfs2 } : {}
+        msgPdfs2.length ? { pdfAttachments: msgPdfs2 } : {},
+        msgParsed2.txtAttachments.length ? { txtAttachments: msgParsed2.txtAttachments } : {}
       ));
       anchor = el;
     }
