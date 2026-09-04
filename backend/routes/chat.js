@@ -224,7 +224,50 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     try {
-        const content = await callWithFallback(model, messages, attachments);
+        // Confirmed as a real, direct bug: `messages` here is the exact
+        // same array (and same newUserMessage object reference) that
+        // also gets persisted to the database with attachmentUrls
+        // attached, for the revisit/re-render feature. Passing it
+        // straight to an AI provider's own API sends that same field
+        // along too — providers validate message shape strictly and
+        // reject unrecognized fields outright (confirmed directly in
+        // Railway logs: "messages.5.attachmentUrls: Extra inputs are
+        // not permitted"). Stripped here into a separate, clean copy
+        // for the actual API call only — the original `messages` array
+        // used for persistence below is untouched.
+        const messagesForApi = messages.map(m => {
+            if (!m.attachmentUrls) return m;
+            const { attachmentUrls, ...clean } = m;
+            return clean;
+        });
+
+        // Confirmed directly in Railway logs: a conversation forked from
+        // an already-extremely-long native thread can be so large from
+        // the start that EVERY provider's own token limit is exceeded on
+        // the very first message — 1,172,116 tokens seen in one real
+        // case, roughly 6x even Claude's own 200k ceiling. Previously
+        // this failed completely silently to the user, retried forever
+        // with the exact same generic "temporarily unavailable" message
+        // each time, since the real cause only ever appeared in server
+        // logs. Checked here, BEFORE ever attempting a call that's
+        // already guaranteed to fail for every provider — an honest,
+        // specific error beats a repeatable, silent dead end. Rough
+        // estimate (characters/4), not an exact token count — deliberately
+        // conservative against ChatGPT's own 128k ceiling specifically,
+        // since it's the smallest limit among this endpoint's supported
+        // providers, so a conversation passing this check should have a
+        // real shot with any of them.
+        const approxCharCount = messagesForApi.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0);
+        const approxTokenCount = Math.ceil(approxCharCount / 4);
+        const MAX_SAFE_TOKENS = 100000;
+        if (approxTokenCount > MAX_SAFE_TOKENS) {
+            return res.status(400).json({
+                success: false,
+                error: `This conversation is too long to continue — it's grown to roughly ${approxTokenCount.toLocaleString()} tokens, beyond what any AI model here can process in one request. This usually means it was forked from an already very long native conversation. Try forking a shorter one, or starting a fresh conversation instead.`
+            });
+        }
+
+        const content = await callWithFallback(model, messagesForApi, attachments);
         messages.push({ role: 'assistant', content });
 
         // Persist session

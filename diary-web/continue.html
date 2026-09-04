@@ -849,7 +849,20 @@ async function sendChatMessage() {
     input.value = text;
     autoResizeChatInput(input);
     chatHistory.pop();
-    addMessageToDOM('assistant', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>' + (err.message || 'Something went wrong.'));
+    // Confirmed as a real, direct bug: the icon was previously
+    // concatenated INTO the content string itself, which then went
+    // through renderWithBubbles() -> Forge.renderMarkdown() — a markdown
+    // renderer correctly escapes raw HTML tags as a safety measure
+    // (it shouldn't trust arbitrary HTML from AI-generated text), so the
+    // <svg> markup itself was being shown as literal, escaped text
+    // rather than rendered. Fixed by keeping the icon entirely separate
+    // from the markdown-processed text — inserted directly into the
+    // resulting message body afterward, bypassing that escaping path.
+    var errorMsgEl = addMessageToDOM('assistant', err.message || 'Something went wrong.');
+    var errorBodyEl = errorMsgEl && errorMsgEl.querySelector('.chat-msg-body');
+    if (errorBodyEl) {
+      errorBodyEl.insertAdjacentHTML('afterbegin', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>');
+    }
     Forge.showToast(err.message || 'Chat request failed.', 'error');
   } finally {
     chatIsSending = false;
