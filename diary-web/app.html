@@ -366,12 +366,12 @@
   <nav class="diary-nav">
     <a href="/index.html" style="text-decoration:none"><div class="diary-logo">Diary<span>.</span></div></a>
     <div class="nav-search">
-      <span class="nav-search-icon" style="cursor:pointer" onclick="runSearch()" title="Search">&#128269;</span>
+      <span class="nav-search-icon" style="cursor:pointer;display:inline-flex;" onclick="runSearch()" title="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg></span>
       <input type="text" id="diarySearch" placeholder="Search your diary... (press Enter)" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();runSearch();}" />
       <span id="searchCountBadge" style="display:none;position:absolute;right:26px;top:50%;transform:translateY(-50%);font-size:11px;color:#9E9890;white-space:nowrap;pointer-events:none;"></span>
       <span id="searchClearBtn" onclick="clearSearchInput()" title="Clear search" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:#9E9890;font-size:14px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;">&times;</span>
     </div>
-    <span onclick="openSearchHelpModal()" title="Search tips" style="cursor:pointer;color:#9E9890;font-size:14px;flex-shrink:0;">&#9432;</span>
+    <span onclick="openSearchHelpModal()" title="Search tips" style="cursor:pointer;color:#9E9890;flex-shrink:0;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg></span>
     <div id="textSizeControl" style="display:flex;align-items:center;gap:2px;flex-shrink:0;" title="Text size">
       <button onclick="adjustDiaryFontScale(-1)" style="width:24px;height:24px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;color:#4A4035;font-size:11px;font-weight:700;cursor:pointer;line-height:1;">A&#8722;</button>
       <button onclick="adjustDiaryFontScale(1)" style="width:24px;height:24px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;color:#4A4035;font-size:14px;font-weight:700;cursor:pointer;line-height:1;">A&#43;</button>
@@ -381,8 +381,8 @@
         <div id="navAvatar" style="width:30px;height:30px;border-radius:50%;background:#C17D3C;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;overflow:hidden;flex-shrink:0;"></div>
         <span class="nav-user" id="navUser"></span>
       </a>
-      <button class="btn-import" id="chatWithAiBtn" onclick="window.location.href='/chat.html'">&#9889; Chat with AI</button>
-      <button class="btn-import" onclick="openImportModal()">&#8627; Import</button>
+      <button class="btn-import" id="chatWithAiBtn" onclick="window.location.href='/chat.html'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>Chat with AI</button>
+      <button class="btn-import" onclick="openImportModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"/></svg>Import</button>
       <!-- Try Forge nav button hidden for Diary launch -->
       <button class="btn-signout" onclick="handleSignOut()">Sign out</button>
     </div>
@@ -406,7 +406,7 @@
       </div>
     </div>
     <div class="sidebar-divider"></div>
-    <div class="cat-item" onclick="toggleFavoriteFilter()" id="favorite-toggle"><span>&#11088; Favorites</span><span class="cat-count" id="favorite-count">0</span></div>
+    <div class="cat-item" onclick="toggleFavoriteFilter()" id="favorite-toggle"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"/></svg>Favorites</span><span class="cat-count" id="favorite-count">0</span></div>
     <div class="sidebar-divider"></div>
     <div class="sidebar-title">Source</div>
     <div id="sourceList">
@@ -424,7 +424,7 @@
     <div class="sidebar-divider"></div>
     <div class="sidebar-title" onclick="toggleDateRangeSection()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
       <span>Date range</span>
-      <span id="dateRangeCollapseIcon" style="font-size:10px;color:#9E9890;transition:transform 0.15s;">&#9660;</span>
+      <span id="dateRangeCollapseIcon" style="color:#9E9890;transition:transform 0.15s;display:inline-flex;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>
     </div>
     <div id="dateRangeFields" style="padding:0 4px;display:flex;flex-direction:column;gap:6px;">
       <input type="date" id="dateFromInput" style="font-size:12px;padding:5px 6px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:'Inter',sans-serif;color:#1B2A4A;" onchange="applyDateFilter()" />
@@ -432,7 +432,7 @@
       <a href="#" onclick="clearDateFilter();return false;" id="dateFilterClear" style="display:none;font-size:11px;color:#9E9890;text-decoration:none;">&times; Clear date range</a>
     </div>
     <div class="sidebar-divider"></div>
-    <a href="#" onclick="runEmbeddingBackfill(this);return false;" style="display:block;font-size:11px;color:#9E9890;text-decoration:none;padding:0 4px;">&#10024; Enable semantic search for older entries</a>
+    <a href="#" onclick="runEmbeddingBackfill(this);return false;" style="display:block;font-size:11px;color:#9E9890;text-decoration:none;padding:0 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>Enable semantic search for older entries</a>
   </div>
 
   <!-- Main -->
@@ -453,8 +453,8 @@
     <!-- Bulk action bar -->
     <div class="bulk-bar" id="bulkBar">
       <span class="bulk-bar-count" id="bulkCount">0 selected</span>
-      <button class="bulk-btn bulk-btn-favorite" id="bulkFavoriteBtn" onclick="bulkFavorite()">&#11088; Add to favorites</button>
-      <button class="bulk-btn bulk-btn-delete" onclick="bulkDelete()">&#128465; Delete selected</button>
+      <button class="bulk-btn bulk-btn-favorite" id="bulkFavoriteBtn" onclick="bulkFavorite()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"/></svg>Add to favorites</button>
+      <button class="bulk-btn bulk-btn-delete" onclick="bulkDelete()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>Delete selected</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear selection</button>
     </div>
     <!-- Select all -->
@@ -466,8 +466,8 @@
     <!-- Quick Answer -->
     <div class="qa-section" id="qaSection">
       <div class="qa-title" onclick="toggleQuickAnswerSection()">
-        <span>&#9889; Quick Answer</span>
-        <button class="qa-collapse-btn" aria-label="Collapse Quick Answer" title="Show/hide Quick Answer">&#9660;</button>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>Quick Answer</span>
+        <button class="qa-collapse-btn" aria-label="Collapse Quick Answer" title="Show/hide Quick Answer"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></button>
       </div>
       <div class="qa-row">
         <input type="text" id="qaInput" class="qa-input" placeholder="Ask anything — answer saves straight to your Diary..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){askQuick();event.preventDefault();}" />
@@ -491,7 +491,7 @@
         <div id="qaAnswerContent"></div>
         <div class="qa-note-row">
           <textarea class="qa-note" id="qaNote" placeholder="Add a note before saving... (optional) e.g. for the quarterly report"></textarea>
-          <button class="qa-save-btn" onclick="saveQuickAnswer()">&#128214; Save to Diary</button>
+          <button class="qa-save-btn" onclick="saveQuickAnswer()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>Save to Diary</button>
         </div>
       </div>
     </div>
@@ -534,8 +534,8 @@
 <div class="import-overlay" id="importOverlay">
   <div class="import-modal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-      <div class="import-title">&#8627; Import conversation</div>
-      <button onclick="closeImportModal()" style="background:none;border:none;color:#9E9890;font-size:18px;cursor:pointer;padding:0;line-height:1;">&#10005;</button>
+      <div class="import-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"/></svg>Import conversation</div>
+      <button onclick="closeImportModal()" style="background:none;border:none;color:#9E9890;cursor:pointer;padding:0;line-height:1;display:inline-flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>
     </div>
     <p class="import-sub">Paste any conversation from Claude, ChatGPT, Gemini, or any other AI — Diary will detect the source and save it automatically.</p>
     <label class="import-label">AI Provider</label>
@@ -557,7 +557,7 @@
     <input id="importQuestion" type="text" class="import-input" placeholder="e.g. What is the best way to learn Python?" />
     <label class="import-label">Conversation</label>
     <textarea id="importText" class="import-textarea" placeholder="Paste your AI conversation here..." oninput="detectProvider()"></textarea>
-    <p class="import-tip">&#128161; Tip: Copy the full conversation including your question for the best result.</p>
+    <p class="import-tip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/></svg>Tip: Copy the full conversation including your question for the best result.</p>
     <div class="import-actions">
       <button class="btn-cancel" onclick="closeImportModal()">Cancel</button>
       <button id="importSaveBtn" class="btn-save" onclick="saveImport()">Save to Diary</button>
@@ -571,7 +571,7 @@
 <div class="entry-panel" id="entryPanel">
   <div class="entry-panel-header">
     <button class="entry-panel-back" onclick="closeEntry()">&#8592;</button>
-    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;" title="Toggle favorite">&#9734;</button>
+    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;" title="Toggle favorite"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg></button>
     <span class="entry-panel-source" id="panelSource"></span>
     <span class="entry-panel-cat" id="panelCat" style="display:none"></span>
     <span class="entry-panel-date" id="panelDate"></span>
@@ -583,9 +583,9 @@
   </div>
   <div class="entry-panel-actions">
     <button class="share-btn" onclick="panelCopy()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5A3.375 3.375 0 0 0 6.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0 0 15 2.25h-1.5a2.251 2.251 0 0 0-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 0 0-9-9Z"/></svg> Copy</button>
-    <button class="share-btn" onclick="panelWhatsApp()">&#128172; WhatsApp</button>
-    <button class="share-btn" onclick="panelEmail()">&#9993; Email</button>
-    <button class="share-btn" onclick="panelPrint()">&#128424; Print</button>
+    <button class="share-btn" onclick="panelWhatsApp()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg>WhatsApp</button>
+    <button class="share-btn" onclick="panelEmail()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>Email</button>
+    <button class="share-btn" onclick="panelPrint()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"/></svg>Print</button>
     <button class="share-btn" id="panelOriginalBtn" style="display:none" onclick="panelOpenOriginal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/></svg> Open original &#8599;</button>
   </div>
 </div>
@@ -770,13 +770,49 @@ var HEROICONS = {
   'folder': 'M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z',
   'trash': 'm14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0',
   'chat-bubble-left-right': 'M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155',
-  'magnifying-glass': 'm21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z'
+  'magnifying-glass': 'm21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z',
+  'star': 'M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z',
+  'clock': 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  'x-mark': 'M6 18 18 6M6 6l12 12',
+  'arrow-down-on-square': 'M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25',
+  'information-circle': 'm11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z',
+  'chevron-left': 'M15.75 19.5 8.25 12l7.5-7.5',
+  'chevron-right': 'm8.25 4.5 7.5 7.5-7.5 7.5',
+  'chevron-up': 'm4.5 15.75 7.5-7.5 7.5 7.5',
+  'chevron-down': 'm19.5 8.25-7.5 7.5-7.5-7.5',
+  'photo': 'm2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z',
+  'light-bulb': 'M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18',
+  'envelope': 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75',
+  'document': 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z',
+  'arrow-down-tray': 'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3',
+  'exclamation-triangle': 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z',
+  'chat-bubble-oval-left-ellipsis': 'M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z',
+  'sparkles': 'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z',
+  'bolt': 'm3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z',
+  'book-open': 'M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25',
+  'hand-thumb-up': 'M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.958 8.958 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z',
+  'hand-thumb-down': 'M7.498 15.25H4.372c-1.026 0-1.945-.694-2.054-1.715a12.137 12.137 0 0 1-.068-1.285c0-2.848.992-5.464 2.649-7.521C5.287 4.247 5.886 4 6.504 4h4.016a4.5 4.5 0 0 1 1.423.23l3.114 1.04a4.5 4.5 0 0 0 1.423.23h1.294M7.498 15.25c.618 0 .991.724.725 1.282A7.471 7.471 0 0 0 7.5 19.75 2.25 2.25 0 0 0 9.75 22a.75.75 0 0 0 .75-.75v-.633c0-.573.11-1.14.322-1.672.304-.76.93-1.33 1.653-1.715a9.04 9.04 0 0 0 2.86-2.4c.498-.634 1.226-1.08 2.032-1.08h.384m-10.253 1.5H9.7m8.075-9.75c.01.05.027.1.05.148.593 1.2.925 2.55.925 3.977 0 1.487-.36 2.89-.999 4.125m.023-8.25c-.076-.365.183-.75.575-.75h.908c.889 0 1.713.518 1.972 1.368.339 1.11.521 2.287.521 3.507 0 1.553-.295 3.036-.831 4.398-.306.774-1.086 1.227-1.918 1.227h-1.053c-.472 0-.745-.556-.5-.96a8.95 8.95 0 0 0 .303-.54'
 };
-function heroicon(name, size) {
+// Solid-fill variants (used specifically for "this is currently active/on"
+// states, e.g. a favorited item — fill:currentColor instead of an
+// outline stroke, matching Heroicons' own outline-vs-solid convention
+// for exactly this kind of state distinction) — kept in a genuinely
+// separate map from the outline paths above, since solid icons use
+// fill-rule/clip-rule attributes the outline path data doesn't have at
+// all, not just a different `d` value.
+var HEROICONS_SOLID = {
+  'star': 'M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z',
+  'hand-thumb-up': 'M7.493 18.5c-.425 0-.82-.236-.975-.632A7.48 7.48 0 0 1 6 15.125c0-1.75.599-3.358 1.602-4.634.151-.192.373-.309.6-.397.473-.183.89-.514 1.212-.924a9.042 9.042 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75A.75.75 0 0 1 15 2a2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H14.23c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23h-.777ZM2.331 10.727a11.969 11.969 0 0 0-.831 4.398 12 12 0 0 0 .52 3.507C2.28 19.482 3.105 20 3.994 20H4.9c.445 0 .72-.498.523-.898a8.963 8.963 0 0 1-.924-3.977c0-1.708.476-3.305 1.302-4.666.245-.403-.028-.959-.5-.959H4.25c-.832 0-1.612.453-1.918 1.227Z',
+  'hand-thumb-down': 'M15.73 5.5h1.035A7.465 7.465 0 0 1 18 9.625a7.465 7.465 0 0 1-1.235 4.125h-.148c-.806 0-1.534.446-2.031 1.08a9.04 9.04 0 0 1-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.499 4.499 0 0 0-.322 1.672v.633A.75.75 0 0 1 9 22a2.25 2.25 0 0 1-2.25-2.25c0-1.152.26-2.243.723-3.218.266-.558-.107-1.282-.725-1.282H3.622c-1.026 0-1.945-.694-2.054-1.715A12.137 12.137 0 0 1 1.5 12.25c0-2.848.992-5.464 2.649-7.521C4.537 4.247 5.136 4 5.754 4H9.77a4.5 4.5 0 0 1 1.423.23l3.114 1.04a4.5 4.5 0 0 0 1.423.23ZM21.669 14.023c.536-1.362.831-2.845.831-4.398 0-1.22-.182-2.398-.52-3.507-.26-.85-1.084-1.368-1.973-1.368H19.1c-.445 0-.72.498-.523.898.591 1.2.924 2.55.924 3.977a8.958 8.958 0 0 1-1.302 4.666c-.245.403.028.959.5.959h1.053c.832 0 1.612-.453 1.918-1.227Z'
+};
+function heroicon(name, size, solid) {
   size = size || 14;
-  var d = HEROICONS[name];
-  if (!d) { console.warn('[Heroicons] Unknown icon:', name); return ''; }
-  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="' + d + '"/></svg>';
+  var map = solid ? HEROICONS_SOLID : HEROICONS;
+  var d = map[name];
+  if (!d) { console.warn('[Heroicons] Unknown icon:', name, solid ? '(solid)' : '(outline)'); return ''; }
+  var fillAttrs = solid ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="1.5"';
+  var pathAttrs = solid ? 'fill-rule="evenodd" clip-rule="evenodd"' : 'stroke-linecap="round" stroke-linejoin="round"';
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" ' + fillAttrs + ' style="vertical-align:-2px;margin-right:3px;flex-shrink:0;"><path ' + pathAttrs + ' d="' + d + '"/></svg>';
 }
 
 
@@ -1066,14 +1102,14 @@ function renderPagination() {
   }
   var p = paginationMeta.page, tp = paginationMeta.totalPages;
   var html = '<div class="diary-pagination">';
-  html += '<button class="page-btn" onclick="goToPage(' + (p - 1) + ')" ' + (p <= 1 ? 'disabled' : '') + '>&#8249; Prev</button>';
+  html += '<button class="page-btn" onclick="goToPage(' + (p - 1) + ')" ' + (p <= 1 ? 'disabled' : '') + '><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>Prev</button>';
   var start = Math.max(1, p - 2), end = Math.min(tp, p + 2);
   if (start > 1) html += '<button class="page-btn" onclick="goToPage(1)">1</button>' + (start > 2 ? '<span class="page-info">&hellip;</span>' : '');
   for (var i = start; i <= end; i++) {
     html += '<button class="page-btn' + (i === p ? ' active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
   }
   if (end < tp) html += (end < tp - 1 ? '<span class="page-info">&hellip;</span>' : '') + '<button class="page-btn" onclick="goToPage(' + tp + ')">' + tp + '</button>';
-  html += '<button class="page-btn" onclick="goToPage(' + (p + 1) + ')" ' + (p >= tp ? 'disabled' : '') + '>Next &#8250;</button>';
+  html += '<button class="page-btn" onclick="goToPage(' + (p + 1) + ')" ' + (p >= tp ? 'disabled' : '') + '>Next<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-left:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg></button>';
   html += '<span class="page-info">' + paginationMeta.total + ' total</span>';
   html += '</div>';
   el.innerHTML = html;
@@ -1273,7 +1309,7 @@ async function searchDiary(q) {
   var previousHtml = entriesEl.innerHTML;
   input.disabled = true;
   if (icon) icon.style.pointerEvents = 'none';
-  entriesEl.innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">&#8987;</div><h3>Searching&hellip;</h3></div>';
+  entriesEl.innerHTML = '<div class="diary-empty"><div class="diary-empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></div><h3>Searching&hellip;</h3></div>';
   try {
     var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     var params = ['q=' + encodeURIComponent(q), 'tz=' + encodeURIComponent(tz)];
@@ -1464,7 +1500,7 @@ function renderEntryCard(e) {
           '<span class="entry-date">' + new Date(e.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ' · ' + date + '</span>' +
         '</div>' +
       '</div>' +
-      '<span class="entry-chevron">&#9660;</span>' +
+      '<span class="entry-chevron">' + heroicon('chevron-down', 10) + '</span>' +
     '</div>' +
     '<div class="entry-body">' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">' +
@@ -1475,8 +1511,8 @@ function renderEntryCard(e) {
       '<div id="entry-search-bar-' + e.id + '" style="display:none;align-items:center;gap:8px;padding:6px 8px;margin-bottom:10px;background:#F5F3EE;border-radius:6px;">' +
         '<input id="entry-search-input-' + e.id + '" type="text" placeholder="Search in this entry..." oninput="runEntrySearch(' + e.id + ')" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();if(event.key===\'Enter\'){event.preventDefault();if(event.shiftKey){prevEntrySearchMatch(' + e.id + ')}else{nextEntrySearchMatch(' + e.id + ')}}else if(event.key===\'Escape\'){toggleEntrySearch(' + e.id + ')}" style="flex:1;font-size:12px;padding:5px 8px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>' +
         '<span id="entry-search-counter-' + e.id + '" style="font-size:11px;color:#9E9890;white-space:nowrap;min-width:48px;text-align:center;"></span>' +
-        '<button onclick="event.stopPropagation();prevEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;font-size:14px;">&#8593;</button>' +
-        '<button onclick="event.stopPropagation();nextEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;font-size:14px;">&#8595;</button>' +
+        '<button onclick="event.stopPropagation();prevEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;">' + heroicon('chevron-up', 12) + '</button>' +
+        '<button onclick="event.stopPropagation();nextEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;">' + heroicon('chevron-down', 12) + '</button>' +
         '<button onclick="event.stopPropagation();toggleEntrySearch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;font-size:14px;">&times;</button>' +
       '</div>' +
 
@@ -1583,7 +1619,7 @@ function renderEntryCard(e) {
         // event.stopPropagation() is required: the row itself already
         // has its own click handler for opening the attachment, and
         // this button must not also trigger that.
-        var deleteBtn = '<button class="attachment-delete-btn" onclick="event.stopPropagation();deleteAttachment(' + e.id + ',\'' + escHtml(att.filename || '').replace(/'/g, "\\'") + '\',\'' + (att.type || '').replace(/'/g, "\\'") + '\')" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;font-size:13px;padding:2px 6px;flex-shrink:0;">&#10005;</button>';
+        var deleteBtn = '<button class="attachment-delete-btn" onclick="event.stopPropagation();deleteAttachment(' + e.id + ',\'' + escHtml(att.filename || '').replace(/'/g, "\\'") + '\',\'' + (att.type || '').replace(/'/g, "\\'") + '\')" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;padding:2px 6px;flex-shrink:0;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>';
         // NOTE: added — Priority 8's proactive-notice decision was
         // designed but never actually implemented in this UI. Before
         // this, the ONLY visible difference between a captured and a
@@ -1620,7 +1656,7 @@ function renderEntryCard(e) {
       // than making the person hunt for the "Continue in Forge" button
       // again lower in the actions row.
       (_emeta && _emeta.chatSessionId ? '<div style="font-size:12px;color:#6B6559;margin-top:10px;padding:8px 12px;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.25);border-radius:8px;line-height:1.5;">' +
-        '&#127807; Continued in Forge' +
+        heroicon('chat-bubble-left-right') + ' Continued in Forge' +
         (_emeta.forkedToForgeAt ? ' on ' + new Date(_emeta.forkedToForgeAt).toLocaleDateString(undefined, {month:'short',day:'numeric',year:'numeric'}) : '') +
         ' — this entry\'s own content won\'t include what happens there. ' +
         '<a href="/continue.html?entryId=' + e.id + '" style="color:#C17D3C;font-weight:500;">Open the Forge conversation &rarr;</a>' +
@@ -1638,6 +1674,8 @@ function renderEntryCard(e) {
         '<button class="entry-btn accent" onclick="shareEntry(' + e.id + ')">' + heroicon('link') + ' Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">' + heroicon('clipboard-document') + ' Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">' + heroicon('folder') + ' Move to…</button>' +
+        '<button class="entry-btn' + (e.rating === 'up' ? ' accent' : '') + '" id="rateUpBtn-' + e.id + '" onclick="rateEntry(' + e.id + ', \'up\')" title="Helpful">' + heroicon('hand-thumb-up', 14, e.rating === 'up') + '</button>' +
+        '<button class="entry-btn' + (e.rating === 'down' ? ' accent' : '') + '" id="rateDownBtn-' + e.id + '" onclick="rateEntry(' + e.id + ', \'down\')" title="Not helpful">' + heroicon('hand-thumb-down', 14, e.rating === 'down') + '</button>' +
         '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">' + heroicon('trash') + ' Delete</button>' +
       '</div>' +
     '</div>' +
@@ -1877,7 +1915,15 @@ function toggleEntrySearch(id) {
   bar.style.display = isHidden ? 'flex' : 'none';
   var input = document.getElementById('entry-search-input-' + id);
   if (isHidden) {
-    if (input) input.focus();
+    // preventScroll:true — confirmed as the real, direct cause of a
+    // reported bug: showing this bar grows the entry card's own height
+    // (it sits in normal flow, right above entry-content), and the
+    // browser's own, default "keep the newly-focused element visible"
+    // behavior was then nudging the whole page's scroll position to
+    // compensate, making the entry appear to shift slightly on its own.
+    // The focus itself is still needed (so typing works immediately);
+    // only the automatic scroll compensation is unwanted here.
+    if (input) input.focus({ preventScroll: true });
   } else {
     if (input) input.value = '';
     clearEntrySearchHighlights(id);
@@ -2013,6 +2059,33 @@ function prevEntrySearchMatch(id) {
   focusCurrentEntrySearchMatch(id);
 }
 window.prevEntrySearchMatch = prevEntrySearchMatch;
+
+// ── Entry rating (thumbs up/down) ────────────────────────────────────────
+// The backend's own /api/diary/:id PATCH endpoint has already supported a
+// rating field ('up'/'down'/null) since it was built for the Sweep
+// feature (self-healing column, validation, all already in place — no
+// backend work needed here at all). This was the missing piece: neither
+// this Diary app nor Continue Conversation ever actually had frontend UI
+// to set or display it. Scoped here to Diary entries specifically —
+// "rate this saved result", the same Claude-style intent the original
+// design was built around — not live, in-progress conversations.
+// Click-to-toggle: clicking an already-active rating again clears it
+// back to null, rather than being permanently sticky once set.
+async function rateEntry(id, rating) {
+  var entry = (allEntries || []).find(function(e) { return e.id === id; });
+  var newRating = (entry && entry.rating === rating) ? null : rating;
+  var upBtn = document.getElementById('rateUpBtn-' + id);
+  var downBtn = document.getElementById('rateDownBtn-' + id);
+  if (upBtn) { upBtn.classList.toggle('accent', newRating === 'up'); upBtn.innerHTML = heroicon('hand-thumb-up', 14, newRating === 'up'); }
+  if (downBtn) { downBtn.classList.toggle('accent', newRating === 'down'); downBtn.innerHTML = heroicon('hand-thumb-down', 14, newRating === 'down'); }
+  if (entry) entry.rating = newRating;
+  try {
+    await Forge.request('PATCH', '/api/diary/' + id, { rating: newRating });
+  } catch (e) {
+    console.warn('[Diary] Failed to save rating:', e.message);
+  }
+}
+window.rateEntry = rateEntry;
 
 async function saveNote(id) {
   var el = document.getElementById('note-' + id);
@@ -3294,7 +3367,7 @@ function openEntry(id) {
   // ever displays, not one created fresh per entry.
   var favBtn = document.getElementById('panelFavoriteBtn');
   if (favBtn) {
-    favBtn.innerHTML = e.is_favorite ? '&#9733;' : '&#9734;';
+    favBtn.innerHTML = e.is_favorite ? heroicon('star', 16, true) : heroicon('star', 16);
     favBtn.style.color = e.is_favorite ? '#C17D3C' : '';
   }
   // Show "Open original conversation" if URL was captured
@@ -3350,7 +3423,7 @@ async function panelToggleFavorite() {
   var newState = !currentPanelEntry.is_favorite;
   var favBtn = document.getElementById('panelFavoriteBtn');
   if (favBtn) {
-    favBtn.innerHTML = newState ? '&#9733;' : '&#9734;';
+    favBtn.innerHTML = newState ? heroicon('star', 16, true) : heroicon('star', 16);
     favBtn.style.color = newState ? '#C17D3C' : '';
   }
   try {
@@ -3363,7 +3436,7 @@ async function panelToggleFavorite() {
     refreshCurrentView();
   } catch(_) {
     if (favBtn) {
-      favBtn.innerHTML = currentPanelEntry.is_favorite ? '&#9733;' : '&#9734;';
+      favBtn.innerHTML = currentPanelEntry.is_favorite ? heroicon('star', 16, true) : heroicon('star', 16);
       favBtn.style.color = currentPanelEntry.is_favorite ? '#C17D3C' : '';
     }
     showTopToast('Could not update favorite status', true);
@@ -3456,7 +3529,7 @@ function renderWithBubblesSegments(text) {
     sourcesHtml = '<div class="sources-collapsible" style="margin-top:14px;">' +
       '<button onclick="event.stopPropagation();var b=document.getElementById(\'' + sid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.sources-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
         'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:12px;color:#6B655C;font-family:Inter,sans-serif;">' +
-        '<span class="sources-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);">&#9656;</span>' +
+        '<span class="sources-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
         'Sources (' + sourceLines.length + ')' +
       '</button>' +
       '<div id="' + sid + '" style="display:none;padding-left:18px;font-size:13px;color:#6B655C;">' + sourcesBody + '</div>' +
@@ -3598,7 +3671,7 @@ async function renderUnifiedEntryContent(entryId) {
   // version names that actual boundary instead of speaking generically.
   if (meta.images && meta.images.length && forgeMessages.length) {
     html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
-      '&#128444;&#65039; Images from the native conversation are shown above; anything continued in Forge below won\'t include or reference them.' +
+      heroicon('photo') + ' Images from the native conversation are shown above; anything continued in Forge below won\'t include or reference them.' +
     '</div>';
   }
 
@@ -3612,7 +3685,7 @@ async function renderUnifiedEntryContent(entryId) {
   // feature set.
   if (meta.lastSyncDiverged === true) {
     html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
-      '&#8987; Still syncing the Forge side — the native conversation above may be slightly ahead of what\'s reflected below.' +
+      heroicon('clock') + ' Still syncing the Forge side — the native conversation above may be slightly ahead of what\'s reflected below.' +
     '</div>';
   }
 
@@ -3620,7 +3693,7 @@ async function renderUnifiedEntryContent(entryId) {
     var forgeSegments = renderMessagesAsSegments(forgeMessages);
     html += '<div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px;">' +
       '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
-      '<span style="font-size:11px;color:#9E9890;white-space:nowrap;">&#127807; Continued in Forge</span>' +
+      '<span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + heroicon('chat-bubble-left-right') + ' Continued in Forge</span>' +
       '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
     '</div>' +
     '<div style="background:#FBF9F4;border-radius:10px;padding:14px;">' + forgeSegments.join('') + '</div>';
@@ -3804,7 +3877,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 <!-- Upgrade Modal -->
 <div class="upgrade-modal-backdrop" id="upgradeModal">
   <div class="upgrade-modal">
-    <div class="upgrade-modal-icon">&#128214;</div>
+    <div class="upgrade-modal-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg></div>
     <!-- NOTE: text corrected — was falsely claiming a "10 free saves"
     limit that no longer exists (saves are unconditionally unlimited,
     see the matching backend/routes/diary.js comment). Worth noting:
@@ -3893,15 +3966,15 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
         <button onclick="shareAttachment(currentReaderAttachment && currentReaderAttachment.url, currentReaderAttachment && currentReaderAttachment.filename)" aria-label="Share" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0;display:flex;align-items:center;" title="Share">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
-        <button id="attachmentReaderDownload" onclick="downloadAttachmentFromReader()" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;">&#8681; Download</button>
+        <button id="attachmentReaderDownload" onclick="downloadAttachmentFromReader()" style="font-size:12px;color:#C17D3C;text-decoration:none;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>Download</button>
         <button onclick="closeAttachmentReader()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
       </div>
     </div>
     <div id="attachmentSearchBar" style="display:none;align-items:center;gap:10px;padding:10px 20px;border-bottom:0.5px solid #D6D2C8;background:#fdfdfb;flex-shrink:0;">
       <input id="attachmentSearchInput" type="text" placeholder="Search in document..." oninput="runAttachmentSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){prevSearchMatch()}else{nextSearchMatch()}}else if(event.key==='Escape'){toggleAttachmentSearch()}" style="flex:1;font-size:13px;padding:6px 10px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>
       <span id="attachmentSearchCounter" style="font-size:12px;color:#9E9890;white-space:nowrap;min-width:52px;text-align:center;font-family:Inter,sans-serif;"></span>
-      <button onclick="prevSearchMatch()" aria-label="Previous match" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:16px;">&#8593;</button>
-      <button onclick="nextSearchMatch()" aria-label="Next match" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:16px;">&#8595;</button>
+      <button onclick="prevSearchMatch()" aria-label="Previous match" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg></button>
+      <button onclick="nextSearchMatch()" aria-label="Next match" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></button>
       <button onclick="toggleAttachmentSearch()" aria-label="Close search" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 4px;font-size:16px;">&times;</button>
     </div>
     <div id="attachmentReaderBody" style="flex:1;overflow:auto;padding:24px;">
