@@ -26,9 +26,15 @@
 // that could break saving or searching if Voyage is unavailable.
 async function voyageEmbed(texts, inputType) {
   const apiKey = process.env.VOYAGE_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn('[Embeddings] VOYAGE_API_KEY is not set — embeddings unavailable.');
+    return null;
+  }
   const inputs = Array.isArray(texts) ? texts : [texts];
-  if (!inputs.length || inputs.every(t => !t || !t.trim())) return null;
+  if (!inputs.length || inputs.every(t => !t || !t.trim())) {
+    console.warn('[Embeddings] voyageEmbed called with no usable (non-empty) text input.');
+    return null;
+  }
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);

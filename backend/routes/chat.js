@@ -88,6 +88,15 @@ const BRIDGE_RECENT_MESSAGES_TO_KEEP = 20; // ~10 turns verbatim, unsummarized
 const BRIDGE_TOP_K_RETRIEVED = 15; // older turns pulled in via retrieval
 async function bridgeConversation(oldSessionId, allMessages, model, userEmail, diaryEntryId) {
     try {
+        // Checked directly here, before ever attempting an embed call —
+        // confirmed as the single most likely cause of a bridge failure
+        // for a genuinely new feature like this, and voyageEmbed() itself
+        // only ever logs this to server logs (see its own comment), not
+        // the response body, so this makes it immediately visible in
+        // DevTools too without requiring separate Railway log access.
+        if (!process.env.VOYAGE_API_KEY) {
+            return { success: false, reason: 'voyage_api_key_not_set' };
+        }
         await db.ensureChatMessageEmbeddingsTable();
 
         // Ensure the old session genuinely exists in chat_sessions —
