@@ -38,13 +38,50 @@
 let _lastFailureReason = null;
 function getLastEmbedFailureReason() { return _lastFailureReason; }
 
-// Voyage's own hard limit — confirmed directly via a real, live failure:
-// "Request to model 'voyage-4' failed. The batch size limit is 1000.
-// Your batch size is 3663." A genuinely long bridged conversation (or,
-// in principle, a large diary.js backfill run) can easily exceed this
-// in one call; texts are chunked below rather than trusting any single
-// caller to stay under the limit itself.
-const VOYAGE_MAX_BATCH_SIZE = 1000;
+// Voyage's own hard limits — confirmed directly via two, separate, real
+// live failures: (1) "The batch size limit is 1000. Your batch size is
+// 3663" and, after fixing that, (2) "The max allowed tokens per
+// submitted batch is 320000. Your batch has 330109 tokens" — these are
+// TWO INDEPENDENT constraints, not one; a chunk of exactly 1000 items
+// can still separately exceed the token ceiling if the items themselves
+// are long enough, which is exactly what happened here. Both are
+// respected simultaneously below, not just the item count.
+const VOYAGE_MAX_BATCH_SIZE = 1000; // items
+const VOYAGE_MAX_BATCH_TOKENS = 300000; // conservative, below Voyage's own 320,000 hard ceiling
+
+// Rough estimate (chars/4), same heuristic used elsewhere in this
+// codebase (chat.js's own oversized-conversation check) — not an exact
+// token count, but Voyage's own limit has enough headroom below its
+// true ceiling (300k vs the real 320k) that this doesn't need to be
+// precise, only conservative.
+function estimateTokens(text) {
+  return Math.ceil((text || '').length / 4);
+}
+
+// Builds chunks greedily so EACH chunk independently stays under both
+// limits — not just splitting by item count and hoping token count
+// works out. If a single item's own estimated tokens alone would
+// already exceed the ceiling (rare, but possible with the existing
+// 8000-char per-item truncation below), it still gets its own,
+// single-item chunk rather than looping forever trying to keep it out.
+function buildTokenAwareChunks(inputs) {
+  const chunks = [];
+  let currentChunk = [];
+  let currentTokens = 0;
+  for (const text of inputs) {
+    const truncated = (text || '').slice(0, 8000);
+    const textTokens = estimateTokens(truncated);
+    if (currentChunk.length > 0 && (currentChunk.length >= VOYAGE_MAX_BATCH_SIZE || currentTokens + textTokens > VOYAGE_MAX_BATCH_TOKENS)) {
+      chunks.push(currentChunk);
+      currentChunk = [];
+      currentTokens = 0;
+    }
+    currentChunk.push(text);
+    currentTokens += textTokens;
+  }
+  if (currentChunk.length > 0) chunks.push(currentChunk);
+  return chunks;
+}
 
 // The actual, single HTTP call to Voyage — unchanged from before this
 // batching fix, just extracted so voyageEmbed() itself can call it once
@@ -94,16 +131,16 @@ async function voyageEmbed(texts, inputType) {
   }
   try {
     // Chunked sequentially, not in parallel — Voyage may separately
-    // rate-limit concurrent requests, and a real case here is only
-    // ~4 chunks (3663 items / 1000), so sequential stays fast enough
-    // without risking that. If ANY chunk fails, the whole call fails —
-    // a partial embeddings array would silently misalign with the
+    // rate-limit concurrent requests, and a real case here is only a
+    // handful of chunks, so sequential stays fast enough without
+    // risking that. If ANY chunk fails, the whole call fails — a
+    // partial embeddings array would silently misalign with the
     // indices callers (chat.js's own bridging logic in particular)
     // depend on to match embeddings back to their original messages.
+    const chunks = buildTokenAwareChunks(inputs);
     const allEmbeddings = [];
-    for (let i = 0; i < inputs.length; i += VOYAGE_MAX_BATCH_SIZE) {
-      const batch = inputs.slice(i, i + VOYAGE_MAX_BATCH_SIZE);
-      const batchEmbeddings = await voyageEmbedBatch(apiKey, batch, inputType);
+    for (const chunk of chunks) {
+      const batchEmbeddings = await voyageEmbedBatch(apiKey, chunk, inputType);
       if (!batchEmbeddings) return null; // _lastFailureReason already set inside voyageEmbedBatch
       allEmbeddings.push(...batchEmbeddings);
     }
