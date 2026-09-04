@@ -261,9 +261,28 @@ router.post('/', requireAuth, async (req, res) => {
         const approxTokenCount = Math.ceil(approxCharCount / 4);
         const MAX_SAFE_TOKENS = 100000;
         if (approxTokenCount > MAX_SAFE_TOKENS) {
+            // Diagnostic breakdown — added after a report that this check
+            // fired on a conversation the user was confident was NOT
+            // actually that long, meaning the real cause might not be a
+            // genuinely oversized native seed at all, but something else
+            // inflating the count (a duplication bug, a runaway single
+            // message, etc.). Included directly in the response itself
+            // (not just server logs, which need separate Railway access)
+            // so the very next occurrence is immediately diagnosable from
+            // the browser's own network tab — pinpointing exactly which
+            // message(s) are responsible, rather than only the aggregate
+            // total.
+            const perMessageBreakdown = messagesForApi.map((m, i) => ({
+                index: i,
+                role: m.role,
+                chars: typeof m.content === 'string' ? m.content.length : 0,
+                preview: (typeof m.content === 'string' ? m.content : '').slice(0, 80)
+            }));
+            console.error(`[Chat] Oversized conversation detected: ~${approxTokenCount} tokens across ${messagesForApi.length} messages.`, JSON.stringify(perMessageBreakdown));
             return res.status(400).json({
                 success: false,
-                error: `This conversation is too long to continue — it's grown to roughly ${approxTokenCount.toLocaleString()} tokens, beyond what any AI model here can process in one request. This usually means it was forked from an already very long native conversation. Try forking a shorter one, or starting a fresh conversation instead.`
+                error: `This conversation is too long to continue — it's grown to roughly ${approxTokenCount.toLocaleString()} tokens, beyond what any AI model here can process in one request. This usually means it was forked from an already very long native conversation. Try forking a shorter one, or starting a fresh conversation instead.`,
+                debugBreakdown: perMessageBreakdown
             });
         }
 
