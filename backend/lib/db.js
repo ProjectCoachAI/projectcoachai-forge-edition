@@ -588,7 +588,30 @@ const CHAT_CONTINUE_ENTRY_LIMITS = {
 // stateless history replay, so cost compounds specifically with
 // conversation length, not with how many separate entries someone
 // continues).
-const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP = 8;
+//
+// Raised for paid tiers specifically — confirmed as a real, direct
+// product decision, not a bug fix: hitting this same, universal-8 cap
+// on a genuine Diary Pro account produced an instinctive "this must be
+// a bug" reaction from a paying user, which is itself real evidence
+// the flat-universal design didn't match what "Pro" implied to someone
+// experiencing it firsthand. Free tier keeps the original, tightly-
+// bounded 8. Paid tiers get 50 — high enough that an ordinary, real
+// conversation essentially never reaches it (matching the original 8's
+// own "3-5 messages is normal use" analysis, just scaled up with real
+// headroom for paid users specifically), while still bounding the
+// same long-tail, runaway-cost conversations the original 8 was
+// designed to catch — deliberately NOT unlimited, since the original
+// cost-control reasoning for having a cap at all remains legitimate.
+const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_FREE = 8;
+const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_PAID = 50;
+function getMessagesPerEntryCap(tier) {
+  // Same "unlimited entries" tiers get the higher, paid cap — reuses
+  // CHAT_CONTINUE_ENTRY_LIMITS' own, already-correct tier classification
+  // (entryLimit === -1) rather than maintaining a second, separate list
+  // of which tiers count as "paid" that could quietly drift out of sync
+  // with the first one over time.
+  return (CHAT_CONTINUE_ENTRY_LIMITS[tier] === -1) ? CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_PAID : CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_FREE;
+}
 
 // Diary's own, dedicated subscription check — reads the per-product
 // subscriptions table (see routes/stripe.js's own comment for why it
@@ -619,6 +642,14 @@ async function getDiaryTier(userEmail) {
 }
 
 async function checkAndIncrementChatContinueUsage(userEmail, diaryEntryId, existingSessionId) {
+  // Tier lookup moved ahead of the guardrail check below — the
+  // per-entry message cap is now tier-aware (see
+  // getMessagesPerEntryCap's own comment), so the tier itself needs to
+  // be known before that check can run at all, not just before the
+  // entries/month check further down.
+  const tier = await getDiaryTier(userEmail);
+  const messagesPerEntryCap = getMessagesPerEntryCap(tier);
+
   // Guardrail axis first: cap growth within a single, already-existing
   // forked conversation, regardless of tier or the entries/month count
   // below — this applies even to unlimited-entries paid tiers, since
@@ -650,12 +681,11 @@ async function checkAndIncrementChatContinueUsage(userEmail, diaryEntryId, exist
     }
     const newMessagesOnly = messages.slice(seedCount);
     const userMessageCount = newMessagesOnly.filter(function(m) { return m.role === 'user'; }).length;
-    if (userMessageCount >= CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP) {
-      return { allowed:false, reason:'message_cap', messageCount:userMessageCount, messageCap:CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP };
+    if (userMessageCount >= messagesPerEntryCap) {
+      return { allowed:false, reason:'message_cap', messageCount:userMessageCount, messageCap:messagesPerEntryCap, isPaidTier: CHAT_CONTINUE_ENTRY_LIMITS[tier] === -1, paidTierMessageCap: CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_PAID };
     }
   }
 
-  const tier  = await getDiaryTier(userEmail);
   // Fallback (for any tier string not found in the map above) kept
   // consistent with starter's own value — 20, not the earlier 10 —
   // since an unrecognized tier defaulting to a DIFFERENT number than
@@ -703,7 +733,7 @@ async function getChatContinueUsage(userEmail) {
     entriesUsed,
     entryLimit,
     entriesRemaining: entryLimit!==null && entryLimit!==-1 ? Math.max(0, entryLimit-entriesUsed) : null,
-    messageCapPerEntry: CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP,
+    messageCapPerEntry: getMessagesPerEntryCap(tier),
     tier
   };
 }

@@ -108,9 +108,19 @@ router.post('/', requireAuth, async (req, res) => {
         const usage = await db.checkAndIncrementChatContinueUsage(req.userEmail, diaryEntryId, sessionId || null);
         if (!usage.allowed) {
             if (usage.reason === 'message_cap') {
+                // Confirmed as a real, previously-misleading message —
+                // "upgrade for higher limits" was shown even to genuine
+                // paid subscribers already hitting their own, higher
+                // cap, for whom upgrading changes nothing at all. Now
+                // branches on the tier actually confirmed server-side
+                // (isPaidTier), rather than assuming free tier by
+                // default.
+                const capMessage = usage.isPaidTier
+                  ? `This conversation has reached its message limit (${usage.messageCount}/${usage.messageCap}) for your plan. Continue a different entry, or start a fresh conversation.`
+                  : `This conversation has reached its message limit (${usage.messageCount}/${usage.messageCap}). Continue a different entry, or upgrade to Forge for up to ${usage.paidTierMessageCap} messages per conversation.`;
                 return res.status(429).json({
                     success: false,
-                    error: `This conversation has reached its message limit (${usage.messageCount}/${usage.messageCap}). Continue a different entry, or upgrade for higher limits.`,
+                    error: capMessage,
                     reason: 'message_cap'
                 });
             }
