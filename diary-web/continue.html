@@ -11,7 +11,17 @@
   html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; min-height: 100vh; }
   a { text-decoration: none; color: inherit; }
 
-  .chat-page { display:flex; flex-direction:column; height:100vh; max-width:760px; margin:0 auto; }
+  .chat-page { display:flex; flex-direction:column; height:100vh; max-width:760px; margin:0 auto; transition: max-width 0.2s ease; }
+  /* Confirmed 760px is a genuinely good default for text readability
+     (optimal line length lands around 50-75 characters at typical font
+     sizes), but leaves substantial, unused whitespace on wide monitors
+     — expanded state offers more room for those who want it, without
+     going fully unconstrained (which would just trade "too narrow" for
+     "lines too long to read comfortably" in the other direction). Not
+     display:none-level different from the default, so the same "safe
+     default, opt into more space" pattern already proven for the
+     sidebar toggle in app.html. */
+  .chat-page.chat-page-expanded { max-width: 1100px; }
   .chat-header { display:flex; align-items:center; gap:10px; padding:14px 20px; border-bottom:0.5px solid #D6D2C8; flex-shrink:0; background:#F5F3EE; }
   .chat-header a.back { color:#6B6559; text-decoration:none; font-size:13px; display:flex; align-items:center; gap:4px; font-family:'Inter',sans-serif; }
   .chat-header a.back:hover { color:#1B2A4A; }
@@ -90,7 +100,7 @@
 </head>
 <body>
 
-<div class="chat-page">
+<div class="chat-page" id="chatPage">
   <div class="chat-header">
     <a href="/app.html" class="back" id="chatBackLink">&larr; Back to Diary</a>
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
@@ -99,6 +109,7 @@
         <button onclick="adjustDiaryFontScale(-1)" title="Decrease text size" style="width:24px;height:24px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;color:#4A4035;font-size:11px;font-weight:700;cursor:pointer;line-height:1;">A&#8722;</button>
         <button onclick="adjustDiaryFontScale(1)" title="Increase text size" style="width:24px;height:24px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;color:#4A4035;font-size:14px;font-weight:700;cursor:pointer;line-height:1;">A&#43;</button>
       </span>
+      <button class="chat-icon-btn" id="chatWidthToggleBtn" onclick="toggleChatPageWidth()" title="Expand for a wider reading view">&#8596; Expand</button>
       <button class="chat-icon-btn" onclick="toggleChatSearch()" title="Search this conversation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px;"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</button>
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <button class="chat-icon-btn" onclick="shareConversation()" title="Share this conversation">&#128279; Share</button>
@@ -196,6 +207,29 @@ function adjustDiaryFontScale(direction) {
 }
 window.adjustDiaryFontScale = adjustDiaryFontScale;
 applyDiaryFontScale(getDiaryFontScale()); // apply immediately on script load, before messages render
+
+// ── Reading width toggle ─────────────────────────────────────────────────
+// Persisted (same "wants it everywhere" pattern as the font-scale/sidebar
+// preferences) — default stays at the existing, genuinely good-for-
+// readability 760px; this offers a wider, opt-in view for anyone working
+// on a wide monitor who wants less unused whitespace on either side.
+function toggleChatPageWidth() {
+  var page = document.getElementById('chatPage');
+  var btn = document.getElementById('chatWidthToggleBtn');
+  if (!page) return;
+  var expanded = page.classList.toggle('chat-page-expanded');
+  localStorage.setItem('chatPageExpanded', expanded ? '1' : '0');
+  if (btn) btn.innerHTML = expanded ? '&#8596; Narrow' : '&#8596; Expand';
+}
+window.toggleChatPageWidth = toggleChatPageWidth;
+(function applyInitialChatPageWidth() {
+  var page = document.getElementById('chatPage');
+  var btn = document.getElementById('chatWidthToggleBtn');
+  if (page && localStorage.getItem('chatPageExpanded') === '1') {
+    page.classList.add('chat-page-expanded');
+    if (btn) btn.innerHTML = '&#8596; Narrow';
+  }
+})();
 
 let chatModel = 'claude';
 
