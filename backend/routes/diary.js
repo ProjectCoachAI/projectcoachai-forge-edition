@@ -1398,11 +1398,32 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // still trigger a real mismatch, while inconsequential
           // formatting drift no longer can.
           const normalizeForCompare = (s) => (s || '').replace(/\s+/g, ' ').trim();
+          // Diagnostic added specifically to pin down a real, reported
+          // case: an entry whose lastSyncDiverged flag won't clear even
+          // after the whitespace-normalization fix above, suggesting the
+          // mismatch itself is genuine rather than cosmetic drift — most
+          // likely because the ALREADY-SAVED baseline (oldRow.content)
+          // was itself truncated by an earlier, separate capture bug
+          // (e.g. Grok's confirmed settle-timing issue), meaning no
+          // future sync can ever "cleanly extend" a baseline that was
+          // already wrong at some earlier point, not just at the end.
+          // Logs exactly which message index first fails to match (role
+          // or content) and both sides' own text at that index, so the
+          // next occurrence is directly diagnosable rather than
+          // requiring more guesswork.
+          let firstMismatchIdx = -1;
           const isCleanExtension = oldMessagesForCompare.length <= newMessagesForCompare.length &&
             oldMessagesForCompare.every(function(m, idx) {
-              return newMessagesForCompare[idx] && newMessagesForCompare[idx].role === m.role &&
+              const matches = newMessagesForCompare[idx] && newMessagesForCompare[idx].role === m.role &&
                 normalizeForCompare(newMessagesForCompare[idx].content) === normalizeForCompare(m.content);
+              if (!matches && firstMismatchIdx === -1) firstMismatchIdx = idx;
+              return matches;
             });
+          if (firstMismatchIdx !== -1) {
+            console.log('[Diary Sync DIAG] history_mismatch at message index', firstMismatchIdx,
+              '| old role/content:', JSON.stringify(oldMessagesForCompare[firstMismatchIdx]),
+              '| new role/content:', JSON.stringify(newMessagesForCompare[firstMismatchIdx]));
+          }
           if (isCleanExtension && newMessagesForCompare.length > oldMessagesForCompare.length) {
             const newMessagesFull = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
             const trailingNew = newMessagesFull.slice(oldMessagesForCompare.length);
