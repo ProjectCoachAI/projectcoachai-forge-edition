@@ -186,6 +186,15 @@
      render it properly via Forge.renderMarkdown() rather than escaped
      plain text. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.1.2/turndown.js"></script>
+<!-- turndown-plugin-gfm: confirmed as a real, direct gap -- turndown's
+     own base library has NO table support at all without this plugin;
+     tested directly and confirmed a table gets completely flattened
+     into disconnected lines with zero row/column structure otherwise.
+     Loaded from unpkg (per the package's own official README) rather
+     than cdnjs, since availability there wasn't directly confirmed for
+     this specific, smaller package; pinned to the exact version
+     (1.0.2) tested against. -->
+<script src="https://unpkg.com/turndown-plugin-gfm@1.0.2/dist/turndown-plugin-gfm.js"></script>
 <script>
 'use strict';
 
@@ -485,7 +494,14 @@ function handleChatFilesSelected(fileList) {
             // the AI itself gets the document's actual structure
             // rather than a flat wall of text.
             var htmlResult = await mammoth.convertToHtml({ arrayBuffer: abReader.result });
-            extractedText = new TurndownService().turndown(htmlResult.value).trim();
+            // .use(turndownPluginGfm.gfm) — confirmed as a real, direct
+            // gap without this: turndown's own base library has no
+            // table support at all, and would otherwise flatten a
+            // table's own rows/columns into disconnected lines with no
+            // structure whatsoever, which is exactly what was reported.
+            var turndownService = new TurndownService();
+            if (window.turndownPluginGfm) turndownService.use(turndownPluginGfm.gfm);
+            extractedText = turndownService.turndown(htmlResult.value).trim();
           } else {
             var workbook = XLSX.read(abReader.result, { type: 'array', cellDates: true });
             extractedText = workbookToReadableText(workbook);
@@ -497,7 +513,30 @@ function handleChatFilesSelected(fileList) {
           chatAttachedFiles.push({ textContent: truncateExtractedText(extractedText, file.name), filename: file.name, type: isDocx ? 'docx' : 'xlsx' });
           renderChatAttachmentPreviews();
         } catch(e) {
-          Forge.showToast('Could not read ' + file.name + ' — ' + (e.message || 'please try again') + '.', 'error');
+          // Logged in full here, since the toast itself is deliberately
+          // terse (e.message alone) — a real failure investigated live
+          // (a renamed copy of a working .docx/.xlsx failing) needs the
+          // exact exception detail, not a paraphrase, to actually
+          // diagnose.
+          console.error('[Chat] Failed to parse ' + file.name + ' (' + (isDocx ? 'docx' : 'xlsx') + '):', e);
+          // .docx/.xlsx are both, structurally, zip archives — mammoth.js
+          // and SheetJS both use a zip reader internally, and this
+          // specific error ("end of central directory... is this a zip
+          // file?") is that reader's own way of saying the bytes it
+          // received genuinely aren't a valid zip archive at all — not
+          // a parsing edge case this code could handle differently, and
+          // not something the filename has any bearing on at all (the
+          // parser never even looks at it). Confirmed live: this is
+          // most often either the older, non-zip-based .doc/.xls binary
+          // format saved with the wrong extension, or a truncated/
+          // corrupted download. Detected here so the person gets an
+          // actionable next step instead of a raw, technical library
+          // error with a link to that library's own documentation.
+          var isNotAZip = /end of central directory|is this a zip file/i.test(e.message || '');
+          var friendlyMessage = isNotAZip
+            ? file.name + ' doesn\'t appear to be a valid ' + (isDocx ? '.docx' : '.xlsx') + ' file — it may be saved in an older format, or the download may be incomplete. Try re-saving or re-downloading it.'
+            : 'Could not read ' + file.name + ' — ' + (e.message || 'please try again') + '.';
+          Forge.showToast(friendlyMessage, 'error');
         }
       };
       abReader.onerror = function() {
