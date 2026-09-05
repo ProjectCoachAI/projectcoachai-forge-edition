@@ -1611,6 +1611,40 @@ function queryAllDeep(selector) {
           }
         }
       }
+      // Confirmed live via a real, reported case: the ENTIRE captured
+      // sequence (every question and answer) repeated back to back,
+      // producing a Diary entry with the full Q/A exchange duplicated
+      // twice — not just one repeated turn, which the consecutive-
+      // question dedup above already guards against. This is a
+      // genuinely different failure mode: the existing dedup only ever
+      // catches the SAME question immediately repeated with nothing in
+      // between (lastQuestionText resets the moment a real answer is
+      // seen), so it cannot catch a full thread appearing twice with
+      // real content between the two copies. A real conversation never
+      // legitimately repeats its entire Q/A sequence identically, so
+      // this is safe to detect and truncate. Deliberately placed in
+      // this shared function (not Mistral-specific) since Perplexity,
+      // Meta AI, and Grok all call this same function and could
+      // plausibly hit the same underlying DOM-level cause (most likely
+      // the page genuinely rendering two copies of the conversation
+      // elements — e.g. a hidden/visible duplicate for animation,
+      // or a responsive-layout duplicate tree). Verified via direct
+      // simulation against four cases before applying here: the exact
+      // reported repeated-whole-thread case, a normal non-repeated
+      // conversation (confirmed untouched), an odd-length result
+      // (left untouched — can't cleanly halve), and a genuine,
+      // deliberate repeat of the same question with a DIFFERENT real
+      // answer the second time (confirmed NOT treated as a duplicate,
+      // since the two halves aren't actually identical).
+      if (parts.length >= 4 && parts.length % 2 === 0) {
+        var half = parts.length / 2;
+        var firstHalf = parts.slice(0, half);
+        var secondHalf = parts.slice(half);
+        if (firstHalf.every(function(p, i) { return p === secondHalf[i]; })) {
+          console.log('[Diary] buildDomPairedThread: whole captured thread was duplicated end-to-end — truncated to the first copy.');
+          parts = firstHalf;
+        }
+      }
       return parts.length ? parts.join('\n\n') : null;
     } catch (e) {
       console.error('[Diary] buildDomPairedThread failed, falling back:', e);
