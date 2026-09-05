@@ -3565,23 +3565,38 @@ window.continueOnProvider = continueOnProvider;
 // the same underlying reason: a long entry rendered all at once into
 // the DOM at once can genuinely get slow and unwieldy — confirmed live
 // today at 44 messages deep in one real conversation).
-function renderWithBubblesSegments(text) {
-  var sourcesHtml = '';
+// Shared by renderWithBubblesSegments() (a single, marker-delimited
+// text blob) and renderMessagesAsSegments() (chat_sessions.messages'
+// own [{role, content}, ...] array) — confirmed as a real, direct gap:
+// renderMessagesAsSegments() was built as a "direct parallel" to
+// renderWithBubblesSegments() per its own comment, but never actually
+// replicated this specific piece, silently losing the Sources
+// collapse/expand feature for any forked entry rendered through the
+// unified Diary view. Extracted here so both stay consistent going
+// forward, rather than risk the same gap reopening after some future
+// change to one but not the other.
+function extractSourcesBlock(text) {
   var sourcesMatch = text.match(/\n\n---\n\n\*\*Sources:\*\*\n([\s\S]*)$/);
-  if (sourcesMatch) {
-    text = text.slice(0, sourcesMatch.index);
-    var sourceLines = sourcesMatch[1].split('\n').filter(function(l) { return l.trim(); });
-    var sourcesBody = Forge.renderMarkdown(sourcesMatch[1]).replace(/<p>\s*<\/p>/g, '');
-    var sid = 'src-' + Math.random().toString(36).slice(2, 10);
-    sourcesHtml = '<div class="sources-collapsible" style="margin-top:14px;">' +
-      '<button onclick="event.stopPropagation();var b=document.getElementById(\'' + sid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.sources-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
-        'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:12px;color:#6B655C;font-family:Inter,sans-serif;">' +
-        '<span class="sources-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
-        'Sources (' + sourceLines.length + ')' +
-      '</button>' +
-      '<div id="' + sid + '" style="display:none;padding-left:18px;font-size:13px;color:#6B655C;">' + sourcesBody + '</div>' +
-    '</div>';
-  }
+  if (!sourcesMatch) return { mainText: text, sourcesHtml: '' };
+  var mainText = text.slice(0, sourcesMatch.index);
+  var sourceLines = sourcesMatch[1].split('\n').filter(function(l) { return l.trim(); });
+  var sourcesBody = Forge.renderMarkdown(sourcesMatch[1]).replace(/<p>\s*<\/p>/g, '');
+  var sid = 'src-' + Math.random().toString(36).slice(2, 10);
+  var sourcesHtml = '<div class="sources-collapsible" style="margin-top:14px;">' +
+    '<button onclick="event.stopPropagation();var b=document.getElementById(\'' + sid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.sources-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
+      'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:12px;color:#6B655C;font-family:Inter,sans-serif;">' +
+      '<span class="sources-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
+      'Sources (' + sourceLines.length + ')' +
+    '</button>' +
+    '<div id="' + sid + '" style="display:none;padding-left:18px;font-size:13px;color:#6B655C;">' + sourcesBody + '</div>' +
+  '</div>';
+  return { mainText: mainText, sourcesHtml: sourcesHtml };
+}
+
+function renderWithBubblesSegments(text) {
+  var sourcesExtracted = extractSourcesBlock(text);
+  text = sourcesExtracted.mainText;
+  var sourcesHtml = sourcesExtracted.sourcesHtml;
 
   var TITLE_MARK = '\u2063';
   var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
@@ -3681,7 +3696,16 @@ function renderMessagesAsSegments(messages) {
       var isLongQuestion = parsed.displayText.length > 150 || ((parsed.displayText.match(/\n/g) || []).length > 1);
       current += '<div class="' + (isLongQuestion ? 'user-bubble-long' : 'user-bubble') + '">' + escHtml(parsed.displayText) + renderFileAttachmentChips(parsed.fileAttachments) + '</div>';
     } else {
-      current += (Forge.renderMarkdown ? Forge.renderMarkdown(m.content || '') : escHtml(m.content || '')).replace(/<p>\s*<\/p>/g, '');
+      // Confirmed as a real, direct gap: unlike renderWithBubblesSegments()
+      // above, this had no Sources handling at all, so any assistant
+      // message carrying a "\n\n---\n\n**Sources:**\n..." footer (e.g. a
+      // Perplexity answer) rendered it as permanently-visible plain
+      // markdown text instead of the same collapsible block used
+      // everywhere else. Applied per-message here (not once for the
+      // whole array, unlike the single-blob case above) since each
+      // individual message could carry its own, separate Sources footer.
+      var extracted = extractSourcesBlock(m.content || '');
+      current += (Forge.renderMarkdown ? Forge.renderMarkdown(extracted.mainText) : escHtml(extracted.mainText)).replace(/<p>\s*<\/p>/g, '') + extracted.sourcesHtml;
     }
   });
   if (current) segments.push(current);
