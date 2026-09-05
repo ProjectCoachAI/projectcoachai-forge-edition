@@ -397,6 +397,35 @@ function truncateExtractedText(text, filename) {
   return text.slice(0, MAX_EXTRACTED_FILE_CHARS) + '\n\n[Content truncated — ' + filename + ' is larger than this chat can include in full.]';
 }
 
+// Confirmed as a real, direct gap: mammoth's own convertToHtml only
+// ever emits <th> for a table if the ORIGINAL Word table explicitly has
+// "repeat header row" set on it — a plain table with no such setting
+// produces every cell as a plain <td>, first row included. Without any
+// <th> at all, turndown-plugin-gfm doesn't recognize the table as
+// convertible and leaves the raw HTML <table> tags embedded verbatim in
+// its output — which Forge.renderMarkdown() then HTML-escapes like any
+// other text, showing up as literal "<table><tr><td>..." on screen
+// rather than either a rendered table or even plain markdown syntax.
+// Promoting the first row's own cells to real <th> here, before ever
+// handing the HTML to turndown, means every table gets a genuine
+// (non-empty) header and converts correctly regardless of whether the
+// original Word table had that Word-specific setting turned on at all.
+function promoteFirstRowToHeader(html) {
+  var temp = document.createElement('div');
+  temp.innerHTML = html;
+  temp.querySelectorAll('table').forEach(function(table) {
+    if (table.querySelector('th')) return; // already has a real header — leave as-is
+    var firstRow = table.querySelector('tr');
+    if (!firstRow) return;
+    firstRow.querySelectorAll('td').forEach(function(td) {
+      var th = document.createElement('th');
+      th.innerHTML = td.innerHTML;
+      td.replaceWith(th);
+    });
+  });
+  return temp.innerHTML;
+}
+
 // Converts a single SheetJS sheet into a genuine markdown table (pipe
 // syntax), not CSV — confirmed as a real, direct gap: raw CSV text
 // rendered no differently from any other plain text in the reader
@@ -501,7 +530,7 @@ function handleChatFilesSelected(fileList) {
             // structure whatsoever, which is exactly what was reported.
             var turndownService = new TurndownService();
             if (window.turndownPluginGfm) turndownService.use(turndownPluginGfm.gfm);
-            extractedText = turndownService.turndown(htmlResult.value).trim();
+            extractedText = turndownService.turndown(promoteFirstRowToHeader(htmlResult.value)).trim();
           } else {
             var workbook = XLSX.read(abReader.result, { type: 'array', cellDates: true });
             extractedText = workbookToReadableText(workbook);

@@ -2602,6 +2602,12 @@ function closeAttachmentReader() {
 window.closeAttachmentReader = closeAttachmentReader;
 
 var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
+// .docx/.xlsx attachments here carry genuine markdown in their own
+// textContent (continue.html's own extraction pipeline: mammoth's
+// convertToHtml + turndown-plugin-gfm for docx; a real pipe-syntax
+// markdown table per sheet for xlsx) — same reasoning as continue.html's
+// own copy of this list.
+var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx'];
 // Tracks the currently-open attachment's real url/filename for the
 // Download button — see downloadAttachmentFromReader's own comment for
 // why this can't just be a plain <a href download> link.
@@ -2624,6 +2630,8 @@ async function openAttachmentReader(url, filename, type) {
   try {
     if (t === 'pdf') {
       await renderPdfIntoReader(url, body);
+    } else if (ATTACHMENT_READER_MARKDOWN_TYPES.indexOf(t) !== -1) {
+      await renderMarkdownIntoReader(url, body);
     } else if (ATTACHMENT_READER_TEXT_TYPES.indexOf(t) !== -1) {
       await renderTextIntoReader(url, body);
     } else {
@@ -2828,6 +2836,21 @@ async function renderTextIntoReader(url, body) {
   if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
   var text = await resp.text();
   body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;background:#fff;padding:20px;border-radius:6px;margin:0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + escHtml(text) + '</pre>';
+}
+
+// For .docx/.xlsx attachments — their own textContent is already
+// genuine markdown, so it's rendered via Forge.renderMarkdown() rather
+// than escaped into a plain <pre> block. Same reasoning as
+// continue.html's own copy of this function.
+async function renderMarkdownIntoReader(url, body) {
+  var resp = await fetch(url);
+  if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
+  var text = await resp.text();
+  if (window.Forge && Forge.renderMarkdown) {
+    body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(text) + '</div>';
+  } else {
+    body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;background:#fff;padding:20px;border-radius:6px;margin:0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + escHtml(text) + '</pre>';
+  }
 }
 
 // Renders every page of a PDF into the reader body: a <canvas> for
@@ -3579,14 +3602,58 @@ function renderWithBubbles(text) {
 // portions of a forked conversation with the same visual bubble style
 // already used everywhere else, without needing to first reconstruct a
 // marker-delimited string from the array just to reuse the text parser.
+// Splits a persisted message's own content back into the user's
+// original typed text plus any .txt/.docx/.xlsx attachment(s) folded
+// into it at send time by continue.html's own sendChatMessage() —
+// confirmed as a real, direct gap: the unified Diary view here renders
+// straight from the same chat_sessions.messages array continue.html
+// writes to, but had no idea about that page's own
+// "--- Attached file: X ---\n<content>" convention at all, so an
+// attached file's own content showed up as raw, undelimited inline
+// text rather than a chip. Duplicated here (not shared/imported) since
+// this and continue.html are two separate, standalone HTML files with
+// no module system connecting them — same reasoning as this file's own
+// pre-existing, separate copy of openAttachmentReader and friends.
+function inferFileTypeFromFilename(filename) {
+  if (/\.docx$/i.test(filename)) return 'docx';
+  if (/\.xlsx$/i.test(filename)) return 'xlsx';
+  return 'txt';
+}
+function extractFileAttachmentsFromContent(content) {
+  var text = typeof content === 'string' ? content : '';
+  var re = /\n{0,2}--- Attached file: (.+?) ---\n([\s\S]*?)(?=\n{0,2}--- Attached file: |$)/g;
+  var attachments = [];
+  var match;
+  var firstMatchIndex = -1;
+  while ((match = re.exec(text)) !== null) {
+    if (firstMatchIndex === -1) firstMatchIndex = match.index;
+    attachments.push({ filename: match[1], textContent: match[2], type: inferFileTypeFromFilename(match[1]) });
+  }
+  var displayText = firstMatchIndex === -1 ? text : text.slice(0, firstMatchIndex);
+  return { displayText: displayText, fileAttachments: attachments };
+}
+var FILE_CHIP_ICONS = {
+  txt: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>',
+  docx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75h6M9 15.75h4.5"/></svg>',
+  xlsx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25M3.375 19.5V6.108c0-.53.184-1.045.52-1.456A2.987 2.987 0 0 1 5.25 4.5h13.5c.548 0 1.05.196 1.355.652.336.411.52.926.52 1.456V19.5M3.375 19.5h17.25M8.25 9.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3.75-6h1.5m-1.5 3h1.5m-1.5 3h1.5"/></svg>'
+};
+function renderFileAttachmentChips(attachments) {
+  return (attachments || []).map(function(a) {
+    var dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(a.textContent || '');
+    var icon = FILE_CHIP_ICONS[a.type] || FILE_CHIP_ICONS.txt;
+    return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (a.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'' + a.type + '\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-top:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + icon + escHtml(a.filename || 'document.txt') + '</div>';
+  }).join('');
+}
+
 function renderMessagesAsSegments(messages) {
   var segments = [];
   var current = '';
   (messages || []).forEach(function(m) {
     if (m.role === 'user') {
       if (current) { segments.push(current); current = ''; }
-      var isLongQuestion = (m.content || '').length > 150 || ((m.content || '').match(/\n/g) || []).length > 1;
-      current += '<div class="' + (isLongQuestion ? 'user-bubble-long' : 'user-bubble') + '">' + escHtml(m.content || '') + '</div>';
+      var parsed = extractFileAttachmentsFromContent(m.content);
+      var isLongQuestion = parsed.displayText.length > 150 || ((parsed.displayText.match(/\n/g) || []).length > 1);
+      current += '<div class="' + (isLongQuestion ? 'user-bubble-long' : 'user-bubble') + '">' + escHtml(parsed.displayText) + renderFileAttachmentChips(parsed.fileAttachments) + '</div>';
     } else {
       current += (Forge.renderMarkdown ? Forge.renderMarkdown(m.content || '') : escHtml(m.content || '')).replace(/<p>\s*<\/p>/g, '');
     }
