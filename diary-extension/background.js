@@ -919,16 +919,40 @@ let data;
             const markerRe2 = new RegExp(TITLE_MARK_MERGE + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK_MERGE, 'g');
             let lastMarkerMatch = null, mm;
             while ((mm = markerRe2.exec(existingContent)) !== null) lastMarkerMatch = mm;
+            let overlapConfirmed = false;
             if (lastMarkerMatch) {
               const overlapMarker = lastMarkerMatch[0];
               const overlapIdx = trimmedNew.indexOf(overlapMarker);
               if (overlapIdx !== -1 && overlapIdx < 50) {
                 trimmedNew = trimmedNew.slice(overlapIdx + overlapMarker.length).replace(/^\n+/, '');
+                overlapConfirmed = true;
               }
             }
-            patchContent = trimmedNew
-              ? existingContent.trim() + '\n\n---\n\n' + trimmedNew
-              : existingContent; // nothing genuinely new left after trimming the overlap
+            // Confirmed as a real, direct gap found during a priority-
+            // ordering audit: when the overlap boundary itself can't be
+            // confirmed at all (no marker found in existingContent, or
+            // the new capture doesn't actually start near one), this used
+            // to fall straight through to appending the ENTIRE, un-
+            // trimmed new capture anyway — the exact same blind-
+            // concatenation bug already fixed above for the "no overlap
+            // marker at all" case, just reappearing here for "found a
+            // marker, but it didn't actually match where the new content
+            // starts." Genuinely uncertain overlap is treated the same
+            // safe way as no overlap at all: keep the existing, already-
+            // saved content unchanged rather than guessing and risking a
+            // permanent, saved duplicate. This trades a slightly delayed
+            // pickup of genuinely new content (the next sync attempt,
+            // once the page has had more time to capture properly, will
+            // still find it) for avoiding a data-corruption risk that's
+            // far harder to undo after the fact.
+            if (overlapConfirmed) {
+              patchContent = trimmedNew
+                ? existingContent.trim() + '\n\n---\n\n' + trimmedNew
+                : existingContent; // nothing genuinely new left after trimming the overlap
+            } else {
+              console.log('[Diary Sync DIAG] partial-capture merge: could not confirm overlap boundary — keeping existing content unchanged rather than risking a duplicate');
+              patchContent = existingContent;
+            }
           }
         }
         const pR = await fetch(API + '/api/diary/' + existingId, {

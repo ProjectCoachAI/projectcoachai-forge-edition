@@ -3360,9 +3360,36 @@ function queryAllDeep(selector) {
         window.__diarySyncAttemptStartedAt = Date.now();
         window.__diarySyncAttemptToken = myToken;
         window.__diaryPerformSave().then(function(result) {
+          // Confirmed as a real, direct gap found during a priority-
+          // ordering audit: the token check below only ever guarded lock
+          // CLEARING, not the actual result being posted at all. A stale
+          // attempt that eventually resolves after being superseded (the
+          // exact scenario this whole token mechanism exists for) would
+          // still post its own SYNC_SAVE_RESULT here regardless — and
+          // background.js's own PATCH handler has no way to know this
+          // result came from an old, already-superseded attempt rather
+          // than the current one. Since that PATCH does a straight
+          // content replace (see backend/routes/diary.js), an older,
+          // stale attempt's own capture — genuinely older by definition,
+          // since it started before the fresh attempt that superseded it
+          // — could silently overwrite newer, already-saved content with
+          // older content, the exact "older data wins" regression risk
+          // this whole staleness window was designed to accept as a
+          // trade-off, not to reintroduce as its own new bug. Checking
+          // the same token here too closes that gap: a superseded
+          // attempt's result is simply discarded rather than ever
+          // reaching background.js at all.
+          if (window.__diarySyncAttemptToken !== myToken) {
+            console.log('[Diary Sync DIAG] a stale attempt resolved after being superseded — discarding its result instead of posting it');
+            return;
+          }
           console.log('[Diary Sync DIAG] performSaveToDiary() resolved:', JSON.stringify(result));
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: !!(result && result.success), error: result && result.error, chatSessionSync: result && result.chatSessionSync } }, '*');
         }).catch(function(err) {
+          if (window.__diarySyncAttemptToken !== myToken) {
+            console.log('[Diary Sync DIAG] a stale attempt threw after being superseded — discarding its result instead of posting it');
+            return;
+          }
           console.log('[Diary Sync DIAG] performSaveToDiary() threw:', err && err.message);
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SYNC_SAVE_RESULT', success: false, error: err && err.message } }, '*');
         }).finally(function() {

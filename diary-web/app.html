@@ -685,8 +685,25 @@ async function updateSyncButtonLabelForEntry(entryId) {
   var conversationUrl = meta && meta.url;
   if (!conversationUrl) { btn.style.display = 'none'; return; }
   var syncedText = (meta && meta.lastSyncedAt) ? ('Synced ' + formatSyncRelativeTime(meta.lastSyncedAt)) : 'Never synced';
-  var tabCheck = await extSyncSendMessage({ type: 'CHECK_TAB_OPEN', conversationUrl: conversationUrl });
-  var opensNewTab = !(tabCheck && tabCheck.isOpen);
+  // Confirmed as a real, direct gap: this call was previously unguarded
+  // — performEntrySync()'s own finally block calls this function
+  // specifically to overwrite its earlier "🔄 Syncing…" button text
+  // with the real, final result, but if extSyncSendMessage itself ever
+  // throws or rejects (a real possibility exactly in the failure cases
+  // this function's own caller most needs it for, e.g. right after a
+  // history_mismatch), that overwrite never happens at all — leaving
+  // the button visibly stuck on "🔄 Syncing…" indefinitely, even though
+  // the actual sync attempt itself already finished. Falls back to the
+  // last known, already-persisted state (still accurate — just not
+  // showing live tab-open status) rather than leaving stale text
+  // visible forever.
+  var opensNewTab = false;
+  try {
+    var tabCheck = await extSyncSendMessage({ type: 'CHECK_TAB_OPEN', conversationUrl: conversationUrl });
+    opensNewTab = !(tabCheck && tabCheck.isOpen);
+  } catch (e) {
+    console.warn('[Diary] updateSyncButtonLabelForEntry: CHECK_TAB_OPEN failed, showing label without live tab status:', e.message);
+  }
   btn.textContent = '\u{1F504} ' + syncedText + (opensNewTab ? ' \u2022 opens original conversation' : '');
 }
 
@@ -723,24 +740,22 @@ async function performEntrySync(entryId) {
     if (r && r.ok && r.data && r.data.entries) {
       allEntries = r.data.entries;
       window._diaryEntries = allEntries;
-      // Confirmed live as a real, concrete bug: re-fetching the data
-      // alone was never enough — the entry's own visible content div was
-      // never re-rendered at all, so a successful sync that pulled in
-      // new turns (e.g. "4 new messages") left the on-screen content
-      // frozen at its old, shorter, pre-sync state. Since that old state
-      // may have had fewer than ENTRY_INITIAL_VISIBLE_TURNS turns total,
-      // "Load earlier" never got the chance to appear even once the
-      // underlying data genuinely warranted it — exactly the
-      // inconsistent behavior reported. Re-rendering here, from the
-      // freshly-updated entry, also naturally resets pagination back to
-      // showing the most recent turns, which is correct regardless: the
-      // content just changed, so any previously-expanded "Load earlier"
-      // state was already stale.
+      // Confirmed as a real, direct bug (not just a display quirk): this
+      // previously called renderEntryContentHtml() directly — the
+      // plain, native-only renderer that has no idea an entry was ever
+      // forked to Forge at all. Every sync of a forked entry silently
+      // erased the "Continued in Forge" divider and the separate
+      // Forge-only segment, replacing the display with just the raw
+      // native content, even though the underlying data (both sides)
+      // was still fully intact. renderUnifiedEntryContent() already
+      // contains the correct logic to detect whether this entry is
+      // forked at all and fall back to the exact same native-only
+      // render when it isn't, so swapping to it here is safe
+      // regardless of fork status — window._diaryEntries is already
+      // updated with the fresh entry data by this point (set just
+      // above), so it reads correctly.
       var updatedEntry = allEntries.find(function(e) { return e.id === entryId; });
-      var contentEl = document.getElementById('entry-content-' + entryId);
-      if (updatedEntry && contentEl) {
-        contentEl.innerHTML = Forge.renderMarkdown ? renderEntryContentHtml(updatedEntry) : escHtml(updatedEntry.content || '');
-      }
+      if (updatedEntry) await renderUnifiedEntryContent(entryId);
     }
   } finally {
     if (btn) btn.disabled = false;
@@ -3721,63 +3736,79 @@ async function renderUnifiedEntryContent(entryId) {
     return;
   }
 
-  var nativeMessages = session.messages.slice(0, seedCount);
-  var forgeMessages = session.messages.slice(seedCount);
+  // Confirmed as a real, direct gap: everything below this point (the
+  // actual unified-view assembly) had NO try/catch at all, unlike the
+  // fetch above it — if anything here throws unexpectedly (e.g. a
+  // malformed session.messages entry, or any other genuinely
+  // unforeseen runtime error), container.innerHTML never gets set at
+  // all, leaving whatever was already on screen (the entry's own
+  // previous content, or a transient state from elsewhere) stuck
+  // indefinitely with no fallback and no visible error either. Wrapped
+  // here so any such failure still falls back to the same safe,
+  // correct native-only render used everywhere else in this function,
+  // rather than leaving the entry in an indeterminate, stuck state.
+  try {
+    var nativeMessages = session.messages.slice(0, seedCount);
+    var forgeMessages = session.messages.slice(seedCount);
 
-  var nativeSegments = renderMessagesAsSegments(nativeMessages);
-  var total = nativeSegments.length;
-  var startIndex = Math.max(0, total - ENTRY_INITIAL_VISIBLE_TURNS);
-  window._entryContentSegments[entryId] = { segments: nativeSegments, renderedFromIndex: startIndex, initialIndex: startIndex };
+    var nativeSegments = renderMessagesAsSegments(nativeMessages);
+    var total = nativeSegments.length;
+    var startIndex = Math.max(0, total - ENTRY_INITIAL_VISIBLE_TURNS);
+    window._entryContentSegments[entryId] = { segments: nativeSegments, renderedFromIndex: startIndex, initialIndex: startIndex };
 
-  var html = '';
-  if (startIndex > 0) {
-    html += '<div id="loadEarlierWrap-' + entryId + '" style="margin:0 0 14px;">' +
-      '<button class="entry-btn" id="loadEarlierEntryBtn-' + entryId + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + entryId + ')" style="font-size:12px;">' +
-        'Load earlier (' + startIndex + ' more)' +
-      '</button>' +
-      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + entryId + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">' + heroicon('arrow-path') + '</button>' +
-    '</div>';
+    var html = '';
+    if (startIndex > 0) {
+      html += '<div id="loadEarlierWrap-' + entryId + '" style="margin:0 0 14px;">' +
+        '<button class="entry-btn" id="loadEarlierEntryBtn-' + entryId + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + entryId + ')" style="font-size:12px;">' +
+          'Load earlier (' + startIndex + ' more)' +
+        '</button>' +
+        '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + entryId + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">' + heroicon('arrow-path') + '</button>' +
+      '</div>';
+    }
+    for (var i = startIndex; i < total; i++) html += nativeSegments[i];
+
+    // Images-disclosure banner — reworded here specifically for the
+    // unified view, where there's now a real, visible boundary to be
+    // precise about. The single-thread version of this banner ("Forge
+    // won't know about images from the original conversation") no longer
+    // fits once the native portion with its own images is directly, visibly
+    // shown right above the Forge-only portion that lacks them — this
+    // version names that actual boundary instead of speaking generically.
+    if (meta.images && meta.images.length && forgeMessages.length) {
+      html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
+        heroicon('photo') + ' Images from the native conversation are shown above; anything continued in Forge below won\'t include or reference them.' +
+      '</div>';
+    }
+
+    // "Still syncing" indicator — a real, honest signal for a real,
+    // possible state: content's own save can succeed independently of
+    // whether the session-merge did (a genuine history_mismatch), meaning
+    // the native portion shown here could be more current than what
+    // synced into the Forge-only portion below reflects. Shown rather than
+    // silently letting the two sides look inconsistent with no
+    // explanation, the same honesty-first principle as the rest of this
+    // feature set.
+    if (meta.lastSyncDiverged === true) {
+      html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
+        heroicon('clock') + ' Still syncing the Forge side — the native conversation above may be slightly ahead of what\'s reflected below.' +
+      '</div>';
+    }
+
+    if (forgeMessages.length) {
+      var forgeSegments = renderMessagesAsSegments(forgeMessages);
+      html += '<div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px;">' +
+        '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
+        '<span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + heroicon('chat-bubble-left-right') + ' Continued in Forge</span>' +
+        '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
+      '</div>' +
+      '<div style="background:#FBF9F4;border-radius:10px;padding:14px;">' + forgeSegments.join('') + '</div>';
+    }
+
+    container.innerHTML = html;
+  } catch (e) {
+    console.warn('[Diary] Unified view: rendering failed unexpectedly, falling back to native-only:', e.message);
+    container.innerHTML = renderEntryContentHtml(entry);
   }
-  for (var i = startIndex; i < total; i++) html += nativeSegments[i];
-
-  // Images-disclosure banner — reworded here specifically for the
-  // unified view, where there's now a real, visible boundary to be
-  // precise about. The single-thread version of this banner ("Forge
-  // won't know about images from the original conversation") no longer
-  // fits once the native portion with its own images is directly, visibly
-  // shown right above the Forge-only portion that lacks them — this
-  // version names that actual boundary instead of speaking generically.
-  if (meta.images && meta.images.length && forgeMessages.length) {
-    html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
-      heroicon('photo') + ' Images from the native conversation are shown above; anything continued in Forge below won\'t include or reference them.' +
-    '</div>';
-  }
-
-  // "Still syncing" indicator — a real, honest signal for a real,
-  // possible state: content's own save can succeed independently of
-  // whether the session-merge did (a genuine history_mismatch), meaning
-  // the native portion shown here could be more current than what
-  // synced into the Forge-only portion below reflects. Shown rather than
-  // silently letting the two sides look inconsistent with no
-  // explanation, the same honesty-first principle as the rest of this
-  // feature set.
-  if (meta.lastSyncDiverged === true) {
-    html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
-      heroicon('clock') + ' Still syncing the Forge side — the native conversation above may be slightly ahead of what\'s reflected below.' +
-    '</div>';
-  }
-
-  if (forgeMessages.length) {
-    var forgeSegments = renderMessagesAsSegments(forgeMessages);
-    html += '<div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px;">' +
-      '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
-      '<span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + heroicon('chat-bubble-left-right') + ' Continued in Forge</span>' +
-      '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
-    '</div>' +
-    '<div style="background:#FBF9F4;border-radius:10px;padding:14px;">' + forgeSegments.join('') + '</div>';
-  }
-
-  container.innerHTML = html;
 }
 window.renderUnifiedEntryContent = renderUnifiedEntryContent;
 
