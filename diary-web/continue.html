@@ -137,7 +137,7 @@
   <div id="chatImagePreviewRow" style="display:none;align-items:center;gap:8px;padding:8px 20px 0;flex-wrap:wrap;"></div>
 
   <div class="chat-input-row">
-    <input type="file" id="chatImageFileInput" accept="image/*,application/pdf,text/plain,.txt" multiple style="display:none;" onchange="handleChatFilesSelected(this.files)"/>
+    <input type="file" id="chatImageFileInput" accept="image/*,application/pdf,text/plain,.txt,.docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple style="display:none;" onchange="handleChatFilesSelected(this.files)"/>
     <button id="chatImageAttachBtn" class="chat-icon-btn" onclick="document.getElementById('chatImageFileInput').click()" title="Attach images or PDFs" style="flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13"/></svg></button>
     <textarea id="chatInput" class="chat-input" placeholder="Type your message..." rows="1" oninput="autoResizeChatInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button id="chatSendBtn" class="chat-send-btn" onclick="sendChatMessage()">Send</button>
@@ -172,6 +172,13 @@
 </div>
 
 <script src="/js/forge-api.js"></script>
+<!-- mammoth (docx text extraction) and SheetJS/xlsx (spreadsheet parsing)
+     — same exact CDN URLs already used and proven working in
+     forge-documents/documents.html and forge-excel/excel.html
+     respectively; reused here rather than a second, separately-loaded
+     copy of the same libraries. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 'use strict';
 
@@ -287,6 +294,19 @@ function renderChatAttachmentPreviews() {
       // after sending.
       var txtDataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(f.textContent || '');
       thumb = '<div onclick="event.stopPropagation();openAttachmentReader(\'' + txtDataUrl.replace(/'/g, "\\'") + '\',\'' + escapedFilename + '\',\'txt\')" style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;background:#F5F3EE;cursor:zoom-in;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg></div>';
+    } else if (f.type === 'docx' || f.type === 'xlsx') {
+      // .docx/.xlsx — same clickable, data: URL pattern as .txt above:
+      // the extracted, readable text is already sitting in
+      // f.textContent (mammoth.js/SheetJS already did the actual
+      // parsing at attach time), so opening the reader modal here needs
+      // no server upload either. Distinct icon per type (document-text
+      // for docx, a grid for xlsx) so the two are visually
+      // distinguishable from each other and from .txt.
+      var docDataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(f.textContent || '');
+      var docIconSvg = f.type === 'docx'
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75h6M9 15.75h4.5"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25M3.375 19.5V6.108c0-.53.184-1.045.52-1.456A2.987 2.987 0 0 1 5.25 4.5h13.5c.548 0 1.05.196 1.355.652.336.411.52.926.52 1.456V19.5M3.375 19.5h17.25M8.25 9.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3.75-6h1.5m-1.5 3h1.5m-1.5 3h1.5"/></svg>';
+      thumb = '<div onclick="event.stopPropagation();openAttachmentReader(\'' + docDataUrl.replace(/'/g, "\\'") + '\',\'' + escapedFilename + '\',\'txt\')" style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;background:#F5F3EE;cursor:zoom-in;">' + docIconSvg + '</div>';
     } else {
       thumb = '<img onclick="event.stopPropagation();openImageZoom(\'' + f.base64 + '\')" src="' + f.base64 + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:0.5px solid #D6D2C8;cursor:zoom-in;"/>';
     }
@@ -306,18 +326,27 @@ function escHtmlChat(str) {
 }
 
 // Splits a persisted message's own content back into the user's
-// original typed text plus any .txt attachment(s) folded into it at
-// send time — confirmed as a real, direct gap: the immediate-send bubble
-// already correctly showed just the original text plus a chip (using the
-// in-memory file data available at that exact moment), but the
-// RE-RENDER paths (loading an existing session on page load, or
-// revisiting it) render straight from the persisted, full content
-// string, which has no separate memory of "this was originally a
-// chip" at all — only the raw "--- Attached file: X.txt ---\n<content>"
-// text baked directly into it. Parsed back out here via the same,
-// exact delimiter format used when building it at send time, so both
-// paths now show a consistent chip regardless of when the message is
-// rendered.
+// original typed text plus any .txt/.docx/.xlsx attachment(s) folded
+// into it at send time — confirmed as a real, direct gap: the
+// immediate-send bubble already correctly showed just the original
+// text plus a chip (using the in-memory file data available at that
+// exact moment), but the RE-RENDER paths (loading an existing session
+// on page load, or revisiting it) render straight from the persisted,
+// full content string, which has no separate memory of "this was
+// originally a chip" at all — only the raw
+// "--- Attached file: X.txt ---\n<content>" text baked directly into
+// it. Parsed back out here via the same, exact delimiter format used
+// when building it at send time, so both paths now show a consistent
+// chip regardless of when the message is rendered. The delimiter
+// format itself never needed to carry a type tag — the file's own
+// extension in its filename is inferred back into a type here, so this
+// stays fully backward-compatible with messages persisted before
+// .docx/.xlsx support existed at all (those are all .txt by definition).
+function inferFileTypeFromFilename(filename) {
+  if (/\.docx$/i.test(filename)) return 'docx';
+  if (/\.xlsx$/i.test(filename)) return 'xlsx';
+  return 'txt';
+}
 function extractTxtAttachmentsFromContent(content) {
   var text = typeof content === 'string' ? content : '';
   // Leading \n\n is deliberately OPTIONAL here (\n{0,2}, not \n\n) —
@@ -333,10 +362,39 @@ function extractTxtAttachmentsFromContent(content) {
   var firstMatchIndex = -1;
   while ((match = re.exec(text)) !== null) {
     if (firstMatchIndex === -1) firstMatchIndex = match.index;
-    attachments.push({ filename: match[1], textContent: match[2] });
+    attachments.push({ filename: match[1], textContent: match[2], type: inferFileTypeFromFilename(match[1]) });
   }
   var displayText = firstMatchIndex === -1 ? text : text.slice(0, firstMatchIndex);
-  return { displayText: displayText, txtAttachments: attachments };
+  return { displayText: displayText, fileAttachments: attachments };
+}
+
+// Shared with documents.js's own MAX_DOC_CHARS precedent — a guardrail
+// on the EXTRACTED text specifically, not just the original file size:
+// a compressed .xlsx/.docx well under the 8MB file-size cap can still
+// unpack into a much larger amount of raw text once extracted, and a
+// single chat message shouldn't be allowed to balloon arbitrarily large
+// just because the bridging system could technically absorb it.
+var MAX_EXTRACTED_FILE_CHARS = 100000;
+
+function truncateExtractedText(text, filename) {
+  if (text.length <= MAX_EXTRACTED_FILE_CHARS) return text;
+  return text.slice(0, MAX_EXTRACTED_FILE_CHARS) + '\n\n[Content truncated — ' + filename + ' is larger than this chat can include in full.]';
+}
+
+// Converts a parsed SheetJS workbook into readable, CSV-style text —
+// deliberately much simpler than forge-excel's own header-detection/
+// data-cleaning logic (processSheetJSON in forge-excel/excel.html),
+// which exists for a different purpose (interactive tabular analysis).
+// Here the only goal is "let the AI read what's in the file," so a
+// plain per-sheet CSV dump, labeled by sheet name, is enough — and ALL
+// sheets are included (not just the first), unlike forge-excel's own
+// single-sheet-for-analysis default, since a chat attachment should
+// give the AI the full picture rather than picking one sheet for it.
+function workbookToReadableText(workbook) {
+  return workbook.SheetNames.map(function(name) {
+    var csv = XLSX.utils.sheet_to_csv(workbook.Sheets[name]);
+    return '=== Sheet: ' + name + ' ===\n' + csv;
+  }).join('\n\n');
 }
 
 function handleChatFilesSelected(fileList) {
@@ -358,8 +416,18 @@ function handleChatFilesSelected(fileList) {
     // uses the same preview-chip staging area for a consistent,
     // reviewable-before-sending experience.
     var isTxt = file.type === 'text/plain' || /\.txt$/i.test(file.name);
-    if (!isImage && !isPdf && !isTxt) {
-      Forge.showToast(file.name + ': only images, PDFs, and .txt files are supported.', 'error');
+    // .docx/.xlsx are genuinely different from .txt in one specific way
+    // (they're binary/zip-based, not plain text — mammoth.js and
+    // SheetJS, the exact same client-side libraries already proven
+    // working in forge-documents/documents.html and forge-excel/
+    // excel.html respectively, extract readable text from them first),
+    // but otherwise follow the identical pattern once that extraction
+    // is done: append the extracted text into the message, same as
+    // .txt, rather than uploading the original binary file anywhere.
+    var isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/i.test(file.name);
+    var isXlsx = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || /\.xlsx$/i.test(file.name);
+    if (!isImage && !isPdf && !isTxt && !isDocx && !isXlsx) {
+      Forge.showToast(file.name + ': only images, PDFs, .txt, .docx, and .xlsx files are supported.', 'error');
       return;
     }
     // 8MB is a conservative, round ceiling comfortably under every target
@@ -369,6 +437,37 @@ function handleChatFilesSelected(fileList) {
     // response.
     if (file.size > 8 * 1024 * 1024) {
       Forge.showToast(file.name + ' is too large (max 8MB).', 'error');
+      return;
+    }
+    if (isDocx || isXlsx) {
+      // Read as arrayBuffer, not text/dataURL — both mammoth.js and
+      // SheetJS need the raw bytes directly to parse the zip-based
+      // file format.
+      var abReader = new FileReader();
+      abReader.onload = async function() {
+        try {
+          var extractedText;
+          if (isDocx) {
+            var result = await mammoth.extractRawText({ arrayBuffer: abReader.result });
+            extractedText = result.value.trim();
+          } else {
+            var workbook = XLSX.read(abReader.result, { type: 'array', cellDates: true });
+            extractedText = workbookToReadableText(workbook);
+          }
+          if (!extractedText.trim()) {
+            Forge.showToast(file.name + ' appears to be empty or could not be read.', 'error');
+            return;
+          }
+          chatAttachedFiles.push({ textContent: truncateExtractedText(extractedText, file.name), filename: file.name, type: isDocx ? 'docx' : 'xlsx' });
+          renderChatAttachmentPreviews();
+        } catch(e) {
+          Forge.showToast('Could not read ' + file.name + ' — ' + (e.message || 'please try again') + '.', 'error');
+        }
+      };
+      abReader.onerror = function() {
+        Forge.showToast('Could not read ' + file.name + ' — please try again.', 'error');
+      };
+      abReader.readAsArrayBuffer(file);
       return;
     }
     var reader = new FileReader();
@@ -618,20 +717,24 @@ function addMessageToDOM(role, content, opts) {
     var pdfChipsHtml = (opts.pdfAttachments || []).map(function(p) {
       return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + p.url.replace(/'/g, "\\'") + '\',\'' + (p.filename || 'document.pdf').replace(/'/g, "\\'") + '\',\'pdf\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>' + escHtmlChat(p.filename || 'document.pdf') + '</div>';
     }).join('<br/>');
-    // .txt chips — clickable, opening the same reader modal as PDF, via
-    // a data: URL built directly from the file's own text content
+    // .txt/.docx/.xlsx chips — clickable, opening the same reader modal
+    // as PDF, via a data: URL built directly from the file's own
+    // (already-extracted, for docx/xlsx) text content
     // (openAttachmentReader's own renderTextIntoReader does a plain
     // fetch(url).then(r => r.text()), and fetch() genuinely supports
     // data: URLs directly — no server upload needed at all for this,
     // unlike images/PDFs, since the full text is already available
-    // right here). Revisited from an earlier, more conservative
-    // decision to make this non-clickable — confirmed directly that a
-    // clickable, consistent-with-PDF/image chip is what was actually
-    // expected here, and the data: URL approach makes it just as
-    // achievable as the plain, non-clickable version.
-    var txtChipsHtml = (opts.txtAttachments || []).map(function(t) {
+    // right here). Icon varies by type so the three are visually
+    // distinguishable from each other.
+    var fileChipIcons = {
+      txt: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>',
+      docx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75h6M9 15.75h4.5"/></svg>',
+      xlsx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25M3.375 19.5V6.108c0-.53.184-1.045.52-1.456A2.987 2.987 0 0 1 5.25 4.5h13.5c.548 0 1.05.196 1.355.652.336.411.52.926.52 1.456V19.5M3.375 19.5h17.25M8.25 9.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3.75-6h1.5m-1.5 3h1.5m-1.5 3h1.5"/></svg>'
+    };
+    var txtChipsHtml = (opts.fileAttachments || []).map(function(t) {
       var dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(t.textContent || '');
-      return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (t.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'txt\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>' + escHtmlChat(t.filename || 'document.txt') + '</div>';
+      var icon = fileChipIcons[t.type] || fileChipIcons.txt;
+      return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (t.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'txt\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + icon + escHtmlChat(t.filename || 'document.txt') + '</div>';
     }).join('<br/>');
     div.innerHTML = '<div class="chat-msg-body">' + imgHtml + pdfChipsHtml + txtChipsHtml + rendered + '</div>';
   }
@@ -820,35 +923,37 @@ async function sendChatMessage() {
   input.value = '';
   autoResizeChatInput(input);
 
-  // .txt files need no special AI-provider content block at all, unlike
-  // images/PDFs — their own text is just appended directly into the
-  // actual message sent to the AI, wrapped with a clear delimiter so the
-  // model can distinguish the user's own typed message from an
-  // attached file's own content. Computed BEFORE chatHistory.push()
-  // below, deliberately — pushing the original, un-appended `text`
-  // there would mean the attached file's own content is only ever sent
-  // once and never actually persisted in the conversation's own
-  // history, silently losing it for every message after this one.
-  var txtFilesForThisSend = filesForThisSend.filter(function(f) { return f.type === 'txt'; });
+  // .txt/.docx/.xlsx files need no special AI-provider content block at
+  // all, unlike images/PDFs — their own (already-extracted, for
+  // docx/xlsx) text is just appended directly into the actual message
+  // sent to the AI, wrapped with a clear delimiter so the model can
+  // distinguish the user's own typed message from an attached file's
+  // own content. Computed BEFORE chatHistory.push() below, deliberately
+  // — pushing the original, un-appended `text` there would mean the
+  // attached file's own content is only ever sent once and never
+  // actually persisted in the conversation's own history, silently
+  // losing it for every message after this one.
+  var appendedContentFilesForThisSend = filesForThisSend.filter(function(f) { return f.type === 'txt' || f.type === 'docx' || f.type === 'xlsx'; });
   var messageToSend = text;
-  txtFilesForThisSend.forEach(function(f) {
+  appendedContentFilesForThisSend.forEach(function(f) {
     messageToSend += '\n\n--- Attached file: ' + f.filename + ' ---\n' + f.textContent;
   });
   // Backend rejects a genuinely empty message outright (separate check
-  // there, not just this page's own guard above) — .txt attachments
-  // already make messageToSend non-empty via the append above, but an
-  // image/PDF sent completely alone (no typed text, no .txt file) would
-  // still leave it blank at this point, so a plain default fills that
-  // gap rather than leaving the send to fail one step further down.
+  // there, not just this page's own guard above) — .txt/.docx/.xlsx
+  // attachments already make messageToSend non-empty via the append
+  // above, but an image/PDF sent completely alone (no typed text, no
+  // other attachment) would still leave it blank at this point, so a
+  // plain default fills that gap rather than leaving the send to fail
+  // one step further down.
   if (!messageToSend.trim() && filesForThisSend.length) {
     messageToSend = 'Please take a look at the attached file' + (filesForThisSend.length > 1 ? 's' : '') + '.';
   }
   // Trims any leading whitespace left over specifically when text was
-  // empty and a .txt file's own content was appended directly onto it
-  // above (e.g. "\n\n--- Attached file...") — cosmetic only, but a
-  // clean send is worth the one extra call.
+  // empty and a file's own content was appended directly onto it above
+  // (e.g. "\n\n--- Attached file...") — cosmetic only, but a clean send
+  // is worth the one extra call.
   messageToSend = messageToSend.trim();
-  var nonTxtFilesForThisSend = filesForThisSend.filter(function(f) { return f.type !== 'txt'; });
+  var nonAppendedFilesForThisSend = filesForThisSend.filter(function(f) { return f.type !== 'txt' && f.type !== 'docx' && f.type !== 'xlsx'; });
 
   // Images get a visual preview; PDFs get a clickable chip (opening the
   // reader modal); .txt files get a plain, non-clickable chip — their
@@ -858,18 +963,18 @@ async function sendChatMessage() {
   // src), but the chip itself still needs to show SOMETHING was
   // attached, since that content never appears in this displayed
   // bubble at all (see the un-appended `text` used below).
-  var imagePreviewsForBubble = filesForThisSend.filter(function(f) { return f.type !== 'pdf' && f.type !== 'txt'; }).map(function(f) { return f.base64; });
+  var imagePreviewsForBubble = filesForThisSend.filter(function(f) { return f.type !== 'pdf' && f.type !== 'txt' && f.type !== 'docx' && f.type !== 'xlsx'; }).map(function(f) { return f.base64; });
   var pdfsForBubble = filesForThisSend.filter(function(f) { return f.type === 'pdf'; }).map(function(f) { return { url: f.base64, filename: f.filename }; });
-  var txtsForBubble = filesForThisSend.filter(function(f) { return f.type === 'txt'; }).map(function(f) { return { filename: f.filename }; });
+  var fileAttachmentsForBubble = appendedContentFilesForThisSend.map(function(f) { return { filename: f.filename, type: f.type, textContent: f.textContent }; });
   // The DISPLAYED bubble still shows the user's own original, un-appended
   // text — genuinely showing the raw ~2000-word contents of an attached
-  // .txt file inline in the chat would be unreadable clutter; the file
-  // itself is already visible via the (now-cleared) pre-send preview
-  // chip. Only the actual API payload and persisted history need the
-  // full, appended text.
+  // .txt/.docx/.xlsx file inline in the chat would be unreadable clutter;
+  // the file itself is already visible via the (now-cleared) pre-send
+  // preview chip. Only the actual API payload and persisted history need
+  // the full, appended text.
   var lastUserMessageEl = addMessageToDOM('user', text, Object.assign(
     imagePreviewsForBubble.length ? { imagePreviewURLs: imagePreviewsForBubble } : {},
-    txtsForBubble.length ? { txtAttachments: txtsForBubble } : {},
+    fileAttachmentsForBubble.length ? { fileAttachments: fileAttachmentsForBubble } : {},
     pdfsForBubble.length ? { pdfAttachments: pdfsForBubble } : {}
   ));
   chatHistory.push({ role: 'user', content: messageToSend });
@@ -896,7 +1001,7 @@ async function sendChatMessage() {
         history: chatHistory.slice(0, -1),
         source: 'diary',
         diaryEntryId: chatDiaryEntryId,
-        attachments: nonTxtFilesForThisSend.length ? nonTxtFilesForThisSend.map(function(f) { return { base64: f.base64, mimeType: f.mimeType, type: f.type }; }) : undefined
+        attachments: nonAppendedFilesForThisSend.length ? nonAppendedFilesForThisSend.map(function(f) { return { base64: f.base64, mimeType: f.mimeType, type: f.type }; }) : undefined
       })
     });
 
@@ -1178,7 +1283,7 @@ window.sendChatMessage = sendChatMessage;
       addMessageToDOM(allLoadedMessages[i].role, msgParsed.displayText, Object.assign(
         msgImageUrls.length ? { imagePreviewURLs: msgImageUrls } : {},
         msgPdfs.length ? { pdfAttachments: msgPdfs } : {},
-        msgParsed.txtAttachments.length ? { txtAttachments: msgParsed.txtAttachments } : {}
+        msgParsed.fileAttachments.length ? { fileAttachments: msgParsed.fileAttachments } : {}
       ));
     }
   }
@@ -1351,7 +1456,7 @@ window.sendChatMessage = sendChatMessage;
       var el = addMessageToDOM(msg.role, msgParsed2.displayText, Object.assign({ insertBeforeEl: anchor },
         msgImageUrls2.length ? { imagePreviewURLs: msgImageUrls2 } : {},
         msgPdfs2.length ? { pdfAttachments: msgPdfs2 } : {},
-        msgParsed2.txtAttachments.length ? { txtAttachments: msgParsed2.txtAttachments } : {}
+        msgParsed2.fileAttachments.length ? { fileAttachments: msgParsed2.fileAttachments } : {}
       ));
       anchor = el;
     }
