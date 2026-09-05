@@ -1376,9 +1376,32 @@ router.patch('/:id', requireAuth, async (req, res) => {
           const oldMessagesForCompare = splitEntryIntoMessages({ prompt: oldRow.prompt, content: oldRow.content }, true);
           const newPromptForCompare = prompt !== undefined ? prompt : oldRow.prompt;
           const newMessagesForCompare = splitEntryIntoMessages({ prompt: newPromptForCompare, content }, true);
+          // Confirmed as a real, direct cause of a genuinely persistent
+          // "still syncing" state (reported live across multiple DOM-
+          // scraping providers, e.g. Grok): this comparison used exact,
+          // byte-for-byte string equality, with zero normalization at
+          // all. A DOM-scraped capture can never guarantee identical
+          // whitespace/line-breaks across two entirely separate re-reads
+          // of the same conversation (confirmed elsewhere in this file —
+          // Turndown's own markdown conversion, re-run fresh each sync
+          // attempt, is not guaranteed byte-identical across runs even
+          // when the underlying DOM content hasn't changed at all). Once
+          // a single sync attempt ever failed this exact-match check due
+          // to purely cosmetic whitespace drift, EVERY subsequent attempt
+          // would likely fail the identical way too, since the capture
+          // mechanism itself has no reason to suddenly start producing
+          // byte-identical output — meaning the resulting
+          // history_mismatch/lastSyncDiverged state could never clear
+          // itself at all, regardless of how many times the user
+          // resynced. Normalizing (collapsing whitespace runs, trimming)
+          // before comparing means only genuine content differences can
+          // still trigger a real mismatch, while inconsequential
+          // formatting drift no longer can.
+          const normalizeForCompare = (s) => (s || '').replace(/\s+/g, ' ').trim();
           const isCleanExtension = oldMessagesForCompare.length <= newMessagesForCompare.length &&
             oldMessagesForCompare.every(function(m, idx) {
-              return newMessagesForCompare[idx] && newMessagesForCompare[idx].role === m.role && newMessagesForCompare[idx].content === m.content;
+              return newMessagesForCompare[idx] && newMessagesForCompare[idx].role === m.role &&
+                normalizeForCompare(newMessagesForCompare[idx].content) === normalizeForCompare(m.content);
             });
           if (isCleanExtension && newMessagesForCompare.length > oldMessagesForCompare.length) {
             const newMessagesFull = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
