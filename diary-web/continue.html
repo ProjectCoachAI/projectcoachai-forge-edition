@@ -397,6 +397,55 @@ function truncateExtractedText(text, filename) {
   return text.slice(0, MAX_EXTRACTED_FILE_CHARS) + '\n\n[Content truncated — ' + filename + ' is larger than this chat can include in full.]';
 }
 
+// Confirmed as a real, direct gap, found by tracing an actual real-world
+// failure: a real Word table cell almost always contains its own text
+// wrapped in a <p> — mammoth's own convertToHtml always wraps table-cell
+// content this way, even for a single line of text. turndown's own base
+// <p> rule inserts "\n\n" around paragraph content, and its table rule
+// doesn't strip that back out for cells specifically — so a cell like
+// <td><p>Group</p></td> converts to a table row broken across MULTIPLE
+// lines ("|\nGroup\n\n|...") instead of one single line, which is not
+// valid markdown table syntax at all and renders as broken, disconnected
+// text. Flattening every cell's own <p> tags into plain inline content
+// BEFORE handing the HTML to turndown avoids this entirely — regardless
+// of whether the original Word table happens to have single- or
+// multi-paragraph cells. Joined with a plain space when a cell genuinely
+// has more than one paragraph — NOT a literal "<br>" text run: confirmed
+// live that Forge.renderMarkdown() HTML-escapes its entire input as its
+// own very first step, before ever parsing any markdown syntax at all,
+// so an embedded "<br>" (real element or literal text alike) just shows
+// up as literal "&lt;br&gt;" on screen rather than an actual line break
+// either way. A plain space loses the original visual line break within
+// the cell, but stays genuinely safe and renders correctly, which a
+// broken-looking literal tag would not.
+function flattenTableCellParagraphs(html) {
+  var temp = document.createElement('div');
+  temp.innerHTML = html;
+  temp.querySelectorAll('table td, table th').forEach(function(cell) {
+    var paragraphs = cell.querySelectorAll('p');
+    if (paragraphs.length) {
+      var parts = Array.prototype.slice.call(paragraphs).map(function(p) { return p.innerHTML; });
+      cell.innerHTML = parts.join(' ');
+    }
+    // Confirmed as a second, separate, real gap in the same area: a
+    // literal '|' within cell content (a realistic thing to appear in
+    // real prose — e.g. "OOS|AOS") is NOT escaped by turndown-plugin-gfm
+    // at all, even with turndown's own default escape() left fully
+    // intact — confirmed directly by testing completely unmodified
+    // turndown+gfm against this exact case. A standard markdown "\|"
+    // escape doesn't actually fix this either: Forge.renderMarkdown()'s
+    // own table-parsing logic does a naive row.split('|') with zero
+    // awareness of escaping at all, so it would still incorrectly split
+    // on an escaped pipe too. Replaced with the fullwidth vertical line
+    // character (U+FF5C, "｜") instead — visually near-identical to a
+    // regular pipe but a genuinely different character that neither
+    // turndown's own table rule nor renderMarkdown's own naive split
+    // can ever mistake for a column separator.
+    cell.innerHTML = cell.innerHTML.replace(/\|/g, '\uFF5C');
+  });
+  return temp.innerHTML;
+}
+
 // Confirmed as a real, direct gap: mammoth's own convertToHtml only
 // ever emits <th> for a table if the ORIGINAL Word table explicitly has
 // "repeat header row" set on it — a plain table with no such setting
@@ -410,6 +459,8 @@ function truncateExtractedText(text, filename) {
 // handing the HTML to turndown, means every table gets a genuine
 // (non-empty) header and converts correctly regardless of whether the
 // original Word table had that Word-specific setting turned on at all.
+// Deliberately runs AFTER flattenTableCellParagraphs above, so it's
+// always operating on plain-text cells rather than <p>-wrapped ones.
 function promoteFirstRowToHeader(html) {
   var temp = document.createElement('div');
   temp.innerHTML = html;
@@ -528,9 +579,31 @@ function handleChatFilesSelected(fileList) {
             // table support at all, and would otherwise flatten a
             // table's own rows/columns into disconnected lines with no
             // structure whatsoever, which is exactly what was reported.
-            var turndownService = new TurndownService();
+            var turndownService = new TurndownService({ headingStyle: 'atx' });
+            // headingStyle:'atx' — confirmed as a real, direct gap:
+            // turndown's own default is 'setext' style (heading text
+            // followed by a line of === or ---), which Forge.renderMarkdown()
+            // has no rule for at all (it only recognizes '#'-prefixed
+            // headings) — so a setext heading passed straight through
+            // unrendered, showing up as literal "Heading text\n=====" on
+            // screen. 'atx' produces '# Heading text' instead, which
+            // that renderer already handles correctly.
             if (window.turndownPluginGfm) turndownService.use(turndownPluginGfm.gfm);
-            extractedText = turndownService.turndown(promoteFirstRowToHeader(htmlResult.value)).trim();
+            extractedText = turndownService.turndown(promoteFirstRowToHeader(flattenTableCellParagraphs(htmlResult.value))).trim();
+            // Targeted un-escaping of turndown's own "N\." pattern only
+            // (e.g. a heading literally titled "1. Where I think we
+            // start" becomes "# 1\. Where...") — confirmed as a real,
+            // direct gap: turndown escapes a number-dot at the start of
+            // a line so it can't ever be misread as a numbered list
+            // item elsewhere, but Forge.renderMarkdown() has no
+            // un-escaping logic at all, so the backslash stayed visible
+            // on screen. Deliberately narrow (only this one pattern,
+            // not a blanket escape() override) — an earlier, broader
+            // attempt to disable turndown's own escaping entirely was
+            // confirmed live to also break its pipe-character escaping
+            // within table cells, corrupting table structure; this
+            // stays targeted to the one specific artifact actually seen.
+            extractedText = extractedText.replace(/^(#{1,6} )?(\d+)\\\./gm, '$1$2.');
           } else {
             var workbook = XLSX.read(abReader.result, { type: 'array', cellDates: true });
             extractedText = workbookToReadableText(workbook);
@@ -1775,7 +1848,19 @@ function downloadAttachmentFromReader() {
   if (!currentReaderAttachment) return;
   var a = document.createElement('a');
   a.href = currentReaderAttachment.url;
-  a.download = currentReaderAttachment.filename;
+  // Confirmed as a real, direct bug: for .docx/.xlsx, currentReaderAttachment.url
+  // is only ever the EXTRACTED markdown text (a data: URL), never the
+  // original binary file at all — the original bytes are never kept
+  // anywhere once parsed. Downloading that text but keeping the original
+  // .docx/.xlsx extension produced a file Word/Excel then correctly
+  // reported as corrupted, since it's genuinely just a text file wearing
+  // the wrong extension. Renamed to .md here so the downloaded file is
+  // honest about what it actually contains and opens correctly.
+  var downloadName = currentReaderAttachment.filename;
+  if (currentReaderAttachment.type === 'docx' || currentReaderAttachment.type === 'xlsx') {
+    downloadName = downloadName.replace(/\.(docx|xlsx)$/i, '') + '.md';
+  }
+  a.download = downloadName;
   a.target = '_blank';
   document.body.appendChild(a);
   a.click();

@@ -2662,7 +2662,16 @@ async function downloadAttachmentFromReader() {
     var blobUrl = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = blobUrl;
-    a.download = currentReaderAttachment.filename;
+    // Same fix as continue.html's own copy of this function — for
+    // .docx/.xlsx, currentReaderAttachment.url is only ever the
+    // extracted markdown text, never the original binary file (which
+    // is never kept anywhere once parsed), so the downloaded file needs
+    // an honest .md extension rather than the misleading original one.
+    var downloadName = currentReaderAttachment.filename;
+    if (currentReaderAttachment.type === 'docx' || currentReaderAttachment.type === 'xlsx') {
+      downloadName = downloadName.replace(/\.(docx|xlsx)$/i, '') + '.md';
+    }
+    a.download = downloadName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
