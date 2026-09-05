@@ -4509,14 +4509,39 @@ function queryAllDeep(selector) {
     // stores the last read (as long as it's not an exact duplicate of the
     // last stored turn) rather than discarding it — an unstable-but-real
     // read is still better than storing nothing.
+    // Confirmed as a real, direct bug via live console evidence: settling
+    // after just ONE matching consecutive read (no minimum elapsed time
+    // at all) falsely concludes "done" during a genuine "thinking" pause
+    // — confirmed live on Grok specifically, whose own "Worked for Xs"
+    // reasoning phase can run well past 10+ seconds before any answer
+    // text even starts rendering. Two 1-second-apart reads taken during
+    // that pause are trivially identical (both seeing only the PREVIOUS
+    // answers, since the newest one hasn't appeared in the DOM at all
+    // yet), so the old check settled after only 2 total attempts,
+    // permanently missing the newest turn — reproduced live: a real,
+    // fully-thought-out 18-second answer was silently dropped entirely,
+    // with the entry and its Forge-forked chat_session never even
+    // learning it existed, which is also why Continue Conversation had
+    // nothing to pick up for it. Scoped specifically to Grok and Mistral
+    // — the two providers confirmed (via their own "Worked for Xs" /
+    // "Thought for Xs" widget text, both stripped elsewhere in this
+    // file) to genuinely have an extended reasoning phase before any
+    // answer text renders at all — rather than applying this slowdown
+    // universally to every provider, most of which stream directly with
+    // no such delay and would otherwise wait out this longer window for
+    // no reason.
+    var hasThinkingPhase = (PROVIDER === 'grok' || PROVIDER === 'mistral');
+    var MIN_SETTLE_ELAPSED_MS = hasThinkingPhase ? 10000 : 0;
+    var DOM_POLL_CEILING = hasThinkingPhase ? 45 : 8;
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
     var _domPollAttempts = 0;
     var _domLastRead = null;
     function _domPollCheck() {
       _domPollAttempts++;
       var text = readDomResponse();
-      var settled = text && text === _domLastRead;
-      if (!settled && _domPollAttempts < 8) {
+      var elapsed = Date.now() - signalArrivalTime;
+      var settled = text && text === _domLastRead && elapsed >= MIN_SETTLE_ELAPSED_MS;
+      if (!settled && _domPollAttempts < DOM_POLL_CEILING) {
         _domLastRead = text;
         _domSettleTimer = setTimeout(_domPollCheck, 1000);
         return;
