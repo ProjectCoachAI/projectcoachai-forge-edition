@@ -385,7 +385,34 @@ function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
                 try {
                     const parsed = JSON.parse(data);
                     if (res.statusCode === 200 && parsed.choices?.[0]) {
-                        resolve(parsed.choices[0].message.content);
+                        var text = parsed.choices[0].message.content;
+                        // Confirmed as a real, direct root cause: Perplexity's own
+                        // "sonar" model returns raw [N] bracket-number citations
+                        // embedded in the text, backed by a SEPARATE top-level
+                        // `citations` array (citations[0] maps to [1], citations[1]
+                        // maps to [2], etc.) — this array was previously discarded
+                        // entirely here, meaning the URL data behind every bracket
+                        // number never reached anywhere near the frontend at all,
+                        // regardless of how the rendering itself worked. Only
+                        // Perplexity's own responses ever carry this field — a
+                        // harmless no-op for every other provider sharing this same
+                        // function (Mistral, DeepSeek, Grok, Meta), none of which
+                        // ever populate `citations` at all. Converts each numbered
+                        // marker into real [N](url) markdown link syntax — the same
+                        // format the extension's own stripCitations() already
+                        // produces for captured conversations, so this renders
+                        // through the identical, already-working markdown-link rule
+                        // rather than needing any separate handling. Kept as
+                        // (?<!\]\() so an already-linked [N](url) is never
+                        // double-wrapped if this ever ran twice.
+                        if (Array.isArray(parsed.citations) && parsed.citations.length) {
+                            text = text.replace(/(?<!\]\()\[(\d+)\](?!\()/g, function(full, numStr) {
+                                var idx = parseInt(numStr, 10) - 1;
+                                var url = parsed.citations[idx];
+                                return url ? '[' + numStr + '](' + url + ')' : full;
+                            });
+                        }
+                        resolve(text);
                     } else {
                         reject(new Error(parsed.error?.message || `API error (${res.statusCode})`));
                     }
