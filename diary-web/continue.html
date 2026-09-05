@@ -137,7 +137,7 @@
   <div id="chatImagePreviewRow" style="display:none;align-items:center;gap:8px;padding:8px 20px 0;flex-wrap:wrap;"></div>
 
   <div class="chat-input-row">
-    <input type="file" id="chatImageFileInput" accept="image/*,application/pdf,text/plain,.txt,.docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple style="display:none;" onchange="handleChatFilesSelected(this.files)"/>
+    <input type="file" id="chatImageFileInput" accept="image/*,application/pdf,text/plain,.txt,.docx,.xlsx,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple style="display:none;" onchange="handleChatFilesSelected(this.files)"/>
     <button id="chatImageAttachBtn" class="chat-icon-btn" onclick="document.getElementById('chatImageFileInput').click()" title="Attach images or PDFs" style="flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13"/></svg></button>
     <textarea id="chatInput" class="chat-input" placeholder="Type your message..." rows="1" oninput="autoResizeChatInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button id="chatSendBtn" class="chat-send-btn" onclick="sendChatMessage()">Send</button>
@@ -195,6 +195,13 @@
      this specific, smaller package; pinned to the exact version
      (1.0.2) tested against. -->
 <script src="https://unpkg.com/turndown-plugin-gfm@1.0.2/dist/turndown-plugin-gfm.js"></script>
+<!-- JSZip: for .pptx attachment support. Unlike .docx/.xlsx, no
+     established browser-compatible library exists purely for pptx text
+     extraction (confirmed via direct research) — .pptx is, like
+     .docx/.xlsx, just a zip archive of XML files, so this is built
+     directly on JSZip (already the standard, most-used zip library for
+     the browser) plus a small amount of hand-written XML parsing. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 'use strict';
 
@@ -310,18 +317,19 @@ function renderChatAttachmentPreviews() {
       // after sending.
       var txtDataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(f.textContent || '');
       thumb = '<div onclick="event.stopPropagation();openAttachmentReader(\'' + txtDataUrl.replace(/'/g, "\\'") + '\',\'' + escapedFilename + '\',\'txt\')" style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;background:#F5F3EE;cursor:zoom-in;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg></div>';
-    } else if (f.type === 'docx' || f.type === 'xlsx') {
-      // .docx/.xlsx — same clickable, data: URL pattern as .txt above:
-      // the extracted, readable text is already sitting in
-      // f.textContent (mammoth.js/SheetJS already did the actual
+    } else if (f.type === 'docx' || f.type === 'xlsx' || f.type === 'pptx') {
+      // .docx/.xlsx/.pptx — same clickable, data: URL pattern as .txt
+      // above: the extracted, readable text is already sitting in
+      // f.textContent (mammoth.js/SheetJS/JSZip already did the actual
       // parsing at attach time), so opening the reader modal here needs
-      // no server upload either. Distinct icon per type (document-text
-      // for docx, a grid for xlsx) so the two are visually
-      // distinguishable from each other and from .txt.
+      // no server upload either. Distinct icon per type so all four are
+      // visually distinguishable from each other.
       var docDataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(f.textContent || '');
       var docIconSvg = f.type === 'docx'
         ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75h6M9 15.75h4.5"/></svg>'
-        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25M3.375 19.5V6.108c0-.53.184-1.045.52-1.456A2.987 2.987 0 0 1 5.25 4.5h13.5c.548 0 1.05.196 1.355.652.336.411.52.926.52 1.456V19.5M3.375 19.5h17.25M8.25 9.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3.75-6h1.5m-1.5 3h1.5m-1.5 3h1.5"/></svg>';
+        : (f.type === 'xlsx'
+          ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25M3.375 19.5V6.108c0-.53.184-1.045.52-1.456A2.987 2.987 0 0 1 5.25 4.5h13.5c.548 0 1.05.196 1.355.652.336.411.52.926.52 1.456V19.5M3.375 19.5h17.25M8.25 9.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3.75-6h1.5m-1.5 3h1.5m-1.5 3h1.5"/></svg>'
+          : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75a1.5 1.5 0 0 1 1.5-1.5h13.5a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 20.25h6M12 17.25v3"/></svg>');
       thumb = '<div onclick="event.stopPropagation();openAttachmentReader(\'' + docDataUrl.replace(/'/g, "\\'") + '\',\'' + escapedFilename + '\',\'' + f.type + '\')" style="width:40px;height:40px;border-radius:6px;border:0.5px solid #D6D2C8;display:flex;align-items:center;justify-content:center;background:#F5F3EE;cursor:zoom-in;">' + docIconSvg + '</div>';
     } else {
       thumb = '<img onclick="event.stopPropagation();openImageZoom(\'' + f.base64 + '\')" src="' + f.base64 + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:0.5px solid #D6D2C8;cursor:zoom-in;"/>';
@@ -361,6 +369,7 @@ function escHtmlChat(str) {
 function inferFileTypeFromFilename(filename) {
   if (/\.docx$/i.test(filename)) return 'docx';
   if (/\.xlsx$/i.test(filename)) return 'xlsx';
+  if (/\.pptx$/i.test(filename)) return 'pptx';
   return 'txt';
 }
 function extractTxtAttachmentsFromContent(content) {
@@ -514,6 +523,51 @@ function workbookToReadableText(workbook) {
   }).join('\n\n');
 }
 
+// Extracts readable text from a .pptx file — no established
+// browser-compatible library exists purely for this (confirmed via
+// direct research before building this: the closest options were
+// either Node-only, explicitly documented as not working in the
+// browser at all, or built for rendering/generating .pptx files
+// rather than plain text extraction). .pptx is, like .docx/.xlsx,
+// just a zip archive of XML files — this uses JSZip (the standard
+// browser zip library, already used elsewhere in this ecosystem) to
+// unpack it, then hand-parses each slide's own XML directly: slide
+// text lives in <a:t> "run" elements nested inside <a:p> "paragraph"
+// elements, per the OOXML PresentationML schema. Runs within one
+// paragraph are joined with no separator (formatting changes
+// mid-sentence commonly split a single sentence across multiple runs,
+// confirmed directly against a realistic multi-run test case), while
+// paragraphs are joined with newlines.
+async function extractPptxText(arrayBuffer) {
+  var zip = await JSZip.loadAsync(arrayBuffer);
+  var slideFiles = [];
+  zip.forEach(function(relativePath) {
+    var m = relativePath.match(/^ppt\/slides\/slide(\d+)\.xml$/);
+    if (m) slideFiles.push({ path: relativePath, num: parseInt(m[1], 10) });
+  });
+  // Numeric sort, not alphabetic — confirmed necessary and tested
+  // directly: zip entry order isn't guaranteed, and a plain string
+  // sort would incorrectly put "slide10" before "slide2".
+  slideFiles.sort(function(a, b) { return a.num - b.num; });
+
+  var slideTexts = [];
+  for (var i = 0; i < slideFiles.length; i++) {
+    var xml = await zip.file(slideFiles[i].path).async('string');
+    var doc = new DOMParser().parseFromString(xml, 'application/xml');
+    var paragraphs = doc.getElementsByTagName('a:p');
+    var paraTexts = [];
+    for (var p = 0; p < paragraphs.length; p++) {
+      var runs = paragraphs[p].getElementsByTagName('a:t');
+      var runTexts = [];
+      for (var r = 0; r < runs.length; r++) runTexts.push(runs[r].textContent);
+      var paraText = runTexts.join('');
+      if (paraText.trim()) paraTexts.push(paraText);
+    }
+    if (paraTexts.length) slideTexts.push('## Slide ' + slideFiles[i].num + '\n\n' + paraTexts.join('\n'));
+  }
+  return slideTexts.join('\n\n');
+}
+
 function handleChatFilesSelected(fileList) {
   var files = Array.prototype.slice.call(fileList || []);
   if (!files.length) return;
@@ -543,8 +597,9 @@ function handleChatFilesSelected(fileList) {
     // .txt, rather than uploading the original binary file anywhere.
     var isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/i.test(file.name);
     var isXlsx = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || /\.xlsx$/i.test(file.name);
-    if (!isImage && !isPdf && !isTxt && !isDocx && !isXlsx) {
-      Forge.showToast(file.name + ': only images, PDFs, .txt, .docx, and .xlsx files are supported.', 'error');
+    var isPptx = file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' || /\.pptx$/i.test(file.name);
+    if (!isImage && !isPdf && !isTxt && !isDocx && !isXlsx && !isPptx) {
+      Forge.showToast(file.name + ': only images, PDFs, .txt, .docx, .xlsx, and .pptx files are supported.', 'error');
       return;
     }
     // 8MB is a conservative, round ceiling comfortably under every target
@@ -556,9 +611,9 @@ function handleChatFilesSelected(fileList) {
       Forge.showToast(file.name + ' is too large (max 8MB).', 'error');
       return;
     }
-    if (isDocx || isXlsx) {
-      // Read as arrayBuffer, not text/dataURL — both mammoth.js and
-      // SheetJS need the raw bytes directly to parse the zip-based
+    if (isDocx || isXlsx || isPptx) {
+      // Read as arrayBuffer, not text/dataURL — mammoth.js, SheetJS, and
+      // JSZip all need the raw bytes directly to parse the zip-based
       // file format.
       var abReader = new FileReader();
       abReader.onload = async function() {
@@ -604,6 +659,8 @@ function handleChatFilesSelected(fileList) {
             // within table cells, corrupting table structure; this
             // stays targeted to the one specific artifact actually seen.
             extractedText = extractedText.replace(/^(#{1,6} )?(\d+)\\\./gm, '$1$2.');
+          } else if (isPptx) {
+            extractedText = await extractPptxText(abReader.result);
           } else {
             var workbook = XLSX.read(abReader.result, { type: 'array', cellDates: true });
             extractedText = workbookToReadableText(workbook);
@@ -612,7 +669,7 @@ function handleChatFilesSelected(fileList) {
             Forge.showToast(file.name + ' appears to be empty or could not be read.', 'error');
             return;
           }
-          chatAttachedFiles.push({ textContent: truncateExtractedText(extractedText, file.name), filename: file.name, type: isDocx ? 'docx' : 'xlsx' });
+          chatAttachedFiles.push({ textContent: truncateExtractedText(extractedText, file.name), filename: file.name, type: isDocx ? 'docx' : (isPptx ? 'pptx' : 'xlsx') });
           renderChatAttachmentPreviews();
         } catch(e) {
           // Logged in full here, since the toast itself is deliberately
@@ -620,7 +677,7 @@ function handleChatFilesSelected(fileList) {
           // (a renamed copy of a working .docx/.xlsx failing) needs the
           // exact exception detail, not a paraphrase, to actually
           // diagnose.
-          console.error('[Chat] Failed to parse ' + file.name + ' (' + (isDocx ? 'docx' : 'xlsx') + '):', e);
+          console.error('[Chat] Failed to parse ' + file.name + ' (' + (isDocx ? 'docx' : (isPptx ? 'pptx' : 'xlsx')) + '):', e);
           // .docx/.xlsx are both, structurally, zip archives — mammoth.js
           // and SheetJS both use a zip reader internally, and this
           // specific error ("end of central directory... is this a zip
@@ -906,7 +963,8 @@ function addMessageToDOM(role, content, opts) {
     var fileChipIcons = {
       txt: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>',
       docx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75h6M9 15.75h4.5"/></svg>',
-      xlsx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25M3.375 19.5V6.108c0-.53.184-1.045.52-1.456A2.987 2.987 0 0 1 5.25 4.5h13.5c.548 0 1.05.196 1.355.652.336.411.52.926.52 1.456V19.5M3.375 19.5h17.25M8.25 9.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3.75-6h1.5m-1.5 3h1.5m-1.5 3h1.5"/></svg>'
+      xlsx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25M3.375 19.5V6.108c0-.53.184-1.045.52-1.456A2.987 2.987 0 0 1 5.25 4.5h13.5c.548 0 1.05.196 1.355.652.336.411.52.926.52 1.456V19.5M3.375 19.5h17.25M8.25 9.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3.75-6h1.5m-1.5 3h1.5m-1.5 3h1.5"/></svg>',
+      pptx: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75a1.5 1.5 0 0 1 1.5-1.5h13.5a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 20.25h6M12 17.25v3"/></svg>'
     };
     var txtChipsHtml = (opts.fileAttachments || []).map(function(t) {
       var dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(t.textContent || '');
@@ -1110,7 +1168,7 @@ async function sendChatMessage() {
   // attached file's own content is only ever sent once and never
   // actually persisted in the conversation's own history, silently
   // losing it for every message after this one.
-  var appendedContentFilesForThisSend = filesForThisSend.filter(function(f) { return f.type === 'txt' || f.type === 'docx' || f.type === 'xlsx'; });
+  var appendedContentFilesForThisSend = filesForThisSend.filter(function(f) { return f.type === 'txt' || f.type === 'docx' || f.type === 'xlsx' || f.type === 'pptx'; });
   var messageToSend = text;
   appendedContentFilesForThisSend.forEach(function(f) {
     messageToSend += '\n\n--- Attached file: ' + f.filename + ' ---\n' + f.textContent;
@@ -1130,7 +1188,7 @@ async function sendChatMessage() {
   // (e.g. "\n\n--- Attached file...") — cosmetic only, but a clean send
   // is worth the one extra call.
   messageToSend = messageToSend.trim();
-  var nonAppendedFilesForThisSend = filesForThisSend.filter(function(f) { return f.type !== 'txt' && f.type !== 'docx' && f.type !== 'xlsx'; });
+  var nonAppendedFilesForThisSend = filesForThisSend.filter(function(f) { return f.type !== 'txt' && f.type !== 'docx' && f.type !== 'xlsx' && f.type !== 'pptx'; });
 
   // Images get a visual preview; PDFs get a clickable chip (opening the
   // reader modal); .txt files get a plain, non-clickable chip — their
@@ -1140,7 +1198,7 @@ async function sendChatMessage() {
   // src), but the chip itself still needs to show SOMETHING was
   // attached, since that content never appears in this displayed
   // bubble at all (see the un-appended `text` used below).
-  var imagePreviewsForBubble = filesForThisSend.filter(function(f) { return f.type !== 'pdf' && f.type !== 'txt' && f.type !== 'docx' && f.type !== 'xlsx'; }).map(function(f) { return f.base64; });
+  var imagePreviewsForBubble = filesForThisSend.filter(function(f) { return f.type !== 'pdf' && f.type !== 'txt' && f.type !== 'docx' && f.type !== 'xlsx' && f.type !== 'pptx'; }).map(function(f) { return f.base64; });
   var pdfsForBubble = filesForThisSend.filter(function(f) { return f.type === 'pdf'; }).map(function(f) { return { url: f.base64, filename: f.filename }; });
   var fileAttachmentsForBubble = appendedContentFilesForThisSend.map(function(f) { return { filename: f.filename, type: f.type, textContent: f.textContent }; });
   // The DISPLAYED bubble still shows the user's own original, un-appended
@@ -1782,7 +1840,7 @@ var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx
 // that array still correctly renders as escaped plain text — .md files
 // included, deliberately unchanged here since that's a separate,
 // pre-existing question outside what was reported.
-var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx'];
+var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx', 'pptx'];
 var currentReaderAttachment = null;
 var currentPdfDoc = null;
 var currentPdfScale = 1.4;
@@ -1857,8 +1915,8 @@ function downloadAttachmentFromReader() {
   // the wrong extension. Renamed to .md here so the downloaded file is
   // honest about what it actually contains and opens correctly.
   var downloadName = currentReaderAttachment.filename;
-  if (currentReaderAttachment.type === 'docx' || currentReaderAttachment.type === 'xlsx') {
-    downloadName = downloadName.replace(/\.(docx|xlsx)$/i, '') + '.md';
+  if (currentReaderAttachment.type === 'docx' || currentReaderAttachment.type === 'xlsx' || currentReaderAttachment.type === 'pptx') {
+    downloadName = downloadName.replace(/\.(docx|xlsx|pptx)$/i, '') + '.md';
   }
   a.download = downloadName;
   a.target = '_blank';
