@@ -1374,7 +1374,30 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // its own Sources footer intact — only the comparison itself
           // ignores it.
           const oldMessagesForCompare = splitEntryIntoMessages({ prompt: oldRow.prompt, content: oldRow.content }, true);
-          const newPromptForCompare = prompt !== undefined ? prompt : oldRow.prompt;
+          // Confirmed as a real, direct root cause via live diagnostic
+          // evidence: a genuinely long, established Grok conversation
+          // produced a history_mismatch where the "new" side's own
+          // message 0 was a completely different, much-later question
+          // than the conversation's real first one — despite this being
+          // confirmed live as the exact same, single, unbroken
+          // conversation from start to end, never a different one. Root
+          // cause: `prompt` here is freshly re-derived from whatever
+          // prompt-selector element happens to match FIRST in the live
+          // DOM at save time — which is only reliably the conversation's
+          // true first question for a short conversation with every
+          // turn still rendered. Long chat UIs commonly virtualize
+          // (remove) older DOM nodes to save memory, at which point the
+          // first-matching element is just whatever's currently
+          // topmost-rendered, not genuinely the conversation's own first
+          // message at all — reproduced live: it resolved to a much
+          // later, unrelated-looking question instead. A conversation's
+          // own true first question is immutable once correctly
+          // captured once, so an already-established oldRow.prompt is
+          // always more trustworthy than a fresh re-capture that DOM
+          // virtualization can silently corrupt — only ever falls back
+          // to the freshly-submitted prompt when no established one
+          // exists yet at all (a genuinely new entry).
+          const newPromptForCompare = oldRow.prompt || prompt;
           const newMessagesForCompare = splitEntryIntoMessages({ prompt: newPromptForCompare, content }, true);
           // Confirmed as a real, direct cause of a genuinely persistent
           // "still syncing" state (reported live across multiple DOM-
@@ -1556,7 +1579,26 @@ router.patch('/:id', requireAuth, async (req, res) => {
       sets.push(`metadata=$${i++}`); params.push(JSON.stringify(newMeta));
     }
 
-    if (prompt !== undefined) { sets.push(`prompt=$${i++}`); params.push(prompt); }
+    // Confirmed as a real, direct root cause via live diagnostic
+    // evidence (see the matching fix on newPromptForCompare above for
+    // the full rationale): a freshly re-captured `prompt` can be wrong
+    // for a long, established conversation once DOM virtualization has
+    // removed the true first message's own element from the live page,
+    // silently corrupting this column on every subsequent save if left
+    // unguarded — even though the conversation's own true first
+    // question never actually changes once correctly captured. Once an
+    // entry already has an established prompt, a later save's own
+    // freshly-submitted prompt is never trusted enough to overwrite it
+    // — only a genuinely empty/missing existing prompt (a brand-new
+    // entry, or a pre-existing one that never captured one at all) ever
+    // accepts the freshly-submitted value.
+    if (prompt !== undefined) {
+      const existingPromptRow = await db.query('SELECT prompt FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+      const hasEstablishedPrompt = existingPromptRow.rows.length && existingPromptRow.rows[0].prompt;
+      if (!hasEstablishedPrompt) {
+        sets.push(`prompt=$${i++}`); params.push(prompt);
+      }
+    }
     if (category !== undefined) { sets.push(`category=$${i++}`); params.push(category); }
     if (decision_note !== undefined) { sets.push(`decision_note=$${i++}`); params.push(decision_note); }
     if (rating !== undefined) { sets.push(`rating=$${i++}`); params.push(rating); }
