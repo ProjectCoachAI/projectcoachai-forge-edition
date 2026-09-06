@@ -445,6 +445,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="nav-item" onclick="nav('costs',this)">
     <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
     API Costs
+    <span class="nav-badge" id="cc-costs-alert-badge" style="display:none">!</span>
   </div>
   <div class="nav-item" onclick="nav('usage',this)">
     <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -2256,6 +2257,21 @@ async function loadLiveData() {
             </div>`).join('');
         } else {
           alertsEl.innerHTML = '';
+        }
+      }
+      // Same nav-badge pattern already used for the Inbox item's own
+      // unread count (see loadLiveData's own inbox-handling code) —
+      // visible in the sidebar regardless of which specific view/tab is
+      // currently open, not just when the Costs view itself happens to
+      // be the active one.
+      const costsBadge = document.getElementById('cc-costs-alert-badge');
+      if (costsBadge) {
+        const errCount = (c.recentErrors || []).reduce((s, e) => s + e.count, 0);
+        if (errCount > 0) {
+          costsBadge.textContent = errCount;
+          costsBadge.style.display = '';
+        } else {
+          costsBadge.style.display = 'none';
         }
       }
       const costsEl = document.getElementById('cc-costs-summary');
