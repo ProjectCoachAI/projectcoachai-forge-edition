@@ -1141,6 +1141,7 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
     (async function() {
       let openedNewTab = false;
       let tabId = null;
+      let restoreFocus = null;
       try {
         console.log('[Diary Sync DIAG] REQUEST_SYNC starting for entry', entryId, 'url:', msg.conversationUrl);
         let existingTab = await findConversationTab(msg.conversationUrl);
@@ -1230,7 +1231,6 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
           }
         }
 
-        let restoreFocus = null;
         // Extended to DeepSeek — confirmed via direct code inspection
         // that this is a genuinely DIFFERENT hypothesis than the
         // ChatGPT case, not literally the same mechanism: DeepSeek has
@@ -1252,7 +1252,23 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         // evidence against it — either way, the same restore-on-result
         // logic below applies safely regardless of which mechanism ends
         // up being the actual explanation.
-        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl) || /gemini\.google\.com/.test(msg.conversationUrl)) {
+        //
+        // Extended to Gemini here — this is the version confirmed by
+        // direct user testing to genuinely work correctly (just slower
+        // than the fully-visible original) — a separate, dedicated
+        // window was tried afterward instead, but was reverted after
+        // introducing worse problems of its own (escaping to a
+        // different monitor on a multi-monitor setup, breaking capture
+        // entirely at a reduced size, and opening as a visibly separate
+        // Chrome window rather than staying contained within the user's
+        // existing one). This shares the exact same, already-confirmed-
+        // working shared-window/tab as ChatGPT/DeepSeek/Meta AI above —
+        // the only difference for Gemini is minimizing it immediately
+        // afterward, in the SAME chrome.windows.update() call (confirmed
+        // live that combining focused:true and state:'minimized' in one
+        // call is valid for windows.update(), unlike windows.create(),
+        // which rejects that exact combination outright).
+        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl)) {
           try {
             const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
             const originalTab = activeTabs && activeTabs[0];
@@ -1264,7 +1280,20 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
           } catch (e) {
             console.log('[Diary Sync DIAG] [EXPERIMENT] brief-focus attempt threw:', e.message);
           }
+        } else if (/gemini\.google\.com/.test(msg.conversationUrl)) {
+          try {
+            const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            const originalTab = activeTabs && activeTabs[0];
+            if (originalTab) restoreFocus = { tabId: originalTab.id, windowId: originalTab.windowId };
+            const targetTab = await chrome.tabs.get(tabId);
+            await chrome.windows.update(targetTab.windowId, { focused: true, state: 'minimized' });
+            await chrome.tabs.update(tabId, { active: true });
+            console.log('[Diary Sync DIAG] [EXPERIMENT] focused+minimized tab', tabId, '(testing whether a minimized window can still hold real focus, avoiding the visible flash)');
+          } catch (e) {
+            console.log('[Diary Sync DIAG] [EXPERIMENT] focused+minimized attempt threw:', e.message);
+          }
         }
+
         // Confirmed live as a real, genuine bug: a fixed 8s wait,
         // regardless of how quickly the actual sync itself finished, was
         // the real source of the disruption — the clipboard method
