@@ -594,7 +594,44 @@
       // sub-item/main-item visual distinction without needing genuine
       // multi-level HTML nesting.
       .replace(/^([ \t]*)[-*•] (.+)$/gm, (m, indent, txt) => indent ? `<li style="margin-left:${Math.min(indent.length,3)*20}px">${txt}</li>` : `<li>${txt}</li>`)
-      .replace(/^([ \t]*)\d+\. (.+)$/gm, (m, indent, txt) => indent ? `<li data-ol style="margin-left:${Math.min(indent.length,3)*20}px">${txt}</li>` : `<li data-ol>${txt}</li>`)
+      // NOTE: fixed a genuine, confirmed bug via direct user report and
+      // simulation: a numbered list whose own items have substantial
+      // content between them (prose, a bullet list, sub-sections — not
+      // just a blank line) breaks the adjacency the grouping rule below
+      // relies on, landing each numbered item in its own, SEPARATE <ol>.
+      // Since a browser's own native <ol> numbering always restarts at 1
+      // for each distinct <ol> element, this showed EVERY such item as
+      // "1." regardless of what number it actually was in the source
+      // text — confirmed live with a real two-part response ("1. What is
+      // changing" ... "2. Why it is changing", with a paragraph and a
+      // bullet list in between) rendering as "1." twice. Deliberately
+      // does not attempt to merge these into one <ol> (would require
+      // correctly inferring whether the intervening prose/list belongs
+      // INSIDE the numbered item or is a separate, standalone block
+      // between list items — a genuinely harder, more invasive
+      // structural question a regex-based renderer can't reliably
+      // answer). Instead captures the item's own real number from the
+      // source text and emits it as an explicit HTML value="N" attribute
+      // (natively supported by <li> specifically to override a
+      // browser's own default auto-numbering) — so each item shows its
+      // correct number regardless of which <ol> it ends up landing in.
+      // NOTE: refined — confirmed via direct testing that applying
+      // value="N" unconditionally to EVERY item, including indented
+      // sub-items, broke the earlier nested-list fix: a nested list's
+      // own sub-items restart their own numbering within the source
+      // text (e.g. "1. Main / 1. Sub A / 2. Sub B / 2. Second main"),
+      // which is correct for a genuinely nested list, but produced a
+      // confusing "1, 1, 2, 2" display once flattened into one <ol>
+      // with every item's own literal source-number preserved. Scoped
+      // to top-level (non-indented) items only — those are the ones
+      // genuinely at risk of landing in a separate <ol> block due to
+      // intervening content; indented sub-items don't have that same
+      // problem (they're never split apart by prose the same way), so
+      // leaving them on the browser's own natural, sequential auto-
+      // numbering is what actually produces a clean, correct sequence
+      // for them.
+      .replace(/^(\d+)\. (.+)$/gm, (m, num, txt) => `<li data-ol value="${num}">${txt}</li>`)
+      .replace(/^([ \t]+)\d+\. (.+)$/gm, (m, indent, txt) => `<li data-ol style="margin-left:${Math.min(indent.length,3)*20}px">${txt}</li>`)
       // NOTE: fixed a genuine, confirmed bug — the earlier grouping
       // rules only tolerated a single, optional trailing newline (\n?)
       // between consecutive <li> tags. The bare-bullet/numbered
