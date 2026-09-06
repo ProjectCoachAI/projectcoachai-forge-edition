@@ -3620,7 +3620,26 @@ function queryAllDeep(selector) {
         // DOM at either specific moment — removing the mismatch at its
         // actual source (the inconsistency itself) rather than papering
         // over one specific timing symptom of it.
-        return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
+        // NOTE: fixed a separate, pre-existing bug found while testing
+        // the change above — confirmed via direct, isolated test that
+        // the `$` in this rule's own lookahead, combined with the `m`
+        // (multiline) flag already required for `^` to match "Sources"
+        // wherever it starts a line (not just at the very start of the
+        // whole string), meant `$` itself matched at the end of EVERY
+        // line, not just the true end of the string. On a genuine,
+        // multi-line Sources list (e.g. "Sources\n1. a.com\n2. b.com"),
+        // the non-greedy match stopped at the first line-end it found
+        // (right after "1. a.com"), leaving "2. b.com" behind
+        // unstripped, rather than continuing to the section's actual
+        // end. Replaced with (?![\s\S]) — a standard, flag-immune "true
+        // end of string" check (only succeeds when no character at all
+        // follows) — verified via direct test across five cases: the
+        // originally-broken multi-line list, a single-line list (no
+        // regression), a Sources section with nothing after it at all
+        // (also confirmed broken before, now fixed), no Sources section
+        // present at all (no regression), and the singular "Source"
+        // wording (no regression).
+        return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|(?![\s\S]))/m, '')
                    .replace(/\n{0,2}Explore related .+? topics:[\s\S]*$/, '')
                    .replace(/\n{3,}/g, '\n\n')
                    .trim();
