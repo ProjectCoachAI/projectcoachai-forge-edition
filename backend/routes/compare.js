@@ -139,6 +139,20 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null, onU
             // entirely rather than replaced — Anthropic's own guidance
             // is to use system-prompt instructions for tone/style
             // instead of a sampling parameter.
+            // Confirmed directly against Anthropic's own docs: Sonnet 5
+            // defaults to adaptive thinking ON at effort high for every
+            // single call, not an opt-in — genuinely billed extra tokens
+            // regardless of whether the "omitted" display setting hides
+            // the actual thinking text from view. Explicitly disabled
+            // here: Continue Conversation is about naturally picking up
+            // an existing chat, not formal multi-step reasoning, so the
+            // added cost and latency (thinking delays the first visible
+            // token) aren't earning their keep for this specific use
+            // case. This is also what caused the frontend crash fixed
+            // just above (a thinking block placed before the text block
+            // in the response) — disabling it removes that whole class
+            // of response shape entirely, not just the extraction bug.
+            thinking: { type: 'disabled' },
             system: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.',
             messages
         });
@@ -174,7 +188,28 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null, onU
                         if (onUsage && parsed.usage) {
                             onUsage({ inputTokens: parsed.usage.input_tokens, outputTokens: parsed.usage.output_tokens });
                         }
-                        resolve(parsed.content[0].text);
+                        // Confirmed as a real, direct bug via a live crash
+                        // ("Cannot read properties of undefined (reading
+                        // 'match')") once thinking blocks entered the mix:
+                        // this assumed content[0] was always the text
+                        // block. Confirmed directly against Anthropic's
+                        // own docs: "with thinking on, the content array
+                        // gains a type: 'thinking' block placed before
+                        // the text block" — and Sonnet 5 specifically
+                        // defaults to thinking on (at effort high), not a
+                        // rare edge case but the default for every call.
+                        // A thinking block has a .thinking field, not
+                        // .text, so content[0].text was silently
+                        // undefined whenever one was returned — which
+                        // then crashed the frontend's own downstream
+                        // parsing once that undefined value got saved and
+                        // re-processed as this message's content. Kept
+                        // here as defense-in-depth even after explicitly
+                        // disabling thinking above, in case Anthropic
+                        // ever returns some other non-text block type in
+                        // the future.
+                        const textBlock = parsed.content.find(b => b.type === 'text');
+                        resolve(textBlock ? textBlock.text : '');
                     } else {
                         reject(new Error(parsed.error?.message || `Claude API error (${res.statusCode})`));
                     }
@@ -393,7 +428,12 @@ function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096) {
                 try {
                     const parsed = JSON.parse(data);
                     if (res.statusCode === 200 && parsed.content && parsed.content.length > 0) {
-                        resolve(parsed.content[0].text);
+                        // Same defensive fix as callClaudeAPI above — a
+                        // thinking block, if ever present, has no .text
+                        // field, so assuming index 0 is always the text
+                        // block is unsafe regardless of model.
+                        const textBlock = parsed.content.find(b => b.type === 'text');
+                        resolve(textBlock ? textBlock.text : '');
                     } else {
                         reject(new Error(parsed.error?.message || `Claude Haiku API error (${res.statusCode})`));
                     }
