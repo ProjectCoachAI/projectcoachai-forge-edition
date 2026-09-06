@@ -7,7 +7,7 @@ let compression;
 try { compression = require('compression'); } catch(_) { compression = () => (req,res,next) => next(); console.warn('[Compression] not available'); }
 let helmet;
 try { helmet = require('helmet'); } catch(_) { helmet = () => (req,res,next) => next(); console.warn('[Helmet] not available'); }
-const { apiLimiter, authLimiter, registerLimiter, synthesisLimiter, compareLimiter, contactLimiter } = require('./middleware/rateLimiter');
+const { apiLimiter, authLimiter, registerLimiter, synthesisLimiter, compareLimiter, contactLimiter, askDiaryLimiter } = require('./middleware/rateLimiter');
 const cors    = require('cors');
 const path    = require('path');
 const db      = require('./lib/db');
@@ -134,6 +134,7 @@ try {
 try {
     app.use('/api/invite', require('./routes/invite'));
     app.use('/api/costs', require('./routes/costs'));
+    app.use('/api/ask-diary', askDiaryLimiter, require('./routes/ask-diary'));
     app.use('/api/blog', require('./routes/blog'));
     app.use('/api/knowledge', require('./routes/knowledge').router);
     app.use('/api/recordings', require('./routes/recordings'));

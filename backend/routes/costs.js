@@ -48,6 +48,14 @@ const PROVIDER_COSTS = {
   // plausible for Groq's known aggressive Llama-hosting pricing but
   // not independently re-verified this pass.
   meta:        { input: 0.00018,output: 0.00018,name: 'Meta AI (unverified)' },
+  // claude-haiku-4-5 (Ask Diary's own support-answering assistant,
+  // ask-diary.js) — Anthropic's own current Haiku-tier rate, same
+  // pricing confirmed earlier this session, kept as its own separate
+  // provider entry rather than folded into 'claude' above, since Ask
+  // Diary genuinely runs on Haiku while Continue Conversation's own
+  // 'claude' entry runs on Sonnet 5 — a materially different cost per
+  // call that a shared entry would blend together inaccurately.
+  'ask-diary': { input: 0.001,   output: 0.005,  name: 'Ask Diary (Claude Haiku)' },
 };
 
 // Avg tokens per synthesis (estimated)

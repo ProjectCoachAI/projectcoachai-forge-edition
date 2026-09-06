@@ -398,7 +398,7 @@ function callGeminiAPI(prompt, apiKey, attachments = null, onUsage = null) {
 
 // Fast Claude Haiku caller for synthesis (much faster than Sonnet 4)
 // Uses alias ID "claude-haiku-4.5" so it auto-resolves to the latest Haiku version
-function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096) {
+function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096, onUsage = null) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
@@ -433,6 +433,15 @@ function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096) {
                         // field, so assuming index 0 is always the text
                         // block is unsafe regardless of model.
                         const textBlock = parsed.content.find(b => b.type === 'text');
+                        // Additive only — onUsage is optional and
+                        // undefined for every existing caller (the
+                        // Compare feature's own synthesis step), changing
+                        // nothing about its existing behavior at all.
+                        // Added specifically for Ask Diary's own real
+                        // cost tracking.
+                        if (onUsage && parsed.usage) {
+                            onUsage({ inputTokens: parsed.usage.input_tokens, outputTokens: parsed.usage.output_tokens });
+                        }
                         resolve(textBlock ? textBlock.text : '');
                     } else {
                         reject(new Error(parsed.error?.message || `Claude Haiku API error (${res.statusCode})`));
@@ -922,3 +931,4 @@ module.exports.callPerplexityAPI = callPerplexityAPI;
 module.exports.callGrokAPI = callGrokAPI;
 module.exports.callMetaAPI = callMetaAPI;
 module.exports.callOpenAICompatible = callOpenAICompatible;
+module.exports.callClaudeHaikuAPI = callClaudeHaikuAPI;

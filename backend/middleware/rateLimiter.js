@@ -71,4 +71,20 @@ const contactLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { authLimiter, registerLimiter, apiLimiter, synthesisLimiter, compareLimiter, contactLimiter };
+// Ask Diary limiter — public-facing (help.html is visited by
+// prospective, not-yet-logged-in customers too, so this deliberately
+// doesn't require auth), same IP-based bounding pattern as
+// contactLimiter above rather than genuinely unlimited access. Set
+// somewhat more generously (20/hour vs. contact's own 10/hour) —
+// this runs on Claude Haiku specifically (confirmed genuinely cheap,
+// ~$0.001/$0.005 per 1K tokens), and a real support conversation may
+// reasonably involve several follow-up questions in one sitting.
+const askDiaryLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { success: false, error: 'Too many questions. Please try again in a bit, or email support@projectcoachai.com.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { authLimiter, registerLimiter, apiLimiter, synthesisLimiter, compareLimiter, contactLimiter, askDiaryLimiter };

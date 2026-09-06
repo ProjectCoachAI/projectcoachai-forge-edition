@@ -105,5 +105,99 @@
       <a href="/help.html" class="footer-link">Help</a>
     </footer>
   </div>
+
+  <!-- Ask Diary — deliberately public, works for not-yet-logged-in
+       visitors too (this page itself is public-facing), grounded
+       entirely in the facts already confirmed for this page's own
+       FAQ above; see backend/routes/ask-diary.js for the full system
+       prompt and reasoning. -->
+  <style>
+    #askDiaryBtn { position:fixed; bottom:24px; right:24px; background:#1B2A4A; color:#F5F3EE; border:none; border-radius:50px; padding:14px 22px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer; box-shadow:0 4px 20px rgba(27,42,74,0.25); z-index:9998; transition:background 0.2s; }
+    #askDiaryBtn:hover { background:#243A63; }
+    #askDiaryPanel { position:fixed; bottom:24px; right:24px; width:360px; max-width:90vw; height:480px; max-height:80vh; background:#fff; border-radius:14px; box-shadow:0 16px 48px rgba(27,42,74,0.25); z-index:9999; display:none; flex-direction:column; overflow:hidden; }
+    #askDiaryPanel.open { display:flex; }
+    .ask-diary-header { background:#1B2A4A; color:#F5F3EE; padding:14px 16px; font-family:'Lora',serif; font-size:16px; display:flex; justify-content:space-between; align-items:center; }
+    .ask-diary-close { background:none; border:none; color:#F5F3EE; cursor:pointer; font-size:18px; line-height:1; padding:0 4px; }
+    .ask-diary-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+    .ask-diary-msg { font-size:13px; line-height:1.6; max-width:85%; padding:8px 12px; border-radius:12px; }
+    .ask-diary-msg.user { align-self:flex-end; background:#e8f0fe; color:#1a1a2e; border-bottom-right-radius:4px; }
+    .ask-diary-msg.assistant { align-self:flex-start; background:#F5F3EE; color:#1B2A4A; border-bottom-left-radius:4px; }
+    .ask-diary-msg.assistant.loading { color:#9E9890; font-style:italic; }
+    .ask-diary-input-row { display:flex; gap:8px; padding:12px; border-top:0.5px solid #D6D2C8; }
+    .ask-diary-input-row input { flex:1; border:0.5px solid #D6D2C8; border-radius:8px; padding:10px 12px; font-family:'Inter',sans-serif; font-size:13px; outline:none; }
+    .ask-diary-input-row input:focus { border-color:#C17D3C; }
+    .ask-diary-input-row button { background:#1B2A4A; color:#F5F3EE; border:none; border-radius:8px; padding:0 16px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; }
+    .ask-diary-input-row button:disabled { background:#C8C4BC; cursor:not-allowed; }
+    .ask-diary-intro { font-size:12px; color:#9E9890; text-align:center; padding:8px 0; }
+  </style>
+  <button id="askDiaryBtn" onclick="toggleAskDiary()">💬 Ask Diary</button>
+  <div id="askDiaryPanel">
+    <div class="ask-diary-header">
+      <span>Ask Diary</span>
+      <button class="ask-diary-close" onclick="toggleAskDiary()">✕</button>
+    </div>
+    <div class="ask-diary-messages" id="askDiaryMessages">
+      <div class="ask-diary-intro">Ask a question about how Diary works — pricing, limits, sync, sharing, and more.</div>
+    </div>
+    <div class="ask-diary-input-row">
+      <input type="text" id="askDiaryInput" placeholder="Ask a question…" onkeydown="if(event.key==='Enter')sendAskDiary()">
+      <button id="askDiarySendBtn" onclick="sendAskDiary()">Ask</button>
+    </div>
+  </div>
+  <script>
+    function toggleAskDiary() {
+      document.getElementById('askDiaryPanel').classList.toggle('open');
+    }
+    function askDiaryAppendMessage(role, text, isLoading) {
+      var el = document.createElement('div');
+      el.className = 'ask-diary-msg ' + role + (isLoading ? ' loading' : '');
+      el.textContent = text;
+      document.getElementById('askDiaryMessages').appendChild(el);
+      el.scrollIntoView({ block: 'end' });
+      return el;
+    }
+    async function sendAskDiary() {
+      var input = document.getElementById('askDiaryInput');
+      var question = input.value.trim();
+      if (!question) return;
+      var sendBtn = document.getElementById('askDiarySendBtn');
+      input.value = '';
+      input.disabled = true;
+      sendBtn.disabled = true;
+      askDiaryAppendMessage('user', question);
+      var loadingEl = askDiaryAppendMessage('assistant', 'Thinking…', true);
+      try {
+        // Same token-fallback pattern already used elsewhere in this
+        // codebase (e.g. app.html's own startDiaryCheckout) — this page
+        // doesn't load the full forge-api.js bridge, but the backend
+        // itself accepts a request with no token at all too
+        // (optionalAuth), so a missing token here still works, just
+        // without usage being attributed to a specific account.
+        var token = localStorage.getItem('forge_token');
+        var r = await fetch('https://api.projectcoachai.com/api/ask-diary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? ('Bearer ' + token) : ''
+          },
+          body: JSON.stringify({ question: question })
+        });
+        var data = await r.json();
+        loadingEl.remove();
+        if (data.success) {
+          askDiaryAppendMessage('assistant', data.answer);
+        } else {
+          askDiaryAppendMessage('assistant', data.error || 'Something went wrong. Please try again.');
+        }
+      } catch (e) {
+        loadingEl.remove();
+        askDiaryAppendMessage('assistant', 'Something went wrong. Please try again, or email support@projectcoachai.com.');
+      } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+  </script>
 </body>
 </html>
