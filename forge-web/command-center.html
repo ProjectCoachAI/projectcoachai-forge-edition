@@ -1120,55 +1120,8 @@ Everything is ready — head to your workspace to get started.
           <div class="panel-title"><span class="panel-title-dot"></span>Cost by Provider</div>
           <div class="panel-action" id="pl-synth-total">— syntheses total</div>
         </div>
-        <div class="panel-body">
-          <div class="cost-row">
-            <div class="cost-provider">Claude (Anthropic)</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:35%"></div></div>
-            <div class="cost-amount">~$0.74</div>
-            <div class="cost-per">$0.0052/call</div>
-          </div>
-          <div class="cost-row">
-            <div class="cost-provider">ChatGPT (OpenAI)</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:28%"></div></div>
-            <div class="cost-amount">~$0.59</div>
-            <div class="cost-per">$0.0041/call</div>
-          </div>
-          <div class="cost-row">
-            <div class="cost-provider">Gemini (Google)</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:15%"></div></div>
-            <div class="cost-amount">~$0.32</div>
-            <div class="cost-per">$0.0022/call</div>
-          </div>
-          <div class="cost-row">
-            <div class="cost-provider">Mistral AI</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:8%"></div></div>
-            <div class="cost-amount">~$0.17</div>
-            <div class="cost-per">$0.0012/call</div>
-          </div>
-          <div class="cost-row">
-            <div class="cost-provider">DeepSeek</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:5%"></div></div>
-            <div class="cost-amount">~$0.11</div>
-            <div class="cost-per">$0.0008/call</div>
-          </div>
-          <div class="cost-row">
-            <div class="cost-provider">Perplexity AI</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:5%"></div></div>
-            <div class="cost-amount">~$0.11</div>
-            <div class="cost-per">$0.0008/call</div>
-          </div>
-          <div class="cost-row">
-            <div class="cost-provider">xAI (Grok)</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:3%"></div></div>
-            <div class="cost-amount">~$0.06</div>
-            <div class="cost-per">$0.0004/call</div>
-          </div>
-          <div class="cost-row" style="border-bottom:none">
-            <div class="cost-provider" style="color:var(--text-muted)">8th Provider</div>
-            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:0%"></div></div>
-            <div class="cost-amount" style="color:var(--text-muted)">TBD</div>
-            <div class="cost-per" style="color:var(--text-muted)">—</div>
-          </div>
+        <div class="panel-body" id="cc-costs-summary">
+          <div style="font-size:12px;color:var(--text-muted);padding:8px 0">Loading…</div>
         </div>
       </div>
 
@@ -2284,21 +2237,13 @@ async function loadLiveData() {
       const c = r.data;
       const costsEl = document.getElementById('cc-costs-summary');
       if (costsEl) {
+        // The redundant 3-column stat grid this used to open with was
+        // removed — the page's own separate stat-card row above (Total
+        // API Spend / Cost per Synthesis / Gross Margin / Net Profit,
+        // updated via the setP() calls below) already shows this same
+        // information; duplicating it again inside this panel just
+        // produced a confusing, nested-looking second copy.
         costsEl.innerHTML = `
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
-            <div style="background:var(--surface2);border-radius:10px;padding:14px">
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Total API Cost</div>
-              <div style="font-size:22px;font-weight:800;color:var(--orange)">$${c.totalApiCost}</div>
-            </div>
-            <div style="background:var(--surface2);border-radius:10px;padding:14px">
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Infrastructure</div>
-              <div style="font-size:22px;font-weight:800">$${c.infraCost}</div>
-            </div>
-            <div style="background:var(--surface2);border-radius:10px;padding:14px">
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Cost/Synthesis</div>
-              <div style="font-size:22px;font-weight:800">$${c.costPerSynth}</div>
-            </div>
-          </div>
           <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Per Provider (${c.totalSynths} syntheses, estimated)</div>
           ${c.providers.map(p => `
             <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--surface2)">
