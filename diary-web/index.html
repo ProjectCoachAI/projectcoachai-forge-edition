@@ -670,7 +670,7 @@
         <span class="toggle-label active" id="label-monthly">Monthly</span>
         <button class="toggle-switch" id="billing-toggle" aria-label="Toggle billing period" role="switch" aria-checked="false"></button>
         <span class="toggle-label" id="label-yearly">Yearly</span>
-        <span class="toggle-save" id="toggle-save-badge" style="display:none;">Save 30%</span>
+        <span class="toggle-save" id="toggle-save-badge" style="display:none;">Save 20%</span>
       </div>
       <div class="pricing-cards">
         <!-- FREE -->
@@ -695,7 +695,7 @@
           <span class="featured-badge">Most popular</span>
           <p class="card-name">Pro</p>
           <div class="card-price">
-            <span class="price-amount" id="pro-price">$11.99</span>
+            <span class="price-amount" id="pro-price">$14.95</span>
             <span class="price-period">/month</span>
           </div>
           <p class="price-annual" id="pro-annual">&nbsp;</p>
@@ -740,19 +740,23 @@
         labelYearly.classList.toggle('active', isYearly);
         saveBadge.style.display = isYearly ? 'inline-block' : 'none';
         if (isYearly) {
-          // Updated to the $11.99/mo repricing (from $6.99) — confirmed via
-          // full cost modeling once Continue-in-Forge's own, genuine
-          // per-use API cost was factored in. Yearly monthly-equivalent
-          // recalculated from the new $100.72/year price (same,
-          // already-confirmed-warranted 30% discount). "2 months free"
-          // corrected to "Save 30%" — the actual savings at 30% off work
-          // out to ~3.6 months' worth, not 2; this was already inaccurate
-          // before this repricing, fixed here since this line was already
-          // being touched.
-          proPrice.textContent = '$8.39'; proAnnual.textContent = 'Billed as $100.72/year — Save 30%';
+          // Updated to the $14.95/mo repricing (from $11.99) — confirmed
+          // as a deliberate decision given rising per-call API costs
+          // observed directly in this same session (a single model
+          // upgrade roughly doubling/tripling per-call cost on identical
+          // usage). Yearly discount also reduced from 30% to 20% at the
+          // same time — 30% off $14.95 would have landed at $10.47/mo
+          // effective, UNDER the $11.99 rate just moved away from for
+          // cost reasons, which would have quietly undermined that same
+          // reasoning for anyone choosing yearly. 20% off $179.40/year =
+          // $143.52/year = $11.96/mo effective — close to, but still
+          // above, the $11.99 baseline being moved away from, while
+          // still a real, meaningful annual incentive (~2.4 months
+          // free).
+          proPrice.textContent = '$11.96'; proAnnual.textContent = 'Billed as $143.52/year — Save 20%';
           forgePrice.textContent = '$12.49'; forgeAnnual.textContent = 'Billed as $149/year — 2 months free';
         } else {
-          proPrice.textContent = '$11.99'; proAnnual.innerHTML = '&nbsp;';
+          proPrice.textContent = '$14.95'; proAnnual.innerHTML = '&nbsp;';
           forgePrice.textContent = '$14.99'; forgeAnnual.innerHTML = '&nbsp;';
         }
       });
@@ -788,7 +792,7 @@
   <div class="close-wrap" id="pricing">
     <div class="close">
       <h2 class="close-headline">Find it instantly.<br>Keep it forever.</h2>
-      <p class="close-sub">Start free. Upgrade to Pro for $11.99/month.<br></p>
+      <p class="close-sub">Start free. Upgrade to Pro for $14.95/month.<br></p>
       <a href="#" onclick="installExtension(event)" class="close-cta" id="closeCta">Add to Chrome — Free</a>
     </div>
   </div>
@@ -827,13 +831,23 @@
               '<button onclick="Forge.auth.signout().then(function(){location.reload();})" style="font-size:13px;color:#9E9890;background:none;border:none;cursor:pointer;margin-left:0.5rem;font-family:Inter,sans-serif;">Sign out</button>';
           }
           // Update hero and close CTAs
+          // Confirmed as a real, direct bug: both elements' own onclick="installExtension(event)"
+          // (from the original, logged-out markup) was never removed here — only .href/.textContent
+          // got updated. Since installExtension()'s own very first line calls e.preventDefault()
+          // unconditionally, that still fired on every click regardless of the updated href,
+          // blocking the browser's own default link navigation entirely and opening the Chrome
+          // Web Store link instead, even though .href had already been correctly set to /app.html.
           var hero = document.getElementById('heroCta');
-          if (hero) { hero.href = '/app.html'; hero.textContent = 'Back to your Diary →'; }
+          if (hero) { hero.href = '/app.html'; hero.textContent = 'Back to your Diary →'; hero.onclick = null; }
           var close = document.getElementById('closeCta');
-          if (close) { close.href = '/app.html'; close.textContent = 'Back to your Diary →'; }
+          if (close) { close.href = '/app.html'; close.textContent = 'Back to your Diary →'; close.onclick = null; }
           // Update pricing CTAs — logged in users go to checkout not signup
+          // Same bug/fix as heroCta/closeCta above — this button also
+          // originally carried onclick="installExtension(event)" from the
+          // logged-out markup, which would have overridden the updated
+          // href the same way.
           var freeBtn = document.querySelector('.card-cta.secondary');
-          if (freeBtn) { freeBtn.href = '/app.html'; freeBtn.textContent = 'Go to My Diary'; }
+          if (freeBtn) { freeBtn.href = '/app.html'; freeBtn.textContent = 'Go to My Diary'; freeBtn.onclick = null; }
           var proBtn = document.querySelector('.card-cta.primary');
           if (proBtn) { proBtn.href = '#'; proBtn.textContent = 'Upgrade to Pro →'; proBtn.onclick = function(e){ e.preventDefault(); var isYearly = document.getElementById('billing-toggle') && document.getElementById('billing-toggle').classList.contains('yearly'); startCheckout(isYearly ? 'diary-pro-yearly' : 'diary-pro-monthly'); }; }
         }

@@ -83,6 +83,21 @@
     .chat-page { max-width:100%; }
     .chat-msg .chat-msg-body { max-width:90%; }
   }
+
+  /* Ported directly from app.html's own upgrade-modal styling, for the
+     new Diary Pro upgrade pop-up — continue.html had none of this
+     infrastructure at all before now. */
+  .upgrade-modal-backdrop { display:none;position:fixed;inset:0;background:rgba(27,42,74,0.5);z-index:10001;align-items:center;justify-content:center; }
+  .upgrade-modal-backdrop.visible { display:flex; }
+  .upgrade-modal { background:#fff;border-radius:14px;padding:2rem;width:360px;max-width:90vw;box-shadow:0 16px 48px rgba(27,42,74,0.2);text-align:center; }
+  .upgrade-modal-icon { font-size:36px;margin-bottom:1rem; }
+  .upgrade-modal-title { font-family:'Lora',serif;font-size:20px;color:#1B2A4A;margin-bottom:0.5rem;line-height:1.3; }
+  .upgrade-modal-sub { font-size:13px;color:#6B6559;line-height:1.6;margin-bottom:1.5rem; }
+  .upgrade-modal-primary { display:block;background:#1B2A4A;color:#F5F3EE;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;text-align:center;cursor:pointer;border:none;width:100%;font-family:inherit;margin-bottom:8px;transition:background 0.2s; }
+  .upgrade-modal-primary:hover { background:#243A63; }
+  .upgrade-modal-secondary { display:block;background:transparent;color:#C17D3C;padding:8px;font-size:13px;cursor:pointer;border:none;width:100%;font-family:inherit;text-align:center; }
+  .upgrade-modal-secondary:hover { text-decoration:underline; }
+  .upgrade-modal-dismiss { font-size:11px;color:#9E9890;margin-top:8px;cursor:pointer;background:none;border:none;font-family:inherit; }
 </style>
 <!-- pdf.js — same loader/version as app.html's own, for the ported
      attachment reader below. Confirmed there, directly against cdnjs's
@@ -1116,13 +1131,67 @@ function linkChatSessionToDiaryEntry(sessionId, isFirstFork, nativeSeedCount) {
   Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, patch).catch(function() {});
 }
 
+// Computes "Month D" for the first day of next calendar month — the
+// limit itself resets based on yearMonth() (calendar-month), confirmed
+// directly in backend/lib/db.js, not a rolling/daily window at all. A
+// "continue tomorrow"-style message would genuinely mislead almost
+// every time someone hits this (only ever accurate by coincidence, on
+// the very last day of the month) — this shows the real reset date
+// instead.
+function getResetDateString() {
+  var now = new Date();
+  var nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return nextMonth.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+
 function showLimitBanner(used, limit, customMessage) {
   var el = document.getElementById('chatLimitBanner');
   var text = customMessage
     ? customMessage
-    : 'Monthly free entries used (' + used + '/' + limit + '). ';
+    : 'Monthly free entries used (' + used + '/' + limit + '). Resets ' + getResetDateString() + '.';
   el.innerHTML = '<div class="chat-limit-banner">' + text + ' ' +
-    '<a href="https://forge.projectcoachai.com/pricing.html">Upgrade to Forge</a> for unlimited continues.</div>';
+    '<a href="https://diary.projectcoachai.com/#pricing">Upgrade to Diary Pro</a> for unlimited continues.</div>';
+}
+
+// Same Stripe checkout pattern already established in app.html's own
+// startDiaryCheckout() — ported here since continue.html had none of
+// this infrastructure at all before now. Same, current price IDs.
+async function startDiaryProCheckout(period) {
+  try {
+    var priceId = period === 'yearly' ? 'price_1UChuPD9SDC8fk3BgoMWsUuJ' : 'price_1UChweD9SDC8fk3Bm9Eemu3z';
+    var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+    var r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        priceId: priceId,
+        tierId: 'diary-pro',
+        successUrl: 'https://diary.projectcoachai.com/app.html?upgraded=true',
+        cancelUrl: 'https://diary.projectcoachai.com/continue.html'
+      })
+    });
+    var data = await r.json();
+    if (data.url) { window.location.href = data.url; }
+    else { Forge.showToast(data.error || 'Could not start checkout', 'error'); }
+  } catch(e) { Forge.showToast('Something went wrong. Please try again.', 'error'); }
+}
+
+// One-time, noticeable pop-up the first time the entries/month limit is
+// hit in this session — the persistent inline banner above stays for
+// ongoing visibility, but a plain text-color change alone is easy to
+// miss the first time it actually happens. Deliberately NOT shown for
+// the separate message_cap reason (a single conversation's own growth
+// limit) — upgrading doesn't resolve that case at all, since paid
+// tiers still have their own (higher) per-entry cap too; showing an
+// upgrade pitch there would be genuinely misleading.
+var _upgradeModalShownThisSession = false;
+function showUpgradeModal() {
+  if (_upgradeModalShownThisSession) return;
+  _upgradeModalShownThisSession = true;
+  document.getElementById('diaryProUpgradeModal').classList.add('visible');
+}
+function dismissUpgradeModal() {
+  document.getElementById('diaryProUpgradeModal').classList.remove('visible');
 }
 
 async function sendChatMessage() {
@@ -1262,6 +1331,7 @@ async function sendChatMessage() {
         showLimitBanner(null, null, errData.error);
       } else {
         showLimitBanner(errData.entriesUsed, errData.entryLimit);
+        showUpgradeModal();
       }
       chatHistory.pop();
       Forge.showToast(errData.error || 'Limit reached.', 'error');
@@ -2035,6 +2105,25 @@ function zoomPdfOut() {
   renderPdfAtCurrentScale();
 }
 window.zoomPdfOut = zoomPdfOut;
+</script>
+
+<!-- Diary Pro upgrade modal — shown once per session when the entries/
+     month limit is hit (not the separate per-conversation message_cap,
+     which upgrading doesn't resolve, since paid tiers have their own,
+     higher cap too, not an unlimited one). -->
+<div class="upgrade-modal-backdrop" id="diaryProUpgradeModal">
+  <div class="upgrade-modal">
+    <div class="upgrade-modal-icon">📖</div>
+    <div class="upgrade-modal-title">You've used this month's free continues</div>
+    <div class="upgrade-modal-sub">Upgrade to Diary Pro for unlimited Continue Conversation, every month — or wait, and your free entries reset on <span id="diaryProModalResetDate"></span>.</div>
+    <button class="upgrade-modal-primary" onclick="startDiaryProCheckout('monthly')">Upgrade to Diary Pro &mdash; $14.95/month</button>
+    <button class="upgrade-modal-secondary" onclick="startDiaryProCheckout('yearly')">Save 20% with yearly &mdash; $11.96/month</button>
+    <button class="upgrade-modal-dismiss" onclick="dismissUpgradeModal()">Not now</button>
+  </div>
+</div>
+<script>
+  var _resetDateEl = document.getElementById('diaryProModalResetDate');
+  if (_resetDateEl) _resetDateEl.textContent = getResetDateString();
 </script>
 
 </body>

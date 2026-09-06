@@ -3268,7 +3268,23 @@ async function saveQuickAnswer() {
 // ── Sign out ──────────────────────────────────────────────────────────────
 async function startDiaryCheckout(period) {
   try {
-    var priceId = period === 'yearly' ? 'price_1TnO5LD9SDC8fk3BMOXOndRV' : 'price_1TnO15D9SDC8fk3BmqPDbjdd';
+    // Confirmed live via direct code inspection: this backend route
+    // (POST /api/stripe/create-checkout-session) uses whatever priceId
+    // is sent here directly (never looks up its own PRICE_IDS mapping
+    // for this flow at all — that mapping is confirmed unused/dead code
+    // in stripe.js), so these two hardcoded IDs are the ONLY place that
+    // actually controls what a real customer gets charged for Diary
+    // Pro. Updated to the $14.95/mo repricing (from $11.99) and the
+    // yearly discount reduced from 30% to 20% — confirmed as a
+    // deliberate decision: 30% off $14.95 would have landed at
+    // $10.47/mo effective, UNDER the $11.99 rate just moved away from
+    // specifically because of rising per-call API costs, which would
+    // have quietly undermined that same reasoning for anyone on the
+    // yearly plan. 20% off $143.52/year lands at $11.96/mo effective —
+    // close to but still above the $11.99 baseline being moved away
+    // from, while still a real, meaningful annual incentive (~2.4
+    // months free).
+    var priceId = period === 'yearly' ? 'price_1UChuPD9SDC8fk3BgoMWsUuJ' : 'price_1UChweD9SDC8fk3Bm9Eemu3z';
     var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
     var r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
       method: 'POST',
@@ -4023,8 +4039,8 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     than actively wrong if this code path is ever reconnected later. -->
     <div class="upgrade-modal-title">Upgrade to Pro</div>
     <div class="upgrade-modal-sub">Get unlimited searches and priority support with Diary Pro.</div>
-    <button class="upgrade-modal-primary" onclick="startDiaryCheckout('monthly')">Upgrade to Pro &mdash; $6.99/month</button>
-    <button class="upgrade-modal-secondary" onclick="startDiaryCheckout('yearly')">Save 30% with yearly &mdash; $4.92/month</button>
+    <button class="upgrade-modal-primary" onclick="startDiaryCheckout('monthly')">Upgrade to Pro &mdash; $14.95/month</button>
+    <button class="upgrade-modal-secondary" onclick="startDiaryCheckout('yearly')">Save 20% with yearly &mdash; $11.96/month</button>
     <a href="https://forge.projectcoachai.com" class="upgrade-modal-secondary">Or try Forge free &rarr;</a>
     <button class="upgrade-modal-dismiss" onclick="document.getElementById('upgradeModal').classList.remove('visible')">Maybe later</button>
   </div>

@@ -17,20 +17,19 @@ const PRICE_IDS = {
   'team-yearly':         process.env.STRIPE_YEARLY_RUN_A_TEAM       || 'price_1TVK0CD9SDC8fk3BEff3fuXq',
   liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || '',
   // Diary Pro
-  // Diary Pro — updated to the $11.99/mo repricing (from $6.99), confirmed
-  // via full cost modeling once Continue-in-Forge's own, genuine per-use
-  // API cost was factored in — the original price was set when Diary
-  // only had Saves/Searches, both effectively free, database-only
-  // operations. Yearly kept at the same, already-confirmed-warranted 30%
-  // discount ($100.72 = $143.88 x 0.70).
-  'diary-pro-monthly': process.env.STRIPE_DIARY_PRO_MONTHLY || 'price_1UACAoD9SDC8fk3BLCNx7VRB',
-  // Yearly price replaced — the original (price_1UACECD9SDC8fk3BpOZWhIh5)
-  // was confirmed live to have been created with a MONTHLY billing
-  // interval by mistake, not yearly — it would have charged $100.72
-  // every month ($1,208.64/year) rather than once a year. Caught before
-  // any customer could be charged. New price object created directly in
-  // Stripe with the correct yearly interval, same $100.72 amount.
-  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || 'price_1UACdRD9SDC8fk3B8KQUOnee',
+  // Diary Pro — updated to the $14.95/mo repricing (from $11.99), and
+  // the yearly discount reduced from 30% to 20% (see index.html/app.html
+  // for the full reasoning). Confirmed via direct code inspection that
+  // this PRICE_IDS mapping is entirely unused/dead for the actual
+  // checkout flow — /create-checkout-session below uses whatever
+  // priceId the client sends directly, never looks this mapping up at
+  // all. Updated anyway for consistency/documentation, since a stale
+  // entry here would be actively misleading to anyone reading this file
+  // even though it's never read from at runtime. The actual, live price
+  // IDs that matter are hardcoded directly in app.html's own
+  // startDiaryCheckout().
+  'diary-pro-monthly': process.env.STRIPE_DIARY_PRO_MONTHLY || 'price_1UChweD9SDC8fk3Bm9Eemu3z',
+  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || 'price_1UChuPD9SDC8fk3BgoMWsUuJ',
   // Sweep Pro
   'sweep-pro':         process.env.STRIPE_SWEEP_PRO_MONTHLY || 'price_1TrMESD9SDC8fk3BhhJhp45J',
   'sweep-pro-yearly':  process.env.STRIPE_SWEEP_PRO_YEARLY  || 'price_1TrMO5D9SDC8fk3BABJJdDoe'
