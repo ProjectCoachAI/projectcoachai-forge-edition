@@ -794,11 +794,11 @@ async function updateStreak(userEmail) {
 }
 
 // ── Chat sessions (Forge Chat — continue conversation with one model) ──────
-async function createChatSession(sessionId, userEmail, model, messages, title) {
+async function createChatSession(sessionId, userEmail, model, messages, title, source) {
   await query(
-    `INSERT INTO chat_sessions (session_id, user_email, model, messages, title, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,NOW(),NOW())`,
-    [sessionId, userEmail, model, JSON.stringify(messages || []), title || null]
+    `INSERT INTO chat_sessions (session_id, user_email, model, messages, title, source, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW())`,
+    [sessionId, userEmail, model, JSON.stringify(messages || []), title || null, source || 'forge']
   );
 }
 
@@ -949,6 +949,20 @@ async function migrateDiary() {
     "CREATE INDEX IF NOT EXISTS idx_diary_category ON diary_entries(user_email, category)",
     "CREATE INDEX IF NOT EXISTS idx_diary_source ON diary_entries(user_email, source)",
     "CREATE INDEX IF NOT EXISTS idx_diary_favorite ON diary_entries(user_email, is_favorite)",
+    // Circle-back item #4 — chat_sessions previously had no way at all
+    // to distinguish a session created via Diary's own Continue
+    // Conversation flow from one created via Forge's own, separate
+    // native chat.html, even though the request body reaching the
+    // shared POST / route already carries a source field distinguishing
+    // the two (continue.html sends source:'diary'; Forge's chat.html
+    // sends no source field at all today — see chat.js's own comment on
+    // this). Defaulted to 'forge' for every existing, already-persisted
+    // row specifically because Forge's native chat predates Diary's
+    // Continue Conversation feature entirely — an existing row with no
+    // other information at all is more likely to be a genuine Forge
+    // session than a Diary one.
+    "ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'forge'",
+    "CREATE INDEX IF NOT EXISTS idx_chat_sessions_source ON chat_sessions(user_email, source)",
   ];
   for (const sql of migrations) {
     try { await query(sql); } catch(e) { console.warn('[Diary migration]', e.message); }

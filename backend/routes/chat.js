@@ -90,7 +90,7 @@ function genSessionId() {
 // from it.
 const BRIDGE_RECENT_MESSAGES_TO_KEEP = 20; // ~10 turns verbatim, unsummarized
 const BRIDGE_TOP_K_RETRIEVED = 15; // older turns pulled in via retrieval
-async function bridgeConversation(oldSessionId, allMessages, model, userEmail, diaryEntryId) {
+async function bridgeConversation(oldSessionId, allMessages, model, userEmail, diaryEntryId, source) {
     try {
         // Checked directly here, before ever attempting an embed call —
         // confirmed as the single most likely cause of a bridge failure
@@ -110,7 +110,7 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
         let archivedSessionId = oldSessionId;
         if (!archivedSessionId) {
             archivedSessionId = genSessionId();
-            await db.createChatSession(archivedSessionId, userEmail, model, allMessages, (allMessages[0] && allMessages[0].content || '').slice(0, 80));
+            await db.createChatSession(archivedSessionId, userEmail, model, allMessages, (allMessages[0] && allMessages[0].content || '').slice(0, 80), source);
         } else {
             await db.updateChatSession(archivedSessionId, userEmail, allMessages);
         }
@@ -185,7 +185,7 @@ async function bridgeConversation(oldSessionId, allMessages, model, userEmail, d
         const seededMessages = [bridgeIntro, bridgeAck, ...recentMessages, newMessage];
 
         const newSessionId = genSessionId();
-        await db.createChatSession(newSessionId, userEmail, model, seededMessages, (newMessage.content || '').slice(0, 80));
+        await db.createChatSession(newSessionId, userEmail, model, seededMessages, (newMessage.content || '').slice(0, 80), source);
 
         if (diaryEntryId) {
             await db.query(
@@ -471,7 +471,7 @@ router.post('/', requireAuth, async (req, res) => {
             // only a bridged:true flag in the final response (plus the
             // pre-existing sessionId field, now the NEW session's own id)
             // signals to the frontend that this happened at all.
-            const bridgeResult = await bridgeConversation(sessionId || null, messagesForApi, model, req.userEmail, diaryEntryId);
+            const bridgeResult = await bridgeConversation(sessionId || null, messagesForApi, model, req.userEmail, diaryEntryId, source);
             if (bridgeResult.success) {
                 bridged = true;
                 bridgedFromSessionId = bridgeResult.archivedSessionId;
@@ -523,11 +523,11 @@ router.post('/', requireAuth, async (req, res) => {
                 if (existing) {
                     await db.updateChatSession(sid, req.userEmail, messages);
                 } else {
-                    await db.createChatSession(sid, req.userEmail, model, messages, message.slice(0, 80));
+                    await db.createChatSession(sid, req.userEmail, model, messages, message.slice(0, 80), source);
                 }
             } else {
                 sid = genSessionId();
-                await db.createChatSession(sid, req.userEmail, model, messages, message.slice(0, 80));
+                await db.createChatSession(sid, req.userEmail, model, messages, message.slice(0, 80), source);
             }
         } catch (dbErr) {
             console.error('[Chat] session persist failed:', dbErr.message);
