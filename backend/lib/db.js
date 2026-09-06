@@ -375,6 +375,26 @@ CREATE TABLE IF NOT EXISTS forge_library (
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_forge_library_user ON forge_library(user_email, created_at DESC);
+
+-- Diary/Continue Conversation's own per-call token usage — dedicated,
+-- separate from synthesis_logs (that table's own shape — primary_
+-- provider/fallback_provider — is specific to the Compare feature's
+-- primary/fallback model selection, which Diary has no equivalent of
+-- at all: one provider per continuation, no fallback concept). Real
+-- token counts captured directly from each provider's own API
+-- response via the onUsage callback added to compare.js's callers —
+-- not estimated, unlike synthesis_logs' own approach for the Compare
+-- feature.
+CREATE TABLE IF NOT EXISTS diary_chat_usage (
+  id             SERIAL PRIMARY KEY,
+  user_email     TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  provider       TEXT NOT NULL,
+  model          TEXT,
+  input_tokens   INTEGER,
+  output_tokens  INTEGER,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_diary_chat_usage_provider_date ON diary_chat_usage(provider, created_at);
 `;
 
 async function query(sql, params = []) {
@@ -865,7 +885,24 @@ async function libraryDelete(fileId, userEmail) {
   await query('DELETE FROM forge_library WHERE file_id=$1 AND user_email=$2', [fileId, userEmail]);
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete };
+// Logs one Diary/Continue Conversation API call's own real token usage,
+// captured directly from the provider's own response via the onUsage
+// callback added to compare.js's callers. Fire-and-forget from the
+// caller's own perspective — a logging failure should never break the
+// actual conversation response itself, so this swallows its own errors
+// rather than ever propagating one back up.
+async function logDiaryChatUsage(userEmail, provider, model, inputTokens, outputTokens) {
+  try {
+    await query(
+      'INSERT INTO diary_chat_usage (user_email, provider, model, input_tokens, output_tokens) VALUES ($1,$2,$3,$4,$5)',
+      [userEmail, provider, model || null, inputTokens || null, outputTokens || null]
+    );
+  } catch (e) {
+    console.error('[Diary Chat Usage] logging failed (non-fatal):', e.message);
+  }
+}
+
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

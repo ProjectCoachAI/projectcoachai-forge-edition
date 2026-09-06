@@ -72,7 +72,7 @@ function normalizeAttachments(attachments) {
   return arr.filter(a => a && a.base64).map(a => ({ type: a.type || 'image', base64: a.base64, mimeType: a.mimeType }));
 }
 
-function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null) {
+function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null, onUsage = null) {
     return new Promise((resolve, reject) => {
         const files = normalizeAttachments(attachments);
         // Confirmed directly against Anthropic's own API docs: images use a
@@ -149,6 +149,17 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null) {
                 try {
                     const parsed = JSON.parse(data);
                     if (res.statusCode === 200 && parsed.content && parsed.content.length > 0) {
+                        // Additive only — onUsage is an optional callback,
+                        // undefined for every existing caller (the Compare
+                        // feature never passes it), so this changes nothing
+                        // about the existing return shape or behavior at
+                        // all for them. Anthropic's own response already
+                        // includes this usage data; it was previously just
+                        // discarded here entirely, same class of gap as the
+                        // Perplexity citations fix earlier this session.
+                        if (onUsage && parsed.usage) {
+                            onUsage({ inputTokens: parsed.usage.input_tokens, outputTokens: parsed.usage.output_tokens });
+                        }
                         resolve(parsed.content[0].text);
                     } else {
                         reject(new Error(parsed.error?.message || `Claude API error (${res.statusCode})`));
@@ -166,7 +177,7 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null) {
     });
 }
 
-function callOpenAIAPI(prompt, apiKey, attachments = null) {
+function callOpenAIAPI(prompt, apiKey, attachments = null, onUsage = null) {
     return new Promise((resolve, reject) => {
         const files = normalizeAttachments(attachments);
         // Confirmed directly against OpenAI's own docs: PDFs use a distinct
@@ -222,6 +233,13 @@ function callOpenAIAPI(prompt, apiKey, attachments = null) {
                 try {
                     const parsed = JSON.parse(data);
                     if (res.statusCode === 200 && parsed.choices && parsed.choices.length > 0) {
+                        // Additive only — same pattern as callClaudeAPI
+                        // above: onUsage is optional and undefined for
+                        // every existing caller, changing nothing about
+                        // their existing behavior at all.
+                        if (onUsage && parsed.usage) {
+                            onUsage({ inputTokens: parsed.usage.prompt_tokens, outputTokens: parsed.usage.completion_tokens });
+                        }
                         resolve(parsed.choices[0].message.content);
                     } else {
                         reject(new Error(parsed.error?.message || `OpenAI API error (${res.statusCode})`));
@@ -239,7 +257,7 @@ function callOpenAIAPI(prompt, apiKey, attachments = null) {
     });
 }
 
-function callGeminiAPI(prompt, apiKey, attachments = null) {
+function callGeminiAPI(prompt, apiKey, attachments = null, onUsage = null) {
     return new Promise((resolve, reject) => {
         const files = normalizeAttachments(attachments);
         // Confirmed directly against Gemini's own API: unlike Claude/OpenAI,
@@ -300,6 +318,15 @@ function callGeminiAPI(prompt, apiKey, attachments = null) {
                         const textPart = parts.filter(p => !p.thought).pop();
                         const text = textPart?.text;
                         if (text) {
+                            // Additive only — same pattern as the other
+                            // providers above: onUsage is optional and
+                            // undefined for every existing caller,
+                            // changing nothing about their existing
+                            // behavior at all. Gemini's own response
+                            // includes usageMetadata alongside candidates.
+                            if (onUsage && parsed.usageMetadata) {
+                                onUsage({ inputTokens: parsed.usageMetadata.promptTokenCount, outputTokens: parsed.usageMetadata.candidatesTokenCount });
+                            }
                             resolve(text);
                         } else {
                             reject(new Error('Empty Gemini response'));
@@ -370,7 +397,7 @@ function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096) {
 }
 
 // ── OpenAI-compatible generic caller (Mistral, DeepSeek, Perplexity, Grok) ──
-function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
+function callOpenAICompatible(prompt, apiKey, hostname, path, model, onUsage = null) {
     return new Promise((resolve, reject) => {
         const sysMsg = { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' };
         let messages;
@@ -428,6 +455,15 @@ function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
                                 return url ? '[' + numStr + '](' + url + ')' : full;
                             });
                         }
+                        // Additive only — same pattern as callClaudeAPI/
+                        // callOpenAIAPI above: onUsage is optional and
+                        // undefined for every existing caller (Compare,
+                        // and every one of the five thin wrappers below
+                        // that don't pass it through), changing nothing
+                        // about their existing behavior at all.
+                        if (onUsage && parsed.usage) {
+                            onUsage({ inputTokens: parsed.usage.prompt_tokens, outputTokens: parsed.usage.completion_tokens });
+                        }
                         resolve(text);
                     } else {
                         reject(new Error(parsed.error?.message || `API error (${res.statusCode})`));
@@ -442,24 +478,24 @@ function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
     });
 }
 
-function callMistralAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.mistral.ai', '/v1/chat/completions', 'mistral-small-latest');
+function callMistralAPI(prompt, apiKey, onUsage = null) {
+    return callOpenAICompatible(prompt, apiKey, 'api.mistral.ai', '/v1/chat/completions', 'mistral-small-latest', onUsage);
 }
 
-function callDeepSeekAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.deepseek.com', '/v1/chat/completions', 'deepseek-chat');
+function callDeepSeekAPI(prompt, apiKey, onUsage = null) {
+    return callOpenAICompatible(prompt, apiKey, 'api.deepseek.com', '/v1/chat/completions', 'deepseek-chat', onUsage);
 }
 
-function callPerplexityAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'sonar');
+function callPerplexityAPI(prompt, apiKey, onUsage = null) {
+    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'sonar', onUsage);
 }
 
-function callGrokAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.x.ai', '/v1/chat/completions', 'grok-3-fast');
+function callGrokAPI(prompt, apiKey, onUsage = null) {
+    return callOpenAICompatible(prompt, apiKey, 'api.x.ai', '/v1/chat/completions', 'grok-3-fast', onUsage);
 }
 
-function callMetaAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.groq.com', '/openai/v1/chat/completions', 'llama-3.3-70b-versatile');
+function callMetaAPI(prompt, apiKey, onUsage = null) {
+    return callOpenAICompatible(prompt, apiKey, 'api.groq.com', '/openai/v1/chat/completions', 'llama-3.3-70b-versatile', onUsage);
 }
 
 // POE uses a different API — subscription-based access via Quora

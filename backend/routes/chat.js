@@ -26,15 +26,19 @@ function getForgeKeys() {
 }
 
 // Model -> caller function (all support array-of-messages as of compare.js update)
+// onUsage added as a 4th param to every wrapper — additive only, since
+// every existing call site that doesn't pass it (none exist outside
+// this file, but any that appear elsewhere later) just gets undefined,
+// identical to today's behavior.
 const MODEL_CALLERS = {
-    claude:     (messages, key, attachments) => cmp.callClaudeAPI(messages, key, 4096, attachments),
-    chatgpt:    (messages, key, attachments) => cmp.callOpenAIAPI(messages, key, attachments),
-    gemini:     (messages, key, attachments) => cmp.callGeminiAPI(messages, key, attachments),
-    mistral:    (messages, key) => cmp.callMistralAPI(messages, key),
-    deepseek:   (messages, key) => cmp.callDeepSeekAPI(messages, key),
-    perplexity: (messages, key) => cmp.callPerplexityAPI(messages, key),
-    grok:       (messages, key) => cmp.callGrokAPI(messages, key),
-    meta:       (messages, key) => cmp.callMetaAPI(messages, key),
+    claude:     (messages, key, attachments, onUsage) => cmp.callClaudeAPI(messages, key, 4096, attachments, onUsage),
+    chatgpt:    (messages, key, attachments, onUsage) => cmp.callOpenAIAPI(messages, key, attachments, onUsage),
+    gemini:     (messages, key, attachments, onUsage) => cmp.callGeminiAPI(messages, key, attachments, onUsage),
+    mistral:    (messages, key, attachments, onUsage) => cmp.callMistralAPI(messages, key, onUsage),
+    deepseek:   (messages, key, attachments, onUsage) => cmp.callDeepSeekAPI(messages, key, onUsage),
+    perplexity: (messages, key, attachments, onUsage) => cmp.callPerplexityAPI(messages, key, onUsage),
+    grok:       (messages, key, attachments, onUsage) => cmp.callGrokAPI(messages, key, onUsage),
+    meta:       (messages, key, attachments, onUsage) => cmp.callMetaAPI(messages, key, onUsage),
 };
 
 // Per-message attachment ceiling. Chosen against real, verified provider
@@ -353,7 +357,16 @@ router.post('/', requireAuth, async (req, res) => {
                 // (mistral, deepseek, etc.) simply ignores the extra
                 // parameter, per normal JS semantics — but those models can
                 // never be reached with attachments set in the first place.
-                const result = await MODEL_CALLERS[m](messages, key, attachments);
+                // Real token usage logged via db.logDiaryChatUsage() —
+                // fire-and-forget (no await, per its own comment: a
+                // logging failure should never delay or break the actual
+                // conversation response). Logged for whichever model
+                // actually served the request (m), not primaryModel —
+                // correctly attributes cost to the fallback provider on
+                // the rare occasion one is used, not the one that failed.
+                const result = await MODEL_CALLERS[m](messages, key, attachments, function(usage) {
+                    db.logDiaryChatUsage(req.userEmail, m, null, usage.inputTokens, usage.outputTokens);
+                });
                 if (m !== primaryModel) {
                     console.log(`[Chat] Fell back from ${primaryModel} to ${m}`);
                     try {
