@@ -3666,12 +3666,26 @@ function queryAllDeep(selector) {
       // distinct value. Confirmed: exactly 2 matches for 2 real answers,
       // zero reasoning text included.
       response: '[data-message-part-type="answer"]',
-      // NOTE: prompt selector fixed — the previously-configured
-      // '[class*="UserMessage"], [data-testid="user-message"],
+      // NOTE: prompt selector strengthened further — the previously-
+      // configured '[class*="UserMessage"], [data-testid="user-message"],
       // [data-message-role="user"]' was confirmed live to be entirely
-      // dead. See the matching note on registry.mistral above for the
-      // full context.
-      prompt: '.ms-auto span.whitespace-pre-wrap',
+      // dead, and was replaced with the .ms-auto version below it in an
+      // earlier fix. That version was confirmed live via a real, pasted
+      // DOM snapshot to still work correctly today, but relies only on
+      // .ms-auto — a generic Tailwind layout utility class, carrying no
+      // guarantee of staying tied to user messages specifically, and
+      // easily reused elsewhere or dropped entirely in a future Mistral
+      // redesign. The same pasted snapshot also revealed the user-
+      // message container itself carries
+      // data-message-author-role="user", a purpose-built semantic
+      // attribute (same naming family as the response side's own
+      // data-message-part-type="answer" above) — verified via direct
+      // DOM simulation against that exact snapshot that both the old
+      // and new selector currently match the same, single, correct
+      // element, so this trades presentational styling for something
+      // actually meant to encode the role, rather than fixing an active
+      // break.
+      prompt: '[data-message-author-role="user"] span.whitespace-pre-wrap',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
