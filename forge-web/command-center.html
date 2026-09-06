@@ -2299,21 +2299,40 @@ async function loadLiveData() {
               <div style="font-size:22px;font-weight:800">$${c.costPerSynth}</div>
             </div>
           </div>
-          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Per Provider (${c.totalSynths} syntheses)</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Per Provider (${c.totalSynths} syntheses, estimated)</div>
           ${c.providers.map(p => `
             <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--surface2)">
               <span style="font-size:13px">${p.name}</span>
               <span style="font-size:13px;font-weight:600;color:var(--orange)">$${p.cost}</span>
-            </div>`).join('')}`;
+            </div>`).join('')}
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px">
+            Diary / Continue Conversation (${c.diary.totalCalls} calls, real measured tokens)
+          </div>
+          ${c.diary.providers.length ? c.diary.providers.map(p => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--surface2)">
+              <div>
+                <div style="font-size:13px">${p.name}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${p.calls} calls · ${p.inputTokens.toLocaleString()} in / ${p.outputTokens.toLocaleString()} out</div>
+              </div>
+              <span style="font-size:13px;font-weight:600;color:var(--orange)">$${p.cost}</span>
+            </div>`).join('') : '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">No Diary usage recorded yet this period.</div>'}
+          <div style="display:flex;justify-content:space-between;padding:10px 0;margin-top:4px;font-weight:700">
+            <span style="font-size:13px">Diary total</span>
+            <span style="font-size:13px;color:var(--orange)">$${c.diary.totalCost}</span>
+          </div>`;
       }
-      // Wire P&L stat cards to real costs data
+      // Wire P&L stat cards to real costs data — includes Diary's own
+      // real, measured cost alongside the Compare feature's estimated
+      // one, since this whole section exists to show the TRUE combined
+      // cost picture, not just the Compare feature's own slice of it.
       const paidUsers = parseInt(document.getElementById('cc-paid-users')?.textContent || '0') || 0;
       const monthlyRev = paidUsers * 14.95;
-      const totalCost  = c.totalApiCost + c.infraCost;
+      const totalApiSpend = c.totalApiCost + c.diary.totalCost;
+      const totalCost  = totalApiSpend + c.infraCost;
       const netProfit  = monthlyRev - totalCost;
       const margin     = monthlyRev > 0 ? Math.round(((monthlyRev - totalCost) / monthlyRev) * 100) : 0;
       const setP = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      setP('pl-api-spend',      '$' + c.totalApiCost.toFixed(2));
+      setP('pl-api-spend',      '$' + totalApiSpend.toFixed(2));
       setP('pl-synth-count',    c.totalSynths + ' syntheses · 8 AIs');
       setP('pl-synth-total',    c.totalSynths + ' syntheses total');
       setP('pl-cost-per-synth', '$' + c.costPerSynth);
