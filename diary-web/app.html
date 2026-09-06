@@ -161,7 +161,21 @@
       .attachment-row .attachment-delete-btn { opacity: 0; transition: opacity 0.12s; }
       .attachment-row:hover .attachment-delete-btn { opacity: 1; }
     }
-    .entry-content { font-size: calc(13px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
+    // Circle-back item #8 — base font-size raised from 13px to 14px
+    // (line-height also aligned to 1.75), confirmed as a real
+    // discrepancy against continue.html's own .chat-msg-body, which
+    // already used 14px/1.75. Both apply the same --diary-font-scale
+    // user preference on top, so this 1px gap held at every zoom level,
+    // not just the default. 14px chosen as closer to this page's own
+    // general 15px body text, and to the common ~14-16px range used for
+    // message/body text across chat interfaces generally. Also fixes a
+    // second, separate issue found while making this change: two
+    // duplicate .entry-content rules existed in this same file (this one
+    // and one further below) with their own, different line-height
+    // values (1.75 here, 1.7 there) — CSS cascade meant the later one
+    // silently won; both are now identical, removing that inconsistency
+    // too.
+    .entry-content { font-size: calc(14px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
     .entry-content p { margin-bottom: 0.5rem; }
     .entry-content h1,.entry-content h2,.entry-content h3 { font-family: Lora,serif; color: #1B2A4A; margin: 0.75rem 0 0.4rem; }
     .entry-content ul,.entry-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
@@ -231,7 +245,7 @@
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
     
-.entry-content { font-size: calc(13px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.7; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
+.entry-content { font-size: calc(14px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
 
     .diary-empty { text-align: center; padding: 4rem 2rem; color: #9E9890; }
     .diary-empty h3 { font-family: 'Lora', serif; font-size: 18px; font-weight: 400; color: #1B2A4A; margin-bottom: 0.5rem; }
