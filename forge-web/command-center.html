@@ -1092,6 +1092,8 @@ Everything is ready — head to your workspace to get started.
         </div>
       </div>
 
+      <div id="cc-provider-alerts"></div>
+
       <div class="stats-row">
         <div class="stat-card" style="--accent-color:var(--red)">
           <div class="stat-card-label">Total API Spend (month)</div>
@@ -2235,6 +2237,27 @@ async function loadLiveData() {
     const r = await Forge.request('GET', '/api/costs/summary?period=month');
     if (r.ok && r.data) {
       const c = r.data;
+      // Surfaces any provider that failed in the last 24 hours as a
+      // visible, immediate alert — the whole point being to catch
+      // exactly the kind of breaking API change (a deprecated
+      // parameter, a changed response shape) that today's Sonnet 5
+      // temperature/thinking issues were, without anyone needing to
+      // manually dig through Railway logs to ever notice a provider is
+      // failing at all. Rendered independent of whether costsEl itself
+      // exists below, since this alert matters regardless of whether
+      // the rest of the cost panel loads.
+      const alertsEl = document.getElementById('cc-provider-alerts');
+      if (alertsEl) {
+        if (c.recentErrors && c.recentErrors.length) {
+          alertsEl.innerHTML = c.recentErrors.map(e => `
+            <div class="alert alert-info" style="border-color:var(--red);background:rgba(239,68,68,0.08);margin-bottom:10px">
+              <strong>⚠️ ${e.name} failed ${e.count} time${e.count === 1 ? '' : 's'} in the last 24 hours.</strong>
+              <div style="margin-top:4px;font-size:12px;color:var(--text-muted)">Most recent: "${e.lastError}"</div>
+            </div>`).join('');
+        } else {
+          alertsEl.innerHTML = '';
+        }
+      }
       const costsEl = document.getElementById('cc-costs-summary');
       if (costsEl) {
         // The redundant 3-column stat grid this used to open with was

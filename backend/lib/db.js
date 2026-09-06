@@ -395,6 +395,26 @@ CREATE TABLE IF NOT EXISTS diary_chat_usage (
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_diary_chat_usage_provider_date ON diary_chat_usage(provider, created_at);
+
+-- Every provider call failure across Continue Conversation, not just
+-- successes — built specifically so a provider's own breaking API
+-- change (a deprecated parameter, a new required field, a changed
+-- response shape) surfaces as a visible, immediate alert instead of
+-- requiring someone to manually dig through Railway logs to notice it
+-- was ever happening at all, which is exactly how today's Sonnet 5
+-- temperature-deprecation issue went unnoticed for a while. Deliberately
+-- NOT keyed to a specific user (unlike diary_chat_usage) — an error like
+-- "temperature is deprecated for this model" is a genuine, provider-wide
+-- fault, not something tied to any one person's own account, and should
+-- surface the same way regardless of which user happened to trigger it
+-- first.
+CREATE TABLE IF NOT EXISTS diary_chat_errors (
+  id             SERIAL PRIMARY KEY,
+  provider       TEXT NOT NULL,
+  error_message  TEXT,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_diary_chat_errors_provider_date ON diary_chat_errors(provider, created_at);
 `;
 
 async function query(sql, params = []) {
@@ -902,7 +922,22 @@ async function logDiaryChatUsage(userEmail, provider, model, inputTokens, output
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage };
+// Logs one Continue Conversation provider call's own failure — same
+// fire-and-forget, never-throw pattern as logDiaryChatUsage above, since
+// a logging failure here should never compound an already-failing
+// request with a second, unrelated error.
+async function logDiaryChatError(provider, errorMessage) {
+  try {
+    await query(
+      'INSERT INTO diary_chat_errors (provider, error_message) VALUES ($1,$2)',
+      [provider, errorMessage || null]
+    );
+  } catch (e) {
+    console.error('[Diary Chat Errors] logging failed (non-fatal):', e.message);
+  }
+}
+
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

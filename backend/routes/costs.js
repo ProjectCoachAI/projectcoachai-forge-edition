@@ -117,6 +117,30 @@ router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
     const totalDiaryCost = diaryProviderCosts.reduce((s, p) => s + p.cost, 0);
     const totalDiaryCalls = diaryProviderCosts.reduce((s, p) => s + p.calls, 0);
 
+    // Recent provider errors — deliberately a fixed, recent (last 24h)
+    // window regardless of the selected period above, since the whole
+    // point of surfacing these is "is something actively broken right
+    // now," not a historical error count over a full month/year. Uses
+    // DISTINCT ON to get each provider's own MOST RECENT error message
+    // specifically (not just a count) — seeing "temperature is
+    // deprecated for this model" directly is what actually would have
+    // made today's real issue immediately actionable, rather than just
+    // a number prompting someone to go dig through Railway logs anyway.
+    const errorsR = await db.query(
+      `SELECT DISTINCT ON (provider) provider, error_message, created_at,
+              (SELECT COUNT(*) FROM diary_chat_errors e2 WHERE e2.provider = e1.provider AND e2.created_at >= NOW() - INTERVAL '24 hours') as count
+       FROM diary_chat_errors e1
+       WHERE created_at >= NOW() - INTERVAL '24 hours'
+       ORDER BY provider, created_at DESC`
+    );
+    const recentErrors = errorsR.rows.map(row => ({
+      id: row.provider,
+      name: (PROVIDER_COSTS[row.provider] && PROVIDER_COSTS[row.provider].name) || row.provider,
+      count: parseInt(row.count || 0),
+      lastError: row.error_message,
+      lastErrorAt: row.created_at
+    }));
+
     res.json({
       ok: true,
       period,
@@ -130,7 +154,8 @@ router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
         totalCalls: totalDiaryCalls,
         totalCost: parseFloat(totalDiaryCost.toFixed(4)),
         providers: diaryProviderCosts.sort((a,b) => b.cost - a.cost)
-      }
+      },
+      recentErrors: recentErrors.sort((a,b) => b.count - a.count)
     });
   } catch(e) {
     console.error('[Costs]', e.message);

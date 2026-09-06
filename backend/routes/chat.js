@@ -381,6 +381,16 @@ router.post('/', requireAuth, async (req, res) => {
                 return result;
             } catch(err) {
                 console.error(`[Chat] ${m} failed:`, err.message);
+                // Fire-and-forget, same as the usage logging above — a
+                // logging failure here should never compound an
+                // already-failing request with a second, unrelated
+                // error. Surfaces in the command center as a visible
+                // alert (see costs.js/command-center.html) instead of
+                // requiring someone to manually check Railway logs to
+                // ever notice a provider is failing at all — exactly
+                // how today's Sonnet 5 temperature-deprecation issue
+                // went unnoticed for a while.
+                db.logDiaryChatError(m, err.message);
                 if (m === tryModels[tryModels.length - 1]) throw err;
             }
         }
