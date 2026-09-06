@@ -526,10 +526,40 @@
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^\n*]+?)\*/g, '<em>$1</em>')
+      // NOTE: strikethrough support added — confirmed live this renderer
+      // had no handling for ~~text~~ at all, same class of gap as the
+      // earlier missing-link/missing-image fixes: it fell through
+      // unrecognized to the generic paragraph rule, showing up as
+      // literal "~~text~~" rather than struck-through text.
+      .replace(/~~([^\n~]+?)~~/g, '<del>$1</del>')
+      // NOTE: H4-H6 header support added — confirmed live this renderer
+      // only ever handled H1-H3 (#, ##, ###), so a common AI-response
+      // pattern (using #### or deeper for sub-sections) fell through to
+      // the generic paragraph rule, showing up as literal "#### text"
+      // rather than a header. Each level's own regex requires an EXACT
+      // "#" count immediately followed by a space, so these are mutually
+      // exclusive with each other and with the existing H1-H3 rules
+      // below regardless of ordering — e.g. "###### text" has a 4th,
+      // 5th, and 6th "#" immediately after the first three, not a
+      // space, so the existing H3 rule's own "^### (.+)$" pattern can
+      // never accidentally match it.
+      .replace(/^###### (.+)$/gm, '<h6>$1</h6>')
+      .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
+      .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
       .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
       .replace(/^---$/gm, '<hr/>')
+      // NOTE: blockquote support added — confirmed live this renderer
+      // had no handling for "> text" at all, showing up as plain text
+      // with a literal, escaped "&gt;" prefix rather than a styled
+      // quote. Matches the ALREADY-escaped "&gt;" (not a raw ">"), since
+      // HTML-escaping runs as the very first step of this function,
+      // well before this rule ever runs. Groups consecutive quoted
+      // lines into one <blockquote>, the same adjacency-grouping
+      // pattern already used for lists below.
+      .replace(/^&gt; ?(.*)$/gm, '<bq>$1</bq>')
+      .replace(/(<bq>[\s\S]*?<\/bq>\n*)+/g, s => `<blockquote>${s.replace(/<\/?bq>/g, m => m === '<bq>' ? '' : '<br>').replace(/<br>\n*$/, '')}</blockquote>`)
       .replace(/^\|(.+)\|$/gm, (row) => {
         const cells = row.slice(1,-1).split('|').map(c => c.trim());
         return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
@@ -543,8 +573,28 @@
         return '<table><thead>' + th + '<\/thead><tbody>' + body.join('') + '<\/tbody><\/table>';
       })
       .replace(/^\d+\.\s*$/gm, '')
-      .replace(/^[-*•] (.+)$/gm, '<li>$1</li>')
-      .replace(/^\d+\. (.+)$/gm, '<li data-ol>$1</li>')
+      // NOTE: indented/nested-list support added — confirmed live via
+      // direct testing that a sub-bullet (any leading whitespace before
+      // the marker, e.g. "  - sub point") never matched either list
+      // rule's own strict "^[-*•] "/"^\d+\. " anchor at all (no leading
+      // whitespace allowed), falling through entirely to the generic
+      // paragraph rule as raw "  - sub point" text — and, worse, this
+      // split what should have been ONE list into two separate,
+      // disconnected <ul> blocks with the broken sub-bullet text
+      // sandwiched as plain paragraphs in between, since the grouping
+      // rule below only merges genuinely ADJACENT <li> tags.
+      // Deliberately does NOT attempt true, arbitrarily-nested
+      // <ul><li><ul>...</ul></li></ul> HTML structure via regex — a
+      // meaningfully larger, higher-risk undertaking for comparatively
+      // little additional payoff over what actually matters here: the
+      // list no longer breaking apart, and the sub-item's own text no
+      // longer appearing as broken, disconnected raw text. Captures any
+      // leading whitespace and, when present, applies a visual indent
+      // via inline margin-left directly on the <li> — preserving the
+      // sub-item/main-item visual distinction without needing genuine
+      // multi-level HTML nesting.
+      .replace(/^([ \t]*)[-*•] (.+)$/gm, (m, indent, txt) => indent ? `<li style="margin-left:${Math.min(indent.length,3)*20}px">${txt}</li>` : `<li>${txt}</li>`)
+      .replace(/^([ \t]*)\d+\. (.+)$/gm, (m, indent, txt) => indent ? `<li data-ol style="margin-left:${Math.min(indent.length,3)*20}px">${txt}</li>` : `<li data-ol>${txt}</li>`)
       // NOTE: fixed a genuine, confirmed bug — the earlier grouping
       // rules only tolerated a single, optional trailing newline (\n?)
       // between consecutive <li> tags. The bare-bullet/numbered
@@ -583,8 +633,17 @@
       // lists with real prose between them (correctly NOT merged), the
       // newly-found numbered-list double-wrap bug, and a normal
       // numbered list (no regression).
-      .replace(/(<li data-ol>[\s\S]*?<\/li>\n*)+/g, s => `<ol>${s.replace(/\n{2,}/g, '\n')}</ol>`)
-      .replace(/(<li>[\s\S]*?<\/li>\n*)+/g, s => `<ul>${s.replace(/\n{2,}/g, '\n')}</ul>`)
+      // NOTE: widened from the literal "<li>"/"<li data-ol>" (no other
+      // attributes allowed at all) to also match the new indented
+      // sub-item format above, which adds an inline style="..."
+      // attribute. The unordered rule's own negative lookahead (?! data-
+      // ol) preserves the exact same ordered/unordered distinction the
+      // original, unwidened version relied on — an ordered <li data-ol
+      // style="..."> item still cannot match the unordered rule, same
+      // structural guarantee as before, just now tolerant of the extra
+      // attribute.
+      .replace(/(<li data-ol[^>]*>[\s\S]*?<\/li>\n*)+/g, s => `<ol>${s.replace(/\n{2,}/g, '\n')}</ol>`)
+      .replace(/(<li(?! data-ol)[^>]*>[\s\S]*?<\/li>\n*)+/g, s => `<ul>${s.replace(/\n{2,}/g, '\n')}</ul>`)
       .replace(/ data-ol/g, '')
       .replace(/\n\n/g, '</p><p>')
       // NOTE: fixed a genuine, confirmed bug found while independently
@@ -608,8 +667,8 @@
       // list, a table immediately after prose, and a combined
       // table-then-list-then-prose sequence — all producing clean,
       // correctly nested HTML with no stray tags.
-      .replace(/([^\n])(<(?:ul|ol|table|pre)>)/g, '$1\n$2')
-      .replace(/(<\/(?:ul|ol|table|pre)>)([^\n])/g, '$1\n$2')
+      .replace(/([^\n])(<(?:ul|ol|table|pre|blockquote)>)/g, '$1\n$2')
+      .replace(/(<\/(?:ul|ol|table|pre|blockquote)>)([^\n])/g, '$1\n$2')
       // NOTE: fixed a second, separate, genuinely pre-existing bug,
       // confirmed present even before today's other changes (tested
       // directly against the last-committed version): this rule's
