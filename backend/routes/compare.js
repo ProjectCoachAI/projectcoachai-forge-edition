@@ -106,7 +106,23 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null) {
             messages = [{ role: 'user', content: userContent }];
         }
         const body = JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
+            // Upgraded from claude-haiku-4-5-20251001 — Haiku is
+            // Anthropic's own fast/cheap tier, explicitly positioned for
+            // high-volume, latency-critical work, not for response
+            // quality. Since this is the model that continues an
+            // already-started conversation for most providers (meta,
+            // grok, perplexity, mistral, deepseek, gemini all fall back
+            // to Claude first before ChatGPT), a visible quality drop
+            // here is felt directly by the user mid-conversation.
+            // Sonnet 5 is Anthropic's own stated default for most
+            // production work — meaningfully stronger reasoning than
+            // Haiku while still fast enough for natural back-and-forth
+            // chat, and its own 1M-token context (at Anthropic's
+            // standard rate, no surcharge) also directly helps with
+            // long conversations that would otherwise need the
+            // bridging workaround, for the many providers that route
+            // through this same function.
+            model: 'claude-sonnet-5',
             max_tokens: maxTokens,
             temperature: 0.3,
             system: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.',
