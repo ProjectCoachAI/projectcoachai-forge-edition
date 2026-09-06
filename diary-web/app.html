@@ -373,6 +373,13 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108/pdf.worker.min.mjs';
     window.pdfjsLib = pdfjsLib;
   </script>
+  <!-- JSZip — same version as continue.html's own copy, needed here
+       specifically to re-extract a .pptx's own embedded images
+       on-demand when the attachment reader opens one (see
+       renderMarkdownIntoReader's own comment below); this page never
+       handles attaching new files itself, so it had no need for this
+       at all before now. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 
@@ -2642,6 +2649,93 @@ var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx', 'pptx'];
 // why this can't just be a plain <a href download> link.
 var currentReaderAttachment = null;
 
+function resolvePptxRelativePath(baseDir, relativeTarget) {
+  var baseParts = baseDir.split('/').filter(Boolean);
+  var relParts = relativeTarget.split('/').filter(Boolean);
+  for (var i = 0; i < relParts.length; i++) {
+    if (relParts[i] === '..') baseParts.pop();
+    else if (relParts[i] !== '.') baseParts.push(relParts[i]);
+  }
+  return baseParts.join('/');
+}
+var PPTX_IMAGE_MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp' };
+
+// includeImages deliberately defaults to false and stays false for
+// every existing call site (attach-time extraction, sent to the AI
+// and persisted in the message's own "--- Attached file..." text) —
+// confirmed as a direct product decision: most AI chat APIs can't
+// actually "see" an image embedded as a markdown data-URI within
+// plain text at all, so doing this unconditionally would only ever
+// burn tokens the AI can't use, while also risking crowding out the
+// actual, useful text against MAX_EXTRACTED_FILE_CHARS below. Only
+// ever passed true from the reader modal itself, re-extracting
+// on-demand from the original file already stored in the Library at
+// attach time (see uploadOriginalFileToLibrary) — the human-facing
+// display path only, never the AI-facing/persisted one.
+async function extractPptxText(arrayBuffer, includeImages) {
+  var zip = await JSZip.loadAsync(arrayBuffer);
+  var slideFiles = [];
+  zip.forEach(function(relativePath) {
+    var m = relativePath.match(/^ppt\/slides\/slide(\d+)\.xml$/);
+    if (m) slideFiles.push({ path: relativePath, num: parseInt(m[1], 10) });
+  });
+  // Numeric sort, not alphabetic — confirmed necessary and tested
+  // directly: zip entry order isn't guaranteed, and a plain string
+  // sort would incorrectly put "slide10" before "slide2".
+  slideFiles.sort(function(a, b) { return a.num - b.num; });
+
+  var slideTexts = [];
+  for (var i = 0; i < slideFiles.length; i++) {
+    var xml = await zip.file(slideFiles[i].path).async('string');
+    var doc = new DOMParser().parseFromString(xml, 'application/xml');
+    var paragraphs = doc.getElementsByTagName('a:p');
+    var paraTexts = [];
+    for (var p = 0; p < paragraphs.length; p++) {
+      var runs = paragraphs[p].getElementsByTagName('a:t');
+      var runTexts = [];
+      for (var r = 0; r < runs.length; r++) runTexts.push(runs[r].textContent);
+      var paraText = runTexts.join('');
+      if (paraText.trim()) paraTexts.push(paraText);
+    }
+    var slideImagesMd = '';
+    if (includeImages) {
+      // Each slide's own images are referenced indirectly: a
+      // <a:blip r:embed="ridN"/> element inside the slide's own XML
+      // points to an rId, which only resolves to an actual file path
+      // via that slide's own, separate relationship file — never
+      // stored anywhere within the slide XML itself.
+      var relsPath = 'ppt/slides/_rels/slide' + slideFiles[i].num + '.xml.rels';
+      var relsFile = zip.file(relsPath);
+      var relMap = {};
+      if (relsFile) {
+        var relsXml = await relsFile.async('string');
+        var relsDoc = new DOMParser().parseFromString(relsXml, 'application/xml');
+        var relElements = relsDoc.getElementsByTagName('Relationship');
+        for (var r2 = 0; r2 < relElements.length; r2++) {
+          relMap[relElements[r2].getAttribute('Id')] = relElements[r2].getAttribute('Target');
+        }
+      }
+      var blips = doc.getElementsByTagName('a:blip');
+      var imgMdParts = [];
+      for (var b = 0; b < blips.length; b++) {
+        var rId = blips[b].getAttribute('r:embed');
+        if (!rId || !relMap[rId]) continue; // no matching relationship — skip rather than fail the whole slide
+        var resolvedPath = resolvePptxRelativePath('ppt/slides', relMap[rId]);
+        var imgFile = zip.file(resolvedPath);
+        if (!imgFile) continue; // relationship present but target genuinely missing from the zip — skip, don't fail
+        var ext = (resolvedPath.split('.').pop() || '').toLowerCase();
+        var mime = PPTX_IMAGE_MIME_BY_EXT[ext];
+        if (!mime) continue; // an unrecognized/unsupported image format (e.g. .wmf/.emf) — skip rather than embed something a browser can't render
+        var base64 = await imgFile.async('base64');
+        imgMdParts.push('![Slide image](data:' + mime + ';base64,' + base64 + ')');
+      }
+      if (imgMdParts.length) slideImagesMd = '\n\n' + imgMdParts.join('\n\n');
+    }
+    if (paraTexts.length || slideImagesMd) slideTexts.push('## Slide ' + slideFiles[i].num + '\n\n' + paraTexts.join('\n') + slideImagesMd);
+  }
+  return slideTexts.join('\n\n');
+}
+
 async function openAttachmentReader(url, filename, type, libraryFileId) {
   var modal = document.getElementById('attachmentReaderModal');
   var titleEl = document.getElementById('attachmentReaderTitle');
@@ -2660,7 +2754,7 @@ async function openAttachmentReader(url, filename, type, libraryFileId) {
     if (t === 'pdf') {
       await renderPdfIntoReader(url, body);
     } else if (ATTACHMENT_READER_MARKDOWN_TYPES.indexOf(t) !== -1) {
-      await renderMarkdownIntoReader(url, body);
+      await renderMarkdownIntoReader(url, body, t, libraryFileId);
     } else if (ATTACHMENT_READER_TEXT_TYPES.indexOf(t) !== -1) {
       await renderTextIntoReader(url, body);
     } else {
@@ -2924,7 +3018,44 @@ async function renderTextIntoReader(url, body) {
 // genuine markdown, so it's rendered via Forge.renderMarkdown() rather
 // than escaped into a plain <pre> block. Same reasoning as
 // continue.html's own copy of this function.
-async function renderMarkdownIntoReader(url, body) {
+// type/libraryFileId are optional — every other markdown-reader type
+// (.txt/.docx/.xlsx) omits them entirely and gets the exact same
+// behavior as before. Only for .pptx with a real libraryFileId present
+// does this re-fetch the ORIGINAL file from the Library and re-extract
+// it with images included (see extractPptxText's own comment, ported
+// above, on why this stays a separate, on-demand, human-facing-only
+// path rather than something baked into the AI-facing/persisted text
+// at all) — falls back to the existing, text-only url fetch on any
+// failure at all (missing libraryFileId, a deleted library file, a
+// parse error), since showing the plain text is always better than
+// showing nothing.
+async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
+  if (type === 'pptx' && libraryFileId) {
+    try {
+      var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+      var libResp = await fetch('https://api.projectcoachai.com/api/library/' + libraryFileId, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      var libData = await libResp.json();
+      if (libData.success && libData.file && libData.file.file_data) {
+        var byteChars = atob(libData.file.file_data);
+        var byteNumbers = new Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        var arrayBuf = new Uint8Array(byteNumbers).buffer;
+        var textWithImages = await extractPptxText(arrayBuf, true);
+        if (textWithImages.trim() && window.Forge && Forge.renderMarkdown) {
+          body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(textWithImages) + '</div>';
+          return;
+        }
+      }
+      // Falls through to the plain-text path below on any non-success
+      // shape (e.g. the file was deleted from the library since this
+      // message was sent, or extraction genuinely found nothing).
+    } catch (e) {
+      console.warn('[Diary] Failed to re-extract PPTX with images, falling back to plain text:', e.message);
+      // Falls through intentionally.
+    }
+  }
   var resp = await fetch(url);
   if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
   var text = await resp.text();
