@@ -387,6 +387,54 @@ function inferFileTypeFromFilename(filename) {
   if (/\.pptx$/i.test(filename)) return 'pptx';
   return 'txt';
 }
+
+// Converts a raw ArrayBuffer to a base64 string, needed to upload a
+// .docx/.xlsx/.pptx file's own original bytes to the Forge Library
+// (POST /api/library/upload expects base64 fileData) — separate from
+// the arrayBuffer itself, which mammoth/SheetJS/JSZip need directly
+// for parsing. Chunked to avoid a real, confirmed issue: calling
+// String.fromCharCode(...) with the entire byte array spread as
+// arguments in one call hits a "Maximum call stack size exceeded"
+// error on larger files (the exact 8MB cap this codebase already
+// allows sits well past where that starts failing in practice) —
+// processing in smaller chunks avoids ever spreading more than a few
+// thousand values into a single function call at once.
+function arrayBufferToBase64(buffer) {
+  var bytes = new Uint8Array(buffer);
+  var binary = '';
+  var chunkSize = 8192;
+  for (var i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+// Uploads a .docx/.xlsx/.pptx file's own original bytes to the Forge
+// Library (already-existing, working infrastructure — see
+// backend/routes/library.js — reused directly rather than building
+// separate storage), returning the library file_id so the real
+// original file can later be downloaded instead of only its extracted
+// markdown text. Deliberately non-fatal on any failure — the file has
+// already been successfully read and parsed for the chat message
+// itself by this point, so a failed upload here should only mean the
+// download button later falls back to its existing .md behavior for
+// this one attachment, not that attaching the file fails outright.
+async function uploadOriginalFileToLibrary(arrayBuffer, filename, fileType) {
+  try {
+    var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+    var base64Data = arrayBufferToBase64(arrayBuffer);
+    var r = await fetch('https://api.projectcoachai.com/api/library/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ filename: filename, fileType: fileType, fileData: base64Data })
+    });
+    var data = await r.json();
+    return (data.success && data.file) ? data.file.file_id : null;
+  } catch (e) {
+    console.warn('[Chat] Failed to upload original file to library (falling back to .md download later):', e.message);
+    return null;
+  }
+}
 function extractTxtAttachmentsFromContent(content) {
   var text = typeof content === 'string' ? content : '';
   // Leading \n\n is deliberately OPTIONAL here (\n{0,2}, not \n\n) —
@@ -402,7 +450,17 @@ function extractTxtAttachmentsFromContent(content) {
   var firstMatchIndex = -1;
   while ((match = re.exec(text)) !== null) {
     if (firstMatchIndex === -1) firstMatchIndex = match.index;
-    attachments.push({ filename: match[1], textContent: match[2], type: inferFileTypeFromFilename(match[1]) });
+    // Splits the optional " [libraryFileId:...]" tag back out of the
+    // captured filename portion — see messageToSend's own matching
+    // build logic above. Absent entirely on messages persisted before
+    // this existed, or on .txt attachments (never given one at all),
+    // in which case rawFilename is already the clean filename as-is.
+    var rawFilename = match[1];
+    var libraryFileId = null;
+    var libraryTagMatch = rawFilename.match(/^(.*) \[libraryFileId:(.+?)\]$/);
+    var cleanFilename = libraryTagMatch ? libraryTagMatch[1] : rawFilename;
+    if (libraryTagMatch) libraryFileId = libraryTagMatch[2];
+    attachments.push({ filename: cleanFilename, textContent: match[2], type: inferFileTypeFromFilename(cleanFilename), libraryFileId: libraryFileId });
   }
   var displayText = firstMatchIndex === -1 ? text : text.slice(0, firstMatchIndex);
   return { displayText: displayText, fileAttachments: attachments };
@@ -684,7 +742,15 @@ function handleChatFilesSelected(fileList) {
             Forge.showToast(file.name + ' appears to be empty or could not be read.', 'error');
             return;
           }
-          chatAttachedFiles.push({ textContent: truncateExtractedText(extractedText, file.name), filename: file.name, type: isDocx ? 'docx' : (isPptx ? 'pptx' : 'xlsx') });
+          // Upload the original file's own bytes to the Library
+          // alongside the extracted text — awaited here (same
+          // sequential pattern as the parsing step just above) rather
+          // than fire-and-forget, so libraryFileId is already resolved
+          // by the time this attachment can be sent. Non-fatal on
+          // failure (see uploadOriginalFileToLibrary's own comment) —
+          // this attachment still gets added below either way.
+          var libraryFileId = await uploadOriginalFileToLibrary(abReader.result, file.name, isDocx ? 'docx' : (isPptx ? 'pptx' : 'xlsx'));
+          chatAttachedFiles.push({ textContent: truncateExtractedText(extractedText, file.name), filename: file.name, type: isDocx ? 'docx' : (isPptx ? 'pptx' : 'xlsx'), libraryFileId: libraryFileId });
           renderChatAttachmentPreviews();
         } catch(e) {
           // Logged in full here, since the toast itself is deliberately
@@ -984,7 +1050,7 @@ function addMessageToDOM(role, content, opts) {
     var txtChipsHtml = (opts.fileAttachments || []).map(function(t) {
       var dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(t.textContent || '');
       var icon = fileChipIcons[t.type] || fileChipIcons.txt;
-      return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (t.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'' + t.type + '\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + icon + escHtmlChat(t.filename || 'document.txt') + '</div>';
+      return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (t.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'' + t.type + '\',' + (t.libraryFileId ? "'" + t.libraryFileId.replace(/'/g, "\\'") + "'" : 'null') + ')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + icon + escHtmlChat(t.filename || 'document.txt') + '</div>';
     }).join('<br/>');
     div.innerHTML = '<div class="chat-msg-body">' + imgHtml + pdfChipsHtml + txtChipsHtml + rendered + '</div>';
   }
@@ -1240,7 +1306,16 @@ async function sendChatMessage() {
   var appendedContentFilesForThisSend = filesForThisSend.filter(function(f) { return f.type === 'txt' || f.type === 'docx' || f.type === 'xlsx' || f.type === 'pptx'; });
   var messageToSend = text;
   appendedContentFilesForThisSend.forEach(function(f) {
-    messageToSend += '\n\n--- Attached file: ' + f.filename + ' ---\n' + f.textContent;
+    // libraryFileId (only ever set for docx/xlsx/pptx, never .txt —
+    // see uploadOriginalFileToLibrary's own call site) embedded directly
+    // in the delimiter line itself when present, so the original file
+    // can later be downloaded for real instead of only its extracted
+    // text — see extractTxtAttachmentsFromContent's own matching parse
+    // logic below. Optional and appended after the filename specifically
+    // so this stays fully backward-compatible with every message
+    // persisted before this existed at all.
+    var libraryTag = f.libraryFileId ? ' [libraryFileId:' + f.libraryFileId + ']' : '';
+    messageToSend += '\n\n--- Attached file: ' + f.filename + libraryTag + ' ---\n' + f.textContent;
   });
   // Backend rejects a genuinely empty message outright (separate check
   // there, not just this page's own guard above) — .txt/.docx/.xlsx
@@ -1920,13 +1995,13 @@ function escHtmlReader(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-async function openAttachmentReader(url, filename, type) {
+async function openAttachmentReader(url, filename, type, libraryFileId) {
   var modal = document.getElementById('attachmentReaderModal');
   var titleEl = document.getElementById('attachmentReaderTitle');
   var body = document.getElementById('attachmentReaderBody');
   if (!modal || !titleEl || !body) return;
 
-  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase() };
+  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase(), libraryFileId: libraryFileId || null };
   titleEl.textContent = filename || 'Document';
   body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
   modal.style.display = 'flex';
@@ -1972,8 +2047,47 @@ function closeAttachmentReader() {
 }
 window.closeAttachmentReader = closeAttachmentReader;
 
-function downloadAttachmentFromReader() {
+async function downloadAttachmentFromReader() {
   if (!currentReaderAttachment) return;
+  // Real fix: when a libraryFileId is present (the original file was
+  // genuinely uploaded to the Forge Library at attach time — see
+  // uploadOriginalFileToLibrary), fetch and download that REAL,
+  // original .docx/.xlsx/.pptx file directly, with its own correct
+  // extension — not the extracted markdown text. Falls back to the
+  // existing .md-rename behavior below for any attachment from before
+  // this existed, or if the library upload itself failed at attach
+  // time (see that function's own comment on why it's deliberately
+  // non-fatal).
+  if (currentReaderAttachment.libraryFileId) {
+    try {
+      var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+      var r = await fetch('https://api.projectcoachai.com/api/library/' + currentReaderAttachment.libraryFileId, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      var data = await r.json();
+      if (data.success && data.file && data.file.file_data) {
+        var byteChars = atob(data.file.file_data);
+        var byteNumbers = new Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        var blob = new Blob([new Uint8Array(byteNumbers)]);
+        var blobUrl = URL.createObjectURL(blob);
+        var realA = document.createElement('a');
+        realA.href = blobUrl;
+        realA.download = data.file.filename || currentReaderAttachment.filename;
+        document.body.appendChild(realA);
+        realA.click();
+        document.body.removeChild(realA);
+        setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1000);
+        return;
+      }
+      // Falls through to the .md fallback below on any non-success
+      // response (e.g. the file was somehow deleted from the library
+      // since this message was sent).
+    } catch (e) {
+      console.warn('[Chat] Failed to download original file from library, falling back to .md:', e.message);
+      // Falls through intentionally.
+    }
+  }
   var a = document.createElement('a');
   a.href = currentReaderAttachment.url;
   // Confirmed as a real, direct bug: for .docx/.xlsx, currentReaderAttachment.url
@@ -1984,6 +2098,11 @@ function downloadAttachmentFromReader() {
   // reported as corrupted, since it's genuinely just a text file wearing
   // the wrong extension. Renamed to .md here so the downloaded file is
   // honest about what it actually contains and opens correctly.
+  //
+  // NOTE: this is now genuinely only a fallback (see the libraryFileId
+  // branch above) for attachments sent before original-file storage
+  // existed, or where that upload itself failed — the current, primary
+  // path downloads the real original file directly.
   var downloadName = currentReaderAttachment.filename;
   if (currentReaderAttachment.type === 'docx' || currentReaderAttachment.type === 'xlsx' || currentReaderAttachment.type === 'pptx') {
     downloadName = downloadName.replace(/\.(docx|xlsx|pptx)$/i, '') + '.md';

@@ -2628,13 +2628,13 @@ var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx', 'pptx'];
 // why this can't just be a plain <a href download> link.
 var currentReaderAttachment = null;
 
-async function openAttachmentReader(url, filename, type) {
+async function openAttachmentReader(url, filename, type, libraryFileId) {
   var modal = document.getElementById('attachmentReaderModal');
   var titleEl = document.getElementById('attachmentReaderTitle');
   var body = document.getElementById('attachmentReaderBody');
   if (!modal || !titleEl || !body) return;
 
-  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase() };
+  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase(), libraryFileId: libraryFileId || null };
   titleEl.textContent = filename || 'Document';
   body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
   modal.style.display = 'flex';
@@ -2670,6 +2670,44 @@ window.openAttachmentReader = openAttachmentReader;
 // is always same-origin from the browser's own perspective.
 async function downloadAttachmentFromReader() {
   if (!currentReaderAttachment) return;
+  // Real fix: when a libraryFileId is present (the original file was
+  // genuinely uploaded to the Forge Library at attach time, in
+  // continue.html — see uploadOriginalFileToLibrary there), fetch and
+  // download that REAL, original .docx/.xlsx/.pptx file directly, with
+  // its own correct extension — not the extracted markdown text. Falls
+  // through to the existing .md-rename behavior below for any
+  // attachment from before this existed, or if that library upload
+  // itself failed at attach time.
+  if (currentReaderAttachment.libraryFileId) {
+    try {
+      var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+      var libResp = await fetch('https://api.projectcoachai.com/api/library/' + currentReaderAttachment.libraryFileId, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      var libData = await libResp.json();
+      if (libData.success && libData.file && libData.file.file_data) {
+        var byteChars = atob(libData.file.file_data);
+        var byteNumbers = new Array(byteChars.length);
+        for (var bi = 0; bi < byteChars.length; bi++) byteNumbers[bi] = byteChars.charCodeAt(bi);
+        var realBlob = new Blob([new Uint8Array(byteNumbers)]);
+        var realBlobUrl = URL.createObjectURL(realBlob);
+        var realA = document.createElement('a');
+        realA.href = realBlobUrl;
+        realA.download = libData.file.filename || currentReaderAttachment.filename;
+        document.body.appendChild(realA);
+        realA.click();
+        document.body.removeChild(realA);
+        setTimeout(function() { URL.revokeObjectURL(realBlobUrl); }, 1000);
+        return;
+      }
+      // Falls through to the .md fallback below on any non-success
+      // response (e.g. the file was somehow deleted from the library
+      // since this message was sent).
+    } catch (e) {
+      console.warn('[Diary] Failed to download original file from library, falling back to .md:', e.message);
+      // Falls through intentionally.
+    }
+  }
   try {
     var resp = await fetch(currentReaderAttachment.url);
     if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
@@ -2682,6 +2720,12 @@ async function downloadAttachmentFromReader() {
     // extracted markdown text, never the original binary file (which
     // is never kept anywhere once parsed), so the downloaded file needs
     // an honest .md extension rather than the misleading original one.
+    //
+    // NOTE: this is now genuinely only a fallback (see the
+    // libraryFileId branch above) for attachments sent before
+    // original-file storage existed, or where that upload itself
+    // failed — the current, primary path downloads the real original
+    // file directly.
     var downloadName = currentReaderAttachment.filename;
     if (currentReaderAttachment.type === 'docx' || currentReaderAttachment.type === 'xlsx' || currentReaderAttachment.type === 'pptx') {
       downloadName = downloadName.replace(/\.(docx|xlsx|pptx)$/i, '') + '.md';
@@ -3683,7 +3727,17 @@ function extractFileAttachmentsFromContent(content) {
   var firstMatchIndex = -1;
   while ((match = re.exec(text)) !== null) {
     if (firstMatchIndex === -1) firstMatchIndex = match.index;
-    attachments.push({ filename: match[1], textContent: match[2], type: inferFileTypeFromFilename(match[1]) });
+    // Splits the optional " [libraryFileId:...]" tag back out of the
+    // captured filename portion — same matching parse logic as
+    // continue.html's own copy of this function; see its comments for
+    // the full reasoning. Absent entirely on messages persisted before
+    // this existed, or on .txt attachments (never given one at all).
+    var rawFilename = match[1];
+    var libraryFileId = null;
+    var libraryTagMatch = rawFilename.match(/^(.*) \[libraryFileId:(.+?)\]$/);
+    var cleanFilename = libraryTagMatch ? libraryTagMatch[1] : rawFilename;
+    if (libraryTagMatch) libraryFileId = libraryTagMatch[2];
+    attachments.push({ filename: cleanFilename, textContent: match[2], type: inferFileTypeFromFilename(cleanFilename), libraryFileId: libraryFileId });
   }
   var displayText = firstMatchIndex === -1 ? text : text.slice(0, firstMatchIndex);
   return { displayText: displayText, fileAttachments: attachments };
@@ -3698,7 +3752,7 @@ function renderFileAttachmentChips(attachments) {
   return (attachments || []).map(function(a) {
     var dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(a.textContent || '');
     var icon = FILE_CHIP_ICONS[a.type] || FILE_CHIP_ICONS.txt;
-    return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (a.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'' + a.type + '\')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-top:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + icon + escHtml(a.filename || 'document.txt') + '</div>';
+    return '<div onclick="event.stopPropagation();openAttachmentReader(\'' + dataUrl.replace(/'/g, "\\'") + '\',\'' + (a.filename || 'document.txt').replace(/'/g, "\\'") + '\',\'' + a.type + '\',' + (a.libraryFileId ? "'" + a.libraryFileId.replace(/'/g, "\\'") + "'" : 'null') + ')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 10px;margin-top:6px;cursor:pointer;font-size:12px;color:#6B6559;">' + icon + escHtml(a.filename || 'document.txt') + '</div>';
   }).join('');
 }
 
