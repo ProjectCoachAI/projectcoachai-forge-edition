@@ -399,8 +399,34 @@ router.post('/', requireAuth, async (req, res) => {
         // for the actual API call only — the original `messages` array
         // used for persistence below is untouched.
         let messagesForApi = messages.map(m => {
-            if (!m.attachmentUrls) return m;
-            const { attachmentUrls, ...clean } = m;
+            let clean = m;
+            if (clean.attachmentUrls) {
+                const { attachmentUrls, ...rest } = clean;
+                clean = rest;
+            }
+            // Confirmed as a real, direct bug via live Railway logs:
+            // "messages.7.content: Field required" (Claude) and
+            // "Invalid value for 'content': expected a string, got
+            // null." (ChatGPT) — a message somewhere in this
+            // conversation's own already-stored history has a
+            // null/missing content field entirely, rejected outright by
+            // every provider before ever attempting to generate a
+            // response at all. Root cause of how it got there not yet
+            // confirmed — possibly a message persisted during an
+            // earlier, since-fixed capture bug this same session (e.g.
+            // Grok's own settle-timing issue) — but this sanitizes it
+            // defensively regardless of cause, since leaving a
+            // conversation permanently unable to continue at all is far
+            // worse than substituting a clearly-marked placeholder for
+            // one already-broken message. A placeholder string is used
+            // rather than dropping the message entirely, since removing
+            // it could break the strict user/assistant role alternation
+            // some providers (Claude in particular) require, trading
+            // one error for a different one.
+            if (clean.content === null || clean.content === undefined) {
+                console.warn('[Chat] sanitized a message with null/missing content before sending to any provider — role:', clean.role);
+                clean = { ...clean, content: '[content unavailable]' };
+            }
             return clean;
         });
 
