@@ -3603,7 +3603,25 @@ function queryAllDeep(selector) {
         // the same confirmed corruption reason: it breaks real markdown
         // links Turndown produces and strips legitimate bracketed numbers
         // from real content.
+        //
+        // NOTE: "Explore related ... topics:" suggested-follow-up
+        // section stripped too — confirmed as a real, direct cause of a
+        // Sync history_mismatch: this UI element (Gemini's own clickable
+        // suggested next-question chips, rendered after the real answer)
+        // was present when an entry was first saved, but genuinely
+        // absent from the same message's own re-scrape at Sync time —
+        // almost certainly a DOM-timing difference (this section
+        // appears to render asynchronously, after the main answer
+        // settles), not something confirmable further without live DOM
+        // access. Rather than guess at a timing-based fix, stripping
+        // this section out entirely here makes both the original save
+        // and any later re-scrape converge on the same, consistent
+        // result regardless of whether it happened to be present in the
+        // DOM at either specific moment — removing the mismatch at its
+        // actual source (the inconsistency itself) rather than papering
+        // over one specific timing symptom of it.
         return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
+                   .replace(/\n{0,2}Explore related .+? topics:[\s\S]*$/, '')
                    .replace(/\n{3,}/g, '\n\n')
                    .trim();
       }
