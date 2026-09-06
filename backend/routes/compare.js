@@ -124,7 +124,21 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, attachments = null, onU
             // through this same function.
             model: 'claude-sonnet-5',
             max_tokens: maxTokens,
-            temperature: 0.3,
+            // Confirmed live via Railway logs, and directly against
+            // Anthropic's own migration docs: Sonnet 5 rejects
+            // temperature (and top_p/top_k) with a hard 400 error —
+            // "`temperature` is deprecated for this model" — a genuine,
+            // documented breaking change new to Sonnet-class models,
+            // not something specific to this app. Every single call was
+            // failing immediately and silently falling back to ChatGPT,
+            // confirmed live: the fallback conversation still succeeded
+            // normally, so this was invisible from the user's own
+            // perspective until checked against the new Diary cost
+            // tracking added this same session, which showed ChatGPT
+            // being billed for every "Claude" conversation. Removed
+            // entirely rather than replaced — Anthropic's own guidance
+            // is to use system-prompt instructions for tone/style
+            // instead of a sampling parameter.
             system: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.',
             messages
         });
