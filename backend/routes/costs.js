@@ -44,10 +44,17 @@ const PROVIDER_COSTS = {
   // than substituting a different model generation's real rate under
   // this one's name.
   grok:        { input: 0.005,  output: 0.015,  name: 'Grok (xAI) (unverified)' },
-  // llama-3.3-70b-versatile via Groq — left at its prior value,
-  // plausible for Groq's known aggressive Llama-hosting pricing but
-  // not independently re-verified this pass.
-  meta:        { input: 0.00018,output: 0.00018,name: 'Meta AI (unverified)' },
+  // openai/gpt-oss-120b via Groq — updated together with the model
+  // switch in compare.js's own callMetaAPI (llama-3.3-70b-versatile
+  // deprecated by Groq, hard shutdown August 16, 2026, already past as
+  // of this fix). Confirmed via multiple, independent, consistent
+  // sources at $0.15/M input, $0.60/M output — genuinely verified this
+  // time, not the prior entry's own unverified placeholder, and
+  // notably different from the old model's own real rate too ($0.59/M
+  // input per an independent pricing comparison), so this also
+  // corrects a real, separate pricing inaccuracy the model switch
+  // surfaced along the way.
+  meta:        { input: 0.00015,output: 0.0006,name: 'Meta AI (unverified)' },
   // claude-haiku-4-5 (Ask Diary's own support-answering assistant,
   // ask-diary.js) — Anthropic's own current Haiku-tier rate, same
   // pricing confirmed earlier this session, kept as its own separate

@@ -558,7 +558,15 @@ function callGrokAPI(prompt, apiKey, onUsage = null) {
 }
 
 function callMetaAPI(prompt, apiKey, onUsage = null) {
-    return callOpenAICompatible(prompt, apiKey, 'api.groq.com', '/openai/v1/chat/completions', 'llama-3.3-70b-versatile', onUsage);
+    // Confirmed live via web search: Groq officially deprecated
+    // llama-3.3-70b-versatile (announced June 17, 2026), with a hard
+    // shutdown on August 16, 2026 — already passed as of this fix,
+    // confirming the reported "model does not exist or you do not have
+    // access to it" error is a permanent removal, not a transient
+    // failure. Switched to openai/gpt-oss-120b, Groq's own official,
+    // directly-recommended replacement for this exact model per their
+    // own deprecations documentation.
+    return callOpenAICompatible(prompt, apiKey, 'api.groq.com', '/openai/v1/chat/completions', 'openai/gpt-oss-120b', onUsage);
 }
 
 // POE uses a different API — subscription-based access via Quora
