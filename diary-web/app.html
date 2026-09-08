@@ -1770,7 +1770,26 @@ function renderEntryCard(e) {
           '</div>' +
         '</div>';
       })()) +
-      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
+      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + (function() {
+        // Gallery navigation list built from the images artifact
+        // specifically (deduped, failed-hosting entries already
+        // excluded) — kept separate from the render loop just below,
+        // which still iterates _emeta.images directly and unchanged, so
+        // a 'failed' entry's own existing fallback card (see below)
+        // keeps rendering exactly as it already did. This just gives
+        // each successfully-rendered <img> the correct list + index to
+        // navigate within, so the gallery's own prev/next never lands
+        // on a failed entry with nothing real to show.
+        var imagesArt = (_eartifacts || []).filter(function(a) { return a.type === 'images'; })[0];
+        var galleryUrls = imagesArt ? imagesArt.images.map(function(im) { return im.url; }) : [];
+        // Confirmed via direct testing to be a real, necessary fix:
+        // JSON.stringify's own double quotes need HTML-entity escaping
+        // here, since this gets embedded inside an already
+        // double-quoted onclick="..." attribute below — the unescaped
+        // version silently truncated the entire attribute at the first
+        // internal double-quote, right after "openImageZoom([".
+        var galleryUrlsJson = escHtml(JSON.stringify(galleryUrls));
+        return _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
         // existing entry saved before native hosting existed) or a
         // richer { url, originalUrl, status } object (Priority 4's
@@ -1791,8 +1810,10 @@ function renderEntryCard(e) {
             '<a href="' + escHtml(fallbackUrl) + '" target="_blank" onclick="event.stopPropagation();" style="color:#C17D3C;font-weight:500;">View original &#8599;</a>' +
             '</div>';
         }
-        return '<img src="' + escHtml(url) + '" onclick="event.stopPropagation();openImageZoom(\'' + url.replace(/'/g, "\\'") + '\')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>';
-      }).join('') + '</div></div>' : '') +
+        var galleryIndex = galleryUrls.indexOf(url);
+        return '<img src="' + escHtml(url) + '" onclick="event.stopPropagation();openImageZoom(' + galleryUrlsJson + ',' + Math.max(0, galleryIndex) + ')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>';
+        }).join('');
+      })() + '</div></div>' : '') +
       // NOTE: attachments — a lightweight index, not the files themselves.
       // Stores just filename + type (via metadata.attachments, the same
       // flexible JSONB field already used for url/images — no backend or
@@ -2786,14 +2807,6 @@ function closeMoveModal() {
 }
 window.closeMoveModal = closeMoveModal;
 
-function openImageZoom(url) {
-  var modal = document.getElementById('imageZoomModal');
-  var img = document.getElementById('imageZoomImg');
-  img.src = url;
-  modal.style.display = 'flex';
-}
-window.openImageZoom = openImageZoom;
-
 // ── Attachment Reader (Priority 4) ──────────────────────────────────────────
 // One general-purpose reader for any captured attachment, regardless of
 // how its bytes arrived (download-interception today; any future
@@ -3661,18 +3674,96 @@ function hideCitePopup(pillEl) {
 }
 window.__hideCitePopup = hideCitePopup;
 
+// Image zoom/gallery state — enhanced in place per direct product
+// decision (see the modal's own HTML comment), not a separate gallery
+// modal. Backward-compatible: a plain string (a single URL, the
+// original calling convention) is still accepted and treated as a
+// one-image gallery, so any call site not yet updated to pass a full
+// images array keeps working exactly as before.
+var _zoomImages = [];
+var _zoomIndex = 0;
+
+function openImageZoom(images, index) {
+  if (typeof images === 'string') { images = [images]; index = 0; }
+  _zoomImages = (images || []).filter(Boolean);
+  _zoomIndex = Math.max(0, Math.min(index || 0, _zoomImages.length - 1));
+  updateImageZoomDisplay();
+  document.getElementById('imageZoomModal').style.display = 'flex';
+}
+window.openImageZoom = openImageZoom;
+
+function updateImageZoomDisplay() {
+  var url = _zoomImages[_zoomIndex];
+  var img = document.getElementById('imageZoomImg');
+  if (img) img.src = url || '';
+  var total = _zoomImages.length;
+  var counter = document.getElementById('imageZoomCounter');
+  var prevBtn = document.getElementById('imageZoomPrevBtn');
+  var nextBtn = document.getElementById('imageZoomNextBtn');
+  // Nav chrome only shown for a genuine, multi-image gallery — no
+  // reason to show prev/next/counter for a single image.
+  var show = total > 1 ? '' : 'none';
+  if (prevBtn) prevBtn.style.display = show;
+  if (nextBtn) nextBtn.style.display = show;
+  if (counter) {
+    counter.style.display = show;
+    counter.textContent = (_zoomIndex + 1) + ' of ' + total;
+  }
+}
+
+function navigateImageZoom(delta) {
+  var total = _zoomImages.length;
+  if (total <= 1) return;
+  _zoomIndex = (_zoomIndex + delta + total) % total; // wraps around at both ends
+  updateImageZoomDisplay();
+}
+window.navigateImageZoom = navigateImageZoom;
+
+// Fetches and downloads via a real blob + object URL, not a plain
+// <a download> pointed directly at the image's own url — confirmed
+// necessary given the same reasoning already applied elsewhere in this
+// codebase (docx/xlsx/pptx downloads, CSV export): a cross-origin
+// download attribute is silently ignored by browsers, opening the
+// image in a new tab instead of downloading it, since these images are
+// hosted on our own storage, a different origin from this page itself.
+async function downloadZoomedImage() {
+  var url = _zoomImages[_zoomIndex];
+  if (!url) return;
+  try {
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
+    var blob = await resp.blob();
+    var blobUrl = URL.createObjectURL(blob);
+    var filename = (url.split('/').pop() || 'image').split('?')[0] || 'image';
+    var a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1000);
+  } catch (e) {
+    console.warn('[Diary] Image download failed:', e.message);
+    window.open(url, '_blank');
+  }
+}
+window.downloadZoomedImage = downloadZoomedImage;
+
 function closeImageZoom() {
   var modal = document.getElementById('imageZoomModal');
   modal.style.display = 'none';
   document.getElementById('imageZoomImg').src = '';
+  _zoomImages = [];
+  _zoomIndex = 0;
 }
 window.closeImageZoom = closeImageZoom;
 
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    var modal = document.getElementById('imageZoomModal');
-    if (modal && modal.style.display === 'flex') closeImageZoom();
-  }
+  var modal = document.getElementById('imageZoomModal');
+  if (!modal || modal.style.display !== 'flex') return;
+  if (e.key === 'Escape') closeImageZoom();
+  else if (e.key === 'ArrowLeft') navigateImageZoom(-1);
+  else if (e.key === 'ArrowRight') navigateImageZoom(1);
 });
 
 async function moveEntry(id, category) {
@@ -4718,9 +4809,20 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 </div>
 
 <!-- Image Zoom Lightbox -->
+<!-- Image zoom/gallery — enhanced in place (direct product decision,
+     rather than a separate gallery modal) with prev/next navigation and
+     a download button, per the Images artifact's own brief spec
+     ("gallery view across an entry... downloadable, with the
+     click-to-zoom behavior already built"). Nav buttons and the counter
+     are hidden via JS (openImageZoom below) when an entry has only one
+     image — no reason to show gallery chrome for a single image. -->
 <div id="imageZoomModal" onclick="if(event.target===this)closeImageZoom()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;cursor:zoom-out;">
   <button onclick="closeImageZoom()" aria-label="Close" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;font-family:Inter,sans-serif;">&times;</button>
+  <button id="imageZoomDownloadBtn" onclick="event.stopPropagation();downloadZoomedImage()" aria-label="Download image" style="position:absolute;top:20px;right:64px;background:rgba(255,255,255,0.15);border:none;border-radius:6px;color:#fff;font-size:12px;padding:6px 12px;cursor:pointer;font-family:Inter,sans-serif;">Download</button>
+  <span id="imageZoomCounter" style="position:absolute;top:24px;left:20px;color:#fff;font-size:12px;font-family:Inter,sans-serif;opacity:0.8;"></span>
+  <button id="imageZoomPrevBtn" onclick="event.stopPropagation();navigateImageZoom(-1)" aria-label="Previous image" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;border-radius:50%;color:#fff;font-size:22px;width:44px;height:44px;cursor:pointer;font-family:Inter,sans-serif;">&#8249;</button>
   <img id="imageZoomImg" src="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.5);cursor:default;" onclick="event.stopPropagation();"/>
+  <button id="imageZoomNextBtn" onclick="event.stopPropagation();navigateImageZoom(1)" aria-label="Next image" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;border-radius:50%;color:#fff;font-size:22px;width:44px;height:44px;cursor:pointer;font-family:Inter,sans-serif;">&#8250;</button>
 </div>
 
 <!-- Attachment Reader — general-purpose viewer for any captured

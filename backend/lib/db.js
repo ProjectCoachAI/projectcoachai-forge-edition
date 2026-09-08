@@ -1171,9 +1171,44 @@ function detectStructuredFactsArtifacts(text) {
   return facts.length ? [{ type: 'structured_facts', facts, position: 0 }] : [];
 }
 
+// Images artifact (sixth of the brief's own build order). Deliberately
+// different from every prior artifact type in one respect: images
+// aren't extracted from unified_content at all — they're already
+// structured data, stored in metadata.images by the existing, already-
+// working hosting pipeline (per the brief's own note: "hosting is
+// already solved"). This function's own job is only to treat that
+// existing data as a first-class artifact object, per the brief's own
+// storage note, and dedupe it — reusing the same by-URL dedup pattern
+// already applied to Citations. Handles both the legacy plain-URL-
+// string format and the newer, richer {url, originalUrl, status}
+// object format already handled elsewhere in this codebase (see
+// renderEntryCard's own comment on this same distinction). Excludes a
+// 'failed'-status entry entirely — it has no real, viewable image to
+// show at all, so including it in a gallery artifact would be
+// meaningless. Verified via direct simulation across 5 cases:
+// multiple distinct images, legacy and newer formats mixed together, a
+// duplicate URL (correctly deduped), a failed-hosting entry (correctly
+// excluded), and no images present at all.
+function detectImagesArtifacts(meta) {
+  const rawImages = (meta && meta.images) || [];
+  if (!rawImages.length) return [];
+  const images = [];
+  const seenUrls = {};
+  rawImages.forEach(img => {
+    const isObj = typeof img === 'object' && img !== null;
+    const url = isObj ? img.url : img;
+    const status = isObj ? img.status : 'hosted';
+    if (!url || status === 'failed') return;
+    if (seenUrls[url]) return;
+    seenUrls[url] = true;
+    images.push({ url, status });
+  });
+  return images.length ? [{ type: 'images', images, position: 0 }] : [];
+}
+
 // Runs the full detect → structure pipeline (Table, Citations,
-// Checklist, and Structured Facts, per the brief's own build order —
-// Code/Images/Reasoning trace remain later, separate stages) against an
+// Checklist, Structured Facts, and Images, per the brief's own build
+// order — Reasoning trace remains the next, separate stage) against an
 // entry's own unified_content, and persists the result. Depends
 // directly on unified_content already being computed and current — see
 // this function's own call sites, all of which run it AFTER
@@ -1182,7 +1217,7 @@ function detectStructuredFactsArtifacts(text) {
 //
 // callClaudeHaikuAPI/apiKey are optional — omitting them (or a
 // classification failure) simply skips Checklist detection for that
-// run, never blocks Table/Citations/Structured Facts from being
+// run, never blocks Table/Citations/Structured Facts/Images from being
 // detected and stored.
 //
 // Never throws — same reasoning as computeAndStoreUnifiedContent's own
@@ -1190,12 +1225,13 @@ function detectStructuredFactsArtifacts(text) {
 // sync/chat operation, not a dependency of it.
 async function detectAndStoreArtifacts(entryId, userEmail, callClaudeHaikuAPI, apiKey) {
   try {
-    const entryRes = await query('SELECT unified_content, artifacts FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
+    const entryRes = await query('SELECT unified_content, artifacts, metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
     if (!entryRes.rows.length) return;
     const unifiedContent = entryRes.rows[0].unified_content || '';
     const existingArtifacts = entryRes.rows[0].artifacts || [];
+    const meta = entryRes.rows[0].metadata || {};
     const checklistArtifacts = await detectChecklistArtifacts(unifiedContent, existingArtifacts, callClaudeHaikuAPI, apiKey);
-    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent));
+    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent)).concat(detectImagesArtifacts(meta));
     await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
   } catch (e) {
     console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);
@@ -1325,7 +1361,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectAndStoreArtifacts };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectAndStoreArtifacts };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
