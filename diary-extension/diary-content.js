@@ -912,6 +912,64 @@ function queryAllDeep(selector) {
 
   
 
+  // Claude "compose email" widget — a genuine, confirmed capture gap
+  // found via a real, live DOM snapshot: this feature's subject line
+  // lives in an <input value="...">, and its body renders in an
+  // editable <textarea>, neither of which is readable via normal
+  // .textContent (an <input>/<textarea>'s current text lives in its own
+  // .value property, not as a text node). Confirmed via the same
+  // snapshot this isn't a DOM_SELECTORS selector problem at all — Claude
+  // has no DOM_SELECTORS entry (see PROVIDER_CONFIG comments elsewhere);
+  // its text capture instead runs almost entirely through
+  // diary-interceptor.js reading Claude's own raw API response, whose
+  // parser only ever recognizes type:"text" content blocks. This
+  // feature's own content almost certainly arrives as some other,
+  // separate block type that parser was never built to read — rather
+  // than guess at that unconfirmed, network-level shape, this is a
+  // targeted DOM supplement instead, same pattern already used above for
+  // Claude's own web-search images living outside the main response
+  // container. Detected via each widget's own distinctive "Subject:"
+  // label rather than any styling-only class, for the same
+  // Tailwind-vs-semantic reasoning already applied to Mistral's own
+  // selector elsewhere in this file. Reads the body from the sibling
+  // ".cds-text-entry-floored" element specifically — a hidden,
+  // aria-hidden div Claude's own UI keeps in sync with the textarea
+  // purely to auto-size it, confirmed live to hold the exact same text
+  // as a normal, readable text node — falling back to the textarea's own
+  // .value directly if that element isn't present for any reason.
+  // Deduplicates identical subject+body pairs, since a transient React
+  // re-render could otherwise produce the same widget's content twice.
+  function extractClaudeEmailComposers() {
+    var blocks = [];
+    try {
+      var labels = document.querySelectorAll('label');
+      var seen = {};
+      labels.forEach(function(label) {
+        if ((label.textContent || '').trim() !== 'Subject:') return;
+        var forId = label.getAttribute('for');
+        var input = forId ? document.getElementById(forId) : null;
+        if (!input) return;
+        var subject = (input.value || '').trim();
+        var container = label.closest('[data-cds="Tabs"]') || label.parentElement;
+        if (!container) return;
+        var bodyEl = container.querySelector('.cds-text-entry-floored');
+        var body = bodyEl ? (bodyEl.textContent || '').trim() : '';
+        if (!body) {
+          var textarea = container.querySelector('textarea');
+          body = textarea ? (textarea.value || '').trim() : '';
+        }
+        if (!subject && !body) return;
+        var key = subject + '|' + body;
+        if (seen[key]) return;
+        seen[key] = true;
+        blocks.push('**[Email draft composed by Claude]**\nSubject: ' + subject + '\n\n' + body);
+      });
+    } catch (e) {
+      console.warn('[Diary] extractClaudeEmailComposers failed:', e.message);
+    }
+    return blocks;
+  }
+
   // Collect image URLs from response DOM, send to background for fetch+upload
   async function captureResponseImages(token) {
     try {
@@ -2944,6 +3002,20 @@ function queryAllDeep(selector) {
         // thread (see boldQuestion()), not as a single, title-only
         // post-processing step. Calling it here too would be redundant
         // at best and risk double-marking at worst.
+        // Claude "compose email" widget content — see
+        // extractClaudeEmailComposers' own comment for the full
+        // reasoning. Appended as its own, clearly-labeled block rather
+        // than spliced into its original position in the conversation
+        // flow — reconstructing exactly where mid-response this widget
+        // appeared isn't reliably possible from text alone, and
+        // appending it is a reasonable trade-off given the alternative
+        // is missing it entirely.
+        if (PROVIDER === 'claude') {
+          var claudeEmailBlocks = extractClaudeEmailComposers();
+          if (claudeEmailBlocks.length) {
+            fullThread = fullThread + '\n\n' + claudeEmailBlocks.join('\n\n');
+          }
+        }
         var contentToSave = stripCitations(fullThread);
         // Guard MUST come before the diagnostic log below, not after —
         // confirmed live as the actual, root cause of a "Cannot read
