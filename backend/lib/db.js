@@ -1108,9 +1108,72 @@ async function detectChecklistArtifacts(text, existingArtifacts, callClaudeHaiku
   }
 }
 
-// Runs the full detect → structure pipeline (Table, Citations, and
-// Checklist, per the brief's own build order — Structured facts/Code/
-// Images/Reasoning trace remain later, separate stages) against an
+// Structured Facts artifact (fourth of the brief's own build order).
+// Deliberately scoped narrower than the brief's own literal spec, per a
+// direct, explicit product decision: the brief lists "coordinates,
+// dates, prices, named entities" as one, uniform "pattern-matchable,
+// low-risk" category, but named-entity extraction (people,
+// organizations, locations) genuinely isn't reliably pattern-matchable
+// at all — you can't tell "Paris" the city from "Paris" a person's name
+// via regex alone. Shipped here as dates + prices only, both genuinely
+// deterministic and low-ambiguity; named-entity extraction is logged as
+// an explicit, deferred follow-up using an LLM classification pass
+// (same pattern as Checklist), not a heuristic — a wrong "location"
+// sitting in a sidebar with the same visual confidence as a correctly-
+// extracted date would erode trust in every fact next to it, worse than
+// not extracting it at all.
+function detectDates(text) {
+  const results = []; const seen = {};
+  const isoRe = /\b(\d{4}-\d{2}-\d{2})\b/g;
+  let m;
+  while ((m = isoRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push(m[1]); } }
+  const monthNames = 'January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec';
+  const mdyRe = new RegExp('\\b((?:' + monthNames + ')\\.? \\d{1,2},? \\d{4})\\b', 'g');
+  while ((m = mdyRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push(m[1]); } }
+  const dmyRe = new RegExp('\\b(\\d{1,2} (?:' + monthNames + ') \\d{4})\\b', 'g');
+  while ((m = dmyRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push(m[1]); } }
+  return results;
+}
+function detectPrices(text) {
+  const results = []; const seenValues = {};
+  // Tracks character ranges already claimed by a match — confirmed via
+  // direct testing to be a real, necessary fix: without this, a value
+  // like "$39,900 USD" gets counted TWICE (once via the symbol pattern,
+  // once via the currency-code pattern matching the same digits), since
+  // the two patterns' own matches can genuinely overlap in the same
+  // text.
+  const occupiedRanges = [];
+  function overlaps(start, end) { return occupiedRanges.some(r => start < r[1] && end > r[0]); }
+  const numPattern = '\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?|\\d+(?:\\.\\d{1,2})?';
+  const symbolRe = new RegExp('([$€£¥])\\s?(' + numPattern + ')', 'g');
+  let m;
+  while ((m = symbolRe.exec(text)) !== null) {
+    const start = m.index, end = start + m[0].length;
+    if (overlaps(start, end)) continue;
+    occupiedRanges.push([start, end]);
+    const val = m[1] + m[2];
+    if (!seenValues[val]) { seenValues[val] = true; results.push(val); }
+  }
+  const codeRe = new RegExp('\\b(' + numPattern + ')\\s?(USD|EUR|GBP|JPY|CHF|CAD|AUD)\\b', 'g');
+  while ((m = codeRe.exec(text)) !== null) {
+    const start = m.index, end = start + m[0].length;
+    if (overlaps(start, end)) continue;
+    occupiedRanges.push([start, end]);
+    const val = m[1] + ' ' + m[2];
+    if (!seenValues[val]) { seenValues[val] = true; results.push(val); }
+  }
+  return results;
+}
+function detectStructuredFactsArtifacts(text) {
+  const facts = [];
+  detectDates(text).forEach(d => facts.push({ label: 'Date', value: d }));
+  detectPrices(text).forEach(p => facts.push({ label: 'Price', value: p }));
+  return facts.length ? [{ type: 'structured_facts', facts, position: 0 }] : [];
+}
+
+// Runs the full detect → structure pipeline (Table, Citations,
+// Checklist, and Structured Facts, per the brief's own build order —
+// Code/Images/Reasoning trace remain later, separate stages) against an
 // entry's own unified_content, and persists the result. Depends
 // directly on unified_content already being computed and current — see
 // this function's own call sites, all of which run it AFTER
@@ -1119,7 +1182,8 @@ async function detectChecklistArtifacts(text, existingArtifacts, callClaudeHaiku
 //
 // callClaudeHaikuAPI/apiKey are optional — omitting them (or a
 // classification failure) simply skips Checklist detection for that
-// run, never blocks Table/Citations from being detected and stored.
+// run, never blocks Table/Citations/Structured Facts from being
+// detected and stored.
 //
 // Never throws — same reasoning as computeAndStoreUnifiedContent's own
 // comment: this is enrichment on top of an already-successful save/
@@ -1131,7 +1195,7 @@ async function detectAndStoreArtifacts(entryId, userEmail, callClaudeHaikuAPI, a
     const unifiedContent = entryRes.rows[0].unified_content || '';
     const existingArtifacts = entryRes.rows[0].artifacts || [];
     const checklistArtifacts = await detectChecklistArtifacts(unifiedContent, existingArtifacts, callClaudeHaikuAPI, apiKey);
-    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts);
+    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent));
     await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
   } catch (e) {
     console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);
@@ -1261,7 +1325,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectAndStoreArtifacts };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectAndStoreArtifacts };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

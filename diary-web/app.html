@@ -1650,6 +1650,30 @@ function renderEntryCard(e) {
           '</div>' +
         '</div>';
       })()) +
+      // Structured Facts (fourth of the brief's own build order). Per
+      // the brief's own explicit render spec ("a metadata sidebar, not
+      // buried in prose"), rendered as a visually-distinct, clearly-
+      // labeled block, styled with a light background specifically to
+      // set it apart even more than Citations/Checklist's own plain
+      // dividers — the entry card itself is a single-column layout, so
+      // a literal, separate-column sidebar isn't applicable here; this
+      // is the pragmatic equivalent of the same "set apart from the
+      // main reading flow" principle within that constraint. Backend
+      // deliberately scoped to dates + prices only, not the brief's own
+      // literal "named entities" — see detectStructuredFactsArtifacts's
+      // own comment in db.js for the full reasoning.
+      ((function() {
+        var factsArt = (_eartifacts || []).filter(function(a) { return a.type === 'structured_facts'; })[0];
+        if (!factsArt || !factsArt.facts || !factsArt.facts.length) return '';
+        return '<div style="margin-top:12px;padding:10px 12px;background:#F5F3EE;border-radius:8px;" onclick="event.stopPropagation();">' +
+          '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Key facts</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+          factsArt.facts.map(function(f) {
+            return '<div style="font-size:12px;color:#4A4035;background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;padding:4px 10px;"><span style="color:#9E9890;">' + escHtml(f.label) + ':</span> ' + escHtml(f.value) + '</div>';
+          }).join('') +
+          '</div>' +
+        '</div>';
+      })()) +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
         // existing entry saved before native hosting existed) or a
