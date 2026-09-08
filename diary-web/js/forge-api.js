@@ -522,7 +522,39 @@
       // character (like a space) that doesn't match the image rules'
       // own URL pattern and so slips through unconverted.
       .replace(/(?<!!)\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-      .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+      // NOTE: code-block rendering enhanced — confirmed live via direct
+      // product decision that code blocks specifically don't need a
+      // separate Work-view section the way Table/Checklist do, since
+      // they're already faithfully present in the reading view via
+      // <pre><code> — syntax highlighting and a copy button are a small,
+      // expected affordance on already-correctly-placed content, not
+      // "interactive chrome" requiring a separate view. Previously this
+      // rule captured everything (including any language tag) as one,
+      // undifferentiated block, meaning a language tag like "javascript"
+      // would incorrectly appear as the literal first line of the
+      // displayed code itself. Now captures the language tag separately
+      // for a real language-N class (consumed by highlight.js, loaded
+      // and invoked after this HTML is inserted into the DOM — see the
+      // post-render call sites in app.html/continue.html) and a
+      // data-code-block marker used to attach a copy button afterward.
+      // Verified via direct testing across seven cases before shipping,
+      // given this runs on every single entry across the whole product:
+      // a normal block with a language tag, no language tag at all,
+      // an empty code block, a non-standard/unusual language tag,
+      // an unclosed fence (confirmed to correctly NOT match at all,
+      // left as plain text rather than mis-parsed), multiple separate
+      // blocks with different languages in one entry, and a plain-text
+      // regression case with no code blocks at all.
+      .replace(/```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g, function(full, lang, code) {
+        lang = (lang || '').trim().toLowerCase();
+        // NOTE: code is NOT re-escaped here — the entire input already
+        // gets HTML-escaped upfront, as this whole function's own very
+        // first step, well before this rule ever runs. Confirmed this
+        // directly before shipping — an earlier version of this fix
+        // escaped it a second time here too, which would have produced
+        // double-escaped output (e.g. "&amp;amp;" instead of "&amp;").
+        return '<pre data-code-block="1"><code' + (lang ? ' class="language-' + lang + '"' : '') + '>' + code + '</code></pre>';
+      })
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^\n*]+?)\*/g, '<em>$1</em>')
@@ -704,7 +736,17 @@
       // list, a table immediately after prose, and a combined
       // table-then-list-then-prose sequence — all producing clean,
       // correctly nested HTML with no stray tags.
-      .replace(/([^\n])(<(?:ul|ol|table|pre|blockquote)>)/g, '$1\n$2')
+      // NOTE: widened from the exact literal "<pre>"/"</pre>" to also
+      // match a <pre> tag carrying attributes — confirmed as a real,
+      // direct regression caused by the code-block rendering change
+      // above, which now emits <pre data-code-block="1"> rather than a
+      // bare <pre>. Without this, this rule's own literal-only match
+      // silently stopped applying to code blocks specifically, and a
+      // stray "</p>" ended up rendered INSIDE a <code> block, before its
+      // own closing tag — caught via direct testing before shipping,
+      // not left for later discovery, given this renderer runs on every
+      // single entry across the whole product.
+      .replace(/([^\n])(<(?:ul|ol|table|pre|blockquote)(?: [^>]*)?>)/g, '$1\n$2')
       .replace(/(<\/(?:ul|ol|table|pre|blockquote)>)([^\n])/g, '$1\n$2')
       // NOTE: fixed a second, separate, genuinely pre-existing bug,
       // confirmed present even before today's other changes (tested

@@ -380,6 +380,15 @@
        handles attaching new files itself, so it had no need for this
        at all before now. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- highlight.js — for the Code artifact's own syntax highlighting
+       (enhanceCodeBlocks below). A minimal-theme CSS matching this
+       page's own warm, muted palette rather than a stock, high-contrast
+       dark theme that would clash with everything else here. Loaded
+       gracefully — enhanceCodeBlocks already checks for window.hljs
+       before using it, so a CDN issue here degrades to plain, still-
+       readable code rather than breaking anything. -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/atom-one-light.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
 </head>
 <body>
 
@@ -1464,6 +1473,52 @@ function renderEntries() {
   container.innerHTML = filteredEntries.map(function(e) {
     return renderEntryCard(e);
   }).join('');
+  enhanceCodeBlocks(container);
+}
+
+// Code artifact (fifth of the brief's own build order). Per direct
+// product decision, enhances the existing <pre data-code-block="1">
+// elements already produced by renderMarkdown's own updated code-block
+// rule — no separate Work-view section, since code blocks are already
+// faithfully present in the reading view; syntax highlighting and a
+// copy button are a small, expected affordance on already-correctly-
+// placed content, not a new "working" object. Scoped to the given
+// container specifically (not a global highlight.js highlightAll()
+// scan of the whole document) — cheaper, and avoids re-highlighting
+// content that hasn't changed at all when only part of the page
+// re-renders. Gracefully does nothing at all if highlight.js hasn't
+// loaded for any reason (e.g. a CDN issue) — the code block still
+// displays correctly as plain, readable text either way, just without
+// highlighting; this was a deliberate design goal, not an afterthought,
+// given this code path runs on every single entry across the product.
+function enhanceCodeBlocks(container) {
+  if (!container) return;
+  var blocks = container.querySelectorAll('pre[data-code-block]');
+  blocks.forEach(function(pre) {
+    if (pre.dataset.codeEnhanced) return; // avoid re-processing on a later, partial re-render
+    pre.dataset.codeEnhanced = '1';
+    var codeEl = pre.querySelector('code');
+    if (window.hljs && codeEl) {
+      try { window.hljs.highlightElement(codeEl); } catch(_e) {}
+    }
+    var btn = document.createElement('button');
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code');
+    btn.style.cssText = 'position:absolute;top:6px;right:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:5px;padding:3px 10px;font-size:11px;color:#6B6559;cursor:pointer;font-family:Inter,sans-serif;';
+    btn.onclick = function(ev) {
+      ev.stopPropagation();
+      // .textContent, not the escaped innerHTML — always the exact,
+      // original code with no HTML-entity artifacts at all, per the
+      // brief's own explicit acceptance criterion here ("a copy action
+      // produces exact, unmodified code").
+      navigator.clipboard.writeText(codeEl.textContent).then(function() {
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+      }).catch(function() {});
+    };
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
 }
 
 function relativeTime(dateStr) {
@@ -3925,6 +3980,7 @@ function openEntry(id) {
   var content = e.content || '';
   if (typeof renderMarkdown === 'function') {
     document.getElementById('panelContent').innerHTML = renderMarkdown(content).replace(/<p>\s*<\/p>/g, '');
+    enhanceCodeBlocks(document.getElementById('panelContent'));
   } else {
     document.getElementById('panelContent').textContent = content;
   }

@@ -217,6 +217,12 @@
      directly on JSZip (already the standard, most-used zip library for
      the browser) plus a small amount of hand-written XML parsing. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- highlight.js — same version/theme as app.html's own copy, for the
+     Code artifact's syntax highlighting here too (enhanceCodeBlocks
+     below). Loaded gracefully — enhanceCodeBlocks already checks for
+     window.hljs before using it. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/atom-one-light.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
 <script>
 'use strict';
 
@@ -1059,6 +1065,57 @@ function renderWithBubbles(text) {
   if (rest) html += Forge.renderMarkdown(rest).replace(/<p>\s*<\/p>/g, '');
   return html + sourcesHtml;
 }
+
+// Code artifact (fifth of the brief's own build order) — same
+// function as app.html's own copy; see its comment there for the full
+// reasoning (enhances existing <pre data-code-block="1"> elements
+// already produced by renderMarkdown's own updated code-block rule,
+// rather than a separate Work-view section, since code blocks are
+// already faithfully present in the reading view here too).
+function enhanceCodeBlocks(container) {
+  if (!container) return;
+  var blocks = container.querySelectorAll('pre[data-code-block]');
+  blocks.forEach(function(pre) {
+    if (pre.dataset.codeEnhanced) return;
+    pre.dataset.codeEnhanced = '1';
+    var codeEl = pre.querySelector('code');
+    if (window.hljs && codeEl) {
+      try { window.hljs.highlightElement(codeEl); } catch(_e) {}
+    }
+    var btn = document.createElement('button');
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code');
+    btn.style.cssText = 'position:absolute;top:6px;right:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:5px;padding:3px 10px;font-size:11px;color:#6B6559;cursor:pointer;font-family:Inter,sans-serif;';
+    btn.onclick = function(ev) {
+      ev.stopPropagation();
+      navigator.clipboard.writeText(codeEl.textContent).then(function() {
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+      }).catch(function() {});
+    };
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+}
+
+// Set up ONCE, watching #chatMessages for any new content added to it
+// at all, regardless of which of this file's own several, separate
+// code paths added it (streaming, history-loading, a bridged/continued
+// message, etc.) — confirmed via direct code search that there are
+// multiple, scattered insertion points here, unlike app.html's own
+// single, centralized render function. A MutationObserver here is
+// safer and more robust than manually finding and updating every one
+// of those call sites individually, and automatically covers any new
+// insertion point added later too, without needing to remember to wire
+// this in again by hand.
+(function setUpCodeBlockObserver() {
+  var chatMessagesEl = document.getElementById('chatMessages');
+  if (!chatMessagesEl) return;
+  var observer = new MutationObserver(function() {
+    enhanceCodeBlocks(chatMessagesEl);
+  });
+  observer.observe(chatMessagesEl, { childList: true, subtree: true });
+})();
 
 function addMessageToDOM(role, content, opts) {
   opts = opts || {};
