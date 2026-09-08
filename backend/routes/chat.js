@@ -533,6 +533,26 @@ router.post('/', requireAuth, async (req, res) => {
             console.error('[Chat] session persist failed:', dbErr.message);
         }
 
+        // Fire-and-forget — see computeAndStoreUnifiedContent's own
+        // comment in db.js for the full context (the Artifacts brief's
+        // own flagged hard dependency). This is the Continue-in-Forge
+        // trigger point specifically: a new message just got appended to
+        // a session that may be linked to a diary entry (via
+        // metadata.chatSessionId) — if so, that entry's own
+        // unified_content is now stale and needs recomputing. Looked up
+        // fresh here rather than passed through from the route's own
+        // caller, since this route only ever knows the session id, never
+        // any diary entry id directly. A session with no linked entry at
+        // all (a genuine, standalone Forge chat) correctly resolves to
+        // null and skips this entirely.
+        db.getDiaryEntryIdByChatSessionId(sid, req.userEmail).then(function(linkedEntryId) {
+            if (linkedEntryId) {
+                return db.computeAndStoreUnifiedContent(linkedEntryId, req.userEmail);
+            }
+        }).catch(function(e) {
+            console.warn('[Chat] computeAndStoreUnifiedContent lookup/update failed:', e.message);
+        });
+
         if (isStreaming) {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');

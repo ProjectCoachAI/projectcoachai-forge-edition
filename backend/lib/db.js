@@ -814,6 +814,85 @@ async function updateChatSession(sessionId, userEmail, messages) {
   );
 }
 
+// Computes and persists diary_entries.unified_content — see this
+// column's own migration comment above for the full context on why
+// this exists at all (the Artifacts brief's own flagged hard
+// dependency: no backend process previously ever combined an entry's
+// native content with its own Forge-continued messages into one text
+// representation). Deliberately standalone and fire-and-forget-safe —
+// re-reads whatever the FINAL, already-committed state of both tables
+// genuinely is, rather than being threaded through the middle of the
+// already-complex sync-merge logic in diary.js's own PATCH route,
+// specifically so it can be called identically and safely from
+// multiple, separate trigger points (an entry's own initial save, a
+// PATCH/sync update, and a new Forge-continuation message in chat.js)
+// without any of them needing to know about each other's own internal
+// state to call this correctly.
+//
+// Never throws — a failure here should never break the actual save/
+// sync/chat operation that triggered it; this is enrichment on top of
+// an already-successful write, not a dependency of it.
+async function computeAndStoreUnifiedContent(entryId, userEmail) {
+  try {
+    const entryRes = await query('SELECT content, metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
+    if (!entryRes.rows.length) return;
+    const entry = entryRes.rows[0];
+    const meta = entry.metadata || {};
+    const chatSessionId = meta.chatSessionId;
+    const seedCount = meta.nativeSeedMessageCount;
+
+    // Not forked to Forge at all, or missing the data this depends on —
+    // the native content IS the complete, correct unified content;
+    // nothing to combine at all. Same fallback condition
+    // renderUnifiedEntryContent's own client-side logic already uses.
+    if (!chatSessionId || typeof seedCount !== 'number') {
+      await query('UPDATE diary_entries SET unified_content=$1 WHERE id=$2 AND user_email=$3', [entry.content || '', entryId, userEmail]);
+      return;
+    }
+
+    const sessionRes = await query('SELECT messages FROM chat_sessions WHERE session_id=$1 AND user_email=$2', [chatSessionId, userEmail]);
+    const messages = (sessionRes.rows.length && Array.isArray(sessionRes.rows[0].messages)) ? sessionRes.rows[0].messages : [];
+
+    // Session missing entirely, or its own message count somehow
+    // doesn't even reach the seed boundary (shouldn't happen given how
+    // seedCount is set, but falling back safely rather than computing
+    // something wrong if it somehow does) — native content alone is
+    // still a correct, complete result on its own.
+    if (messages.length < seedCount) {
+      await query('UPDATE diary_entries SET unified_content=$1 WHERE id=$2 AND user_email=$3', [entry.content || '', entryId, userEmail]);
+      return;
+    }
+
+    const forgeMessages = messages.slice(seedCount);
+    let unified = entry.content || '';
+    if (forgeMessages.length) {
+      const forgeText = forgeMessages.map(function(m) {
+        return (m.role === 'user' ? '**Question:** ' : '') + (m.content || '');
+      }).join('\n\n');
+      unified += '\n\n--- Continued in Forge ---\n\n' + forgeText;
+    }
+
+    await query('UPDATE diary_entries SET unified_content=$1 WHERE id=$2 AND user_email=$3', [unified, entryId, userEmail]);
+  } catch (e) {
+    console.error('[Diary] computeAndStoreUnifiedContent failed for entry', entryId, ':', e.message);
+  }
+}
+
+// Looks up the diary entry (if any) whose own metadata.chatSessionId
+// links it to a given chat_sessions row — needed specifically so
+// chat.js's own message-persist path (which only ever knows the
+// session's own id, not any diary entry id) can trigger
+// computeAndStoreUnifiedContent for the correct entry whenever a new
+// Forge-continuation message is added to an existing, already-forked
+// session. Returns just the id — callers don't need anything else here.
+async function getDiaryEntryIdByChatSessionId(sessionId, userEmail) {
+  const r = await query(
+    `SELECT id FROM diary_entries WHERE user_email=$1 AND metadata->>'chatSessionId'=$2 LIMIT 1`,
+    [userEmail, sessionId]
+  );
+  return r.rows.length ? r.rows[0].id : null;
+}
+
 async function listChatSessions(userEmail, limit = 20) {
   const r = await query(
     'SELECT session_id, model, title, created_at, updated_at FROM chat_sessions WHERE user_email=$1 ORDER BY updated_at DESC LIMIT $2',
@@ -937,7 +1016,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
@@ -963,6 +1042,20 @@ async function migrateDiary() {
     // session than a Diary one.
     "ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'forge'",
     "CREATE INDEX IF NOT EXISTS idx_chat_sessions_source ON chat_sessions(user_email, source)",
+    // Artifacts implementation brief's own flagged hard dependency:
+    // confirmed live that no backend process anywhere ever combined an
+    // entry's native content with its own Forge-continued messages into
+    // a single text representation — the existing "unified thread view"
+    // (renderUnifiedEntryContent in app.html) only ever assembles this
+    // client-side, at view time, fetching chat_sessions.messages fresh
+    // on every open. Per direct product decision, this column is the
+    // real, backend-persisted equivalent — computed once, at save/sync
+    // time (see computeAndStoreUnifiedContent in this file and its own
+    // call sites in diary.js/chat.js), not recomputed on every page
+    // load. This is the actual source artifact detection is meant to
+    // read from, per the brief's own explicit requirement — not the
+    // native-only content column alone.
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS unified_content TEXT",
   ];
   for (const sql of migrations) {
     try { await query(sql); } catch(e) { console.warn('[Diary migration]', e.message); }

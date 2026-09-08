@@ -1164,6 +1164,17 @@ router.post('/', requireAuth, async (req, res) => {
     console.log(`[Diary] Saved: ${source} → ${category} for ${req.userEmail}`);
     res.json({ success: true, id: r.rows[0].id, created_at: r.rows[0].created_at, category, tags });
 
+    // Fire-and-forget — see computeAndStoreUnifiedContent's own comment
+    // for the full context. A brand-new entry is never forked to Forge
+    // yet at this point, so this always resolves to just the native
+    // content itself here — but computing it now, consistently, means
+    // unified_content is never left null for any entry at all, rather
+    // than only ever being set starting from whichever entries happen
+    // to receive a later PATCH.
+    db.computeAndStoreUnifiedContent(r.rows[0].id, req.userEmail).catch(function(e) {
+      console.warn('[Diary] computeAndStoreUnifiedContent failed:', e.message);
+    });
+
     // Fire-and-forget — see rehostImagesAndPatch's own comment for why
     // this runs server-side and always after the response above. Passes
     // the FULL, prepared images array (not just URLs) — every entry is
@@ -1617,6 +1628,18 @@ router.patch('/:id', requireAuth, async (req, res) => {
     );
 
     res.json({ success: true, chatSessionSync: chatSessionSyncResult });
+
+    // Fire-and-forget — see computeAndStoreUnifiedContent's own comment
+    // for the full context (the Artifacts brief's own flagged hard
+    // dependency). Only runs when content was actually part of this
+    // update — no reason to recompute unified_content on a category-only
+    // or decision_note-only PATCH, since neither of those could ever
+    // change what unified_content should be.
+    if (content !== undefined) {
+      db.computeAndStoreUnifiedContent(id, req.userEmail).catch(function(e) {
+        console.warn('[Diary] computeAndStoreUnifiedContent failed:', e.message);
+      });
+    }
 
     // Fire-and-forget — see rehostImagesAndPatch's own comment. Passes
     // the FULL, prepared images array (including any already-'hosted'
