@@ -1521,6 +1521,47 @@ function enhanceCodeBlocks(container) {
   });
 }
 
+// Confirmed as a real, direct gap via a user report: syntax
+// highlighting worked in Continue Conversation but not in the Diary
+// entry view itself. Investigated and found FOUR separate call sites
+// within this same file that insert new content into an entry's own
+// container without ever calling enhanceCodeBlocks — the initial
+// unified-view render (renderUnifiedEntryContent, in its own multiple
+// branches), its own "Load earlier" pagination
+// (loadEarlierEntryContent), and its own pagination-reset
+// (resetEntryContentPagination) — each individually fixed, but finding
+// four separate, scattered gaps this way is exactly the same class of
+// risk that led to using a MutationObserver in continue.html instead
+// of manually finding every call site there. Applying the same fix
+// here too — set up ONCE, watching #diaryEntries for any new content
+// added to it at all, regardless of which code path added it,
+// including any future one not yet written. enhanceCodeBlocks' own
+// re-processing guard (pre.dataset.codeEnhanced) already makes this
+// safe to call repeatedly, including redundantly alongside the
+// individual call sites already fixed above — this observer is a
+// safety net on top of those, not a replacement requiring their
+// removal.
+(function setUpAppCodeBlockObserver() {
+  var entriesEl = document.getElementById('diaryEntries');
+  if (!entriesEl) return;
+  var observer = new MutationObserver(function() {
+    enhanceCodeBlocks(entriesEl);
+  });
+  observer.observe(entriesEl, { childList: true, subtree: true });
+})();
+
+// Same safety-net observer, separately, for #panelContent — a genuinely
+// distinct container outside #diaryEntries entirely (the entry detail
+// panel), so the observer above doesn't cover it at all.
+(function setUpPanelCodeBlockObserver() {
+  var panelEl = document.getElementById('panelContent');
+  if (!panelEl) return;
+  var observer = new MutationObserver(function() {
+    enhanceCodeBlocks(panelEl);
+  });
+  observer.observe(panelEl, { childList: true, subtree: true });
+})();
+
 function relativeTime(dateStr) {
   var now = Date.now();
   var then = new Date(dateStr).getTime();
@@ -4332,6 +4373,7 @@ async function renderUnifiedEntryContent(entryId) {
   // no reason to attempt a unified view that has nothing to unify.
   if (!chatSessionId || typeof seedCount !== 'number') {
     container.innerHTML = renderEntryContentHtml(entry);
+    enhanceCodeBlocks(container);
     return;
   }
 
@@ -4350,6 +4392,7 @@ async function renderUnifiedEntryContent(entryId) {
   // complete result on its own.
   if (!session || !Array.isArray(session.messages) || session.messages.length < seedCount) {
     container.innerHTML = renderEntryContentHtml(entry);
+    enhanceCodeBlocks(container);
     return;
   }
 
@@ -4431,9 +4474,11 @@ async function renderUnifiedEntryContent(entryId) {
     }
 
     container.innerHTML = html;
+    enhanceCodeBlocks(container);
   } catch (e) {
     console.warn('[Diary] Unified view: rendering failed unexpectedly, falling back to native-only:', e.message);
     container.innerHTML = renderEntryContentHtml(entry);
+    enhanceCodeBlocks(container);
   }
 }
 window.renderUnifiedEntryContent = renderUnifiedEntryContent;
@@ -4488,6 +4533,7 @@ function resetEntryContentPagination(entryId) {
   var container = document.getElementById('entry-content-' + entryId);
   if (!entry || !container) return;
   container.innerHTML = renderEntryContentHtml(entry);
+  enhanceCodeBlocks(container);
 }
 window.resetEntryContentPagination = resetEntryContentPagination;
 
@@ -4517,6 +4563,7 @@ function loadEarlierEntryContent(entryId) {
   } else {
     container.insertAdjacentHTML('afterbegin', revealedHtml);
   }
+  enhanceCodeBlocks(container);
   state.renderedFromIndex = newStart;
   if (newStart === 0) {
     if (btn) btn.remove();
