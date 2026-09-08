@@ -1814,6 +1814,31 @@ function renderEntryCard(e) {
         return '<img src="' + escHtml(url) + '" onclick="event.stopPropagation();openImageZoom(' + galleryUrlsJson + ',' + Math.max(0, galleryIndex) + ')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>';
         }).join('');
       })() + '</div></div>' : '') +
+      // Reasoning trace (seventh and final artifact of the brief's own
+      // build order). Rendered as a collapsible outline, reusing the
+      // same visual/interaction pattern as the existing "Sources (N)"
+      // widget (extractSourcesBlock) — per this artifact's own design
+      // pass, this is presenting existing reasoning more clearly, not a
+      // new working object, so Read-view-appropriate placement, same as
+      // Citations/Checklist/Structured Facts. A random id per render,
+      // same collision-avoidance approach already used by
+      // extractSourcesBlock's own sid, since an entry could show
+      // multiple collapsibles at once.
+      ((function() {
+        var reasoningArt = (_eartifacts || []).filter(function(a) { return a.type === 'reasoning'; })[0];
+        if (!reasoningArt || !reasoningArt.steps || !reasoningArt.steps.length) return '';
+        var rid = 'reasoning-' + e.id + '-' + Math.random().toString(36).slice(2, 10);
+        return '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+          '<button onclick="var b=document.getElementById(\'' + rid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.reasoning-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
+            'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;font-family:Inter,sans-serif;">' +
+            '<span class="reasoning-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
+            'Reasoning (' + reasoningArt.steps.length + ' steps)' +
+          '</button>' +
+          '<ol id="' + rid + '" style="display:none;margin:8px 0 0;padding-left:20px;font-size:12px;color:#4A4035;line-height:1.7;">' +
+          reasoningArt.steps.map(function(step) { return '<li>' + escHtml(step) + '</li>'; }).join('') +
+          '</ol>' +
+        '</div>';
+      })()) +
       // NOTE: attachments — a lightweight index, not the files themselves.
       // Stores just filename + type (via metadata.attachments, the same
       // flexible JSONB field already used for url/images — no backend or

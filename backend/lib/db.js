@@ -1206,9 +1206,107 @@ function detectImagesArtifacts(meta) {
   return images.length ? [{ type: 'images', images, position: 0 }] : [];
 }
 
+// Reasoning trace artifact (seventh and final artifact of the brief's
+// own build order). Per the brief's own explicit instruction, this
+// stage went through its own, separate design pass before any
+// implementation began, resolving three concrete open questions rather
+// than leaving them as implicit judgment calls:
+//
+// 1. Definition: "reasoning" here means multiple steps connected by
+//    logical/causal language (first/therefore/because/etc.) that build
+//    toward an explicit conclusion — deliberately distinct from an
+//    unordered list of independent points (already excluded — those
+//    carry no such connectors) and from a procedural checklist of
+//    tasks (Checklist's own, already-shipped territory), so this new
+//    type doesn't quietly cannibalize content Checklist already
+//    handles correctly.
+// 2. Ambiguous-gate-defaults-to-no-extraction: this is the one artifact
+//    type most vulnerable to a subtle, hard-to-notice failure mode — a
+//    model quietly "cleaning up" or reordering someone's actual logic.
+//    A missed reasoning trace costs the user nothing; a wrongly-
+//    extracted or distorted one damages trust in every other artifact
+//    on the page. So classification is kept deliberately narrow and
+//    extractive rather than generative: a plain yes/no gate, and only
+//    on yes, steps extracted using the ORIGINAL WORDING as closely as
+//    possible — never paraphrased or summarized. Any response that
+//    isn't cleanly shaped as expected is forced to false, same
+//    fail-toward-skipping shape already directly verified in
+//    parseChecklistClassification/detectChecklistArtifacts above
+//    (a null/malformed classification there flows through to an empty
+//    array — no checklist shown at all — not some other default).
+// 3. "Most substantial" passage, when more than one candidate
+//    genuinely qualifies: highest extracted step count wins — a
+//    concrete, checkable rule, not connector-word density, which could
+//    be trivially inflated by verbose phrasing without reflecting more
+//    real logical structure.
+//
+// findReasoningCandidates is the same "find candidates cheaply first,
+// pure/deterministic, no LLM cost for text with no signal at all"
+// pattern already used for Checklist's own findChecklistCandidates —
+// only paragraphs containing at least two distinct logical/causal
+// connectors are worth spending a classification call on at all.
+function findReasoningCandidates(text) {
+  const connectors = /\b(first|then|therefore|because|this means|given that|as a result|consequently|since|thus|which means|so that)\b/gi;
+  const paragraphs = (text || '').split(/\n\n+/);
+  const candidates = [];
+  paragraphs.forEach((p, i) => {
+    const matches = p.match(connectors);
+    if (matches && matches.length >= 2 && p.trim().length > 40) {
+      candidates.push({ text: p.trim(), position: i });
+    }
+  });
+  return candidates;
+}
+
+function parseReasoningClassification(responseText, expectedLength) {
+  try {
+    const cleaned = responseText.trim().replace(/^```json\n?|```$/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed) || parsed.length !== expectedLength) return null;
+    return parsed.map(entry => {
+      let isReasoning = entry && typeof entry.isReasoning === 'boolean' ? entry.isReasoning : false;
+      const steps = isReasoning && Array.isArray(entry.steps) && entry.steps.length ? entry.steps : null;
+      // isReasoning:true with no real, non-empty steps array is itself
+      // a malformed shape — forced to false rather than trusted, same
+      // ambiguous-gate-defaults-to-no principle applied at this layer
+      // too, not just at the JSON-parse-failure layer above.
+      if (!steps) isReasoning = false;
+      return { isReasoning, steps };
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+async function detectReasoningArtifacts(text, callClaudeHaikuAPI, apiKey) {
+  const candidates = findReasoningCandidates(text);
+  if (!candidates.length || !callClaudeHaikuAPI || !apiKey) return [];
+  try {
+    const prompt = 'You are analyzing passages from a saved AI conversation. For each passage below, determine whether it genuinely shows step-by-step reasoning that builds toward an explicit conclusion (using logical connectors like "first", "therefore", "because") — as opposed to an unordered list of independent points, a procedural checklist of tasks, or plain explanatory text.\n\n' +
+      'If a passage IS genuine reasoning, extract its steps using the ORIGINAL WORDING as closely as possible — do not paraphrase, summarize, or add connective logic that is not already there.\n\n' +
+      candidates.map((c, i) => 'Passage ' + (i + 1) + ':\n' + c.text).join('\n\n') +
+      '\n\nRespond ONLY with a JSON array, one object per passage, in order: [{"isReasoning": true/false, "steps": ["..."] or null}]. No other text.';
+    const response = await callClaudeHaikuAPI(prompt, apiKey, 500);
+    const classifications = parseReasoningClassification(response, candidates.length);
+    // Malformed/unparseable classification treated the same as "no
+    // reasoning found anywhere" — never falls back to guessing.
+    if (!classifications) return [];
+    const qualifying = candidates
+      .map((c, i) => ({ position: c.position, steps: classifications[i].steps, isReasoning: classifications[i].isReasoning }))
+      .filter(c => c.isReasoning);
+    if (!qualifying.length) return [];
+    qualifying.sort((a, b) => b.steps.length - a.steps.length);
+    const winner = qualifying[0];
+    return [{ type: 'reasoning', steps: winner.steps, position: winner.position }];
+  } catch (e) {
+    console.warn('[Diary] detectReasoningArtifacts classification failed, skipping:', e.message);
+    return [];
+  }
+}
+
 // Runs the full detect → structure pipeline (Table, Citations,
-// Checklist, Structured Facts, and Images, per the brief's own build
-// order — Reasoning trace remains the next, separate stage) against an
+// Checklist, Structured Facts, Images, and Reasoning trace — the
+// complete artifact build order from the original brief) against an
 // entry's own unified_content, and persists the result. Depends
 // directly on unified_content already being computed and current — see
 // this function's own call sites, all of which run it AFTER
@@ -1216,9 +1314,9 @@ function detectImagesArtifacts(meta) {
 // entry, never before or independently of it.
 //
 // callClaudeHaikuAPI/apiKey are optional — omitting them (or a
-// classification failure) simply skips Checklist detection for that
-// run, never blocks Table/Citations/Structured Facts/Images from being
-// detected and stored.
+// classification failure) simply skips Checklist/Reasoning detection
+// for that run, never blocks Table/Citations/Structured Facts/Images
+// from being detected and stored.
 //
 // Never throws — same reasoning as computeAndStoreUnifiedContent's own
 // comment: this is enrichment on top of an already-successful save/
@@ -1231,7 +1329,8 @@ async function detectAndStoreArtifacts(entryId, userEmail, callClaudeHaikuAPI, a
     const existingArtifacts = entryRes.rows[0].artifacts || [];
     const meta = entryRes.rows[0].metadata || {};
     const checklistArtifacts = await detectChecklistArtifacts(unifiedContent, existingArtifacts, callClaudeHaikuAPI, apiKey);
-    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent)).concat(detectImagesArtifacts(meta));
+    const reasoningArtifacts = await detectReasoningArtifacts(unifiedContent, callClaudeHaikuAPI, apiKey);
+    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent)).concat(detectImagesArtifacts(meta)).concat(reasoningArtifacts);
     await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
   } catch (e) {
     console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);
@@ -1361,7 +1460,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectAndStoreArtifacts };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
