@@ -582,7 +582,7 @@ router.get('/', requireAuth, async (req, res) => {
     // recently-updated ones now correctly float to the top, without
     // touching the displayed original date anywhere.
     const sql = `SELECT id, source, title, prompt, content, document_text,
-                        conversation, decision_note, category, tags, metadata, rating, is_favorite, conversation_count, open_count, created_at, updated_at
+                        conversation, decision_note, category, tags, metadata, rating, is_favorite, conversation_count, open_count, created_at, updated_at, artifacts
                  FROM diary_entries${whereSql}
                  ORDER BY COALESCE(updated_at, created_at) DESC
                  LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
@@ -1171,8 +1171,15 @@ router.post('/', requireAuth, async (req, res) => {
     // unified_content is never left null for any entry at all, rather
     // than only ever being set starting from whichever entries happen
     // to receive a later PATCH.
-    db.computeAndStoreUnifiedContent(r.rows[0].id, req.userEmail).catch(function(e) {
-      console.warn('[Diary] computeAndStoreUnifiedContent failed:', e.message);
+    //
+    // detectAndStoreArtifacts explicitly chained AFTER this, not fired
+    // in parallel — it depends directly on unified_content already
+    // being written, and running it concurrently risks reading a stale,
+    // pre-update value.
+    db.computeAndStoreUnifiedContent(r.rows[0].id, req.userEmail).then(function() {
+      return db.detectAndStoreArtifacts(r.rows[0].id, req.userEmail);
+    }).catch(function(e) {
+      console.warn('[Diary] Artifacts pipeline failed:', e.message);
     });
 
     // Fire-and-forget — see rehostImagesAndPatch's own comment for why
@@ -1634,10 +1641,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // dependency). Only runs when content was actually part of this
     // update — no reason to recompute unified_content on a category-only
     // or decision_note-only PATCH, since neither of those could ever
-    // change what unified_content should be.
+    // change what unified_content should be. detectAndStoreArtifacts
+    // explicitly chained after, not fired in parallel — see the same
+    // reasoning at this pipeline's other call site in this file.
     if (content !== undefined) {
-      db.computeAndStoreUnifiedContent(id, req.userEmail).catch(function(e) {
-        console.warn('[Diary] computeAndStoreUnifiedContent failed:', e.message);
+      db.computeAndStoreUnifiedContent(id, req.userEmail).then(function() {
+        return db.detectAndStoreArtifacts(id, req.userEmail);
+      }).catch(function(e) {
+        console.warn('[Diary] Artifacts pipeline failed:', e.message);
       });
     }
 

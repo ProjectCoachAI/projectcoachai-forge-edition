@@ -1484,6 +1484,13 @@ function renderEntryCard(e) {
   var icon = SOURCE_ICONS[e.source] || '📔';
   var _emeta = null;
   try { _emeta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata; } catch(_e) {}
+  // Same defensive parsing pattern already applied to metadata
+  // throughout this file (e.g. right above) — artifacts is the same
+  // JSONB column type, so it carries the same risk of arriving as a
+  // raw string rather than an already-parsed array depending on the
+  // exact code path an entry came through.
+  var _eartifacts = [];
+  try { _eartifacts = (typeof e.artifacts === 'string' ? JSON.parse(e.artifacts) : e.artifacts) || []; } catch(_e2) {}
   var origUrl = _emeta && _emeta.url && ['claude.ai','chatgpt.com','gemini.google','perplexity.ai','grok.com','deepseek.com','mistral.ai','meta.ai'].some(function(d){ return _emeta.url.includes(d); }) ? _emeta.url : null;
   // NOTE: "Continue on [Provider]" — for entries with no original
   // conversation to reopen (e.g. Quick Answer, generated fresh via the
@@ -1570,6 +1577,27 @@ function renderEntryCard(e) {
 
       '<div class="entry-content md" id="entry-content-' + e.id + '">' + (Forge.renderMarkdown ? renderEntryContentHtml(e) : escHtml(e.content || '')) + '</div>' +
       '<div id="entry-summary-' + e.id + '" style="display:none;"></div>' +
+      // Artifacts (Table, first of the brief's own build order) — per
+      // the brief's own explicit Read/Work boundary ("artifacts live in
+      // their own layer, rendered in a distinct working view, never
+      // injected into the reading flow as interactive chrome"), this is
+      // deliberately just a small, easy-to-ignore affordance here, not
+      // an embedded interactive grid — the actual sortable/filterable
+      // grid with CSV export lives in a separate modal, opened via
+      // openTableArtifact below. e.artifacts itself was computed once,
+      // server-side, at save/sync time (see computeAndStoreUnifiedContent/
+      // detectAndStoreArtifacts in db.js) — never recomputed here at
+      // render time.
+      ((_eartifacts && _eartifacts.length) ?
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+          _eartifacts.map(function(art, idx) {
+            if (art.type !== 'table') return '';
+            return '<button onclick="openTableArtifact(' + e.id + ',' + idx + ')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:#4A4035;font-family:Inter,sans-serif;">' +
+              '📊 View table (' + art.rows.length + ' rows)' +
+            '</button>';
+          }).join('') +
+        '</div>'
+      : '') +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
         // existing entry saved before native hosting existed) or a
@@ -2636,6 +2664,151 @@ function closeAttachmentReader() {
   readerSearchIndex = -1;
 }
 window.closeAttachmentReader = closeAttachmentReader;
+
+// ── Table artifact working view ──────────────────────────────────────────
+// Holds the currently-open artifact's own data plus live sort state —
+// separate, in-memory copy, never mutating e.artifacts itself (rows are
+// re-sliced fresh on every render below), so re-opening the same or a
+// different artifact always starts from the original, correctly-ordered
+// source data.
+var _currentTableArtifact = null;
+
+function openTableArtifact(entryId, artifactIndex) {
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+  if (!entry) return;
+  var artifacts = [];
+  try { artifacts = (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch(_e) {}
+  var art = artifacts[artifactIndex];
+  if (!art || art.type !== 'table') return;
+  _currentTableArtifact = { headers: art.headers, rows: art.rows, sortCol: null, sortDir: 1 };
+  var filterInput = document.getElementById('tableArtifactFilter');
+  if (filterInput) filterInput.value = '';
+  var modal = document.getElementById('tableArtifactModal');
+  if (modal) modal.style.display = 'flex';
+  renderTableArtifactBody();
+}
+window.openTableArtifact = openTableArtifact;
+
+function closeTableArtifact() {
+  var modal = document.getElementById('tableArtifactModal');
+  if (modal) modal.style.display = 'none';
+  _currentTableArtifact = null;
+}
+window.closeTableArtifact = closeTableArtifact;
+
+function sortTableArtifact(columnIndex) {
+  if (!_currentTableArtifact) return;
+  if (_currentTableArtifact.sortCol === columnIndex) {
+    _currentTableArtifact.sortDir *= -1;
+  } else {
+    _currentTableArtifact.sortCol = columnIndex;
+    _currentTableArtifact.sortDir = 1;
+  }
+  renderTableArtifactBody();
+}
+window.sortTableArtifact = sortTableArtifact;
+
+function renderTableArtifactBody() {
+  if (!_currentTableArtifact) return;
+  var headers = _currentTableArtifact.headers;
+  var rows = _currentTableArtifact.rows.slice();
+
+  var filterInput = document.getElementById('tableArtifactFilter');
+  var filterText = (filterInput && filterInput.value || '').toLowerCase().trim();
+  if (filterText) {
+    rows = rows.filter(function(row) {
+      return row.some(function(cell) { return (cell || '').toLowerCase().includes(filterText); });
+    });
+  }
+
+  if (_currentTableArtifact.sortCol !== null) {
+    var col = _currentTableArtifact.sortCol;
+    var dir = _currentTableArtifact.sortDir;
+    rows.sort(function(a, b) {
+      var av = a[col] || '';
+      var bv = b[col] || '';
+      // Numeric-aware: strips common currency/percent formatting before
+      // comparing, so "$9" correctly sorts before "$50" — a plain string
+      // sort would otherwise put "$100" before "$50" lexicographically.
+      var anum = parseFloat(av.replace(/[$,%]/g, ''));
+      var bnum = parseFloat(bv.replace(/[$,%]/g, ''));
+      if (!isNaN(anum) && !isNaN(bnum)) return (anum - bnum) * dir;
+      return av.localeCompare(bv) * dir;
+    });
+  }
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Inter,sans-serif;">';
+  html += '<thead><tr style="background:#EDE9E0;">';
+  headers.forEach(function(h, i) {
+    var arrow = _currentTableArtifact.sortCol === i ? (_currentTableArtifact.sortDir === 1 ? ' &uarr;' : ' &darr;') : '';
+    html += '<th onclick="sortTableArtifact(' + i + ')" style="padding:10px 14px;text-align:left;cursor:pointer;position:sticky;top:0;background:#EDE9E0;color:#1B2A4A;font-weight:600;user-select:none;white-space:nowrap;">' + escHtml(h) + arrow + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+  if (!rows.length) {
+    html += '<tr><td colspan="' + headers.length + '" style="padding:20px;text-align:center;color:#9E9890;">No matching rows.</td></tr>';
+  } else {
+    rows.forEach(function(row, ri) {
+      html += '<tr style="border-bottom:0.5px solid #D6D2C8;' + (ri % 2 === 1 ? 'background:#FAF8F4;' : '') + '">';
+      row.forEach(function(cell) {
+        html += '<td style="padding:9px 14px;color:#4A4035;">' + escHtml(cell) + '</td>';
+      });
+      html += '</tr>';
+    });
+  }
+  html += '</tbody></table>';
+  var body = document.getElementById('tableArtifactBody');
+  if (body) body.innerHTML = html;
+}
+window.renderTableArtifactBody = renderTableArtifactBody;
+
+// Exports the FULL, unfiltered/unsorted-order-preserved-as-displayed
+// data — deliberately exports whatever the CURRENT sort/filter state
+// shows on screen (not always the original, unsorted full set), since
+// per the brief's own acceptance criteria this needs to produce "a file
+// that opens correctly with the same rows/columns" as what someone is
+// actually looking at and has chosen to export.
+function exportTableArtifactCsv() {
+  if (!_currentTableArtifact) return;
+  var headers = _currentTableArtifact.headers;
+  var rows = _currentTableArtifact.rows.slice();
+  var filterInput = document.getElementById('tableArtifactFilter');
+  var filterText = (filterInput && filterInput.value || '').toLowerCase().trim();
+  if (filterText) {
+    rows = rows.filter(function(row) {
+      return row.some(function(cell) { return (cell || '').toLowerCase().includes(filterText); });
+    });
+  }
+  if (_currentTableArtifact.sortCol !== null) {
+    var col = _currentTableArtifact.sortCol;
+    var dir = _currentTableArtifact.sortDir;
+    rows.sort(function(a, b) {
+      var av = a[col] || '';
+      var bv = b[col] || '';
+      var anum = parseFloat(av.replace(/[$,%]/g, ''));
+      var bnum = parseFloat(bv.replace(/[$,%]/g, ''));
+      if (!isNaN(anum) && !isNaN(bnum)) return (anum - bnum) * dir;
+      return av.localeCompare(bv) * dir;
+    });
+  }
+  function csvEscape(val) {
+    var s = String(val == null ? '' : val);
+    if (/["\n,]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  var lines = [headers.map(csvEscape).join(',')];
+  rows.forEach(function(row) { lines.push(row.map(csvEscape).join(',')); });
+  var csv = lines.join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'table.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+window.exportTableArtifactCsv = exportTableArtifactCsv;
 
 var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
 // .docx/.xlsx attachments here carry genuine markdown in their own
@@ -4337,6 +4510,26 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     <div id="attachmentReaderBody" style="flex:1;overflow:auto;padding:24px;">
       <div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>
     </div>
+  </div>
+</div>
+
+<!-- Table artifact working view — per the brief's own explicit Read/Work
+     boundary, this is a distinct, separate view from the reading flow
+     above, opened only via the small "View table" affordance on an
+     entry's own card. Sortable (click a header), filterable (a live
+     search across every cell), and exports to a real, standalone CSV
+     file — per the brief's own acceptance criteria for this artifact
+     type: "confirm the working view renders an actual interactive grid
+     (not a static re-render of the markdown), and CSV export produces a
+     file that opens correctly with the same rows/columns." -->
+<div id="tableArtifactModal" onclick="if(event.target===this)closeTableArtifact()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#F5F3EE;width:min(880px,92vw);height:80vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;gap:12px;">
+      <input id="tableArtifactFilter" type="text" placeholder="Filter rows..." oninput="renderTableArtifactBody()" style="flex:1;font-size:13px;padding:6px 10px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>
+      <button onclick="exportTableArtifactCsv()" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export CSV</button>
+      <button onclick="closeTableArtifact()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+    </div>
+    <div id="tableArtifactBody" style="flex:1;overflow:auto;padding:0;"></div>
   </div>
 </div>
 

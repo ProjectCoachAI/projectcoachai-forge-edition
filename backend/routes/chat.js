@@ -545,12 +545,22 @@ router.post('/', requireAuth, async (req, res) => {
         // any diary entry id directly. A session with no linked entry at
         // all (a genuine, standalone Forge chat) correctly resolves to
         // null and skips this entirely.
+        //
+        // detectAndStoreArtifacts explicitly chained after
+        // computeAndStoreUnifiedContent completes, not fired in
+        // parallel — see the same reasoning at this pipeline's other
+        // call sites in diary.js. This is exactly the trigger point the
+        // brief itself warned about: without this, a table built
+        // collaboratively in a Forge continuation would silently never
+        // reach artifact detection at all.
         db.getDiaryEntryIdByChatSessionId(sid, req.userEmail).then(function(linkedEntryId) {
             if (linkedEntryId) {
-                return db.computeAndStoreUnifiedContent(linkedEntryId, req.userEmail);
+                return db.computeAndStoreUnifiedContent(linkedEntryId, req.userEmail).then(function() {
+                    return db.detectAndStoreArtifacts(linkedEntryId, req.userEmail);
+                });
             }
         }).catch(function(e) {
-            console.warn('[Chat] computeAndStoreUnifiedContent lookup/update failed:', e.message);
+            console.warn('[Chat] Artifacts pipeline failed:', e.message);
         });
 
         if (isStreaming) {

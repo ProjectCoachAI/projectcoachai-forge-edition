@@ -893,6 +893,89 @@ async function getDiaryEntryIdByChatSessionId(sessionId, userEmail) {
   return r.rows.length ? r.rows[0].id : null;
 }
 
+// ── Artifacts pipeline (Table, first of the brief's own build order) ────────
+// Architecture per the brief: detect → structure → render, once, at
+// save/sync time — never recomputed on page load. Generic-first: this
+// operates on unified_content directly, which is already one common,
+// plain-text representation regardless of which AI provider the answer
+// came from, so there's no per-provider branching needed here at all,
+// same reasoning already applied to getAttachments() elsewhere.
+//
+// Deliberately pure, synchronous, and DB-free — makes this directly
+// unit-testable in isolation (confirmed via direct simulation against
+// seven separate cases before ever wiring this into a live route: a
+// basic table, two separate tables in one entry, alignment markers in
+// the separator row, no table at all, a malformed row with an
+// unescaped pipe breaking its own cell count, a header row with no
+// separator row at all, and a table starting at position 0) — the
+// database-touching wrapper (detectAndStoreArtifacts below) is a thin,
+// separate layer on top of this.
+function isPipeRow(line) {
+  const t = (line || '').trim();
+  return t.startsWith('|') && t.endsWith('|') && t.length > 1;
+}
+function isTableSeparatorRow(line) {
+  const t = (line || '').trim();
+  if (!isPipeRow(t)) return false;
+  const cells = t.slice(1, -1).split('|').map(c => c.trim());
+  return cells.length > 0 && cells.every(c => /^:?-+:?$/.test(c));
+}
+function parsePipeRow(line) {
+  return line.trim().slice(1, -1).split('|').map(c => c.trim());
+}
+function detectTableArtifacts(text) {
+  const artifacts = [];
+  const lines = (text || '').split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    if (isPipeRow(lines[i]) && i + 1 < lines.length && isTableSeparatorRow(lines[i + 1])) {
+      const headers = parsePipeRow(lines[i]);
+      const rows = [];
+      let j = i + 2;
+      while (j < lines.length && isPipeRow(lines[j])) {
+        const cells = parsePipeRow(lines[j]);
+        // Defensive: a row whose own cell count doesn't match the
+        // header's own count (e.g. a genuinely unescaped '|' inside a
+        // cell value, valid markdown table syntax always requires
+        // escaping this) would otherwise misalign every column after
+        // it in whatever grid renders this — skipped rather than
+        // included as a malformed row.
+        if (cells.length === headers.length) rows.push(cells);
+        j++;
+      }
+      if (rows.length) artifacts.push({ type: 'table', headers, rows, position: i });
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  return artifacts;
+}
+
+// Runs the full detect → structure pipeline (Table only, for now — the
+// brief's own build order puts Citations/Checklist/etc. after this,
+// each shipped and stabilized before the next begins) against an
+// entry's own unified_content, and persists the result. Depends
+// directly on unified_content already being computed and current — see
+// this function's own call sites, all of which run it AFTER
+// computeAndStoreUnifiedContent has already completed for the same
+// entry, never before or independently of it.
+//
+// Never throws — same reasoning as computeAndStoreUnifiedContent's own
+// comment: this is enrichment on top of an already-successful save/
+// sync/chat operation, not a dependency of it.
+async function detectAndStoreArtifacts(entryId, userEmail) {
+  try {
+    const entryRes = await query('SELECT unified_content FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
+    if (!entryRes.rows.length) return;
+    const unifiedContent = entryRes.rows[0].unified_content || '';
+    const artifacts = detectTableArtifacts(unifiedContent);
+    await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
+  } catch (e) {
+    console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);
+  }
+}
+
 async function listChatSessions(userEmail, limit = 20) {
   const r = await query(
     'SELECT session_id, model, title, created_at, updated_at FROM chat_sessions WHERE user_email=$1 ORDER BY updated_at DESC LIMIT $2',
@@ -1016,7 +1099,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectAndStoreArtifacts };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
@@ -1056,6 +1139,17 @@ async function migrateDiary() {
     // read from, per the brief's own explicit requirement — not the
     // native-only content column alone.
     "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS unified_content TEXT",
+    // Artifacts implementation brief's own storage spec: "add
+    // entry.artifacts — a JSON column/table of detected structured
+    // objects, each tagged with type and position in the source text —
+    // stored alongside the existing raw content, not replacing it."
+    // JSONB specifically (not TEXT) so a future query could filter by
+    // artifact type directly if ever needed, without having to parse
+    // every row's own JSON first. Computed once, at save/sync time (see
+    // detectAndStoreArtifacts in this file), never recomputed on page
+    // load — same principle, same trigger points, as unified_content
+    // above, which this itself depends on as its own input.
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS artifacts JSONB",
   ];
   for (const sql of migrations) {
     try { await query(sql); } catch(e) { console.warn('[Diary migration]', e.message); }
