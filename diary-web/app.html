@@ -1598,6 +1598,31 @@ function renderEntryCard(e) {
           }).join('') +
         '</div>'
       : '') +
+      // Citations (second of the brief's own build order). Explicit,
+      // direct product decision: kept the EXISTING per-turn "Sources"
+      // widget (extractSourcesBlock, rendered inside entry-content
+      // above) completely untouched — it already works, and this is
+      // additive on top of it, not a replacement, same lower-risk
+      // pattern already used for Table. Per the brief's own note that
+      // this artifact type is "Read-view-appropriate" (unlike Table),
+      // rendered directly inline here rather than behind a separate
+      // modal — this is the one, single, deduplicated list of every
+      // unique source cited anywhere across the entire entry (computed
+      // server-side, deduplicated by URL, per the brief's own explicit
+      // acceptance criterion), shown once at the end, rather than
+      // scattered, possibly-repeated per-turn.
+      ((function() {
+        var citationArt = (_eartifacts || []).filter(function(a) { return a.type === 'citations'; })[0];
+        if (!citationArt || !citationArt.sources || !citationArt.sources.length) return '';
+        return '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+          '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Sources (' + citationArt.sources.length + ')</div>' +
+          '<ol style="margin:0;padding-left:18px;font-size:12px;color:#6B655C;line-height:1.8;">' +
+          citationArt.sources.map(function(s) {
+            return '<li><a href="' + escHtml(s.url) + '" target="_blank" rel="noopener" style="color:#C17D3C;text-decoration:none;">' + escHtml(s.title) + '</a></li>';
+          }).join('') +
+          '</ol>' +
+        '</div>';
+      })()) +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
         // existing entry saved before native hosting existed) or a

@@ -952,9 +952,58 @@ function detectTableArtifacts(text) {
   return artifacts;
 }
 
-// Runs the full detect → structure pipeline (Table only, for now — the
-// brief's own build order puts Citations/Checklist/etc. after this,
-// each shipped and stabilized before the next begins) against an
+// Citations artifact (second of the brief's own build order). Confirmed
+// via direct code investigation, not assumed, that there are genuinely
+// TWO distinct citation formats that actually end up in a saved
+// entry's own unified_content — not one:
+//
+// 1. A "Sources:" footer block, appended per-turn by the extension's
+//    own stripCitations() (diary-content.js) whenever a provider shows
+//    real sources: "**Sources:**\n1. [Label](url)\n2. ...". Multiple
+//    such footers can appear across multiple turns in one entry.
+// 2. PUA-encoded inline citations (Claude's own capture path,
+//    diary-content.js's own stripCitations()): pill/title/url/favicon
+//    packed between \uE000-\uE004 marker characters, which stay in this
+//    raw, encoded form in the SAVED text — they're only ever converted
+//    into a real, clickable pill at DISPLAY time, by forge-api.js's own
+//    renderer (confirmed directly there, same group shape reused here).
+//
+// Deduplicates by URL across the entire entry, per the brief's own
+// explicit acceptance criterion ("an entry with duplicate citations
+// across multiple turns shows each unique source once") — the FIRST
+// occurrence of a given URL wins its title and its sequential number;
+// a later, duplicate citation of the same URL is dropped rather than
+// creating a second entry for it.
+function detectCitationArtifacts(text) {
+  const sources = [];
+  const seenUrls = {};
+  function addSource(title, url) {
+    if (!url || seenUrls.hasOwnProperty(url)) return;
+    seenUrls[url] = true;
+    sources.push({ number: sources.length + 1, url, title: title || url });
+  }
+
+  const footerRe = /\*\*Sources:\*\*\n((?:\d+\. \[[^\]]*\]\([^)]+\)\n?)+)/g;
+  let footerMatch;
+  while ((footerMatch = footerRe.exec(text)) !== null) {
+    footerMatch[1].split('\n').filter(l => l.trim()).forEach(line => {
+      const lineMatch = line.match(/^\d+\. \[([^\]]*)\]\(([^)]+)\)/);
+      if (lineMatch) addSource(lineMatch[1], lineMatch[2]);
+    });
+  }
+
+  const puaRe = /\uE000([^\uE003]*)\uE003([^\uE001]*)\uE001([^\uE004]*)\uE004([^\uE002]*)\uE002/g;
+  let puaMatch;
+  while ((puaMatch = puaRe.exec(text)) !== null) {
+    addSource(puaMatch[2] || puaMatch[1], puaMatch[3]);
+  }
+
+  return sources.length ? [{ type: 'citations', sources, position: 0 }] : [];
+}
+
+// Runs the full detect → structure pipeline (Table and Citations, per
+// the brief's own build order — Checklist/Structured facts/Code/
+// Images/Reasoning trace remain later, separate stages) against an
 // entry's own unified_content, and persists the result. Depends
 // directly on unified_content already being computed and current — see
 // this function's own call sites, all of which run it AFTER
@@ -969,7 +1018,7 @@ async function detectAndStoreArtifacts(entryId, userEmail) {
     const entryRes = await query('SELECT unified_content FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
     if (!entryRes.rows.length) return;
     const unifiedContent = entryRes.rows[0].unified_content || '';
-    const artifacts = detectTableArtifacts(unifiedContent);
+    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent));
     await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
   } catch (e) {
     console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);
@@ -1099,7 +1148,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectAndStoreArtifacts };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectAndStoreArtifacts };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
