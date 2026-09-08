@@ -1100,6 +1100,79 @@ router.post('/backfill-embeddings', requireAuth, async (req, res) => {
   }
 });
 
+// ── POST /api/diary/backfill-artifacts ───────────────────────────────────────
+// Same established pattern as backfill-embeddings above, adapted for the
+// Artifacts pipeline. Confirmed as a real, genuine gap when a user
+// directly reported "View table"/"Sources (N)" missing on an entry —
+// investigated and confirmed this wasn't a bug at all: the detection
+// pipeline (computeAndStoreUnifiedContent + detectAndStoreArtifacts)
+// only ever runs at save/sync/continuation time, per the brief's own
+// explicit architecture ("processing runs once at save time... never
+// recomputed on page load"). Any entry saved before that pipeline
+// existed, and never touched again since, genuinely has both
+// unified_content and artifacts still NULL — nothing broken, simply
+// never triggered. The brief itself directly anticipates exactly this:
+// "improving extraction quality later means re-running the pipeline as
+// a background job against existing entries, not touching live view
+// code" — this is that job.
+//
+// Targets content IS NOT NULL AND artifacts IS NULL specifically — an
+// entry with no content at all could never have any artifacts to
+// detect anyway, so there's no reason to touch it here. Runs BOTH
+// computeAndStoreUnifiedContent and detectAndStoreArtifacts per entry,
+// not just the latter — an old, untouched entry is equally likely to
+// have unified_content still NULL too, and detectAndStoreArtifacts
+// itself depends directly on unified_content already being current.
+router.post('/backfill-artifacts', requireAuth, async (req, res) => {
+  try {
+    const countR = await db.query(
+      `SELECT COUNT(*) AS total FROM diary_entries WHERE user_email = $1 AND content IS NOT NULL AND artifacts IS NULL`,
+      [req.userEmail]
+    );
+    const total = parseInt(countR.rows[0]?.total || 0);
+    if (total === 0) {
+      return res.json({ success: true, message: 'Nothing to backfill — every entry with content already has artifacts computed.', queued: 0 });
+    }
+    res.json({ success: true, message: `Backfill started for ${total} entries. This runs in the background.`, queued: total });
+
+    (async () => {
+      const BATCH_SIZE = 50;
+      // Same hard safety cap and reasoning as backfill-embeddings above
+      // — prevents a true infinite loop if a specific row's own
+      // artifacts write consistently fails for some reason, which would
+      // otherwise leave that row permanently stuck at artifacts IS NULL
+      // and re-fetched on every iteration forever.
+      const MAX_ITERATIONS = 400;
+      let processed = 0;
+      let iterations = 0;
+      try {
+        while (iterations < MAX_ITERATIONS) {
+          iterations++;
+          const batchR = await db.query(
+            `SELECT id FROM diary_entries WHERE user_email = $1 AND content IS NOT NULL AND artifacts IS NULL ORDER BY id LIMIT $2`,
+            [req.userEmail, BATCH_SIZE]
+          );
+          if (!batchR.rows.length) break;
+          for (const row of batchR.rows) {
+            await db.computeAndStoreUnifiedContent(row.id, req.userEmail);
+            await db.detectAndStoreArtifacts(row.id, req.userEmail);
+          }
+          processed += batchR.rows.length;
+        }
+        if (iterations >= MAX_ITERATIONS) {
+          console.warn('[Diary] Artifacts backfill hit the safety iteration cap — some entries may remain unprocessed. Re-run to continue.');
+        }
+        console.log(`[Diary] Artifacts backfill complete for ${req.userEmail}: ${processed} entries processed`);
+      } catch(e) {
+        console.warn('[Diary] Artifacts backfill error:', e.message, '| processed before failure:', processed);
+      }
+    })();
+  } catch(e) {
+    console.error('[Diary] Artifacts backfill trigger error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not start backfill' });
+  }
+});
+
 // ── POST /api/diary — save entry with auto-categorization ────────────────────
 router.post('/', requireAuth, async (req, res) => {
   try {
