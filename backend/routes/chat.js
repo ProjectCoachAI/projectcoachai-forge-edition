@@ -556,7 +556,7 @@ router.post('/', requireAuth, async (req, res) => {
         db.getDiaryEntryIdByChatSessionId(sid, req.userEmail).then(function(linkedEntryId) {
             if (linkedEntryId) {
                 return db.computeAndStoreUnifiedContent(linkedEntryId, req.userEmail).then(function() {
-                    return db.detectAndStoreArtifacts(linkedEntryId, req.userEmail);
+                    return db.detectAndStoreArtifacts(linkedEntryId, req.userEmail, cmp.callClaudeHaikuAPI, process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY);
                 });
             }
         }).catch(function(e) {

@@ -1001,8 +1001,115 @@ function detectCitationArtifacts(text) {
   return sources.length ? [{ type: 'citations', sources, position: 0 }] : [];
 }
 
-// Runs the full detect → structure pipeline (Table and Citations, per
-// the brief's own build order — Checklist/Structured facts/Code/
+// Checklist artifact (third of the brief's own build order). Unlike
+// Table/Citations (pure, deterministic pattern-matching), this is the
+// one detection step the brief itself explicitly calls out as needing
+// real semantic judgment — distinguishing "here are three reasons"
+// from "here are three things you must do" isn't something a regex can
+// reliably do. Confirmed via direct simulation before wiring in: the
+// deterministic candidate-finding step (below) and the LLM-based
+// classification step were each tested separately, including the
+// classifier's own prompt/response-parsing against a clean response, a
+// markdown-code-fence-wrapped response (a real, common LLM quirk), and
+// deliberately malformed/garbage output (confirmed to safely fall back
+// to zero detected checklists rather than throwing or producing
+// incorrect data).
+//
+// callClaudeHaikuAPI and apiKey are passed in as parameters rather than
+// this file requiring compare.js directly — avoids db.js (a low-level
+// data module) reaching into a route module, and avoids executing
+// compare.js's own router/route-definition setup just to reach one
+// standalone utility function within it. Callers (diary.js/chat.js)
+// already require compare.js themselves for other reasons.
+function findChecklistCandidates(text) {
+  function isListLine(line) { return /^[ \t]*[-*•] (.+)/.test(line) || /^[ \t]*\d+\. (.+)/.test(line); }
+  function itemText(line) {
+    const m = line.match(/^[ \t]*[-*•] (.+)/) || line.match(/^[ \t]*\d+\. (.+)/);
+    return m ? m[1].trim() : '';
+  }
+  const candidates = [];
+  const lines = (text || '').split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    if (isListLine(lines[i])) {
+      const items = [];
+      const position = i;
+      while (i < lines.length && isListLine(lines[i])) { items.push(itemText(lines[i])); i++; }
+      // A single bullet on its own isn't meaningfully a "checklist" —
+      // not worth spending a classification call on.
+      if (items.length >= 2) candidates.push({ items, position });
+    } else {
+      i++;
+    }
+  }
+  return candidates;
+}
+
+function parseChecklistClassification(responseText, expectedLength) {
+  try {
+    const cleaned = responseText.trim().replace(/^```json\n?|```$/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed) || parsed.length !== expectedLength) return null;
+    if (!parsed.every(v => typeof v === 'boolean')) return null;
+    return parsed;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Merges freshly re-detected checklist item TEXT against whatever
+// checklist artifact already existed before this re-detection,
+// carrying over each matching item's own "done" state — a genuinely
+// new item (no existing text match) defaults to not-done. This is the
+// direct fix for a real risk confirmed before building any of this:
+// detectAndStoreArtifacts overwrites the ENTIRE artifacts column on
+// every run, so without this merge step, re-syncing or continuing an
+// entry after someone had already checked items off would silently
+// wipe that progress — directly violating the brief's own acceptance
+// criterion ("persists across reload and across sessions"). Matches by
+// exact item text specifically, not position/index — the safer choice
+// given re-detection could plausibly reorder or partially change a
+// list's own content between runs.
+function mergeChecklistState(existingArtifacts, newItemTexts) {
+  const existingChecklist = (existingArtifacts || []).find(a => a.type === 'checklist');
+  const existingDoneByText = {};
+  if (existingChecklist) {
+    existingChecklist.items.forEach(item => { existingDoneByText[item.text] = item.done; });
+  }
+  return newItemTexts.map(text => ({
+    text,
+    done: existingDoneByText.hasOwnProperty(text) ? existingDoneByText[text] : false
+  }));
+}
+
+async function detectChecklistArtifacts(text, existingArtifacts, callClaudeHaikuAPI, apiKey) {
+  const candidates = findChecklistCandidates(text);
+  if (!candidates.length || !callClaudeHaikuAPI || !apiKey) return [];
+  try {
+    const prompt = 'You are classifying lists found within a saved AI conversation. For each numbered list below, determine whether it is genuinely a checklist of discrete, actionable requirements or tasks (something a person would "do" or "complete") — as opposed to a list of reasons, examples, facts, or explanatory points (something a person would just "read").\n\n' +
+      candidates.map((c, i) => 'List ' + (i + 1) + ':\n' + c.items.map(item => '- ' + item).join('\n')).join('\n\n') +
+      '\n\nRespond ONLY with a JSON array of booleans, one per list, in order (e.g. [true,false]). No other text.';
+    const response = await callClaudeHaikuAPI(prompt, apiKey, 200);
+    const classifications = parseChecklistClassification(response, candidates.length);
+    // A malformed/unparseable classification response is treated the
+    // same as "nothing classified as a checklist" — never falls back to
+    // guessing every candidate is (or isn't) one.
+    if (!classifications) return [];
+    const checklistCandidates = candidates.filter((c, i) => classifications[i]);
+    if (!checklistCandidates.length) return [];
+    // Brief's own storage note (same reasoning as Citations): one,
+    // single checklist artifact per entry, combining every genuinely-
+    // classified list found anywhere in it — not one artifact per list.
+    const allItems = checklistCandidates.reduce((acc, c) => acc.concat(c.items), []);
+    return [{ type: 'checklist', items: mergeChecklistState(existingArtifacts, allItems), position: checklistCandidates[0].position }];
+  } catch (e) {
+    console.warn('[Diary] detectChecklistArtifacts classification failed, skipping:', e.message);
+    return [];
+  }
+}
+
+// Runs the full detect → structure pipeline (Table, Citations, and
+// Checklist, per the brief's own build order — Structured facts/Code/
 // Images/Reasoning trace remain later, separate stages) against an
 // entry's own unified_content, and persists the result. Depends
 // directly on unified_content already being computed and current — see
@@ -1010,15 +1117,21 @@ function detectCitationArtifacts(text) {
 // computeAndStoreUnifiedContent has already completed for the same
 // entry, never before or independently of it.
 //
+// callClaudeHaikuAPI/apiKey are optional — omitting them (or a
+// classification failure) simply skips Checklist detection for that
+// run, never blocks Table/Citations from being detected and stored.
+//
 // Never throws — same reasoning as computeAndStoreUnifiedContent's own
 // comment: this is enrichment on top of an already-successful save/
 // sync/chat operation, not a dependency of it.
-async function detectAndStoreArtifacts(entryId, userEmail) {
+async function detectAndStoreArtifacts(entryId, userEmail, callClaudeHaikuAPI, apiKey) {
   try {
-    const entryRes = await query('SELECT unified_content FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
+    const entryRes = await query('SELECT unified_content, artifacts FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
     if (!entryRes.rows.length) return;
     const unifiedContent = entryRes.rows[0].unified_content || '';
-    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent));
+    const existingArtifacts = entryRes.rows[0].artifacts || [];
+    const checklistArtifacts = await detectChecklistArtifacts(unifiedContent, existingArtifacts, callClaudeHaikuAPI, apiKey);
+    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts);
     await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
   } catch (e) {
     console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);
@@ -1148,7 +1261,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectAndStoreArtifacts };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectAndStoreArtifacts };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

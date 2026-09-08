@@ -1624,6 +1624,32 @@ function renderEntryCard(e) {
           '</ol>' +
         '</div>';
       })()) +
+      // Checklist (third of the brief's own build order). Per the
+      // brief's own explicit render spec ("interactive checkboxes"),
+      // rendered directly inline here — same Read-view-appropriate
+      // placement as Citations above, not a separate modal like Table.
+      // Genuinely new here: this is the first artifact type needing
+      // writable, persisted state (toggleChecklistItem below), not just
+      // read-only derived data. Item text passed through the same
+      // single-quote-escaping pattern already used elsewhere in this
+      // file for inline onclick/onchange handlers, since a checklist
+      // item's own text could genuinely contain an apostrophe.
+      ((function() {
+        var checklistArt = (_eartifacts || []).filter(function(a) { return a.type === 'checklist'; })[0];
+        if (!checklistArt || !checklistArt.items || !checklistArt.items.length) return '';
+        return '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+          '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Checklist (' + checklistArt.items.length + ')</div>' +
+          '<div style="display:flex;flex-direction:column;gap:6px;">' +
+          checklistArt.items.map(function(item) {
+            var escapedText = String(item.text).replace(/'/g, "\\'");
+            return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:' + (item.done ? '#9E9890' : '#4A4035') + ';text-decoration:' + (item.done ? 'line-through' : 'none') + ';cursor:pointer;">' +
+              '<input type="checkbox" ' + (item.done ? 'checked' : '') + ' onchange="toggleChecklistItem(' + e.id + ',\'' + escapedText + '\',this.checked,this)" style="margin-top:2px;flex-shrink:0;">' +
+              '<span>' + escHtml(item.text) + '</span>' +
+            '</label>';
+          }).join('') +
+          '</div>' +
+        '</div>';
+      })()) +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(img) {
         // NOTE: images can now be either a plain URL string (every
         // existing entry saved before native hosting existed) or a
@@ -2835,6 +2861,52 @@ function exportTableArtifactCsv() {
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 }
 window.exportTableArtifactCsv = exportTableArtifactCsv;
+
+// ── Checklist item toggle ─────────────────────────────────────────────────
+// Genuinely new interaction for this Artifacts work — the first
+// writable, persisted piece of artifact state (Table/Citations are both
+// read-only). Optimistic by design: the checkbox's own visual state
+// already reflects the click immediately via the browser's native
+// checkbox behavior, before this handler even runs — this only needs
+// to (1) persist it server-side, and (2) keep the in-memory entry data
+// consistent too, so a later re-render of the same card (e.g. a
+// search/filter change re-drawing the list) doesn't silently revert the
+// checkbox back to unchecked using stale, pre-toggle data. Reverts the
+// checkbox back on failure specifically, since an unpersisted "checked"
+// state that silently doesn't survive a reload would be a real,
+// confusing regression against the brief's own explicit acceptance
+// criterion here.
+async function toggleChecklistItem(entryId, text, done, checkboxEl) {
+  try {
+    var r = await Forge.request('PATCH', '/api/diary/' + entryId + '/checklist-item', { text: text, done: done });
+    if (!r.ok) throw new Error(r.data && r.data.error || 'Failed');
+    // Keep in-memory entry data consistent with the just-persisted change.
+    var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+    if (entry) {
+      var artifacts = [];
+      try { artifacts = (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch(_e) {}
+      var checklist = artifacts.filter(function(a) { return a.type === 'checklist'; })[0];
+      if (checklist) {
+        var item = checklist.items.filter(function(i) { return i.text === text; })[0];
+        if (item) item.done = done;
+        entry.artifacts = artifacts;
+      }
+    }
+    // Reflects the new done state visually (label color/strikethrough)
+    // without a full card re-render — same targeted-DOM-update
+    // preference already used elsewhere in this file over a blanket
+    // refreshCurrentView() for a small, local state change.
+    if (checkboxEl && checkboxEl.parentElement) {
+      checkboxEl.parentElement.style.color = done ? '#9E9890' : '#4A4035';
+      checkboxEl.parentElement.style.textDecoration = done ? 'line-through' : 'none';
+    }
+  } catch (e) {
+    console.warn('[Diary] Failed to save checklist item state:', e.message);
+    if (checkboxEl) checkboxEl.checked = !done;
+    showTopToast('Could not save — please try again.', true);
+  }
+}
+window.toggleChecklistItem = toggleChecklistItem;
 
 var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
 // .docx/.xlsx attachments here carry genuine markdown in their own

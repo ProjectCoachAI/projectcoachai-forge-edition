@@ -6,6 +6,11 @@ const https   = require('https');
 const { requireAuth } = require('../middleware/auth');
 const db = require('../lib/db');
 const attachmentStorage = require('../lib/attachmentStorage');
+// callClaudeHaikuAPI needed for the Checklist artifact's own semantic
+// classification step — see detectChecklistArtifacts's own comment in
+// db.js for why this is passed in as a parameter rather than db.js
+// requiring compare.js directly.
+const { callClaudeHaikuAPI } = require('./compare');
 
 // ── Auto-categorization via Claude Haiku ─────────────────────────────────────
 const CATEGORIES = [
@@ -1155,7 +1160,7 @@ router.post('/backfill-artifacts', requireAuth, async (req, res) => {
           if (!batchR.rows.length) break;
           for (const row of batchR.rows) {
             await db.computeAndStoreUnifiedContent(row.id, req.userEmail);
-            await db.detectAndStoreArtifacts(row.id, req.userEmail);
+            await db.detectAndStoreArtifacts(row.id, req.userEmail, callClaudeHaikuAPI, process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY);
           }
           processed += batchR.rows.length;
         }
@@ -1250,7 +1255,7 @@ router.post('/', requireAuth, async (req, res) => {
     // being written, and running it concurrently risks reading a stale,
     // pre-update value.
     db.computeAndStoreUnifiedContent(r.rows[0].id, req.userEmail).then(function() {
-      return db.detectAndStoreArtifacts(r.rows[0].id, req.userEmail);
+      return db.detectAndStoreArtifacts(r.rows[0].id, req.userEmail, callClaudeHaikuAPI, process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY);
     }).catch(function(e) {
       console.warn('[Diary] Artifacts pipeline failed:', e.message);
     });
@@ -1351,6 +1356,42 @@ router.get('/by-url', requireAuth, async (req, res) => {
   } catch(e) {
     console.error('[Diary] by-url error:', e.message);
     res.json({ success: true, entry: null });
+  }
+});
+
+// ── PATCH /api/diary/:id/checklist-item — toggle a checklist item's own
+// done state ──────────────────────────────────────────────────────────────
+// Genuinely new kind of interaction for this Artifacts work — Table and
+// Citations are both read-only, derived-from-content data; this is the
+// first artifact type needing writable, persisted state, per the
+// brief's own explicit requirement ("checking an item off should
+// survive reload" / "persists across reload and across sessions").
+// Identifies the specific item by its own TEXT (not array index) — same
+// matching approach already used by mergeChecklistState's own
+// re-detection logic in db.js, and the safer choice given the
+// checklist artifact as a whole could genuinely be recomputed (though
+// with state preserved) between when the client fetched it and when
+// this request arrives.
+router.patch('/:id/checklist-item', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { text, done } = req.body;
+    if (typeof text !== 'string' || typeof done !== 'boolean') {
+      return res.status(400).json({ success: false, error: 'text (string) and done (boolean) are required.' });
+    }
+    const entryRes = await db.query('SELECT artifacts FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+    if (!entryRes.rows.length) return res.status(404).json({ success: false, error: 'Entry not found.' });
+    const artifacts = entryRes.rows[0].artifacts || [];
+    const checklist = artifacts.find(a => a.type === 'checklist');
+    if (!checklist) return res.status(404).json({ success: false, error: 'No checklist found on this entry.' });
+    const item = checklist.items.find(i => i.text === text);
+    if (!item) return res.status(404).json({ success: false, error: 'That checklist item was not found — it may have changed since this page loaded.' });
+    item.done = done;
+    await db.query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), id, req.userEmail]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[Diary] checklist-item toggle failed:', e.message);
+    res.status(500).json({ success: false, error: 'Could not update checklist item.' });
   }
 });
 
@@ -1719,7 +1760,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // reasoning at this pipeline's other call site in this file.
     if (content !== undefined) {
       db.computeAndStoreUnifiedContent(id, req.userEmail).then(function() {
-        return db.detectAndStoreArtifacts(id, req.userEmail);
+        return db.detectAndStoreArtifacts(id, req.userEmail, callClaudeHaikuAPI, process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY);
       }).catch(function(e) {
         console.warn('[Diary] Artifacts pipeline failed:', e.message);
       });
