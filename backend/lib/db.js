@@ -74,6 +74,37 @@ CREATE TABLE IF NOT EXISTS synthesis_usage (
   PRIMARY KEY (user_email, year_month)
 );
 
+-- Read-Aloud usage metering (revised brief: cloud TTS from v1) — same
+-- shape as synthesis_usage above, kept as its own, separate table
+-- rather than sharing that one, since synthesis_usage already belongs
+-- to a different, existing feature and sharing a counter would
+-- incorrectly combine two unrelated limits into one.
+CREATE TABLE IF NOT EXISTS read_aloud_usage (
+  user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  year_month  TEXT NOT NULL,
+  used        INTEGER DEFAULT 0,
+  PRIMARY KEY (user_email, year_month)
+);
+
+-- TTS audio cache — the brief's own core, required cost-control
+-- mechanism, not a later optimization. Keyed by (entry_id,
+-- content_hash) specifically, not just entry_id: a genuine content
+-- change (a new sync, a summary regeneration) naturally produces a
+-- different hash and correctly triggers fresh generation, while
+-- replaying the same, unchanged content always resolves to the same
+-- hash and reuses the already-generated audio_url, never triggering a
+-- second paid API call. audio_url points into the same R2 bucket
+-- already used for attachment/image storage (via attachmentStorage.js),
+-- not a new storage mechanism.
+CREATE TABLE IF NOT EXISTS tts_cache (
+  id            SERIAL PRIMARY KEY,
+  entry_id      INTEGER NOT NULL REFERENCES diary_entries(id) ON DELETE CASCADE,
+  content_hash  TEXT NOT NULL,
+  audio_url     TEXT NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(entry_id, content_hash)
+);
+
 -- Continue-in-Forge usage (Diary Priority 9) — see
 -- checkAndIncrementChatContinueUsage's own comment for the full,
 -- two-axis design (entries/month, generous and user-facing; messages/
@@ -577,6 +608,45 @@ async function getUsage(userEmail) {
   const limit = LIMITS[tier] ?? null;
   const used  = r.rows[0]?.used || 0;
   return { used, limit, remaining: limit!==null ? Math.max(0,limit-used) : null, tier };
+}
+
+// Read-Aloud usage metering (revised brief: cloud TTS from v1). Since
+// there's no lesser, free "browser-native" tier anymore, the free/Pro
+// line moves to usage volume instead of quality, per the revised
+// brief's own explicit framing — same shape as checkAndIncrementUsage
+// above, own separate table (read_aloud_usage), own separate limit key.
+// LIMIT_STARTER is a deliberately-flagged, adjustable starting point —
+// the brief itself says to pick "a reasonable starting point... watch,
+// adjust" rather than treat this as a final, precise number; 5/month
+// was the number leaning-toward-confirmed in discussion before the
+// provider-choice investigation took over, chosen specifically to let
+// someone genuinely feel the value once or twice, not a token gesture.
+const READ_ALOUD_LIMIT_STARTER = 5;
+async function checkAndIncrementReadAloudUsage(userEmail) {
+  const LIMITS = {
+    starter: READ_ALOUD_LIMIT_STARTER, lite: READ_ALOUD_LIMIT_STARTER * 3, creator:-1, pro:-1,
+    professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
+  };
+  const user  = await getUser(userEmail);
+  const limit = user ? (LIMITS[user.tier||'starter'] ?? READ_ALOUD_LIMIT_STARTER) : READ_ALOUD_LIMIT_STARTER;
+  const ym    = yearMonth();
+  const r     = await query('SELECT used FROM read_aloud_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
+  const used  = r.rows[0]?.used || 0;
+  if (limit !== null && limit !== -1 && used >= limit) return { allowed:false, used, limit };
+  await query(`INSERT INTO read_aloud_usage(user_email,year_month,used) VALUES($1,$2,1)
+    ON CONFLICT(user_email,year_month) DO UPDATE SET used=read_aloud_usage.used+1`,
+    [userEmail, ym]);
+  return { allowed:true, used:used+1, limit };
+}
+async function getReadAloudUsage(userEmail) {
+  const LIMITS = { starter: READ_ALOUD_LIMIT_STARTER, lite: READ_ALOUD_LIMIT_STARTER * 3, creator:-1, pro:-1, professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1 };
+  const ym   = yearMonth();
+  const r    = await query('SELECT used FROM read_aloud_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
+  const user = await getUser(userEmail);
+  const tier = user?.tier || 'starter';
+  const limit = LIMITS[tier] ?? null;
+  const used  = r.rows[0]?.used || 0;
+  return { used, limit, remaining: limit!==null && limit!==-1 ? Math.max(0,limit-used) : null, tier };
 }
 
 // ── Continue-in-Forge usage (Diary Priority 9) ──────────────────────────────
@@ -1460,7 +1530,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndIncrementReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

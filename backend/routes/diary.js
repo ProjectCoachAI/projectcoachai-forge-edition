@@ -6,6 +6,7 @@ const https   = require('https');
 const { requireAuth } = require('../middleware/auth');
 const db = require('../lib/db');
 const attachmentStorage = require('../lib/attachmentStorage');
+const readAloudTts = require('../lib/readAloudTts');
 // callClaudeHaikuAPI needed for the Checklist artifact's own semantic
 // classification step — see detectChecklistArtifacts's own comment in
 // db.js for why this is passed in as a parameter rather than db.js
@@ -1395,7 +1396,76 @@ router.patch('/:id/checklist-item', requireAuth, async (req, res) => {
   }
 });
 
-// ── PATCH /api/diary/:id — update content of existing entry ──────────────────
+// ── POST /api/diary/:id/read-aloud — generate or reuse cached TTS audio ─────
+// Revised implementation brief: cloud TTS from v1, not a later,
+// paid-tier fast-follow. Content-cleaning happens on the frontend
+// (cleanTextForSpeech — already-existing, already-tested infrastructure
+// from the original browser-native build, reused here rather than
+// rebuilt server-side) — this route receives already-cleaned text and
+// is only responsible for: (1) usage metering, (2) the cache
+// lookup/generation/store cycle, per the brief's own explicit framing
+// of caching as core v1 scope, not a later optimization.
+//
+// Free/Pro metering moves to usage volume, not quality, since there's
+// no longer a lesser, free "browser-native" tier to distinguish from —
+// per the revised brief's own explicit reasoning, mirroring how
+// Continue-in-Forge's own message caps already work.
+router.post('/:id/read-aloud', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { text } = req.body;
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ success: false, error: 'text (non-empty string) is required.' });
+    }
+
+    const entryRes = await db.query('SELECT id FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+    if (!entryRes.rows.length) return res.status(404).json({ success: false, error: 'Entry not found.' });
+
+    const contentHash = readAloudTts.hashContent(text);
+
+    // Cache check FIRST, before touching usage metering at all — a
+    // cache hit is a free replay, not a new use of the feature, per the
+    // brief's own explicit acceptance criterion ("playing the same,
+    // unchanged entry a second time does not trigger a second TTS API
+    // call"). Metering only applies to genuine, new generations.
+    const cacheRes = await db.query('SELECT audio_url FROM tts_cache WHERE entry_id=$1 AND content_hash=$2', [id, contentHash]);
+    if (cacheRes.rows.length) {
+      return res.json({ success: true, audioUrl: cacheRes.rows[0].audio_url, cached: true });
+    }
+
+    const usage = await db.checkAndIncrementReadAloudUsage(req.userEmail);
+    if (!usage.allowed) {
+      return res.status(403).json({ success: false, error: 'Monthly Listen limit reached.', limitReached: true, used: usage.used, limit: usage.limit });
+    }
+
+    let audioBuffer;
+    try {
+      audioBuffer = await readAloudTts.generateSpeech(text);
+    } catch (e) {
+      console.error('[Diary] Read-Aloud TTS generation failed:', e.message);
+      return res.status(502).json({ success: false, error: 'Could not generate audio right now. Please try again.' });
+    }
+
+    const stored = await attachmentStorage.store({
+      buffer: audioBuffer,
+      contentType: 'audio/mpeg',
+      userEmail: req.userEmail,
+      filenameHint: 'read-aloud-' + id,
+    });
+
+    await db.query(
+      'INSERT INTO tts_cache(entry_id, content_hash, audio_url) VALUES($1,$2,$3) ON CONFLICT(entry_id, content_hash) DO NOTHING',
+      [id, contentHash, stored.url]
+    );
+
+    res.json({ success: true, audioUrl: stored.url, cached: false });
+  } catch (e) {
+    console.error('[Diary] Read-Aloud route failed:', e.message);
+    res.status(500).json({ success: false, error: 'Could not process read-aloud request.' });
+  }
+});
+
+
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
