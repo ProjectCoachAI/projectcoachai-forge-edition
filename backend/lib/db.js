@@ -613,12 +613,29 @@ async function getUsage(userEmail) {
 const READ_ALOUD_LIMIT_STARTER = 5;
 
 async function getReadAloudLimit(userEmail) {
+  // Confirmed as two real, direct bugs together, found via a real Pro
+  // account still hitting the free-tier limit: (1) this previously read
+  // the generic user.tier field via getUser() directly, but that column
+  // can't reliably represent Diary-specific subscription status at all
+  // (per Diary's own, established reasoning already documented at
+  // getDiaryTier's own definition: "a single users.tier column can't
+  // represent 'subscribed to Sweep AND Forge at once' — the most recent
+  // purchase just overwrites whatever was there before") — getDiaryTier
+  // is the correct, dedicated lookup, already used by every other
+  // Diary-Pro-aware limit in this file (Continue-in-Forge's own). (2)
+  // Even with the correct tier value, the LIMITS map itself never
+  // recognized Diary's own real tier strings ('diary-pro',
+  // 'diary-pro-monthly', 'diary-pro-yearly' — confirmed directly from
+  // CHAT_CONTINUE_ENTRY_LIMITS' own, already-correct list) at all,
+  // silently falling through to the free-tier default regardless of
+  // subscription status.
   const LIMITS = {
     starter: READ_ALOUD_LIMIT_STARTER, lite: READ_ALOUD_LIMIT_STARTER * 3, creator:-1, pro:-1,
-    professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
+    professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1,
+    'diary-pro':-1, 'diary-pro-monthly':-1, 'diary-pro-yearly':-1
   };
-  const user = await getUser(userEmail);
-  return user ? (LIMITS[user.tier||'starter'] ?? READ_ALOUD_LIMIT_STARTER) : READ_ALOUD_LIMIT_STARTER;
+  const tier = await getDiaryTier(userEmail);
+  return LIMITS[tier] ?? READ_ALOUD_LIMIT_STARTER;
 }
 
 // Confirmed as a real, direct fix for a genuine race condition
@@ -663,12 +680,18 @@ async function refundReadAloudUsage(userEmail) {
 }
 
 async function getReadAloudUsage(userEmail) {
-  const LIMITS = { starter: READ_ALOUD_LIMIT_STARTER, lite: READ_ALOUD_LIMIT_STARTER * 3, creator:-1, pro:-1, professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1 };
+  // Reuses getReadAloudLimit directly rather than maintaining a second,
+  // separate copy of the same tier/limit mapping — confirmed as a real,
+  // direct cause of the exact bug just fixed in getReadAloudLimit
+  // itself: this function had its own, separate, out-of-sync copy that
+  // never recognized Diary's own real tier strings either, and used
+  // the same wrong, generic getUser().tier lookup. One shared source of
+  // truth now, so a future tier/limit change only ever needs to happen
+  // in one place.
   const ym   = yearMonth();
   const r    = await query('SELECT used FROM read_aloud_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
-  const user = await getUser(userEmail);
-  const tier = user?.tier || 'starter';
-  const limit = LIMITS[tier] ?? null;
+  const tier = await getDiaryTier(userEmail);
+  const limit = await getReadAloudLimit(userEmail);
   const used  = r.rows[0]?.used || 0;
   return { used, limit, remaining: limit!==null && limit!==-1 ? Math.max(0,limit-used) : null, tier };
 }
