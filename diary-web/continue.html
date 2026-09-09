@@ -1251,7 +1251,7 @@ async function toggleListenMsg(entryId, msgId) {
     if (!r.ok || !r.data || !r.data.success) {
       if (btn) btn.innerHTML = originalBtnHtml;
       if (r.data && r.data.limitReached) {
-        Forge.showToast('You\u2019ve reached this month\u2019s Listen limit.', 'error');
+        showReadAloudLimitModal();
       } else {
         Forge.showToast('Could not generate audio right now. Please try again.', 'error');
       }
@@ -1492,6 +1492,26 @@ function showUpgradeModal() {
 }
 function dismissUpgradeModal() {
   document.getElementById('diaryProUpgradeModal').classList.remove('visible');
+}
+
+// Read-Aloud's own dedicated "you've hit your limit" modal — direct
+// product decision, replacing a plain, transient toast. Kept as its
+// own, separate modal rather than reusing diaryProUpgradeModal above —
+// that one's own wording is specific to Continue-in-Forge's "free
+// continues" limit; reusing it here would show genuinely misleading
+// text for a Listen-limit situation. Reuses getResetDateString (above,
+// already existing in this file) and the same upgrade-modal-backdrop
+// styling/shown-once-per-session pattern as diaryProUpgradeModal's own.
+var _readAloudLimitModalShownThisSession = false;
+function showReadAloudLimitModal() {
+  var resetEl = document.getElementById('readAloudModalResetDate');
+  if (resetEl) resetEl.textContent = getResetDateString();
+  if (_readAloudLimitModalShownThisSession) return;
+  _readAloudLimitModalShownThisSession = true;
+  document.getElementById('readAloudLimitModal').classList.add('visible');
+}
+function dismissReadAloudLimitModal() {
+  document.getElementById('readAloudLimitModal').classList.remove('visible');
 }
 
 async function sendChatMessage() {
@@ -2508,6 +2528,20 @@ window.zoomPdfOut = zoomPdfOut;
     <button class="upgrade-modal-primary" onclick="startDiaryProCheckout('monthly')">Upgrade to Diary Pro &mdash; $14.95/month</button>
     <button class="upgrade-modal-secondary" onclick="startDiaryProCheckout('yearly')">Save 20% with yearly &mdash; $11.96/month</button>
     <button class="upgrade-modal-dismiss" onclick="dismissUpgradeModal()">Not now</button>
+  </div>
+</div>
+
+<!-- Read-Aloud's own monthly-limit modal — see showReadAloudLimitModal's
+     own comment above for why this is kept separate from
+     diaryProUpgradeModal above rather than reusing its wording. -->
+<div class="upgrade-modal-backdrop" id="readAloudLimitModal">
+  <div class="upgrade-modal">
+    <div class="upgrade-modal-icon">🔊</div>
+    <div class="upgrade-modal-title">You've used this month's free Listens</div>
+    <div class="upgrade-modal-sub">Upgrade to Diary Pro for unlimited Listen, every month — or wait, and your free Listens reset on <span id="readAloudModalResetDate"></span>.</div>
+    <button class="upgrade-modal-primary" onclick="startDiaryProCheckout('monthly')">Upgrade to Diary Pro &mdash; $14.95/month</button>
+    <button class="upgrade-modal-secondary" onclick="startDiaryProCheckout('yearly')">Save 20% with yearly &mdash; $11.96/month</button>
+    <button class="upgrade-modal-dismiss" onclick="dismissReadAloudLimitModal()">Not now</button>
   </div>
 </div>
 <script>
