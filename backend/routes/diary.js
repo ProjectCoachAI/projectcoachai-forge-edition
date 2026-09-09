@@ -1432,55 +1432,70 @@ router.post('/:id/read-aloud', requireAuth, async (req, res) => {
     const chunks = readAloudTts.chunkTextForTts(text);
     const chunkHashes = chunks.map(c => readAloudTts.hashContent(c));
 
-    // Cache check FIRST, before touching usage metering at all — a
-    // cache hit is a free replay, not a new use of the feature, per the
-    // brief's own explicit acceptance criterion ("playing the same,
-    // unchanged entry a second time does not trigger a second TTS API
-    // call"). Checked across ALL chunks: only a full hit (every chunk
-    // already cached) is a genuinely free replay with zero new API
-    // cost — if even one chunk needs fresh generation, that's a real,
-    // new use of the feature, metered once below, not per-chunk (a
-    // single long entry splitting into several chunks should still
-    // count as one "Listen" against the monthly limit, not several —
-    // otherwise one long entry could exhaust someone's entire monthly
-    // allowance by itself).
-    const cachedUrls = new Array(chunks.length).fill(null);
-    for (let i = 0; i < chunks.length; i++) {
-      const cacheRes = await db.query('SELECT audio_url FROM tts_cache WHERE entry_id=$1 AND content_hash=$2', [id, chunkHashes[i]]);
-      if (cacheRes.rows.length) cachedUrls[i] = cacheRes.rows[0].audio_url;
-    }
+    // Cache lookups run in parallel (Promise.all), not one at a time —
+    // confirmed as a real, direct contributor to a real user report of
+    // the Listen button appearing stuck: a longer diary entry splitting
+    // into several chunks was checking (and, below, generating) each
+    // one sequentially, multiplying real latency by the chunk count.
+    const cachedUrls = await Promise.all(chunkHashes.map(async hash => {
+      const cacheRes = await db.query('SELECT audio_url FROM tts_cache WHERE entry_id=$1 AND content_hash=$2', [id, hash]);
+      return cacheRes.rows.length ? cacheRes.rows[0].audio_url : null;
+    }));
+
+    // A full cache hit (every chunk already generated) is a genuinely
+    // free replay with zero new API cost, per the brief's own explicit
+    // acceptance criterion — checked, and correctly skips usage
+    // metering entirely, BEFORE even checking eligibility at all.
     const allCached = cachedUrls.every(u => u !== null);
     if (allCached) {
       return res.json({ success: true, audioUrls: cachedUrls, cached: true });
     }
 
-    const usage = await db.checkAndIncrementReadAloudUsage(req.userEmail);
+    // Read-only check here — deliberately NOT the old, combined
+    // check-and-increment. Confirmed as a real, direct bug via a user
+    // report of exhausting their monthly limit unexpectedly: the
+    // previous version incremented usage BEFORE generation was
+    // attempted at all, so every failed generation (the 5,000-byte
+    // error hit in production before the chunking fix, or any other
+    // failure) silently consumed one of the user's limited monthly
+    // listens without ever producing any audio. Usage is now only ever
+    // incremented once, further below, after every chunk has genuinely,
+    // successfully generated — never before, never on a failed attempt.
+    const usage = await db.checkReadAloudUsage(req.userEmail);
     if (!usage.allowed) {
       return res.status(403).json({ success: false, error: 'Monthly Listen limit reached.', limitReached: true, used: usage.used, limit: usage.limit });
     }
 
-    const audioUrls = [];
-    for (let i = 0; i < chunks.length; i++) {
-      if (cachedUrls[i]) { audioUrls.push(cachedUrls[i]); continue; }
-      let audioBuffer;
-      try {
-        audioBuffer = await readAloudTts.generateSpeech(chunks[i]);
-      } catch (e) {
-        console.error('[Diary] Read-Aloud TTS generation failed on chunk', i, 'of', chunks.length, ':', e.message);
-        return res.status(502).json({ success: false, error: 'Could not generate audio right now. Please try again.' });
-      }
-      const stored = await attachmentStorage.store({
-        buffer: audioBuffer,
-        contentType: 'audio/mpeg',
-        userEmail: req.userEmail,
-        filenameHint: 'read-aloud-' + id + '-' + i,
-      });
-      await db.query(
-        'INSERT INTO tts_cache(entry_id, content_hash, audio_url) VALUES($1,$2,$3) ON CONFLICT(entry_id, content_hash) DO NOTHING',
-        [id, chunkHashes[i], stored.url]
-      );
-      audioUrls.push(stored.url);
+    // Generation also runs in parallel, same latency reasoning as the
+    // cache lookups above — each chunk's own generate -> store -> cache
+    // sequence is independent of every other chunk's own, so there's no
+    // reason to force them through one at a time.
+    let audioUrls;
+    try {
+      audioUrls = await Promise.all(chunks.map(async (chunkText, i) => {
+        if (cachedUrls[i]) return cachedUrls[i];
+        const audioBuffer = await readAloudTts.generateSpeech(chunkText);
+        const stored = await attachmentStorage.store({
+          buffer: audioBuffer,
+          contentType: 'audio/mpeg',
+          userEmail: req.userEmail,
+          filenameHint: 'read-aloud-' + id + '-' + i,
+        });
+        await db.query(
+          'INSERT INTO tts_cache(entry_id, content_hash, audio_url) VALUES($1,$2,$3) ON CONFLICT(entry_id, content_hash) DO NOTHING',
+          [id, chunkHashes[i], stored.url]
+        );
+        return stored.url;
+      }));
+    } catch (e) {
+      console.error('[Diary] Read-Aloud TTS generation failed:', e.message);
+      return res.status(502).json({ success: false, error: 'Could not generate audio right now. Please try again.' });
     }
+
+    // Only ever reached after every chunk has genuinely, successfully
+    // generated — see this route's own comment above on why this is no
+    // longer combined with the eligibility check itself.
+    await db.incrementReadAloudUsage(req.userEmail);
 
     res.json({ success: true, audioUrls, cached: false });
   } catch (e) {

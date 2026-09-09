@@ -610,34 +610,46 @@ async function getUsage(userEmail) {
   return { used, limit, remaining: limit!==null ? Math.max(0,limit-used) : null, tier };
 }
 
-// Read-Aloud usage metering (revised brief: cloud TTS from v1). Since
-// there's no lesser, free "browser-native" tier anymore, the free/Pro
-// line moves to usage volume instead of quality, per the revised
-// brief's own explicit framing — same shape as checkAndIncrementUsage
-// above, own separate table (read_aloud_usage), own separate limit key.
-// LIMIT_STARTER is a deliberately-flagged, adjustable starting point —
-// the brief itself says to pick "a reasonable starting point... watch,
-// adjust" rather than treat this as a final, precise number; 5/month
-// was the number leaning-toward-confirmed in discussion before the
-// provider-choice investigation took over, chosen specifically to let
-// someone genuinely feel the value once or twice, not a token gesture.
 const READ_ALOUD_LIMIT_STARTER = 5;
-async function checkAndIncrementReadAloudUsage(userEmail) {
+
+async function getReadAloudLimit(userEmail) {
   const LIMITS = {
     starter: READ_ALOUD_LIMIT_STARTER, lite: READ_ALOUD_LIMIT_STARTER * 3, creator:-1, pro:-1,
     professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
   };
-  const user  = await getUser(userEmail);
-  const limit = user ? (LIMITS[user.tier||'starter'] ?? READ_ALOUD_LIMIT_STARTER) : READ_ALOUD_LIMIT_STARTER;
+  const user = await getUser(userEmail);
+  return user ? (LIMITS[user.tier||'starter'] ?? READ_ALOUD_LIMIT_STARTER) : READ_ALOUD_LIMIT_STARTER;
+}
+
+// Read-only check — confirmed as a real, necessary fix for a genuine
+// bug found via a direct user report: the original, combined
+// check-and-increment ran the increment BEFORE generation was
+// attempted at all, so every failed generation (the 5,000-byte-limit
+// error hit in production before the chunking fix, or any other
+// generation failure) silently consumed one of the user's limited
+// monthly listens without ever producing any audio at all. Split so
+// the caller can check eligibility first, attempt generation, and only
+// call incrementReadAloudUsage below once generation has genuinely
+// succeeded — never before, never on a failed attempt.
+async function checkReadAloudUsage(userEmail) {
+  const limit = await getReadAloudLimit(userEmail);
   const ym    = yearMonth();
   const r     = await query('SELECT used FROM read_aloud_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
   const used  = r.rows[0]?.used || 0;
   if (limit !== null && limit !== -1 && used >= limit) return { allowed:false, used, limit };
+  return { allowed:true, used, limit };
+}
+
+// The increment half, on its own — called only after a genuine, new
+// generation has actually succeeded (see checkReadAloudUsage's own
+// comment for why these two are no longer combined into one step).
+async function incrementReadAloudUsage(userEmail) {
+  const ym = yearMonth();
   await query(`INSERT INTO read_aloud_usage(user_email,year_month,used) VALUES($1,$2,1)
     ON CONFLICT(user_email,year_month) DO UPDATE SET used=read_aloud_usage.used+1`,
     [userEmail, ym]);
-  return { allowed:true, used:used+1, limit };
 }
+
 async function getReadAloudUsage(userEmail) {
   const LIMITS = { starter: READ_ALOUD_LIMIT_STARTER, lite: READ_ALOUD_LIMIT_STARTER * 3, creator:-1, pro:-1, professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1 };
   const ym   = yearMonth();
@@ -1530,7 +1542,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndIncrementReadAloudUsage, getReadAloudUsage };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkReadAloudUsage, incrementReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
