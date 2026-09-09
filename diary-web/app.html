@@ -1755,12 +1755,26 @@ function renderEntryCard(e) {
       // single-quote-escaping pattern already used elsewhere in this
       // file for inline onclick/onchange handlers, since a checklist
       // item's own text could genuinely contain an apostrophe.
+      //
+      // Made collapsible, per direct product decision, but deliberately
+      // NOT collapsed by default like Citations/Reasoning trace — a
+      // checklist's own items are interactive (something to check off,
+      // not just reference material to glance at occasionally), so
+      // defaulting to hidden would force an extra click before someone
+      // could even see or act on their own tasks at all. Still
+      // collapsible, so it can be tucked away once genuinely not
+      // needed (e.g. every item already checked off).
       ((function() {
         var checklistArt = (_eartifacts || []).filter(function(a) { return a.type === 'checklist'; })[0];
         if (!checklistArt || !checklistArt.items || !checklistArt.items.length) return '';
+        var cid = 'checklist-' + e.id + '-' + Math.random().toString(36).slice(2, 10);
         return '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
-          '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Checklist (' + checklistArt.items.length + ')</div>' +
-          '<div style="display:flex;flex-direction:column;gap:6px;">' +
+          '<button onclick="var b=document.getElementById(\'' + cid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'flex\';this.querySelector(\'.checklist-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
+            'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;font-family:Inter,sans-serif;">' +
+            '<span class="checklist-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(0deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
+            'Checklist (' + checklistArt.items.length + ')' +
+          '</button>' +
+          '<div id="' + cid + '" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">' +
           checklistArt.items.map(function(item) {
             var escapedText = String(item.text).replace(/'/g, "\\'");
             return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:' + (item.done ? '#9E9890' : '#4A4035') + ';text-decoration:' + (item.done ? 'line-through' : 'none') + ';cursor:pointer;">' +
