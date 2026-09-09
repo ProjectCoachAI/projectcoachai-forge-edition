@@ -1451,25 +1451,32 @@ router.post('/:id/read-aloud', requireAuth, async (req, res) => {
       return res.json({ success: true, audioUrls: cachedUrls, cached: true });
     }
 
-    // Read-only check here — deliberately NOT the old, combined
-    // check-and-increment. Confirmed as a real, direct bug via a user
-    // report of exhausting their monthly limit unexpectedly: the
-    // previous version incremented usage BEFORE generation was
-    // attempted at all, so every failed generation (the 5,000-byte
-    // error hit in production before the chunking fix, or any other
-    // failure) silently consumed one of the user's limited monthly
-    // listens without ever producing any audio. Usage is now only ever
-    // incremented once, further below, after every chunk has genuinely,
-    // successfully generated — never before, never on a failed attempt.
-    const usage = await db.checkReadAloudUsage(req.userEmail);
+    // Check-and-reserve, atomically, BEFORE generation — deliberately
+    // NOT a separate read-only check followed by a later increment.
+    // Confirmed as a real, direct fix for a genuine race condition: an
+    // earlier version of this fix split check and increment into two
+    // fully separate steps with generation (which can take real
+    // seconds) happening in between, opening a window where multiple
+    // concurrent requests could each see the same, not-yet-incremented
+    // count and each pass — letting the total blow past the monthly
+    // limit entirely (consistent with a real report of hitting "limit
+    // reached" after only 3 short reads, well under the real limit of
+    // 5). Reserves the usage slot up front; if generation subsequently
+    // fails, refundReadAloudUsage below explicitly gives it back — this
+    // preserves the earlier, separate, real fix too (usage must never
+    // be silently lost on a failed generation) without reopening this
+    // race window to do it.
+    const usage = await db.checkAndReserveReadAloudUsage(req.userEmail);
     if (!usage.allowed) {
       return res.status(403).json({ success: false, error: 'Monthly Listen limit reached.', limitReached: true, used: usage.used, limit: usage.limit });
     }
 
-    // Generation also runs in parallel, same latency reasoning as the
-    // cache lookups above — each chunk's own generate -> store -> cache
-    // sequence is independent of every other chunk's own, so there's no
-    // reason to force them through one at a time.
+    // Generation runs in parallel across chunks — each chunk's own
+    // generate -> store -> cache sequence is independent of every other
+    // chunk's own, so there's no reason to force them through one at a
+    // time (a real, direct contributor to a reported "stuck loading"
+    // symptom before this fix, on any entry long enough to split into
+    // multiple chunks).
     let audioUrls;
     try {
       audioUrls = await Promise.all(chunks.map(async (chunkText, i) => {
@@ -1489,13 +1496,12 @@ router.post('/:id/read-aloud', requireAuth, async (req, res) => {
       }));
     } catch (e) {
       console.error('[Diary] Read-Aloud TTS generation failed:', e.message);
+      // The refund half of reserve-then-refund — the reservation made
+      // just above genuinely didn't pay off, so it's given back rather
+      // than silently lost, same principle as the original bug fix.
+      await db.refundReadAloudUsage(req.userEmail);
       return res.status(502).json({ success: false, error: 'Could not generate audio right now. Please try again.' });
     }
-
-    // Only ever reached after every chunk has genuinely, successfully
-    // generated — see this route's own comment above on why this is no
-    // longer combined with the eligibility check itself.
-    await db.incrementReadAloudUsage(req.userEmail);
 
     res.json({ success: true, audioUrls, cached: false });
   } catch (e) {

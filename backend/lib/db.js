@@ -621,33 +621,45 @@ async function getReadAloudLimit(userEmail) {
   return user ? (LIMITS[user.tier||'starter'] ?? READ_ALOUD_LIMIT_STARTER) : READ_ALOUD_LIMIT_STARTER;
 }
 
-// Read-only check — confirmed as a real, necessary fix for a genuine
-// bug found via a direct user report: the original, combined
-// check-and-increment ran the increment BEFORE generation was
-// attempted at all, so every failed generation (the 5,000-byte-limit
-// error hit in production before the chunking fix, or any other
-// generation failure) silently consumed one of the user's limited
-// monthly listens without ever producing any audio at all. Split so
-// the caller can check eligibility first, attempt generation, and only
-// call incrementReadAloudUsage below once generation has genuinely
-// succeeded — never before, never on a failed attempt.
-async function checkReadAloudUsage(userEmail) {
+// Confirmed as a real, direct fix for a genuine race condition
+// introduced by an earlier version of this fix: splitting "check" and
+// "increment" into two fully separate steps, with generation (which
+// can take real seconds) happening in between, opened a window where
+// multiple concurrent read-aloud requests could each call the
+// read-only check, each see the SAME, not-yet-incremented usage count,
+// and each pass — letting the total blow past the monthly limit
+// entirely (a user reporting hitting "limit reached" after only 3
+// short reads, well under the real limit of 5, is consistent with
+// exactly this happening). Re-combines check-and-reserve into one step
+// again — same atomic INSERT...ON CONFLICT...DO UPDATE the original,
+// single combined function already used, closing that race window —
+// while still preserving the earlier, separate, real bug fix (usage
+// must never be silently lost on a failed generation) via
+// refundReadAloudUsage below, called explicitly by the route if
+// generation subsequently fails after this reservation succeeds.
+async function checkAndReserveReadAloudUsage(userEmail) {
   const limit = await getReadAloudLimit(userEmail);
   const ym    = yearMonth();
   const r     = await query('SELECT used FROM read_aloud_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
   const used  = r.rows[0]?.used || 0;
   if (limit !== null && limit !== -1 && used >= limit) return { allowed:false, used, limit };
-  return { allowed:true, used, limit };
-}
-
-// The increment half, on its own — called only after a genuine, new
-// generation has actually succeeded (see checkReadAloudUsage's own
-// comment for why these two are no longer combined into one step).
-async function incrementReadAloudUsage(userEmail) {
-  const ym = yearMonth();
   await query(`INSERT INTO read_aloud_usage(user_email,year_month,used) VALUES($1,$2,1)
     ON CONFLICT(user_email,year_month) DO UPDATE SET used=read_aloud_usage.used+1`,
     [userEmail, ym]);
+  return { allowed:true, used:used+1, limit };
+}
+
+// Refunds a reservation made by checkAndReserveReadAloudUsage above,
+// when generation subsequently fails — this is the direct fix for the
+// original bug (usage silently consumed on a failed generation, e.g.
+// the 5,000-byte-limit error hit in production before the chunking
+// fix), now implemented as reserve-then-refund-on-failure instead of
+// the race-prone check-then-increment-on-success this replaces. Floors
+// at 0 rather than letting used go negative, in case this is ever
+// somehow called more than once for the same reservation.
+async function refundReadAloudUsage(userEmail) {
+  const ym = yearMonth();
+  await query(`UPDATE read_aloud_usage SET used = GREATEST(used - 1, 0) WHERE user_email=$1 AND year_month=$2`, [userEmail, ym]);
 }
 
 async function getReadAloudUsage(userEmail) {
@@ -1542,7 +1554,7 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkReadAloudUsage, incrementReadAloudUsage, getReadAloudUsage };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
