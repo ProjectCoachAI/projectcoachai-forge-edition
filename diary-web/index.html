@@ -1127,6 +1127,17 @@
 
     var _carouselIndex = 0;
 
+    // Escapes text for safe use inside a double-quoted HTML attribute
+    // (alt="...", or the outer onclick="..." attribute itself).
+    function escAttr(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    // Escapes text for safe use inside a single-quoted JS string
+    // literal, e.g. openLightbox('...', '...')'s own arguments.
+    function escJsString(s) {
+      return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
     function renderCarouselSlides() {
       var container = document.getElementById('carouselSlides');
       container.innerHTML = CAROUSEL_SLIDES.map(function(s, i) {
@@ -1140,8 +1151,21 @@
         // "screenshots" section further up, rather than building a
         // separate zoom mechanism. event.stopPropagation() prevents
         // the click from also reaching any carousel-level handler.
+        //
+        // Confirmed as a real, direct fix for a real production bug
+        // (three slides' own alt text containing literal double quotes
+        // — e.g. "1 of 17" — broke the onclick attribute outright,
+        // since only a single-quote escape was ever applied before,
+        // never a double-quote one). The onclick value specifically
+        // needs BOTH escapes, applied in the right order: first the
+        // JS-string escape (a literal single-quote in the alt text
+        // shouldn't end the openLightbox('...') string early), then
+        // the HTML-attribute escape (a literal double-quote shouldn't
+        // end the onclick="..." attribute itself early).
+        var safeAltForAttr = escAttr(s.imageAlt);
+        var safeAltForOnclick = escAttr(escJsString(s.imageAlt));
         var visualHtml = s.image
-          ? '<img src="' + s.image + '" alt="' + (s.imageAlt || '') + '" onclick="event.stopPropagation();openLightbox(\'' + s.image + '\',\'' + (s.imageAlt || '').replace(/'/g, "\\'") + '\')" style="width:100%;max-height:320px;object-fit:cover;object-position:top;border-radius:8px;display:block;cursor:zoom-in;" />'
+          ? '<img src="' + s.image + '" alt="' + safeAltForAttr + '" onclick="event.stopPropagation();openLightbox(\'' + s.image + '\',\'' + safeAltForOnclick + '\')" style="width:100%;max-height:320px;object-fit:cover;object-position:top;border-radius:8px;display:block;cursor:zoom-in;" />'
           : s.visualLabel;
         return '<div class="carousel-slide' + (i === 0 ? ' active' : '') + '" data-slide="' + i + '">' +
           '<div class="carousel-visual"' + ((s.image || s.noBorder) ? ' style="border:none;background:none;padding:0;"' : '') + '>' + visualHtml + '</div>' +
