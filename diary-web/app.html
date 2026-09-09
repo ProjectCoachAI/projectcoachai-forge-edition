@@ -1672,6 +1672,16 @@ function renderEntryCard(e) {
         '</div>'
       : '') +
 
+      // Read-Aloud ("Listen") — native content only, per the hybrid
+      // design's own direct product decision. Reads entry.content as
+      // one, single unit (no per-message split here — the native
+      // portion has no genuine, structured message boundaries to split
+      // on, unlike the Forge-continued portion below, whose own
+      // messages each get their own, individually-reliable Listen
+      // button instead). Always shown, on every entry, unlike the
+      // conditional Full/Summary group just above.
+      '<div style="margin-bottom:10px;" onclick="event.stopPropagation();">' + renderListenButton('native-' + e.id, 'toggleListenNative(' + e.id + ')') + '</div>' +
+
       '<div class="entry-content md" id="entry-content-' + e.id + '">' + (Forge.renderMarkdown ? renderEntryContentHtml(e) : escHtml(e.content || '')) + '</div>' +
       '<div id="entry-summary-' + e.id + '" style="display:none;"></div>' +
       // Artifacts (Table, first of the brief's own build order) — per
@@ -2052,6 +2062,160 @@ var STICKY_HEADER_OFFSET = 78;
 // (keyed to the entry's own content), so even a fresh page load's
 // first click is usually near-instant rather than a genuine
 // regeneration.
+// ── Read-Aloud ("Listen") ────────────────────────────────────────────────
+// Per the revised implementation brief: cloud TTS from v1, not
+// browser-native. The actual bar ("doesn't sound computer-generated" —
+// Grok/Claude/Gemini-level naturalness) is structurally unreachable by
+// browser-native voices regardless of which installed system voice is
+// selected — confirmed directly during scoping, not assumed — so this
+// calls the real backend endpoint (POST /api/diary/:id/read-aloud,
+// Google Cloud TTS/WaveNet, cached by content-hash server-side) and
+// plays the returned, real audio file via a standard <audio> element,
+// rather than window.speechSynthesis.
+//
+// Hybrid design, confirmed directly before building: the native
+// portion (an entry's own original, saved content) is one raw block of
+// text with no genuine, structured message boundaries — Continue
+// Conversation's own messages arrive live, each as its own distinct
+// item, but a saved entry's own captured text has no such record of
+// where one AI turn ends and another begins. Splitting the native
+// portion per-message would mean guessing at structure that may not be
+// real — the same class of unreliable-heuristic risk already avoided
+// for named-entity extraction during the Structured Facts artifact.
+// The Forge-continued portion, by contrast, IS made of real, separately
+// stored chat_sessions messages — the same structured data Continue
+// Conversation itself displays — so per-message listening there is
+// genuinely reliable, not a guess. Hybrid: native content is one,
+// single listenable unit; Forge-continued messages each get their own,
+// individually reliable Listen button, matching Continue Conversation's
+// own per-message pattern directly (copyMsgContent's own el-by-id
+// access, extended here rather than reinvented).
+//
+// Strips markdown syntax and skips/substitutes code blocks, markdown
+// tables, and citation markers before any TTS engine touches the text
+// — this runs client-side and is sent already-cleaned to the backend,
+// per the revised brief's own "reuse existing infrastructure, don't
+// rebuild it" guidance (this exact function, already verified, from
+// the original browser-native build).
+function cleanTextForSpeech(text) {
+  if (!text) return '';
+  return text
+    .replace(/(?:^\|.*\|[ \t]*\n)(?:^\|(?:[ :-]+\|)+[ \t]*\n)(?:^\|.*\|[ \t]*\n?)+/gm, ' A table is shown here — see the entry to view it. ')
+    .replace(/```[a-zA-Z0-9_+-]*\n?[\s\S]*?```/g, ' A code example is shown here — see the entry to read it. ')
+    .replace(/`([^`]+)`/g, ' code ')
+    .replace(/\uE000([^\uE003]*)\uE003([^\uE001]*)\uE001([^\uE004]*)\uE004([^\uE002]*)\uE002/g, function(full, pill, title) { return title || pill || ''; })
+    .replace(/\n*---\n*\*\*Sources:\*\*\n(?:\d+\. \[[^\]]*\]\([^)]+\)\n?)+/g, ' ')
+    .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/^[-*_]{3,}$/gm, '')
+    .replace(/^[ \t]*[-*•]\s+/gm, '')
+    .replace(/^[ \t]*\d+\.\s+/gm, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function renderListenButton(msgId, onclickExpr) {
+  return '<button class="chat-icon-btn" id="listen-btn-' + msgId + '" onclick="event.stopPropagation();' + (onclickExpr || '') + '" title="Listen" style="font-size:11px;padding:4px 10px;border-radius:5px;border:0.5px solid #D6D2C8;background:none;color:#6B6559;cursor:pointer;font-family:Inter,sans-serif;">' + listenIconSvg(false) + ' Listen</button>';
+}
+
+function listenIconSvg(playing) {
+  return playing
+    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-1px;margin-right:2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5"/></svg>'
+    : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-1px;margin-right:2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"/></svg>';
+}
+
+// Single, simple play/stop toggle per unit — no pause/resume, no skip,
+// per the brief's own v1 scope. Shared by both the native "Listen"
+// button (msgId = 'native-<entryId>', reading entry.content directly
+// via directText) and each Forge-continued message's own button
+// (msgId = its real fmsg_* div id) — one toggle function, one state
+// variable, since only one thing should ever be playing at a time
+// regardless of which kind of unit it is.
+var _currentListenMsgId = null;
+var _currentListenAudio = null;
+
+async function toggleListenMsg(entryId, msgId, directText) {
+  var wasPlayingThisMessage = _currentListenMsgId === msgId;
+  // Always stop whichever audio was previously playing first — a new
+  // Listen click should never overlap with, or get silently blocked
+  // by, one already in progress.
+  if (_currentListenAudio) { _currentListenAudio.pause(); _currentListenAudio = null; }
+  resetListenButtonIcon(_currentListenMsgId);
+  _currentListenMsgId = null;
+  if (wasPlayingThisMessage) return; // this click was a toggle-off — already stopped above
+
+  var rawText = directText;
+  if (rawText === undefined) {
+    var el = document.getElementById(msgId);
+    rawText = el ? (el.innerText || el.textContent || '') : '';
+  }
+  var cleaned = cleanTextForSpeech(rawText || '');
+  if (!cleaned) { showTopToast('Nothing to read.', true); return; }
+
+  var btn = document.getElementById('listen-btn-' + msgId);
+  var originalBtnHtml = btn ? btn.innerHTML : null;
+  if (btn) { btn.innerHTML = 'Loading…'; btn.disabled = true; }
+
+  try {
+    var r = await Forge.request('POST', '/api/diary/' + entryId + '/read-aloud', { text: cleaned });
+    if (btn) { btn.disabled = false; }
+    if (!r.ok || !r.data || !r.data.success) {
+      if (btn) btn.innerHTML = originalBtnHtml;
+      if (r.data && r.data.limitReached) {
+        showTopToast('You\u2019ve reached this month\u2019s Listen limit.', true);
+      } else {
+        showTopToast('Could not generate audio right now. Please try again.', true);
+      }
+      return;
+    }
+    var audio = new Audio(r.data.audioUrl);
+    audio.onended = function() {
+      if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+    };
+    audio.onerror = function() {
+      if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+      showTopToast('Could not play the generated audio.', true);
+    };
+    _currentListenMsgId = msgId;
+    _currentListenAudio = audio;
+    setListenButtonPlayingIcon(msgId);
+    audio.play();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
+    console.warn('[Diary] Read-Aloud request failed:', e.message);
+    showTopToast('Could not generate audio right now. Please try again.', true);
+  }
+}
+window.toggleListenMsg = toggleListenMsg;
+
+function setListenButtonPlayingIcon(msgId) {
+  var btn = document.getElementById('listen-btn-' + msgId);
+  if (btn) btn.innerHTML = listenIconSvg(true) + ' Stop';
+}
+
+function resetListenButtonIcon(msgId) {
+  if (!msgId) return;
+  var btn = document.getElementById('listen-btn-' + msgId);
+  if (btn) btn.innerHTML = listenIconSvg(false) + ' Listen';
+}
+
+// Native content's own Listen entry point — reads entry.content
+// directly as one, single unit, per the hybrid design above. msgId is
+// synthetic ('native-<id>') since there's no real DOM element holding
+// just this text the way a Forge message's own div does — directText
+// is passed straight through instead.
+function toggleListenNative(entryId) {
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+  if (!entry) return;
+  toggleListenMsg(entryId, 'native-' + entryId, entry.content || '');
+}
+window.toggleListenNative = toggleListenNative;
+
 async function setEntryReadMode(id, mode) {
   var fullBtn = document.getElementById('read-full-btn-' + id);
   var summaryBtn = document.getElementById('read-summary-btn-' + id);
@@ -4436,10 +4600,10 @@ function renderFileAttachmentChips(attachments) {
   }).join('');
 }
 
-function renderMessagesAsSegments(messages) {
+function renderMessagesAsSegments(messages, entryId) {
   var segments = [];
   var current = '';
-  (messages || []).forEach(function(m) {
+  (messages || []).forEach(function(m, idx) {
     if (m.role === 'user') {
       if (current) { segments.push(current); current = ''; }
       var parsed = extractFileAttachmentsFromContent(m.content);
@@ -4455,7 +4619,15 @@ function renderMessagesAsSegments(messages) {
       // whole array, unlike the single-blob case above) since each
       // individual message could carry its own, separate Sources footer.
       var extracted = extractSourcesBlock(m.content || '');
-      current += (Forge.renderMarkdown ? Forge.renderMarkdown(extracted.mainText) : escHtml(extracted.mainText)).replace(/<p>\s*<\/p>/g, '') + extracted.sourcesHtml;
+      // Per-message Listen — same reliable-structure reasoning as
+      // cleanTextForSpeech's own comment above: real, individually-
+      // addressable messages here, unlike the native portion's own raw
+      // text block. fmsgId includes idx specifically since multiple
+      // assistant messages could genuinely be processed within the
+      // same millisecond.
+      var fmsgId = 'fmsg_' + Date.now() + '_' + idx;
+      current += '<div id="' + fmsgId + '">' + (Forge.renderMarkdown ? Forge.renderMarkdown(extracted.mainText) : escHtml(extracted.mainText)).replace(/<p>\s*<\/p>/g, '') + '</div>' + extracted.sourcesHtml +
+        '<div style="margin-top:6px;">' + renderListenButton(fmsgId, 'toggleListenMsg(' + entryId + ',\'' + fmsgId + '\')') + '</div>';
     }
   });
   if (current) segments.push(current);
@@ -4527,7 +4699,7 @@ async function renderUnifiedEntryContent(entryId) {
     var nativeMessages = session.messages.slice(0, seedCount);
     var forgeMessages = session.messages.slice(seedCount);
 
-    var nativeSegments = renderMessagesAsSegments(nativeMessages);
+    var nativeSegments = renderMessagesAsSegments(nativeMessages, entryId);
     var total = nativeSegments.length;
     var startIndex = Math.max(0, total - ENTRY_INITIAL_VISIBLE_TURNS);
     window._entryContentSegments[entryId] = { segments: nativeSegments, renderedFromIndex: startIndex, initialIndex: startIndex };
@@ -4580,7 +4752,7 @@ async function renderUnifiedEntryContent(entryId) {
     }
 
     if (forgeMessages.length) {
-      var forgeSegments = renderMessagesAsSegments(forgeMessages);
+      var forgeSegments = renderMessagesAsSegments(forgeMessages, entryId);
       html += '<div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px;">' +
         '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
         '<span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + heroicon('chat-bubble-left-right') + ' Continued in Forge</span>' +
