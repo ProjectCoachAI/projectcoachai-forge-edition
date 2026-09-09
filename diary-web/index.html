@@ -1070,7 +1070,8 @@
       {
         headline: 'Works everywhere you already use AI',
         body: 'One click saves any conversation from Claude, ChatGPT, Gemini, Perplexity, Grok, DeepSeek, Mistral, or Meta AI \u2014 into one place you control.',
-        visualLabel: '[Screenshot: the Diary browser extension\u2019s save button/dock visible on top of a real conversation page \u2014 or a clean row of the 8 provider logos with a single \u201cSave to Diary\u201d affordance beneath them]',
+        image: '/img/screenshot_carousel_reach.png',
+        imageAlt: 'The Diary browser extension\u2019s save dock, showing the AI provider switcher and Save to Diary button, on top of a real Claude conversation',
         cta: null
       },
       {
@@ -1082,25 +1083,29 @@
       {
         headline: 'Read your AI conversations like they matter',
         body: 'No clutter, no scrolling through chat noise \u2014 just a clean, searchable version of what was actually said. Find anything, instantly.',
-        visualLabel: '[Screenshot: the Diary reader \u2014 a saved entry in Full view, ideally showing the search feature active (a highlighted match, "1 of 5" style navigation)]',
+        image: '/img/screenshot_carousel_reader.png',
+        imageAlt: 'A saved Diary entry in Full view with search active, showing a highlighted match and "1 of 17" navigation',
         cta: null
       },
       {
         headline: 'Never wonder if you\u2019re looking at the full picture',
         body: 'If a conversation keeps going after you save it, Sync brings in what\u2019s new \u2014 anytime, from anywhere. The original is always the source of truth.',
-        visualLabel: '[Screenshot: the Sync control in an entry \u2014 the sync icon and a "Synced X ago" timestamp, ideally mid-action or right after a successful sync]',
+        image: '/img/screenshot_carousel_sync.png',
+        imageAlt: 'A Diary entry showing a "Synced just now" confirmation with a link back to the original conversation',
         cta: null
       },
       {
         headline: 'Keep going, even when a conversation can\u2019t',
         body: 'Some conversations outgrow their own limits. Continue in Forge picks up exactly where you left off \u2014 no lost context, no starting over.',
-        visualLabel: '[Screenshot: the fork marker / "Continue in Forge" entry point on a Diary entry, or the Forge-continued view showing native and continued content clearly, honestly distinguished]',
+        image: '/img/screenshot_carousel_forge.png',
+        imageAlt: 'A Diary entry showing the "Continued in Forge" divider, with the native content above it and the continued conversation below',
         cta: { label: 'Start using Diary', action: 'signup' }
       },
       {
         headline: 'It doesn\u2019t just save what you get \u2014 it makes it useful',
         body: 'A table buried in a long answer becomes a real, sortable, exportable table \u2014 ready to turn into a quote, a comparison, a plan. Diary finds the structure that was already there.',
-        visualLabel: '[Screenshot: a Diary entry showing a detected Table artifact with its own "View table" affordance, ideally the working-view grid open \u2014 the quote-generator flow specifically, if available]',
+        image: '/img/screenshot_carousel_table.png',
+        imageAlt: 'The Table artifact\u2019s own working-view grid open on a Diary entry, showing a real, multi-row table with filter and export controls',
         cta: { label: 'Start using Diary', action: 'signup' }
       }
     ];
@@ -1110,8 +1115,16 @@
     function renderCarouselSlides() {
       var container = document.getElementById('carouselSlides');
       container.innerHTML = CAROUSEL_SLIDES.map(function(s, i) {
+        // Real image when the slide has one (all six slides except
+        // Slide 2, which the spec itself says needs no screenshot at
+        // all) — falls back to the original, honest text placeholder
+        // only when no real image is provided, rather than assuming
+        // every slide has one.
+        var visualHtml = s.image
+          ? '<img src="' + s.image + '" alt="' + (s.imageAlt || '') + '" style="width:100%;max-height:320px;object-fit:cover;object-position:top;border-radius:8px;display:block;" />'
+          : s.visualLabel;
         return '<div class="carousel-slide' + (i === 0 ? ' active' : '') + '" data-slide="' + i + '">' +
-          '<div class="carousel-visual">' + s.visualLabel + '</div>' +
+          '<div class="carousel-visual"' + (s.image ? ' style="border:none;background:none;padding:0;"' : '') + '>' + visualHtml + '</div>' +
           '<div class="carousel-headline">' + s.headline + '</div>' +
           '<div class="carousel-body">' + s.body + '</div>' +
           (s.cta ? '<div class="carousel-cta"><button onclick="carouselCtaClick(\'' + s.cta.action + '\')">' + s.cta.label + '</button></div>' : '') +
