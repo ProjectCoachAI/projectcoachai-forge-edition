@@ -222,7 +222,12 @@
       position: fixed;
       inset: 0;
       background: rgba(10,18,35,0.85);
-      z-index: 9999;
+      /* Raised above the landing carousel's own z-index (20000) —
+         confirmed as a real, necessary fix: opening the lightbox on a
+         carousel slide's own image needs to render on top of the
+         carousel, not behind it, since the carousel itself can still
+         be open underneath when a screenshot gets zoomed. */
+      z-index: 20001;
       align-items: center;
       justify-content: center;
       padding: 2rem;
@@ -1077,7 +1082,17 @@
       {
         headline: 'Your data, handled seriously',
         body: 'Swiss data residency. Never used to train any AI model. Built for people who use AI for real work, not just casual chat.',
-        visualLabel: '[Small badge/icon treatment \u2014 a shield or lock, understated \u2014 no screenshot needed here]',
+        // Small, understated icon treatment, per the spec's own explicit
+        // note that this slide needs no screenshot at all. A real,
+        // verified Heroicons lock-closed path (MIT-licensed, the same
+        // icon set already used consistently throughout this codebase)
+        // rather than sourcing a separate external image file — no
+        // licensing risk, and matches the existing visual language
+        // directly. Rendered in Diary's own muted gray (#9E9890,
+        // already used elsewhere for understated UI elements) rather
+        // than a bold, solid black, for the same "understated" reason.
+        visualLabel: '<svg width="56" height="56" viewBox="0 0 24 24" fill="#9E9890" style="margin:20px auto;display:block;"><path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd"/></svg>',
+        noBorder: true,
         cta: null
       },
       {
@@ -1120,11 +1135,16 @@
         // all) — falls back to the original, honest text placeholder
         // only when no real image is provided, rather than assuming
         // every slide has one.
+        // Click-to-zoom, per direct product decision — reuses the
+        // exact same lightbox already live for this page's own
+        // "screenshots" section further up, rather than building a
+        // separate zoom mechanism. event.stopPropagation() prevents
+        // the click from also reaching any carousel-level handler.
         var visualHtml = s.image
-          ? '<img src="' + s.image + '" alt="' + (s.imageAlt || '') + '" style="width:100%;max-height:320px;object-fit:cover;object-position:top;border-radius:8px;display:block;" />'
+          ? '<img src="' + s.image + '" alt="' + (s.imageAlt || '') + '" onclick="event.stopPropagation();openLightbox(\'' + s.image + '\',\'' + (s.imageAlt || '').replace(/'/g, "\\'") + '\')" style="width:100%;max-height:320px;object-fit:cover;object-position:top;border-radius:8px;display:block;cursor:zoom-in;" />'
           : s.visualLabel;
         return '<div class="carousel-slide' + (i === 0 ? ' active' : '') + '" data-slide="' + i + '">' +
-          '<div class="carousel-visual"' + (s.image ? ' style="border:none;background:none;padding:0;"' : '') + '>' + visualHtml + '</div>' +
+          '<div class="carousel-visual"' + ((s.image || s.noBorder) ? ' style="border:none;background:none;padding:0;"' : '') + '>' + visualHtml + '</div>' +
           '<div class="carousel-headline">' + s.headline + '</div>' +
           '<div class="carousel-body">' + s.body + '</div>' +
           (s.cta ? '<div class="carousel-cta"><button onclick="carouselCtaClick(\'' + s.cta.action + '\')">' + s.cta.label + '</button></div>' : '') +
