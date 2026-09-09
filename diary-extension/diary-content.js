@@ -2185,7 +2185,7 @@ function queryAllDeep(selector) {
       'bottom:80px',
       'right:20px',
       'z-index:2147483640',
-      'background:#F97316',
+      'background:#1B2A4A',
       'color:#fff',
       'border:none',
       'border-radius:10px',
@@ -2194,15 +2194,15 @@ function queryAllDeep(selector) {
       'font-weight:700',
       'cursor:pointer',
       'font-family:system-ui,sans-serif',
-      'box-shadow:0 4px 16px rgba(249,115,22,0.4)',
+      'box-shadow:0 4px 16px rgba(27,42,74,0.4)',
       'transition:all 0.2s',
       'display:flex',
       'align-items:center',
       'gap:6px'
     ].join(';');
 
-    btn.onmouseenter = function() { this.style.background = '#ea580c'; this.style.transform = 'translateY(-2px)'; };
-    btn.onmouseleave = function() { this.style.background = '#F97316'; this.style.transform = ''; };
+    btn.onmouseenter = function() { this.style.background = '#243A63'; this.style.transform = 'translateY(-2px)'; };
+    btn.onmouseleave = function() { this.style.background = '#1B2A4A'; this.style.transform = ''; };
 
     // ── Save-to-Diary logic, extracted into a standalone, reusable
     // function (Sync feature groundwork) ──────────────────────────────
