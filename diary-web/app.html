@@ -1022,9 +1022,9 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
   } else if (fromProvider) {
     var backBtn = document.createElement('button');
     backBtn.textContent = String.fromCharCode(55357,56613) + ' Back to ' + fromProvider.name;
-    backBtn.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(249,115,22,0.4);font-family:inherit;transition:all 0.2s;';
-    backBtn.onmouseenter = function() { this.style.transform = 'translateY(-2px)'; this.style.background = '#ea580c'; };
-    backBtn.onmouseleave = function() { this.style.transform = ''; this.style.background = '#f97316'; };
+    backBtn.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1B2A4A;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(27,42,74,0.4);font-family:inherit;transition:all 0.2s;';
+    backBtn.onmouseenter = function() { this.style.transform = 'translateY(-2px)'; this.style.background = '#243A63'; };
+    backBtn.onmouseleave = function() { this.style.transform = ''; this.style.background = '#1B2A4A'; };
     backBtn.onclick = function() { window.location.href = fromProvider.url; };
     document.body.appendChild(backBtn);
   }
