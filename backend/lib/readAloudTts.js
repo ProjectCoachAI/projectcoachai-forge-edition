@@ -55,6 +55,72 @@ function hashContent(text) {
   return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+// Google Cloud TTS's own hard limit: input.text cannot exceed 5,000
+// bytes per request — confirmed directly via a real, production error
+// this exact route hit ("Either input.text or input.ssml is longer
+// than the limit of 5000 bytes"), not something caught in advance
+// during scoping. A full diary entry's own cleaned text can easily
+// exceed this, so long content needs to be split into multiple,
+// separate requests. MAX_CHUNK_BYTES is kept meaningfully under the
+// real 5,000-byte ceiling (not right up against it) as a safety
+// margin, since sentence-boundary splitting below can occasionally
+// land a candidate chunk slightly over a tighter target before the
+// check below forces a new chunk.
+const MAX_CHUNK_BYTES = 4800;
+
+/**
+ * Splits text into chunks that each stay under Google Cloud TTS's own
+ * 5,000-byte-per-request limit, per the byte count specifically (not
+ * character count) — multi-byte UTF-8 characters (accented letters,
+ * emoji) can otherwise silently push a chunk over the real limit even
+ * when its character count looks safely low. Splits at sentence
+ * boundaries wherever possible, for natural-sounding breaks between
+ * chunks rather than an arbitrary mid-sentence cut; falls back to a
+ * word-level split only for the rare case of a single sentence that
+ * alone exceeds the limit. Verified via direct simulation across four
+ * cases before wiring in: short text staying as one chunk, long text
+ * splitting into multiple chunks all confirmed under the byte limit,
+ * the reconstructed chunks roughly matching the original content, and
+ * multi-byte UTF-8 text (accented characters, emoji) correctly
+ * measured and chunked by actual byte length rather than character
+ * count.
+ */
+function chunkTextForTts(text, maxBytes) {
+  maxBytes = maxBytes || MAX_CHUNK_BYTES;
+  if (Buffer.byteLength(text, 'utf8') <= maxBytes) return [text];
+  const sentences = text.match(/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g) || [text];
+  const chunks = [];
+  let current = '';
+  sentences.forEach(sentence => {
+    const candidate = current ? current + ' ' + sentence.trim() : sentence.trim();
+    if (Buffer.byteLength(candidate, 'utf8') > maxBytes) {
+      if (current) { chunks.push(current); current = ''; }
+      if (Buffer.byteLength(sentence, 'utf8') > maxBytes) {
+        // A single sentence itself exceeds the limit (rare) — hard-split
+        // it by word, since there's no other safe, natural boundary.
+        const words = sentence.trim().split(' ');
+        let wordChunk = '';
+        words.forEach(w => {
+          const wc = wordChunk ? wordChunk + ' ' + w : w;
+          if (Buffer.byteLength(wc, 'utf8') > maxBytes) {
+            if (wordChunk) chunks.push(wordChunk);
+            wordChunk = w;
+          } else {
+            wordChunk = wc;
+          }
+        });
+        if (wordChunk) current = wordChunk;
+      } else {
+        current = sentence.trim();
+      }
+    } else {
+      current = candidate;
+    }
+  });
+  if (current) chunks.push(current);
+  return chunks;
+}
+
 /**
  * Generates speech audio for the given (already content-cleaned) text.
  * Returns a raw MP3 buffer — storage (R2, via attachmentStorage.js) and
@@ -76,4 +142,4 @@ async function generateSpeech(text) {
   return Buffer.from(response.audioContent);
 }
 
-module.exports = { generateSpeech, hashContent, DEFAULT_VOICE };
+module.exports = { generateSpeech, hashContent, chunkTextForTts, DEFAULT_VOICE, MAX_CHUNK_BYTES };

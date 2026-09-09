@@ -2173,18 +2173,11 @@ async function toggleListenMsg(entryId, msgId, directText) {
       }
       return;
     }
-    var audio = new Audio(r.data.audioUrl);
-    audio.onended = function() {
-      if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
-    };
-    audio.onerror = function() {
-      if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
-      showTopToast('Could not play the generated audio.', true);
-    };
+    var audioUrls = r.data.audioUrls || (r.data.audioUrl ? [r.data.audioUrl] : []);
+    if (!audioUrls.length) { showTopToast('Could not generate audio right now. Please try again.', true); return; }
     _currentListenMsgId = msgId;
-    _currentListenAudio = audio;
     setListenButtonPlayingIcon(msgId);
-    audio.play();
+    playListenQueue(msgId, audioUrls, 0);
   } catch (e) {
     if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
     console.warn('[Diary] Read-Aloud request failed:', e.message);
@@ -2192,6 +2185,33 @@ async function toggleListenMsg(entryId, msgId, directText) {
   }
 }
 window.toggleListenMsg = toggleListenMsg;
+
+// Plays a sequence of audio chunk URLs back-to-back as one continuous
+// listen — necessary because Google Cloud TTS has a hard 5,000-byte
+// limit per request (confirmed directly via a real production error),
+// so any text longer than that arrives here as multiple, separate
+// audio files rather than one. Advances to the next URL only once the
+// current one's own 'ended' event fires, so chunks play in order with
+// no gap-filling/overlap logic needed. index-based recursion rather
+// than an array of Audio objects queued up front, so a mid-playback
+// stop (toggleListenMsg's own cancel-previous logic) only ever needs
+// to pause whichever single Audio is the current one.
+function playListenQueue(msgId, audioUrls, index) {
+  if (index >= audioUrls.length) {
+    if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+    return;
+  }
+  var audio = new Audio(audioUrls[index]);
+  audio.onended = function() {
+    if (_currentListenMsgId === msgId) playListenQueue(msgId, audioUrls, index + 1);
+  };
+  audio.onerror = function() {
+    if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+    showTopToast('Could not play the generated audio.', true);
+  };
+  _currentListenAudio = audio;
+  audio.play();
+}
 
 function setListenButtonPlayingIcon(msgId) {
   var btn = document.getElementById('listen-btn-' + msgId);

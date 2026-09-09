@@ -1257,18 +1257,11 @@ async function toggleListenMsg(entryId, msgId) {
       }
       return;
     }
-    var audio = new Audio(r.data.audioUrl);
-    audio.onended = function() {
-      if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
-    };
-    audio.onerror = function() {
-      if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
-      Forge.showToast('Could not play the generated audio.', 'error');
-    };
+    var audioUrls = r.data.audioUrls || (r.data.audioUrl ? [r.data.audioUrl] : []);
+    if (!audioUrls.length) { Forge.showToast('Could not generate audio right now. Please try again.', 'error'); return; }
     _currentListenMsgId = msgId;
-    _currentListenAudio = audio;
     setListenButtonPlayingIcon(msgId);
-    audio.play();
+    playListenQueue(msgId, audioUrls, 0);
   } catch (e) {
     if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
     console.warn('[Continue] Read-Aloud request failed:', e.message);
@@ -1276,6 +1269,28 @@ async function toggleListenMsg(entryId, msgId) {
   }
 }
 window.toggleListenMsg = toggleListenMsg;
+
+// Plays a sequence of audio chunk URLs back-to-back as one continuous
+// listen — same reasoning and implementation as app.html's own copy
+// (see its own comment there): Google Cloud TTS's hard 5,000-byte
+// limit per request means longer messages arrive here as multiple,
+// separate audio files.
+function playListenQueue(msgId, audioUrls, index) {
+  if (index >= audioUrls.length) {
+    if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+    return;
+  }
+  var audio = new Audio(audioUrls[index]);
+  audio.onended = function() {
+    if (_currentListenMsgId === msgId) playListenQueue(msgId, audioUrls, index + 1);
+  };
+  audio.onerror = function() {
+    if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+    Forge.showToast('Could not play the generated audio.', 'error');
+  };
+  _currentListenAudio = audio;
+  audio.play();
+}
 
 function setListenButtonPlayingIcon(msgId) {
   var btn = document.getElementById('listen-btn-' + msgId);
