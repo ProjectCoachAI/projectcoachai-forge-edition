@@ -2467,7 +2467,22 @@ async function toggleEntry(id) {
     if (restoreTo !== undefined) {
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
-          window.scrollTo({ top: restoreTo, behavior: 'smooth' });
+          // Instant, not 'smooth' — confirmed as a real, direct fix for
+          // a precisely-reproduced sequence: close entry #1 (this
+          // restore runs), then immediately open entry #2 — the second
+          // entry's own scroll target is calculated based on
+          // window.scrollY at that moment. If this close-action's own
+          // scroll animation hadn't genuinely finished settling yet
+          // (someone clicking the next entry quickly, before the
+          // animation completes), that read would capture an
+          // intermediate, still-in-transit scroll position rather than
+          // the real, final one — corrupting the very next entry's own
+          // target calculation with no relation to that entry at all.
+          // Matches the open-action's own scroll (fixed the same way,
+          // previously) — both now settle immediately, so there's never
+          // an in-transit window for a quick, following action to land
+          // inside of.
+          window.scrollTo({ top: restoreTo });
         });
       });
     }
