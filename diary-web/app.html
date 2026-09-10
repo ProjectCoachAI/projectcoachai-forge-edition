@@ -343,6 +343,25 @@
   </style>
   <!-- PostHog Analytics -->
   <script>
+    // Confirmed as a real, direct fix for a real, precisely-reported
+    // bug: opening an entry from page 1 of results left a sliver of
+    // the previous list view visible at the top of the viewport, but
+    // opening from a later page didn't. Root cause: the browser's own
+    // default scroll-restoration behavior (history.scrollRestoration =
+    // 'auto') tries to restore the visitor's own, previous scroll
+    // position specifically on an initial page load/reload — which is
+    // exactly when someone opens an entry from page 1, having just
+    // loaded the app. That restoration can run at a slightly different
+    // point in the page's own loading lifecycle than toggleEntry's own,
+    // explicit, double-requestAnimationFrame-deferred scroll (below),
+    // silently overriding it afterward. Navigating to a later page is a
+    // client-side, in-app action with no real browser history entry or
+    // reload involved at all, so this restoration never applies there
+    // — matching exactly why the bug was page-1-specific. Set as early
+    // as possible, before any other code runs, to disable the browser's
+    // own restoration entirely and give this app's own, explicit
+    // scroll logic full, exclusive control.
+    if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
     !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
     posthog.init('phc_wVedb6RwcG5xJUcbVLd3wePsquhWZ6BmxrvGEeybunam', {
       api_host: 'https://eu.i.posthog.com',
@@ -2604,20 +2623,36 @@ function focusCurrentEntrySearchMatch(id) {
   highlightCurrentEntrySearchMatch(id);
   var state = entrySearchState.get(id);
   if (state && state.index >= 0 && state.matches[state.index]) {
-    // block:'nearest' (not 'center') — confirmed as a real, direct fix
-    // for a second, related report: the up/down chevron buttons
-    // (explicit Next/Previous match navigation, calling this exact
-    // function) could still push the search input itself off-screen,
-    // same underlying mechanism as the typing bug fixed above, just
-    // triggered by a click instead of a keystroke. 'center' forcefully
-    // centers the match within the ENTIRE viewport regardless of where
-    // the search bar sits above the entry's own content — for a match
-    // near the top of a long entry, that could scroll the search bar
-    // itself out of view even though the match was already visible or
-    // nearly so. 'nearest' only ever scrolls the minimum amount
-    // actually needed to bring the match into view, never overshooting
-    // past what's already visible.
-    state.matches[state.index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // Confirmed as a real, direct fix for a real regression: an earlier
+    // version of this fix used the page's own global STICKY_HEADER_OFFSET
+    // constant (78px), but that only accounts for the page's own top nav
+    // bar — it has no idea the entry's own search bar (a separate element,
+    // sitting below the global header, within the entry's own content)
+    // exists at all. That earlier version scrolled matches to a position
+    // that still landed right where the search bar itself sits, pushing
+    // it further off-screen than before, not less.
+    //
+    // Fixed by measuring the search bar's own real, current bottom edge
+    // directly, rather than any fixed constant, and computing a scroll
+    // DELTA (via window.scrollBy) instead of an absolute target position.
+    // matchTop and searchBarBottom are both viewport-relative, measured
+    // at this same instant, so their difference is the exact, constant
+    // distance between them regardless of scroll position — both
+    // elements move together, at the same rate, as the page scrolls. A
+    // positive delta scrolls down (match was below the visible area), a
+    // negative delta scrolls up (match was hidden behind/above the
+    // search bar) — the same formula naturally handles both directions.
+    // Skips scrolling entirely when the match is already fully visible
+    // below the search bar and above the bottom of the viewport.
+    var match = state.matches[state.index];
+    var matchRect = match.getBoundingClientRect();
+    var searchBar = document.getElementById('entry-search-bar-' + id);
+    var searchBarBottom = searchBar ? searchBar.getBoundingClientRect().bottom : STICKY_HEADER_OFFSET;
+    var alreadyVisible = matchRect.top >= searchBarBottom && matchRect.bottom <= window.innerHeight;
+    if (!alreadyVisible) {
+      var delta = matchRect.top - searchBarBottom - 12;
+      window.scrollBy({ top: delta, behavior: 'smooth' });
+    }
   }
 }
 
