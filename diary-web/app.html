@@ -2577,17 +2577,33 @@ function runEntrySearch(id) {
   var matches = Array.prototype.slice.call(content.querySelectorAll('mark.entry-search-hit'));
   entrySearchState.set(id, { matches: matches, index: matches.length ? 0 : -1 });
   updateEntrySearchCounter(id);
-  focusCurrentEntrySearchMatch(id);
+  // highlightCurrentEntrySearchMatch (not the scrolling
+  // focusCurrentEntrySearchMatch) — confirmed as a real, direct fix for
+  // a real regression report: this runs on every single keystroke (via
+  // oninput), and the scrolling version's own unconditional
+  // scrollIntoView({block:'center'}) was auto-scrolling the page while
+  // someone was still actively typing, which could push the search
+  // input itself (positioned above the entry's own content, where a
+  // match might be) off-screen mid-type. Scrolling to a specific match
+  // is exactly the right behavior for explicit Next/Previous navigation
+  // (Enter/Shift+Enter, still using the full function below) — it's
+  // only wrong here, firing on every keystroke.
+  highlightCurrentEntrySearchMatch(id);
 }
 window.runEntrySearch = runEntrySearch;
 
-function focusCurrentEntrySearchMatch(id) {
+function highlightCurrentEntrySearchMatch(id) {
   var state = entrySearchState.get(id);
   if (!state) return;
   state.matches.forEach(function(m, i) {
     m.style.background = i === state.index ? '#FFA500' : '#FFE58A';
   });
-  if (state.index >= 0 && state.matches[state.index]) {
+}
+
+function focusCurrentEntrySearchMatch(id) {
+  highlightCurrentEntrySearchMatch(id);
+  var state = entrySearchState.get(id);
+  if (state && state.index >= 0 && state.matches[state.index]) {
     state.matches[state.index].scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 }
