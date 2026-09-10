@@ -2350,11 +2350,12 @@ async function setEntryReadMode(id, mode) {
 }
 window.setEntryReadMode = setEntryReadMode;
 
-function toggleEntry(id) {
+async function toggleEntry(id) {
   var wasExpanded = expandedIds.has(id);
   if (wasExpanded) { expandedIds.delete(id); } else { expandedIds.add(id); }
   var card = document.getElementById('entry-' + id);
   if (card) card.classList.toggle('expanded');
+  if (!wasExpanded) entryScrollPositions[id] = window.scrollY;
   // Auto-reset "Load earlier" state on re-expand — confirmed live as a
   // real gap: toggleEntry() only ever toggles a CSS class, it never
   // rebuilds the entry's own content at all, so whatever pagination
@@ -2370,13 +2371,29 @@ function toggleEntry(id) {
     if (paginationState && paginationState.renderedFromIndex !== paginationState.initialIndex) {
       resetEntryContentPagination(id);
     }
+    // TEMPORARY DIAGNOSTIC LOGGING — a prior fix (awaiting
+    // renderUnifiedEntryContent before scrolling, on the theory that its
+    // own async chat-session fetch was changing the card's height after
+    // an unawaited scroll already ran) did not resolve a real,
+    // repeated report, so this captures real, concrete values instead
+    // of theorizing further: whether this entry genuinely has a
+    // chatSessionId at all, the card's own position before and after
+    // the fetch, the calculated scroll target, and the actual, final
+    // scroll position shortly after — to see exactly where the real
+    // behavior diverges from what's intended, rather than guessing
+    // again. Remove once the real root cause here is confirmed.
+    var _diagEntry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === id; });
+    var _diagHasChatSession = !!(_diagEntry && _diagEntry.metadata && _diagEntry.metadata.chatSessionId);
+    console.log('[SCROLL-DIAG] entry', id, 'hasChatSessionId:', _diagHasChatSession);
+    console.log('[SCROLL-DIAG] card top BEFORE await:', card ? card.getBoundingClientRect().top : 'no card');
     // Unified view — fetches and renders on expansion, not eagerly at
     // page-load time (see renderUnifiedEntryContent's own comment for
     // why). Genuinely a no-op for any entry without a chatSessionId at
     // all — the function itself checks and falls back to the existing,
     // native-only render, so this is safe to call unconditionally here
     // rather than needing its own guard at each call site.
-    renderUnifiedEntryContent(id);
+    await renderUnifiedEntryContent(id);
+    console.log('[SCROLL-DIAG] card top AFTER await:', card ? card.getBoundingClientRect().top : 'no card');
     attachEntryScrollAutoLoad(id);
   }
   // Summary feature's own "times opened" trigger — fire-and-forget,
@@ -2419,12 +2436,15 @@ function toggleEntry(id) {
   // recalculation (and any anchoring adjustment) finish first, so this
   // explicit scroll is the last word, not the anchoring correction.
   if (!wasExpanded) {
-    entryScrollPositions[id] = window.scrollY;
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         if (card) {
           var target = card.getBoundingClientRect().top + window.scrollY - STICKY_HEADER_OFFSET;
+          console.log('[SCROLL-DIAG] card top at scroll-calc time:', card.getBoundingClientRect().top, 'window.scrollY:', window.scrollY, 'calculated target:', target);
           window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+          setTimeout(function() {
+            console.log('[SCROLL-DIAG] ACTUAL final window.scrollY, ~300ms later:', window.scrollY, '(should match target above:', Math.max(0, target), ')');
+          }, 300);
         }
       });
     });
