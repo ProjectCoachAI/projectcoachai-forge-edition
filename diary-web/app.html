@@ -2443,7 +2443,21 @@ async function toggleEntry(id) {
       requestAnimationFrame(function() {
         if (card) {
           var target = card.getBoundingClientRect().top + window.scrollY - STICKY_HEADER_OFFSET;
-          window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+          // Confirmed as a real, direct fix, tried after overflow-anchor
+          // alone didn't resolve a repeated report: behavior:'smooth'
+          // makes this an animated scroll, not an instant one — the
+          // earlier, directly-measured discrepancy (calculated target
+          // vs. actual final scrollY, off by a small, variable amount:
+          // ~5px on one entry, ~13px on another) is consistent with that
+          // animation not having fully finished settling by the moment
+          // it was measured, rather than (or in addition to) scroll
+          // anchoring — a larger scroll distance takes a smooth-scroll
+          // animation longer to fully complete, which would explain why
+          // the gap varied between entries rather than being a fixed
+          // amount. Switched to an instant scroll (no behavior option
+          // at all, the default) so there's no "still in transit" moment
+          // to ever be seen mid-animation at all.
+          window.scrollTo({ top: Math.max(0, target) });
         }
       });
     });
