@@ -2497,12 +2497,40 @@ function updateEntrySearchCounter(id) {
 function expandAllEntryContentForSearch(entryId) {
   var state = window._entryContentSegments[entryId];
   if (!state) return;
+  // Confirmed as a real, direct fix for a real regression report: this
+  // function calls loadEarlierEntryContent repeatedly, and that
+  // function has no scroll-preservation logic at all — each call
+  // inserts newly-revealed content ABOVE the currently-visible portion
+  // of the entry, pushing everything below it (including the entry
+  // card itself) further down the page. Called just once, this is a
+  // small, easy-to-miss shift; called repeatedly in this loop for a
+  // long, heavily-paginated entry, the cumulative shift is large and
+  // visible — appearing as the entry card drifting out of alignment
+  // with the sticky category sidebar, which itself never moves at all,
+  // since sticky positioning only tracks viewport scroll, not content
+  // height changes elsewhere on the page.
+  //
+  // Fixed the same way as this exact class of shift is always fixed:
+  // measure a stable reference point's own position before the content
+  // changes, then compensate window.scrollY by exactly how far that
+  // same point moved afterward — the entry then stays visually fixed
+  // in place on screen throughout the entire expansion, rather than
+  // visibly jumping.
+  var card = document.getElementById('entry-content-' + entryId);
+  var beforeTop = card ? card.getBoundingClientRect().top : null;
+
   var guard = 0; // safety ceiling — should never genuinely be needed, but
                  // avoids any risk of an infinite loop if renderedFromIndex
                  // ever failed to reach 0 for some unforeseen reason.
   while (state.renderedFromIndex > 0 && guard < 200) {
     loadEarlierEntryContent(entryId);
     guard++;
+  }
+
+  if (card && beforeTop !== null) {
+    var afterTop = card.getBoundingClientRect().top;
+    var delta = afterTop - beforeTop;
+    if (delta !== 0) window.scrollBy(0, delta);
   }
 }
 
