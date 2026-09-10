@@ -2581,13 +2581,13 @@ function runEntrySearch(id) {
   // focusCurrentEntrySearchMatch) — confirmed as a real, direct fix for
   // a real regression report: this runs on every single keystroke (via
   // oninput), and the scrolling version's own unconditional
-  // scrollIntoView({block:'center'}) was auto-scrolling the page while
-  // someone was still actively typing, which could push the search
-  // input itself (positioned above the entry's own content, where a
-  // match might be) off-screen mid-type. Scrolling to a specific match
-  // is exactly the right behavior for explicit Next/Previous navigation
-  // (Enter/Shift+Enter, still using the full function below) — it's
-  // only wrong here, firing on every keystroke.
+  // scrollIntoView was auto-scrolling the page while someone was still
+  // actively typing, which could push the search input itself
+  // (positioned above the entry's own content, where a match might be)
+  // off-screen mid-type. Scrolling to a specific match is exactly the
+  // right behavior for explicit Next/Previous navigation (Enter/
+  // Shift+Enter and the up/down chevron buttons, still using the full
+  // function below) — it's only wrong here, firing on every keystroke.
   highlightCurrentEntrySearchMatch(id);
 }
 window.runEntrySearch = runEntrySearch;
@@ -2604,7 +2604,20 @@ function focusCurrentEntrySearchMatch(id) {
   highlightCurrentEntrySearchMatch(id);
   var state = entrySearchState.get(id);
   if (state && state.index >= 0 && state.matches[state.index]) {
-    state.matches[state.index].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // block:'nearest' (not 'center') — confirmed as a real, direct fix
+    // for a second, related report: the up/down chevron buttons
+    // (explicit Next/Previous match navigation, calling this exact
+    // function) could still push the search input itself off-screen,
+    // same underlying mechanism as the typing bug fixed above, just
+    // triggered by a click instead of a keystroke. 'center' forcefully
+    // centers the match within the ENTIRE viewport regardless of where
+    // the search bar sits above the entry's own content — for a match
+    // near the top of a long entry, that could scroll the search bar
+    // itself out of view even though the match was already visible or
+    // nearly so. 'nearest' only ever scrolls the minimum amount
+    // actually needed to bring the match into view, never overshooting
+    // past what's already visible.
+    state.matches[state.index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 }
 
