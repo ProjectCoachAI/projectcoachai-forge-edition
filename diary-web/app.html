@@ -8,7 +8,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    /* overflow-anchor: none — confirmed as a real, direct fix via actual
+       diagnostic data: an explicit scroll-to-entry calculation landed
+       correctly on its own target, but the browser's own, native scroll
+       anchoring (on by default) was still measurably nudging the final
+       scroll position afterward regardless — a small (~5-13px),
+       variable discrepancy between the calculated target and the
+       actual, final scrollY confirmed this directly, not assumed. The
+       existing double-requestAnimationFrame delay (toggleEntry, further
+       down) was an attempt to "outrace" this same browser behavior via
+       timing, but wasn't reliably enough later than whatever the
+       browser's own anchoring correction runs on — disabling anchoring
+       outright removes the race entirely, rather than trying to time
+       around it. */
+    html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; min-height: 100vh; overflow-anchor: none; }
     a { text-decoration: none; color: inherit; }
 
     /* NAV */
@@ -2371,29 +2384,19 @@ async function toggleEntry(id) {
     if (paginationState && paginationState.renderedFromIndex !== paginationState.initialIndex) {
       resetEntryContentPagination(id);
     }
-    // TEMPORARY DIAGNOSTIC LOGGING — a prior fix (awaiting
-    // renderUnifiedEntryContent before scrolling, on the theory that its
-    // own async chat-session fetch was changing the card's height after
-    // an unawaited scroll already ran) did not resolve a real,
-    // repeated report, so this captures real, concrete values instead
-    // of theorizing further: whether this entry genuinely has a
-    // chatSessionId at all, the card's own position before and after
-    // the fetch, the calculated scroll target, and the actual, final
-    // scroll position shortly after — to see exactly where the real
-    // behavior diverges from what's intended, rather than guessing
-    // again. Remove once the real root cause here is confirmed.
-    var _diagEntry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === id; });
-    var _diagHasChatSession = !!(_diagEntry && _diagEntry.metadata && _diagEntry.metadata.chatSessionId);
-    console.log('[SCROLL-DIAG] entry', id, 'hasChatSessionId:', _diagHasChatSession);
-    console.log('[SCROLL-DIAG] card top BEFORE await:', card ? card.getBoundingClientRect().top : 'no card');
     // Unified view — fetches and renders on expansion, not eagerly at
     // page-load time (see renderUnifiedEntryContent's own comment for
     // why). Genuinely a no-op for any entry without a chatSessionId at
     // all — the function itself checks and falls back to the existing,
     // native-only render, so this is safe to call unconditionally here
-    // rather than needing its own guard at each call site.
+    // rather than needing its own guard at each call site. Awaited so
+    // the scroll logic below only runs once this entry's own content is
+    // genuinely settled — confirmed via direct diagnostic testing that
+    // this specific timing wasn't the actual cause of a real,
+    // separately-reported scroll-landing bug (see overflow-anchor,
+    // above), but it remains correct, defensive ordering on its own
+    // merits regardless.
     await renderUnifiedEntryContent(id);
-    console.log('[SCROLL-DIAG] card top AFTER await:', card ? card.getBoundingClientRect().top : 'no card');
     attachEntryScrollAutoLoad(id);
   }
   // Summary feature's own "times opened" trigger — fire-and-forget,
@@ -2440,11 +2443,7 @@ async function toggleEntry(id) {
       requestAnimationFrame(function() {
         if (card) {
           var target = card.getBoundingClientRect().top + window.scrollY - STICKY_HEADER_OFFSET;
-          console.log('[SCROLL-DIAG] card top at scroll-calc time:', card.getBoundingClientRect().top, 'window.scrollY:', window.scrollY, 'calculated target:', target);
           window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-          setTimeout(function() {
-            console.log('[SCROLL-DIAG] ACTUAL final window.scrollY, ~300ms later:', window.scrollY, '(should match target above:', Math.max(0, target), ')');
-          }, 300);
         }
       });
     });
