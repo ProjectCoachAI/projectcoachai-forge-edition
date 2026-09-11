@@ -1708,7 +1708,7 @@ function renderEntryCard(e) {
         '</button>' +
       '</div>' +
       '<div id="entry-search-bar-' + e.id + '" style="display:none;align-items:center;gap:8px;padding:6px 8px;margin-bottom:10px;background:#F5F3EE;border-radius:6px;">' +
-        '<input id="entry-search-input-' + e.id + '" type="text" placeholder="Search in this entry..." oninput="runEntrySearch(' + e.id + ')" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();if(event.key===\'Enter\'){event.preventDefault();if(event.shiftKey){prevEntrySearchMatch(' + e.id + ')}else{nextEntrySearchMatch(' + e.id + ')}}else if(event.key===\'Escape\'){toggleEntrySearch(' + e.id + ')}" style="flex:1;font-size:12px;padding:5px 8px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>' +
+        '<input id="entry-search-input-' + e.id + '" type="text" placeholder="Search in this entry..." oninput="runEntrySearch(' + e.id + ')" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();if(event.key===\'Enter\'){event.preventDefault();if(event.shiftKey){prevEntrySearchMatch(' + e.id + ')}else{nextEntrySearchMatch(' + e.id + ')}}else if(event.key===\'ArrowDown\'){event.preventDefault();nextEntrySearchMatch(' + e.id + ')}else if(event.key===\'ArrowUp\'){event.preventDefault();prevEntrySearchMatch(' + e.id + ')}else if(event.key===\'Escape\'){toggleEntrySearch(' + e.id + ')}" style="flex:1;font-size:12px;padding:5px 8px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>' +
         '<span id="entry-search-counter-' + e.id + '" style="font-size:11px;color:#9E9890;white-space:nowrap;min-width:48px;text-align:center;"></span>' +
         '<button onclick="event.stopPropagation();prevEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;">' + heroicon('chevron-up', 12) + '</button>' +
         '<button onclick="event.stopPropagation();nextEntrySearchMatch(' + e.id + ')" style="background:none;border:none;color:#6B6559;cursor:pointer;padding:0 3px;">' + heroicon('chevron-down', 12) + '</button>' +
@@ -5454,6 +5454,36 @@ function panelOpenOriginal() {
 }
 
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEntry(); });
+
+// Confirmed as a real, direct implementation of an already-approved
+// plan item: opens the currently-expanded entry's own in-entry search
+// bar on Cmd/Ctrl+F, rather than requiring a manual click on the
+// search icon every time. Only intercepts when EXACTLY one entry is
+// currently expanded (expandedIds is a real Set — more than one entry
+// can genuinely be open at once) — with zero or multiple entries open,
+// it's genuinely ambiguous which one's search bar should open, so the
+// browser's own native Find is deliberately left to work normally in
+// both of those cases instead of guessing. Reuses toggleEntrySearch's
+// own existing open-and-focus logic rather than duplicating it here —
+// that function already correctly focuses the input (with
+// preventScroll) when opening.
+document.addEventListener('keydown', function(e) {
+  if (!((e.ctrlKey || e.metaKey) && e.key === 'f')) return;
+  if (expandedIds.size !== 1) return;
+  var entryId = Array.from(expandedIds)[0];
+  var bar = document.getElementById('entry-search-bar-' + entryId);
+  if (!bar) return;
+  e.preventDefault();
+  var isHidden = bar.style.display === 'none' || !bar.style.display;
+  if (isHidden) {
+    toggleEntrySearch(entryId);
+  } else {
+    // Already open — refocus rather than re-toggling it closed, since
+    // the person's intent here is "let me search," not "toggle."
+    var input = document.getElementById('entry-search-input-' + entryId);
+    if (input) input.focus({ preventScroll: true });
+  }
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────
 (async function() {
