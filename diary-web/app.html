@@ -2397,8 +2397,120 @@ async function setEntryReadMode(id, mode) {
 }
 window.setEntryReadMode = setEntryReadMode;
 
+// Item 6, gap-analysis plan: scroll-position memory across sessions.
+// Confirmed directly before building any of this: entry-content gets
+// torn down and completely rebuilt from scratch every single time an
+// entry opens, resetting pagination back to only its own most-recent
+// turns each time — so "resume where the reader left off" has to mean
+// WHICH TURN they were on (see wrapTurnHtml, above renderEntryContentHtml),
+// not a raw scrollTop pixel value that would be meaningless against a
+// freshly-collapsed render. A single, shared localStorage key holds a
+// map of entryId -> {turnIndex, totalTurns, savedAt}, capped at 50
+// entries (oldest evicted by savedAt) so this doesn't grow unbounded
+// over time, per the plan's own explicit requirement.
+var DIARY_SCROLL_POS_KEY = 'diaryScrollPositions';
+var DIARY_SCROLL_POS_MAX_ENTRIES = 50;
+
+function saveEntryScrollPosition(entryId, turnIndex, totalTurns) {
+  try {
+    var raw = localStorage.getItem(DIARY_SCROLL_POS_KEY);
+    var map = raw ? JSON.parse(raw) : {};
+    map[entryId] = { turnIndex: turnIndex, totalTurns: totalTurns, savedAt: Date.now() };
+    var keys = Object.keys(map);
+    if (keys.length > DIARY_SCROLL_POS_MAX_ENTRIES) {
+      keys.sort(function(a, b) { return map[a].savedAt - map[b].savedAt; });
+      keys.slice(0, keys.length - DIARY_SCROLL_POS_MAX_ENTRIES).forEach(function(k) { delete map[k]; });
+    }
+    localStorage.setItem(DIARY_SCROLL_POS_KEY, JSON.stringify(map));
+  } catch (_e) {
+    // localStorage can genuinely fail (private browsing, quota, disabled
+    // entirely) — harmless to skip saving in that case, not worth
+    // surfacing to the person reading their diary.
+  }
+}
+
+function getEntryScrollPosition(entryId) {
+  try {
+    var raw = localStorage.getItem(DIARY_SCROLL_POS_KEY);
+    if (!raw) return null;
+    var map = JSON.parse(raw);
+    return map[entryId] || null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+// Finds the turn currently at/nearest the top of entry-content's own
+// visible area — the first turn whose own bottom edge is still at or
+// below the pane's own top edge, i.e. genuinely still at least
+// partially visible right now, not one already scrolled fully past.
+function getCurrentTopTurnIndex(entryId) {
+  var container = document.getElementById('entry-content-' + entryId);
+  if (!container) return null;
+  var turnEls = container.querySelectorAll('[data-turn-index]');
+  if (!turnEls.length) return null;
+  var containerTop = container.getBoundingClientRect().top;
+  for (var i = 0; i < turnEls.length; i++) {
+    var rect = turnEls[i].getBoundingClientRect();
+    if (rect.bottom > containerTop) {
+      return parseInt(turnEls[i].getAttribute('data-turn-index'), 10);
+    }
+  }
+  return parseInt(turnEls[turnEls.length - 1].getAttribute('data-turn-index'), 10);
+}
+
+// Reuses the exact reveal logic already built and directly tested at
+// real production scale for search's own "jump to a match hidden
+// behind Load earlier" case (confirmed beforehand to scale linearly,
+// not quadratically, even across hundreds of repeated calls) — applied
+// here to a second, genuinely different use case: re-expanding
+// pagination back out to a specific, previously-read turn on reopen,
+// rather than to reveal a search match.
+function restoreEntryScrollPosition(entryId) {
+  var saved = getEntryScrollPosition(entryId);
+  if (!saved) return;
+  var state = window._entryContentSegments && window._entryContentSegments[entryId];
+  if (!state) return;
+  // Guard: the entry's own content could genuinely have changed since
+  // this was saved (new messages added, or otherwise) — if the saved
+  // turn index no longer fits within the current, real segment count,
+  // skip restoring entirely rather than risk landing somewhere wrong.
+  if (saved.turnIndex < 0 || saved.turnIndex >= state.segments.length) return;
+  var container = document.getElementById('entry-content-' + entryId);
+  if (!container) return;
+  var guard = 0;
+  while (state.renderedFromIndex > saved.turnIndex && guard < 700) {
+    loadEarlierEntryContent(entryId);
+    guard++;
+  }
+  var targetEl = container.querySelector('[data-turn-index="' + saved.turnIndex + '"]');
+  if (!targetEl) return;
+  // Same internal-pane-vs-outer-page distinction already established
+  // this session (.entry-content's own max-height:75vh; overflow-y:auto
+  // only engages its own internal scroll once its real content actually
+  // exceeds that height) — a short entry has nothing to restore at all,
+  // since its whole content is already visible together regardless.
+  if (container.scrollHeight > container.clientHeight) {
+    var targetRect = targetEl.getBoundingClientRect();
+    var containerRect = container.getBoundingClientRect();
+    container.scrollTop = Math.max(0, container.scrollTop + (targetRect.top - containerRect.top));
+  }
+}
+
 async function toggleEntry(id) {
   var wasExpanded = expandedIds.has(id);
+  // Confirmed as a real, direct requirement for scroll-position memory
+  // (item 6): captured BEFORE the "expanded" class toggles below, since
+  // that class controls entry-content's own visibility/layout — reading
+  // getBoundingClientRect() afterward risks the pane already being
+  // hidden or collapsed by the time this runs.
+  if (wasExpanded) {
+    var topTurnIndex = getCurrentTopTurnIndex(id);
+    var closingState = window._entryContentSegments && window._entryContentSegments[id];
+    if (topTurnIndex !== null && closingState) {
+      saveEntryScrollPosition(id, topTurnIndex, closingState.segments.length);
+    }
+  }
   if (wasExpanded) { expandedIds.delete(id); } else { expandedIds.add(id); }
   var card = document.getElementById('entry-' + id);
   if (card) card.classList.toggle('expanded');
@@ -2432,6 +2544,12 @@ async function toggleEntry(id) {
     // merits regardless.
     await renderUnifiedEntryContent(id);
     attachEntryScrollAutoLoad(id);
+    // Restore where the reader left off, if anywhere — after content
+    // has fully, genuinely settled (both the async unified-view fetch
+    // above, and the auto-load listener's own attachment), matching the
+    // same ordering already established for every other scroll-related
+    // action this session.
+    restoreEntryScrollPosition(id);
   }
   // Summary feature's own "times opened" trigger — fire-and-forget,
   // since the user shouldn't wait on this tracking call at all. Not
@@ -2611,10 +2729,6 @@ function updateEntrySearchCounter(id) {
 // (search runs on oninput) is cheap after the first call.
 function expandAllEntryContentForSearch(entryId) {
   var state = window._entryContentSegments[entryId];
-  // TEMPORARY DIAGNOSTIC — kept in place per explicit instruction not
-  // to remove until this issue is fully solved. Logs the real, live
-  // pagination state at the exact moment search runs.
-  console.log('[EXPANDALL-DIAG] entry', entryId, '| state exists:', !!state, '| state:', state ? JSON.stringify({ renderedFromIndex: state.renderedFromIndex, initialIndex: state.initialIndex, segmentsLength: state.segments ? state.segments.length : null }) : 'undefined — this function returns immediately, doing nothing at all');
   if (!state) return;
   // Confirmed as a real, direct fix for a real regression report: this
   // function calls loadEarlierEntryContent repeatedly, and that
@@ -2645,7 +2759,6 @@ function expandAllEntryContentForSearch(entryId) {
     loadEarlierEntryContent(entryId);
     guard++;
   }
-  console.log('[EXPANDALL-DIAG] after expansion loop — iterations run:', guard, '| final renderedFromIndex (should be 0):', state.renderedFromIndex, '| entry-content own real text length now:', (document.getElementById('entry-content-' + entryId) || {}).textContent ? document.getElementById('entry-content-' + entryId).textContent.length : 'N/A');
 
   if (card) {
     if (beforeTop !== null) {
@@ -2720,13 +2833,6 @@ function runEntrySearch(id) {
   while ((node = walker.nextNode())) {
     if (node.nodeValue && node.nodeValue.trim()) textNodes.push(node);
   }
-
-  // TEMPORARY DIAGNOSTIC — kept in place per explicit instruction not
-  // to remove until this issue is fully solved. Ground-truth comparison
-  // against content.textContent directly.
-  var diagRegexPre = new RegExp('\\b' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
-  var diagGroundTruthCount = (content.textContent.match(diagRegexPre) || []).length;
-  console.log('[SEARCH-DIAG5] entry', id, '| query:', query, '| text nodes visited by scoped walker:', textNodes.length, '| content.textContent length:', content.textContent.length, '| ground-truth matches in content.textContent:', diagGroundTruthCount);
 
   // Confirmed as a real, direct fix for the actual, real root cause of
   // a reported "fewer matches, some real occurrences missed"
@@ -2804,10 +2910,6 @@ function runEntrySearch(id) {
     combinedMatches.push({ start: cm.index, end: cm.index + cm[0].length });
     if (cm.index === wordBoundaryRegex.lastIndex) wordBoundaryRegex.lastIndex++;
   }
-
-  // TEMPORARY DIAGNOSTIC — kept in place per explicit instruction not
-  // to remove until this issue is fully solved.
-  console.log('[SEARCH-DIAG5] combinedText length:', combinedText.length, '| combinedMatches found:', combinedMatches.length);
 
   // Group each match's own pieces by which node they fall in, so each
   // node can be processed once, independently, with all of its own
@@ -5203,7 +5305,7 @@ async function renderUnifiedEntryContent(entryId) {
     // what keeps it in sync with this function's own, freshly-set
     // pagination values instead.
     var html = '';
-    for (var i = startIndex; i < total; i++) html += nativeSegments[i];
+    for (var i = startIndex; i < total; i++) html += wrapTurnHtml(nativeSegments[i], i);
 
     // Images-disclosure banner — reworded here specifically for the
     // unified view, where there's now a real, visible boundary to be
@@ -5276,6 +5378,30 @@ var ENTRY_INITIAL_VISIBLE_TURNS = 3;
 var ENTRY_LOAD_EARLIER_BATCH = 3;
 window._entryContentSegments = window._entryContentSegments || {};
 
+// Confirmed as a real, direct requirement for scroll-position memory
+// (item 6): restoring "where the reader left off" needs to mean WHICH
+// TURN they were on, not a raw scrollTop pixel value — entry-content
+// gets torn down and completely rebuilt from scratch every single time
+// an entry opens (confirmed directly before building this at all), so
+// a saved pixel offset from a previous, differently-paginated render
+// is meaningless against a freshly-collapsed one. This wraps each
+// turn's own HTML in a stable, identifiable anchor (a real DOM
+// element, not just a comment or string marker) so a later reopen can
+// find "turn N" again after re-expanding pagination back out to it —
+// reusing the exact reveal logic already built and tested for search's
+// own "jump to a match hidden behind Load earlier" case, confirmed
+// directly beforehand to scale linearly even across hundreds of
+// repeated calls, not quadratically. Deliberately added only at the
+// three places .segments[i] gets concatenated into entry-content's own
+// innerHTML, rather than inside renderWithBubblesSegments/
+// renderMessagesAsSegments themselves — those two functions are shared
+// across other, unrelated call sites, so changing their own output
+// shape there would carry real, avoidable regression risk elsewhere
+// for no benefit to those other callers.
+function wrapTurnHtml(html, index) {
+  return '<div data-turn-index="' + index + '">' + html + '</div>';
+}
+
 function renderEntryContentHtml(e) {
   var segments = renderWithBubblesSegments(e.content || '');
   var total = segments.length;
@@ -5295,7 +5421,7 @@ function renderEntryContentHtml(e) {
   // renderEntryCard). This function's own job is now genuinely just
   // the entry's own turns, nothing else.
   var html = '';
-  for (var i = startIndex; i < total; i++) html += segments[i];
+  for (var i = startIndex; i < total; i++) html += wrapTurnHtml(segments[i], i);
   return html;
 }
 
@@ -5425,7 +5551,7 @@ function loadEarlierEntryContent(entryId) {
   // 'afterend' against. Newly-revealed content always inserts directly
   // at the very top of container itself now.
   var revealedHtml = '';
-  for (var i = newStart; i < state.renderedFromIndex; i++) revealedHtml += state.segments[i];
+  for (var i = newStart; i < state.renderedFromIndex; i++) revealedHtml += wrapTurnHtml(state.segments[i], i);
   container.insertAdjacentHTML('afterbegin', revealedHtml);
   enhanceCodeBlocks(container);
   state.renderedFromIndex = newStart;
