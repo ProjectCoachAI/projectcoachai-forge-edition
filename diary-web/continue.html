@@ -1143,9 +1143,20 @@ function addMessageToDOM(role, content, opts) {
     }
   } else {
     var previewUrls = opts.imagePreviewURLs || (opts.imagePreviewURL ? [opts.imagePreviewURL] : []);
-    var imgHtml = previewUrls.map(function(u) {
-      return '<img src="' + u + '" onclick="event.stopPropagation();openImageZoom(\'' + u.replace(/'/g, "\\'") + '\')" style="max-width:200px;max-height:200px;border-radius:8px;display:block;margin-bottom:6px;cursor:zoom-in;"/>';
-    }).join('');
+    // Confirmed as a real, direct fix, scoped specifically to this file
+    // (app.html's own equivalent gallery rendering never had this same
+    // issue — no display:block there at all, so images already flowed
+    // horizontally by the browser's own default <img> behavior). Each
+    // image tag here previously carried display:block directly on
+    // itself, forcing every one onto its own line regardless of how
+    // many were attached to a single message — stacked vertically
+    // rather than aligned side by side. Wrapped in a flex row instead:
+    // multiple images now flow horizontally, wrapping to a new row only
+    // once the container genuinely runs out of width, rather than each
+    // one always claiming its own line unconditionally.
+    var imgHtml = previewUrls.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">' + previewUrls.map(function(u) {
+      return '<img src="' + u + '" onclick="event.stopPropagation();openImageZoom(\'' + u.replace(/'/g, "\\'") + '\')" style="max-width:200px;max-height:200px;border-radius:8px;cursor:zoom-in;"/>';
+    }).join('') + '</div>' : '';
     // PDF chips — clickable, opening the reader modal above. Distinct
     // from the pre-send preview chip (which disappears once sent): this
     // is the persistent, in-message representation, since a PDF has no
