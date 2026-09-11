@@ -188,7 +188,18 @@
     // values (1.75 here, 1.7 there) — CSS cascade meant the later one
     // silently won; both are now identical, removing that inconsistency
     // too.
-    .entry-content { font-size: calc(14px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
+    // overflow-anchor: none — confirmed as a real, direct fix via
+    // actual diagnostic data: resetEntryContentPagination's own,
+    // explicit scrollTop = 0 was directly confirmed to genuinely run
+    // and succeed at that exact moment, but scrollTop was then found,
+    // ~300ms later, to have silently drifted back to a large, non-zero
+    // value on its own — the browser's own native scroll anchoring
+    // (already disabled on html/body for the outer page, but never on
+    // this element specifically) trying to "preserve" this pane's own,
+    // previous scroll position after its content changed, overriding
+    // the explicit reset shortly after it ran. Disabling it here too
+    // makes the explicit reset the genuine, permanent last word.
+    .entry-content { font-size: calc(14px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-anchor: none; overflow-wrap: break-word; margin-bottom: 0.75rem; }
     .entry-content p { margin-bottom: 0.5rem; }
     .entry-content h1,.entry-content h2,.entry-content h3 { font-family: Lora,serif; color: #1B2A4A; margin: 0.75rem 0 0.4rem; }
     .entry-content ul,.entry-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
@@ -258,7 +269,7 @@
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
     
-.entry-content { font-size: calc(14px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-wrap: break-word; margin-bottom: 0.75rem; }
+.entry-content { font-size: calc(14px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 75vh; overflow-y: auto; overflow-anchor: none; overflow-wrap: break-word; margin-bottom: 0.75rem; }
 
     .diary-empty { text-align: center; padding: 4rem 2rem; color: #9E9890; }
     .diary-empty h3 { font-family: 'Lora', serif; font-size: 18px; font-weight: 400; color: #1B2A4A; margin-bottom: 0.5rem; }
@@ -2516,6 +2527,24 @@ function toggleEntrySearch(id) {
   } else {
     if (input) input.value = '';
     clearEntrySearchHighlights(id);
+    // Confirmed as a real, direct fix for a real, reported gap:
+    // expandAllEntryContentForSearch (which runs at the start of every
+    // search) permanently reveals every remaining "Load earlier" batch
+    // and removes that button/wrap entirely, since search needs to be
+    // able to find a match anywhere in the entry, not just its
+    // initially-visible portion. But that expansion was never actually
+    // undone again once search closed — meaning the very first search
+    // within an entry silently, permanently removed the ability to
+    // collapse it back down at all, even for someone who never wanted
+    // to see the full, expanded history at once. Only rebuilds if the
+    // pagination state actually diverged from where it started (same
+    // guard already used elsewhere, in toggleEntry's own re-expand
+    // logic), so closing search on an entry that was never expanded at
+    // all doesn't cause needless DOM churn.
+    var paginationState = window._entryContentSegments && window._entryContentSegments[id];
+    if (paginationState && paginationState.renderedFromIndex !== paginationState.initialIndex) {
+      resetEntryContentPagination(id);
+    }
   }
 }
 window.toggleEntrySearch = toggleEntrySearch;
@@ -2568,23 +2597,23 @@ function expandAllEntryContentForSearch(entryId) {
   // function calls loadEarlierEntryContent repeatedly, and that
   // function has no scroll-preservation logic at all — each call
   // inserts newly-revealed content ABOVE the currently-visible portion
-  // of the entry, pushing everything below it (including the entry
-  // card itself) further down the page. Called just once, this is a
-  // small, easy-to-miss shift; called repeatedly in this loop for a
-  // long, heavily-paginated entry, the cumulative shift is large and
-  // visible — appearing as the entry card drifting out of alignment
-  // with the sticky category sidebar, which itself never moves at all,
-  // since sticky positioning only tracks viewport scroll, not content
-  // height changes elsewhere on the page.
-  //
-  // Fixed the same way as this exact class of shift is always fixed:
-  // measure a stable reference point's own position before the content
-  // changes, then compensate window.scrollY by exactly how far that
-  // same point moved afterward — the entry then stays visually fixed
-  // in place on screen throughout the entire expansion, rather than
-  // visibly jumping.
+  // of the entry, pushing everything below it further down. This
+  // affects two, genuinely different things depending on
+  // .entry-content's own current state (max-height:75vh; overflow-y:
+  // auto — an entry becomes its own, separately-scrollable pane once
+  // its real content actually exceeds that height): for a short entry
+  // (no internal scroll engaged yet), the entry card itself grows and
+  // pushes the rest of the OUTER page down, drifting out of alignment
+  // with the sticky category sidebar; for a long entry already
+  // engaging its own internal scroll, the card's own external position
+  // never moves at all (it's already capped at 75vh) — instead, its
+  // own INTERNAL scrollTop drifts, since new content is inserted above
+  // whatever's currently, internally visible within the pane. Both are
+  // measured and compensated independently, since a short entry could
+  // genuinely cross that 75vh threshold partway through this very loop.
   var card = document.getElementById('entry-content-' + entryId);
   var beforeTop = card ? card.getBoundingClientRect().top : null;
+  var beforeScrollHeight = card ? card.scrollHeight : null;
 
   var guard = 0; // safety ceiling — should never genuinely be needed, but
                  // avoids any risk of an infinite loop if renderedFromIndex
@@ -2594,10 +2623,26 @@ function expandAllEntryContentForSearch(entryId) {
     guard++;
   }
 
-  if (card && beforeTop !== null) {
-    var afterTop = card.getBoundingClientRect().top;
-    var delta = afterTop - beforeTop;
-    if (delta !== 0) window.scrollBy(0, delta);
+  if (card) {
+    if (beforeTop !== null) {
+      var afterTop = card.getBoundingClientRect().top;
+      var delta = afterTop - beforeTop;
+      if (delta !== 0) window.scrollBy(0, delta);
+    }
+    if (beforeScrollHeight !== null) {
+      // How much new content height was actually added, measured via
+      // scrollHeight before/after — NOT restoring scrollTop back to its
+      // own prior value (that would scroll to a different, wrong spot,
+      // since new content was inserted above whatever was previously
+      // visible). Adding this same growth directly onto scrollTop's own
+      // current value shifts the internal viewport down by exactly as
+      // much as the content grew, keeping the same, previously-visible
+      // portion still visible at the same relative position within the
+      // pane — the internal-scroll equivalent of the outer-page
+      // compensation just above.
+      var scrollHeightGrowth = card.scrollHeight - beforeScrollHeight;
+      if (scrollHeightGrowth !== 0) card.scrollTop += scrollHeightGrowth;
+    }
   }
 }
 
@@ -2671,35 +2716,73 @@ function focusCurrentEntrySearchMatch(id) {
   highlightCurrentEntrySearchMatch(id);
   var state = entrySearchState.get(id);
   if (state && state.index >= 0 && state.matches[state.index]) {
-    // Confirmed as a real, direct fix for a real regression: an earlier
-    // version of this fix used the page's own global STICKY_HEADER_OFFSET
-    // constant (78px), but that only accounts for the page's own top nav
-    // bar — it has no idea the entry's own search bar (a separate element,
-    // sitting below the global header, within the entry's own content)
-    // exists at all. That earlier version scrolled matches to a position
-    // that still landed right where the search bar itself sits, pushing
-    // it further off-screen than before, not less.
-    //
-    // Fixed by measuring the search bar's own real, current bottom edge
-    // directly, rather than any fixed constant, and computing a scroll
-    // DELTA (via window.scrollBy) instead of an absolute target position.
-    // matchTop and searchBarBottom are both viewport-relative, measured
-    // at this same instant, so their difference is the exact, constant
-    // distance between them regardless of scroll position — both
-    // elements move together, at the same rate, as the page scrolls. A
-    // positive delta scrolls down (match was below the visible area), a
-    // negative delta scrolls up (match was hidden behind/above the
-    // search bar) — the same formula naturally handles both directions.
-    // Skips scrolling entirely when the match is already fully visible
-    // below the search bar and above the bottom of the viewport.
+    // Confirmed as the real, direct root cause behind every entry-
+    // search scrolling report this session, via a precise, direct
+    // description: "the system is scrolling the page and not the diary
+    // entry pane where the conversation and keywords live." .entry-
+    // content's own CSS (max-height:75vh; overflow-y:auto) makes it its
+    // own, genuinely separately-scrollable pane once its real content
+    // actually exceeds that height — every earlier version of this fix
+    // used window.scrollBy exclusively, which only ever scrolls the
+    // OUTER page, completely missing this internal pane whenever an
+    // entry is long enough to actually engage its own scrollbar. A
+    // short entry (content still fits within 75vh, no internal scroll
+    // active at all) still correctly grows/shrinks the outer page as
+    // before — this checks which situation is actually true right now
+    // (content.scrollHeight > content.clientHeight) and scrolls
+    // whichever one actually applies, rather than always assuming the
+    // page.
     var match = state.matches[state.index];
-    var matchRect = match.getBoundingClientRect();
+    var content = document.getElementById('entry-content-' + id);
     var searchBar = document.getElementById('entry-search-bar-' + id);
-    var searchBarBottom = searchBar ? searchBar.getBoundingClientRect().bottom : STICKY_HEADER_OFFSET;
-    var alreadyVisible = matchRect.top >= searchBarBottom && matchRect.bottom <= window.innerHeight;
-    if (!alreadyVisible) {
-      var delta = matchRect.top - searchBarBottom - 12;
-      window.scrollBy({ top: delta, behavior: 'smooth' });
+    // Confirmed as a real, direct fix for a related, reported cosmetic
+    // issue: a search match could still end up landing partly behind
+    // whatever's rendered just above the entry's own main text within
+    // this pane (the search bar itself, and/or a lingering "Load
+    // earlier" wrapper, if either is still present) — using the LOWER
+    // of the search bar's own bottom edge and this wrap's own bottom
+    // edge as the real "safe offset," rather than only ever checking
+    // the search bar alone.
+    var loadEarlierWrap = document.getElementById('loadEarlierWrap-' + id);
+    var hasInternalScroll = content && content.scrollHeight > content.clientHeight;
+
+    if (hasInternalScroll) {
+      var matchRect = match.getBoundingClientRect();
+      var contentRect = content.getBoundingClientRect();
+      var safeOffsetViewport = contentRect.top;
+      if (searchBar) safeOffsetViewport = Math.max(safeOffsetViewport, searchBar.getBoundingClientRect().bottom);
+      if (loadEarlierWrap) safeOffsetViewport = Math.max(safeOffsetViewport, loadEarlierWrap.getBoundingClientRect().bottom);
+      var alreadyVisible = matchRect.top >= safeOffsetViewport && matchRect.bottom <= contentRect.bottom;
+      if (!alreadyVisible) {
+        // Both matchRect.top and safeOffsetViewport are viewport-
+        // relative, measured at this same instant, so their difference
+        // is the exact distance between them regardless of content's
+        // own current scroll position — adding that distance directly
+        // onto content.scrollTop gives the new, absolute internal
+        // scroll position needed to bring the match to just below
+        // whatever's safely above it.
+        content.scrollTop = Math.max(0, content.scrollTop + (matchRect.top - safeOffsetViewport) - 12);
+      }
+    } else {
+      // Entry's own content still fits within 75vh — no internal scroll
+      // engaged at all, so the entry genuinely still grows/shrinks the
+      // outer page's own layout, same as the earlier, page-level fix
+      // already correctly handled.
+      var matchRectPage = match.getBoundingClientRect();
+      var safeOffsetPage = STICKY_HEADER_OFFSET;
+      // Also accounts for the "Listen" button, which sits above
+      // entry-content entirely (a separate element, outside this
+      // pane) — content's own getBoundingClientRect().top already,
+      // implicitly reflects its height, since content genuinely starts
+      // right after it within the same, outer entry card.
+      if (content) safeOffsetPage = Math.max(safeOffsetPage, content.getBoundingClientRect().top);
+      if (searchBar) safeOffsetPage = Math.max(safeOffsetPage, searchBar.getBoundingClientRect().bottom);
+      if (loadEarlierWrap) safeOffsetPage = Math.max(safeOffsetPage, loadEarlierWrap.getBoundingClientRect().bottom);
+      var alreadyVisiblePage = matchRectPage.top >= safeOffsetPage && matchRectPage.bottom <= window.innerHeight;
+      if (!alreadyVisiblePage) {
+        var deltaPage = matchRectPage.top - safeOffsetPage - 12;
+        window.scrollBy({ top: deltaPage, behavior: 'smooth' });
+      }
     }
   }
 }
@@ -5037,6 +5120,20 @@ function resetEntryContentPagination(entryId) {
   var container = document.getElementById('entry-content-' + entryId);
   if (!entry || !container) return;
   container.innerHTML = renderEntryContentHtml(entry);
+  // Confirmed as a real, direct fix via actual, real diagnostic data:
+  // this collapses the entry's own content back down and correctly
+  // re-creates the "Load earlier" button/wrap — but replacing innerHTML
+  // never, on its own, resets an element's own internal scrollTop back
+  // to 0 at all. If someone was scrolled deep into a long entry's own
+  // internal pane before closing search, the restored button, rendered
+  // at the very top of the entry's own newly-rebuilt content, stayed
+  // completely outside the still-scrolled-down visible viewport.
+  // Confirmed this specific assignment genuinely runs and succeeds at
+  // this exact moment (a real, separate issue — the browser's own
+  // native scroll anchoring silently reverting it again shortly after
+  // — is fixed directly via overflow-anchor: none on .entry-content's
+  // own CSS, not here).
+  container.scrollTop = 0;
   enhanceCodeBlocks(container);
 }
 window.resetEntryContentPagination = resetEntryContentPagination;
@@ -5070,7 +5167,17 @@ function loadEarlierEntryContent(entryId) {
   enhanceCodeBlocks(container);
   state.renderedFromIndex = newStart;
   if (newStart === 0) {
-    if (btn) btn.remove();
+    // Confirmed as a real, direct fix for a real, reported cosmetic
+    // issue: only the button itself was ever removed here, not the
+    // surrounding wrap div — which still carries its own margin
+    // (margin:0 0 14px), so it kept taking up real space within the
+    // entry's own pane indefinitely after there was nothing left to
+    // load, occasionally pushing a search match down enough to land
+    // it partly behind whatever's still rendered above the entry's own
+    // main text. Removes the whole wrap now, not just the button
+    // inside it, once there's genuinely nothing left to reveal.
+    if (wrap) wrap.remove();
+    else if (btn) btn.remove();
   } else if (btn) {
     btn.textContent = 'Load earlier (' + newStart + ' more)';
   }
