@@ -1746,6 +1746,7 @@ function renderEntryCard(e) {
       '<div id="entry-listen-row-' + e.id + '" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;" onclick="event.stopPropagation();">' +
         renderListenButton('native-' + e.id, 'toggleListenNative(' + e.id + ')') +
         renderLoadEarlierButtonHtml(e.id) +
+        renderJumpToButtonHtml(e.id) +
       '</div>' +
 
       '<div class="entry-content md" id="entry-content-' + e.id + '">' + entryContentHtml + '</div>' +
@@ -5081,6 +5082,50 @@ function extractSourcesBlock(text) {
   return { mainText: mainText, sourcesHtml: sourcesHtml };
 }
 
+// Item 2.1, gap-analysis plan: jump-to-section / table of contents.
+// Confirmed directly before building: renderWithBubblesSegments's own
+// return value is a flat array of already-rendered HTML strings,
+// consumed by several other, unrelated call sites (search, pagination,
+// scroll-position memory) — changing its own return shape to also
+// carry titles would touch every one of those callers for no benefit
+// to them, the same avoidable-regression-risk reasoning wrapTurnHtml
+// was already built around for item 6. Runs the identical marker-
+// matching regex as a separate, second pass instead — a cheap,
+// plain-text match only (no Forge.renderMarkdown call), not the
+// expensive part of the original function — to collect just the
+// question text for each turn, truncated to a short, real title.
+function extractTurnTitles(text) {
+  var sourcesExtracted = extractSourcesBlock(text);
+  var cleanText = sourcesExtracted.mainText;
+  var TITLE_MARK = '\u2063';
+  var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
+  var titles = [];
+  var m;
+  while ((m = markerRe.exec(cleanText)) !== null) {
+    titles.push(truncateTurnTitle(m[1]));
+  }
+  return titles;
+}
+
+// Direct parallel to extractTurnTitles above, but for the unified
+// view's own messages array input, matching renderMessagesAsSegments's
+// own per-message iteration exactly (one title per real user turn).
+function extractMessageTurnTitles(messages) {
+  var titles = [];
+  (messages || []).forEach(function(m) {
+    if (m.role === 'user') {
+      var parsed = extractFileAttachmentsFromContent(m.content);
+      titles.push(truncateTurnTitle(parsed.displayText));
+    }
+  });
+  return titles;
+}
+
+function truncateTurnTitle(text) {
+  var firstLine = (text || '').replace(/^\n+/, '').split('\n')[0];
+  return firstLine.length > 60 ? firstLine.slice(0, 60) + '\u2026' : firstLine;
+}
+
 function renderWithBubblesSegments(text) {
   var sourcesExtracted = extractSourcesBlock(text);
   text = sourcesExtracted.mainText;
@@ -5288,7 +5333,7 @@ async function renderUnifiedEntryContent(entryId) {
     var nativeSegments = renderMessagesAsSegments(nativeMessages, entryId);
     var total = nativeSegments.length;
     var startIndex = Math.max(0, total - ENTRY_INITIAL_VISIBLE_TURNS);
-    window._entryContentSegments[entryId] = { segments: nativeSegments, renderedFromIndex: startIndex, initialIndex: startIndex };
+    window._entryContentSegments[entryId] = { segments: nativeSegments, renderedFromIndex: startIndex, initialIndex: startIndex, titles: extractMessageTurnTitles(nativeMessages) };
 
     // Confirmed as a real, direct fix for a real, reported bug:
     // "Load earlier" appeared twice on some entries — once here (this
@@ -5412,7 +5457,7 @@ function renderEntryContentHtml(e) {
   // render — avoids needless DOM churn (losing scroll position, an
   // open Sources dropdown, etc.) when the user never clicked "Load
   // earlier" at all.
-  window._entryContentSegments[e.id] = { segments: segments, renderedFromIndex: startIndex, initialIndex: startIndex };
+  window._entryContentSegments[e.id] = { segments: segments, renderedFromIndex: startIndex, initialIndex: startIndex, titles: extractTurnTitles(e.content || '') };
   // Confirmed as a real, direct fix per an explicit, direct
   // recommendation: "Load earlier" no longer renders as part of this
   // function's own return value at all — it now renders separately,
@@ -5472,6 +5517,86 @@ function renderLoadEarlierButtonHtml(entryId) {
   '</div>';
 }
 window.renderLoadEarlierButtonHtml = renderLoadEarlierButtonHtml;
+
+// Item 2.1, gap-analysis plan: jump-to-section / table of contents.
+// Renders alongside Listen and "Load earlier" (see renderEntryCard's
+// own call site) — only shown at all once an entry genuinely has more
+// than one real turn, since a single-turn entry has nothing to jump
+// between at all.
+function renderJumpToButtonHtml(entryId) {
+  var state = window._entryContentSegments[entryId];
+  if (!state || !state.titles || state.titles.length <= 1) return '';
+  var itemsHtml = state.titles.map(function(title, idx) {
+    return '<div onclick="event.stopPropagation();jumpToTurn(' + entryId + ',' + idx + ')" style="padding:6px 10px;cursor:pointer;font-size:12px;color:#4A4035;border-bottom:0.5px solid #EDE9E0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(title || '(untitled turn)') + '</div>';
+  }).join('');
+  return '<div style="position:relative;display:inline-block;">' +
+    '<button class="entry-btn" onclick="event.stopPropagation();toggleJumpToMenu(' + entryId + ')" style="font-size:12px;">' + heroicon('book-open') + ' Jump to</button>' +
+    '<div id="jumpToMenu-' + entryId + '" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;max-height:300px;overflow-y:auto;min-width:220px;max-width:340px;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);margin-top:4px;">' + itemsHtml + '</div>' +
+  '</div>';
+}
+window.renderJumpToButtonHtml = renderJumpToButtonHtml;
+
+function toggleJumpToMenu(entryId) {
+  var menu = document.getElementById('jumpToMenu-' + entryId);
+  if (!menu) return;
+  var isHidden = menu.style.display === 'none' || !menu.style.display;
+  // Only one jump-to menu open at a time, same pattern as entry search
+  // bars — closes any other one that might already be open first.
+  document.querySelectorAll('[id^="jumpToMenu-"]').forEach(function(m) { m.style.display = 'none'; });
+  if (isHidden) menu.style.display = 'block';
+}
+window.toggleJumpToMenu = toggleJumpToMenu;
+
+function jumpToTurn(entryId, turnIndex) {
+  var menu = document.getElementById('jumpToMenu-' + entryId);
+  if (menu) menu.style.display = 'none';
+  var state = window._entryContentSegments && window._entryContentSegments[entryId];
+  var container = document.getElementById('entry-content-' + entryId);
+  if (!state || !container) return;
+  // Reuses the exact reveal logic already built and directly tested at
+  // real production scale for search's own "jump to a match hidden
+  // behind Load earlier" case, and again for scroll-position memory's
+  // own restore step — confirmed there to scale linearly, not
+  // quadratically, even across hundreds of repeated calls.
+  var guard = 0;
+  while (state.renderedFromIndex > turnIndex && guard < 700) {
+    loadEarlierEntryContent(entryId);
+    guard++;
+  }
+  var targetEl = container.querySelector('[data-turn-index="' + turnIndex + '"]');
+  if (!targetEl) return;
+  // Same internal-pane-vs-outer-page distinction, and the same
+  // "safe offset" (search bar and/or a lingering Load-earlier wrap,
+  // whichever sits lower) already established for search-match
+  // scrolling — reused here rather than reinvented for a second,
+  // genuinely different use case.
+  var searchBar = document.getElementById('entry-search-bar-' + entryId);
+  var loadEarlierWrap = document.getElementById('loadEarlierWrap-' + entryId);
+  if (container.scrollHeight > container.clientHeight) {
+    var targetRect = targetEl.getBoundingClientRect();
+    var containerRect = container.getBoundingClientRect();
+    var safeOffsetViewport = containerRect.top;
+    if (searchBar) safeOffsetViewport = Math.max(safeOffsetViewport, searchBar.getBoundingClientRect().bottom);
+    if (loadEarlierWrap) safeOffsetViewport = Math.max(safeOffsetViewport, loadEarlierWrap.getBoundingClientRect().bottom);
+    var alreadyVisible = targetRect.top >= safeOffsetViewport && targetRect.bottom <= containerRect.bottom;
+    if (!alreadyVisible) {
+      container.scrollTop = Math.max(0, container.scrollTop + (targetRect.top - safeOffsetViewport) - 12);
+    }
+  } else {
+    // Short entry, no internal scroll active at all — the entry itself
+    // still grows/shrinks the outer page's own layout.
+    var targetRectPage = targetEl.getBoundingClientRect();
+    var safeOffsetPage = STICKY_HEADER_OFFSET;
+    if (container) safeOffsetPage = Math.max(safeOffsetPage, container.getBoundingClientRect().top);
+    if (searchBar) safeOffsetPage = Math.max(safeOffsetPage, searchBar.getBoundingClientRect().bottom);
+    if (loadEarlierWrap) safeOffsetPage = Math.max(safeOffsetPage, loadEarlierWrap.getBoundingClientRect().bottom);
+    var alreadyVisiblePage = targetRectPage.top >= safeOffsetPage && targetRectPage.bottom <= window.innerHeight;
+    if (!alreadyVisiblePage) {
+      window.scrollBy({ top: targetRectPage.top - safeOffsetPage - 12, behavior: 'smooth' });
+    }
+  }
+}
+window.jumpToTurn = jumpToTurn;
 
 // Shared by the manual refresh icon and toggleEntry()'s own auto-reset
 // on re-expand — collapses this entry's content back to its original,
