@@ -1657,6 +1657,22 @@ function renderEntryCard(e) {
   var title = e.title || (e.prompt ? e.prompt.slice(0, 60) + (e.prompt.length > 60 ? '...' : '') : 'Untitled entry');
   var isExpanded = expandedIds.has(e.id);
   var tags = (e.tags || []).map(function(t) { return '<span class="entry-tag">' + t + '</span>'; }).join('');
+  // Confirmed as a real, direct fix per an explicit, direct
+  // recommendation: "Load earlier" genuinely, repeatedly caused real
+  // trouble specifically because it lived inside the entry's own
+  // searchable pane (#entry-content) — search's own scoped TreeWalker,
+  // internal-scroll targeting, and pagination-expansion logic all had
+  // to account for it there, and every one of those interactions
+  // proved genuinely hard to get fully right together. Moved outside
+  // entry-content entirely, alongside Listen (a different element that
+  // never had any of these problems, precisely because it was never
+  // inside the searchable pane at all) — computed here, BEFORE this
+  // function's own single, large template-string literal, since
+  // renderEntryContentHtml is what populates
+  // window._entryContentSegments[e.id] in the first place, and the
+  // Listen/Load-earlier row itself renders earlier in that literal
+  // than #entry-content does, needing that state already available.
+  var entryContentHtml = Forge.renderMarkdown ? renderEntryContentHtml(e) : escHtml(e.content || '');
 
   return '<div class="entry-card' + (isExpanded ? ' expanded' : '') + (selectedIds.has(e.id) ? ' selected' : '') + '" id="entry-' + e.id + '">' +
     '<input type="checkbox" class="entry-checkbox" id="chk-' + e.id + '" ' + (selectedIds.has(e.id) ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSelect(' + e.id + ',this.checked)" />' +
@@ -1723,9 +1739,16 @@ function renderEntryCard(e) {
       // messages each get their own, individually-reliable Listen
       // button instead). Always shown, on every entry, unlike the
       // conditional Full/Summary group just above.
-      '<div style="margin-bottom:10px;" onclick="event.stopPropagation();">' + renderListenButton('native-' + e.id, 'toggleListenNative(' + e.id + ')') + '</div>' +
+      //
+      // "Load earlier" now renders here too, alongside Listen —
+      // outside entry-content entirely, per the explicit
+      // recommendation above.
+      '<div id="entry-listen-row-' + e.id + '" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;" onclick="event.stopPropagation();">' +
+        renderListenButton('native-' + e.id, 'toggleListenNative(' + e.id + ')') +
+        renderLoadEarlierButtonHtml(e.id) +
+      '</div>' +
 
-      '<div class="entry-content md" id="entry-content-' + e.id + '">' + (Forge.renderMarkdown ? renderEntryContentHtml(e) : escHtml(e.content || '')) + '</div>' +
+      '<div class="entry-content md" id="entry-content-' + e.id + '">' + entryContentHtml + '</div>' +
       '<div id="entry-summary-' + e.id + '" style="display:none;"></div>' +
       // Artifacts (Table, first of the brief's own build order) — per
       // the brief's own explicit Read/Work boundary ("artifacts live in
@@ -2527,24 +2550,20 @@ function toggleEntrySearch(id) {
   } else {
     if (input) input.value = '';
     clearEntrySearchHighlights(id);
-    // Confirmed as a real, direct fix for a real, reported gap:
-    // expandAllEntryContentForSearch (which runs at the start of every
-    // search) permanently reveals every remaining "Load earlier" batch
-    // and removes that button/wrap entirely, since search needs to be
-    // able to find a match anywhere in the entry, not just its
-    // initially-visible portion. But that expansion was never actually
-    // undone again once search closed — meaning the very first search
-    // within an entry silently, permanently removed the ability to
-    // collapse it back down at all, even for someone who never wanted
-    // to see the full, expanded history at once. Only rebuilds if the
-    // pagination state actually diverged from where it started (same
-    // guard already used elsewhere, in toggleEntry's own re-expand
-    // logic), so closing search on an entry that was never expanded at
-    // all doesn't cause needless DOM churn.
-    var paginationState = window._entryContentSegments && window._entryContentSegments[id];
-    if (paginationState && paginationState.renderedFromIndex !== paginationState.initialIndex) {
-      resetEntryContentPagination(id);
-    }
+    // Confirmed as a real, direct fix per an explicit, direct
+    // recommendation: an earlier version of this branch tried to
+    // "restore" pagination back to its own, original, collapsed state
+    // whenever search closed (undoing expandAllEntryContentForSearch's
+    // own, permanent expansion) — but this repeatedly proved genuinely
+    // hard to get right together with search's own internal-scroll
+    // targeting and pagination-state tracking, causing several,
+    // separate, real regressions across this same investigation.
+    // Removed entirely, rather than attempting a fourth fix: closing
+    // search now simply leaves the entry's own content exactly as
+    // search last expanded it. Collapsing back down is still available
+    // directly, any time, via the standalone collapse-back icon next
+    // to "Load earlier" (now living outside entry-content entirely,
+    // alongside Listen — see renderLoadEarlierButtonHtml).
   }
 }
 window.toggleEntrySearch = toggleEntrySearch;
@@ -2592,6 +2611,10 @@ function updateEntrySearchCounter(id) {
 // (search runs on oninput) is cheap after the first call.
 function expandAllEntryContentForSearch(entryId) {
   var state = window._entryContentSegments[entryId];
+  // TEMPORARY DIAGNOSTIC — kept in place per explicit instruction not
+  // to remove until this issue is fully solved. Logs the real, live
+  // pagination state at the exact moment search runs.
+  console.log('[EXPANDALL-DIAG] entry', entryId, '| state exists:', !!state, '| state:', state ? JSON.stringify({ renderedFromIndex: state.renderedFromIndex, initialIndex: state.initialIndex, segmentsLength: state.segments ? state.segments.length : null }) : 'undefined — this function returns immediately, doing nothing at all');
   if (!state) return;
   // Confirmed as a real, direct fix for a real regression report: this
   // function calls loadEarlierEntryContent repeatedly, and that
@@ -2622,6 +2645,7 @@ function expandAllEntryContentForSearch(entryId) {
     loadEarlierEntryContent(entryId);
     guard++;
   }
+  console.log('[EXPANDALL-DIAG] after expansion loop — iterations run:', guard, '| final renderedFromIndex (should be 0):', state.renderedFromIndex, '| entry-content own real text length now:', (document.getElementById('entry-content-' + entryId) || {}).textContent ? document.getElementById('entry-content-' + entryId).textContent.length : 'N/A');
 
   if (card) {
     if (beforeTop !== null) {
@@ -2655,38 +2679,186 @@ function runEntrySearch(id) {
   var content = document.getElementById('entry-content-' + id);
   if (!content) return;
 
-  var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null);
+  // Confirmed as a real, direct fix for a real, precisely-reported
+  // regression: "CTO" matched only the real, whole word before, but
+  // was found matching words like "factor" and "doctor" too — a plain
+  // substring search (text.indexOf(query)) always matches "cto"
+  // anywhere it appears, including inside longer, unrelated words.
+  // Switched to a real, whole-word regex match (\b...\b) instead, so a
+  // short query like "CTO" only ever matches itself as a genuine,
+  // separate word — case-insensitive matching (the 'i' flag) is
+  // preserved exactly as before. escapeRegex protects against any
+  // regex-special characters the query itself might contain (e.g. a
+  // literal "$", "(", or ".") being misinterpreted as regex syntax
+  // rather than literal characters to search for.
+  function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  var wordBoundaryRegex = new RegExp('\\b' + escapeRegex(query) + '\\b', 'gi');
+
+  // Confirmed as a real, direct fix for a real, separate regression:
+  // this scoped walker (explicitly rejecting any text node whose own
+  // ancestor chain passes through a DIFFERENT entry's own
+  // id-prefixed container) was found missing entirely from this
+  // function during this same investigation — it must have been lost
+  // during an earlier re-combination of several, separate, unpushed
+  // fixes this session. Restored here: search can never act on
+  // another entry's own content, independent of whatever might
+  // otherwise let that happen.
+  var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+    acceptNode: function(node) {
+      var el = node.parentElement;
+      while (el && el !== content) {
+        var elId = el.id || '';
+        var m = elId.match(/^entry(?:-content)?-(.+)$/);
+        if (m && m[1] !== String(id)) return NodeFilter.FILTER_REJECT;
+        el = el.parentElement;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
   var textNodes = [];
   var node;
   while ((node = walker.nextNode())) {
     if (node.nodeValue && node.nodeValue.trim()) textNodes.push(node);
   }
 
-  var lowerQuery = query.toLowerCase();
-  textNodes.forEach(function(textNode) {
-    var text = textNode.nodeValue;
-    var lowerText = text.toLowerCase();
-    if (lowerText.indexOf(lowerQuery) === -1) return;
+  // TEMPORARY DIAGNOSTIC — kept in place per explicit instruction not
+  // to remove until this issue is fully solved. Ground-truth comparison
+  // against content.textContent directly.
+  var diagRegexPre = new RegExp('\\b' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+  var diagGroundTruthCount = (content.textContent.match(diagRegexPre) || []).length;
+  console.log('[SEARCH-DIAG5] entry', id, '| query:', query, '| text nodes visited by scoped walker:', textNodes.length, '| content.textContent length:', content.textContent.length, '| ground-truth matches in content.textContent:', diagGroundTruthCount);
 
+  // Confirmed as a real, direct fix for the actual, real root cause of
+  // a reported "fewer matches, some real occurrences missed"
+  // regression — confirmed via direct testing that a word split across
+  // an inline element mid-word (e.g. markdown rendering "Our C<strong>
+  // TO</strong> approved" — "CTO" split between a plain text node and
+  // a bold one) was silently missed entirely: the previous, per-text-
+  // node approach ran the regex independently on each individual text
+  // node, so neither "Our C" nor "TO" alone ever contained the full
+  // "CTO" text for the regex to match at all, even though the rendered
+  // page visually reads as one continuous word. Fixed by matching
+  // against ALL of the scoped text nodes' own combined text as a single
+  // string first, then mapping each real match's own absolute position
+  // back to whichever individual node(s) it actually overlaps —
+  // correctly handling both a match entirely within one node (the
+  // common case) and one genuinely split across several.
+  // Confirmed as a real, direct fix for a real, precisely-reported
+  // regression (34-35 real occurrences found, only 3 matched): each
+  // message/turn in an entry renders as its own, separate block
+  // element (e.g. a <div> per bubble), with no whitespace text node
+  // between adjacent ones at all — block-level HTML elements don't
+  // need any literal whitespace in the markup to display correctly on
+  // separate lines. Joining every text node's own value directly
+  // adjacent to the next, with nothing between them, meant a real word
+  // landing at the very boundary between two separate messages (its
+  // own message ending with "...our CTO", the next starting with "The
+  // team...") merged into "CTOThe" in the combined text — destroying
+  // the word boundary the regex depends on entirely, and silently
+  // dropping that match. With many separate messages each containing
+  // the same short, common query, this landed on a real boundary often
+  // enough to explain a massive, direct discrepancy like this one.
+  //
+  // A first attempt fixed this by inserting a space between every pair
+  // of adjacent nodes unconditionally — but that broke the earlier,
+  // already-fixed "word split by an inline element mid-word" case
+  // (e.g. "Our C<strong>TO</strong> approved"), inserting a space
+  // directly inside what should have joined back into one, real,
+  // continuous word ("C" + " " + "TO" no longer forms "CTO" at all).
+  // The two cases need to be genuinely distinguished, not treated
+  // identically: getBlockAncestor walks up from a text node to the
+  // nearest real block-level ancestor within content (falling back to
+  // content itself if none exists before reaching it) — two nodes
+  // sharing that same block ancestor are genuinely still within one,
+  // continuous run of text, split only by inline formatting (no
+  // separator needed, and inserting one would break the join); two
+  // nodes with DIFFERENT block ancestors are genuinely in separate
+  // messages entirely (a real separator is needed, restoring the word
+  // boundary a person would naturally read there).
+  var BLOCK_ANCESTOR_TAGS = { DIV: 1, P: 1, LI: 1, UL: 1, OL: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, BLOCKQUOTE: 1, PRE: 1, TABLE: 1, TR: 1, TD: 1, SECTION: 1, ARTICLE: 1, HEADER: 1, FOOTER: 1 };
+  function getBlockAncestor(node) {
+    var el = node.parentElement;
+    while (el && el !== content) {
+      if (BLOCK_ANCESTOR_TAGS[el.tagName]) return el;
+      el = el.parentElement;
+    }
+    return content;
+  }
+
+  var combinedText = '';
+  var nodeRanges = [];
+  var prevBlockAncestor = null;
+  textNodes.forEach(function(n, i) {
+    var blockAncestor = getBlockAncestor(n);
+    if (i > 0 && blockAncestor !== prevBlockAncestor) combinedText += ' ';
+    prevBlockAncestor = blockAncestor;
+    var start = combinedText.length;
+    combinedText += n.nodeValue;
+    nodeRanges.push({ node: n, start: start, end: start + n.nodeValue.length });
+  });
+
+  wordBoundaryRegex.lastIndex = 0;
+  var combinedMatches = [];
+  var cm;
+  while ((cm = wordBoundaryRegex.exec(combinedText)) !== null) {
+    combinedMatches.push({ start: cm.index, end: cm.index + cm[0].length });
+    if (cm.index === wordBoundaryRegex.lastIndex) wordBoundaryRegex.lastIndex++;
+  }
+
+  // TEMPORARY DIAGNOSTIC — kept in place per explicit instruction not
+  // to remove until this issue is fully solved.
+  console.log('[SEARCH-DIAG5] combinedText length:', combinedText.length, '| combinedMatches found:', combinedMatches.length);
+
+  // Group each match's own pieces by which node they fall in, so each
+  // node can be processed once, independently, with all of its own
+  // pieces already known in advance. matchGroups tracks, in order,
+  // which mark elements belong to the SAME logical match — needed
+  // separately from piecesByNodeIndex, since a match split across
+  // nodes (like the CTO/<strong> case above) creates more than one
+  // <mark> element for what is genuinely one, single logical
+  // occurrence; Next/Previous navigation and the counter both need to
+  // treat that as one hit, not two.
+  var piecesByNodeIndex = new Map();
+  var matchGroups = combinedMatches.map(function() { return []; });
+  combinedMatches.forEach(function(match, matchIndex) {
+    nodeRanges.forEach(function(nr, nodeIndex) {
+      var overlapStart = Math.max(match.start, nr.start);
+      var overlapEnd = Math.min(match.end, nr.end);
+      if (overlapStart < overlapEnd) {
+        if (!piecesByNodeIndex.has(nodeIndex)) piecesByNodeIndex.set(nodeIndex, []);
+        piecesByNodeIndex.get(nodeIndex).push({ relStart: overlapStart - nr.start, relEnd: overlapEnd - nr.start, matchIndex: matchIndex });
+      }
+    });
+  });
+
+  nodeRanges.forEach(function(nr, nodeIndex) {
+    var pieces = piecesByNodeIndex.get(nodeIndex);
+    if (!pieces || !pieces.length) return;
+    var text = nr.node.nodeValue;
     var frag = document.createDocumentFragment();
     var lastEnd = 0;
-    var idx = lowerText.indexOf(lowerQuery);
-    while (idx !== -1) {
-      frag.appendChild(document.createTextNode(text.slice(lastEnd, idx)));
+    pieces.forEach(function(p) {
+      frag.appendChild(document.createTextNode(text.slice(lastEnd, p.relStart)));
       var mark = document.createElement('mark');
       mark.className = 'entry-search-hit';
       mark.style.background = '#FFE58A';
       mark.style.borderRadius = '2px';
-      mark.textContent = text.slice(idx, idx + query.length);
+      mark.textContent = text.slice(p.relStart, p.relEnd);
       frag.appendChild(mark);
-      lastEnd = idx + query.length;
-      idx = lowerText.indexOf(lowerQuery, lastEnd);
-    }
+      matchGroups[p.matchIndex].push(mark);
+      lastEnd = p.relEnd;
+    });
     frag.appendChild(document.createTextNode(text.slice(lastEnd)));
-    textNode.parentNode.replaceChild(frag, textNode);
+    nr.node.parentNode.replaceChild(frag, nr.node);
   });
 
-  var matches = Array.prototype.slice.call(content.querySelectorAll('mark.entry-search-hit'));
+  // Each entry in "matches" is itself an array of one or more mark
+  // elements (more than one only for a match genuinely split across
+  // nodes) — highlightCurrentEntrySearchMatch and
+  // focusCurrentEntrySearchMatch both style/scroll to every element in
+  // the current group together, so a split match still highlights and
+  // scrolls as one, single, complete hit.
+  var matches = matchGroups.filter(function(g) { return g.length > 0; });
   entrySearchState.set(id, { matches: matches, index: matches.length ? 0 : -1 });
   updateEntrySearchCounter(id);
   // highlightCurrentEntrySearchMatch (not the scrolling
@@ -2707,15 +2879,23 @@ window.runEntrySearch = runEntrySearch;
 function highlightCurrentEntrySearchMatch(id) {
   var state = entrySearchState.get(id);
   if (!state) return;
-  state.matches.forEach(function(m, i) {
-    m.style.background = i === state.index ? '#FFA500' : '#FFE58A';
+  // Confirmed as a real, direct fix needed alongside the match-splitting
+  // fix above: each entry in state.matches is now itself a group (an
+  // array) of one or more mark elements — more than one only for a
+  // match genuinely split across nodes by an inline element mid-word —
+  // so every element within a group is styled together, keeping a
+  // split match visually highlighted as one, single, complete hit.
+  state.matches.forEach(function(group, i) {
+    group.forEach(function(m) {
+      m.style.background = i === state.index ? '#FFA500' : '#FFE58A';
+    });
   });
 }
 
 function focusCurrentEntrySearchMatch(id) {
   highlightCurrentEntrySearchMatch(id);
   var state = entrySearchState.get(id);
-  if (state && state.index >= 0 && state.matches[state.index]) {
+  if (state && state.index >= 0 && state.matches[state.index] && state.matches[state.index].length) {
     // Confirmed as the real, direct root cause behind every entry-
     // search scrolling report this session, via a precise, direct
     // description: "the system is scrolling the page and not the diary
@@ -2732,7 +2912,10 @@ function focusCurrentEntrySearchMatch(id) {
     // (content.scrollHeight > content.clientHeight) and scrolls
     // whichever one actually applies, rather than always assuming the
     // page.
-    var match = state.matches[state.index];
+    // Scrolls to the group's own first element — the earliest portion
+    // of the match — sufficient for a split match, since its remaining
+    // piece(s) sit immediately adjacent in the rendered page.
+    var match = state.matches[state.index][0];
     var content = document.getElementById('entry-content-' + id);
     var searchBar = document.getElementById('entry-search-bar-' + id);
     // Confirmed as a real, direct fix for a related, reported cosmetic
@@ -4961,6 +5144,7 @@ async function renderUnifiedEntryContent(entryId) {
   if (!chatSessionId || typeof seedCount !== 'number') {
     container.innerHTML = renderEntryContentHtml(entry);
     enhanceCodeBlocks(container);
+    updateLoadEarlierButtonInPage(entryId);
     return;
   }
 
@@ -4980,6 +5164,7 @@ async function renderUnifiedEntryContent(entryId) {
   if (!session || !Array.isArray(session.messages) || session.messages.length < seedCount) {
     container.innerHTML = renderEntryContentHtml(entry);
     enhanceCodeBlocks(container);
+    updateLoadEarlierButtonInPage(entryId);
     return;
   }
 
@@ -5003,15 +5188,21 @@ async function renderUnifiedEntryContent(entryId) {
     var startIndex = Math.max(0, total - ENTRY_INITIAL_VISIBLE_TURNS);
     window._entryContentSegments[entryId] = { segments: nativeSegments, renderedFromIndex: startIndex, initialIndex: startIndex };
 
+    // Confirmed as a real, direct fix for a real, reported bug:
+    // "Load earlier" appeared twice on some entries — once here (this
+    // function's own, separate, previously-untouched copy of the same
+    // HTML), and again from the single, relocated version living
+    // outside entry-content, alongside Listen (see
+    // renderLoadEarlierButtonHtml and its own call site in
+    // renderEntryCard). This function embedded its own, separate copy
+    // directly in its own HTML string, unaffected by that earlier
+    // relocation entirely, since this function was never touched
+    // during that work at all. Removed here — the relocated version is
+    // now the only one, ever, anywhere; updateLoadEarlierButtonInPage
+    // (called after container.innerHTML is actually set, below) is
+    // what keeps it in sync with this function's own, freshly-set
+    // pagination values instead.
     var html = '';
-    if (startIndex > 0) {
-      html += '<div id="loadEarlierWrap-' + entryId + '" style="margin:0 0 14px;">' +
-        '<button class="entry-btn" id="loadEarlierEntryBtn-' + entryId + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + entryId + ')" style="font-size:12px;">' +
-          'Load earlier (' + startIndex + ' more)' +
-        '</button>' +
-        '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + entryId + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">' + heroicon('arrow-path') + '</button>' +
-      '</div>';
-    }
     for (var i = startIndex; i < total; i++) html += nativeSegments[i];
 
     // Images-disclosure banner — reworded here specifically for the
@@ -5062,10 +5253,12 @@ async function renderUnifiedEntryContent(entryId) {
 
     container.innerHTML = html;
     enhanceCodeBlocks(container);
+    updateLoadEarlierButtonInPage(entryId);
   } catch (e) {
     console.warn('[Diary] Unified view: rendering failed unexpectedly, falling back to native-only:', e.message);
     container.innerHTML = renderEntryContentHtml(entry);
     enhanceCodeBlocks(container);
+    updateLoadEarlierButtonInPage(entryId);
   }
 }
 window.renderUnifiedEntryContent = renderUnifiedEntryContent;
@@ -5094,18 +5287,65 @@ function renderEntryContentHtml(e) {
   // open Sources dropdown, etc.) when the user never clicked "Load
   // earlier" at all.
   window._entryContentSegments[e.id] = { segments: segments, renderedFromIndex: startIndex, initialIndex: startIndex };
+  // Confirmed as a real, direct fix per an explicit, direct
+  // recommendation: "Load earlier" no longer renders as part of this
+  // function's own return value at all — it now renders separately,
+  // outside entry-content entirely, alongside Listen (see
+  // renderLoadEarlierButtonHtml below, and its own call site within
+  // renderEntryCard). This function's own job is now genuinely just
+  // the entry's own turns, nothing else.
   var html = '';
-  if (startIndex > 0) {
-    html += '<div id="loadEarlierWrap-' + e.id + '" style="margin:0 0 14px;">' +
-      '<button class="entry-btn" id="loadEarlierEntryBtn-' + e.id + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + e.id + ')" style="font-size:12px;">' +
-        'Load earlier (' + startIndex + ' more)' +
-      '</button>' +
-      '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + e.id + ')" title="Collapse back to the most recent turns" style="font-size:12px;margin-left:6px;">' + heroicon('arrow-path') + '</button>' +
-    '</div>';
-  }
   for (var i = startIndex; i < total; i++) html += segments[i];
   return html;
 }
+
+// Confirmed as a real, direct fix per an explicit, direct
+// recommendation: renders "Load earlier" (and its own, adjacent
+// collapse-back icon) as a standalone piece of HTML, entirely separate
+// from entry-content's own innerHTML — called once, at initial render
+// (renderEntryCard, right after renderEntryContentHtml, which is what
+// populates window._entryContentSegments[entryId] in the first place),
+// and again whenever this button's own text needs updating afterward
+// (loadEarlierEntryContent's own "X more" count, or removing it
+// entirely once nothing remains to reveal). Reads renderedFromIndex
+// (not initialIndex) specifically, since that's the value that
+// actually changes as more gets revealed — initialIndex never changes
+// after the first render at all.
+// Confirmed as a real, direct fix per an explicit, direct
+// recommendation: renders "Load earlier" (and its own, adjacent
+// collapse-back icon) as a standalone piece of HTML, entirely separate
+// from entry-content's own innerHTML — called once, at initial render
+// (renderEntryCard, right after renderEntryContentHtml, which is what
+// populates window._entryContentSegments[entryId] in the first place),
+// and again whenever this button's own text needs updating afterward
+// (loadEarlierEntryContent's own "X more" count).
+//
+// Renders based on initialIndex, not renderedFromIndex — the whole
+// wrap (button plus collapse-back icon together) should exist for the
+// entry's own entire lifetime once it genuinely started with hidden
+// content at all, regardless of how much has since been revealed.
+// Confirmed as a real, direct fix for a real, separate bug: an earlier
+// version removed the entire wrap once fully expanded (renderedFromIndex
+// reaching 0) — but that wrap held BOTH buttons together, so removing
+// it after a search's own full expansion also removed the collapse-
+// back icon, leaving genuinely no way left to collapse the entry back
+// down at all afterward. Only the "Load earlier" button itself hides
+// now once nothing remains to reveal — the collapse-back icon stays
+// available for the entry's own entire lifetime, exactly as intended.
+function renderLoadEarlierButtonHtml(entryId) {
+  var state = window._entryContentSegments[entryId];
+  if (!state || state.initialIndex <= 0) return '';
+  var showLoadEarlierBtn = state.renderedFromIndex > 0;
+  return '<div id="loadEarlierWrap-' + entryId + '" style="display:flex;align-items:center;">' +
+    (showLoadEarlierBtn ?
+      '<button class="entry-btn" id="loadEarlierEntryBtn-' + entryId + '" onclick="event.stopPropagation();loadEarlierEntryContent(' + entryId + ')" style="font-size:12px;">' +
+        'Load earlier (' + state.renderedFromIndex + ' more)' +
+      '</button>'
+    : '') +
+    '<button class="entry-btn" onclick="event.stopPropagation();resetEntryContentPagination(' + entryId + ')" title="Collapse back to the most recent turns" style="font-size:12px;' + (showLoadEarlierBtn ? 'margin-left:6px;' : '') + '">' + heroicon('arrow-path') + '</button>' +
+  '</div>';
+}
+window.renderLoadEarlierButtonHtml = renderLoadEarlierButtonHtml;
 
 // Shared by the manual refresh icon and toggleEntry()'s own auto-reset
 // on re-expand — collapses this entry's content back to its original,
@@ -5115,19 +5355,45 @@ function renderEntryContentHtml(e) {
 // own content may have changed since the last render (e.g. a Sync just
 // pulled in new native messages) — a stale re-render would silently
 // miss that.
+// Confirmed as a real, direct fix for a real bug found via direct
+// testing: this only ever handled the case where loadEarlierWrap
+// already existed in the page at all — but after a search fully
+// expands an entry, loadEarlierEntryContent already removes that
+// wrap entirely, meaning it genuinely doesn't exist at the moment
+// this runs, so the button never got recreated at all. Correctly
+// handles both: replace the existing wrap in place if it's still
+// there, or insert a fresh one into the stable, always-present row
+// (entry-listen-row) if it was already removed. Shared by
+// resetEntryContentPagination and renderUnifiedEntryContent — both
+// genuinely, separately populate window._entryContentSegments[entryId]
+// with their own, fresh pagination values, and both then need this
+// same "Load earlier" button, living outside entry-content entirely,
+// to reflect those new values in place.
+function updateLoadEarlierButtonInPage(entryId) {
+  var loadEarlierWrap = document.getElementById('loadEarlierWrap-' + entryId);
+  var newLoadEarlierHtml = renderLoadEarlierButtonHtml(entryId);
+  if (loadEarlierWrap) {
+    if (newLoadEarlierHtml) loadEarlierWrap.outerHTML = newLoadEarlierHtml;
+    else loadEarlierWrap.remove();
+  } else if (newLoadEarlierHtml) {
+    var listenRow = document.getElementById('entry-listen-row-' + entryId);
+    if (listenRow) listenRow.insertAdjacentHTML('beforeend', newLoadEarlierHtml);
+  }
+}
+
 function resetEntryContentPagination(entryId) {
   var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
   var container = document.getElementById('entry-content-' + entryId);
   if (!entry || !container) return;
   container.innerHTML = renderEntryContentHtml(entry);
   // Confirmed as a real, direct fix via actual, real diagnostic data:
-  // this collapses the entry's own content back down and correctly
-  // re-creates the "Load earlier" button/wrap — but replacing innerHTML
-  // never, on its own, resets an element's own internal scrollTop back
-  // to 0 at all. If someone was scrolled deep into a long entry's own
-  // internal pane before closing search, the restored button, rendered
-  // at the very top of the entry's own newly-rebuilt content, stayed
-  // completely outside the still-scrolled-down visible viewport.
+  // this collapses the entry's own content back down — but replacing
+  // innerHTML never, on its own, resets an element's own internal
+  // scrollTop back to 0 at all. Kept even now that "Load earlier"
+  // itself lives outside this element entirely (see below) — this
+  // pane can still, genuinely, be scrolled deep into on its own, and
+  // collapsing its own content back down should still return to its
+  // own top, not leave the viewport wherever it happened to be.
   // Confirmed this specific assignment genuinely runs and succeeds at
   // this exact moment (a real, separate issue — the browser's own
   // native scroll anchoring silently reverting it again shortly after
@@ -5135,6 +5401,14 @@ function resetEntryContentPagination(entryId) {
   // own CSS, not here).
   container.scrollTop = 0;
   enhanceCodeBlocks(container);
+  // Confirmed as a real, direct fix per an explicit, direct
+  // recommendation: "Load earlier" now lives outside entry-content
+  // entirely (see renderLoadEarlierButtonHtml), so replacing
+  // container's own innerHTML above no longer touches it at all —
+  // this function's own, whole purpose is collapsing back to the most
+  // recent turns, which should still mean the button reflects that
+  // here too.
+  updateLoadEarlierButtonInPage(entryId);
 }
 window.resetEntryContentPagination = resetEntryContentPagination;
 
@@ -5143,41 +5417,31 @@ function loadEarlierEntryContent(entryId) {
   if (!state) return;
   var newStart = Math.max(0, state.renderedFromIndex - ENTRY_LOAD_EARLIER_BATCH);
   var container = document.getElementById('entry-content-' + entryId);
-  // Anchor against the WRAPPER div (holding both the "Load earlier" and
-  // refresh buttons together), not the inner button itself — inserting
-  // 'afterend' the button directly would land the newly-revealed
-  // content inside that same wrapper, between/after the two buttons,
-  // rather than as proper sibling content in the entry itself.
-  var wrap = document.getElementById('loadEarlierWrap-' + entryId);
   if (!container) return;
-  // Build the newly-revealed segments (newStart..renderedFromIndex) as
-  // one HTML chunk, in correct chronological order, and insert the
-  // whole chunk right after the button in one go — simpler and safer
-  // here than continue.html's own one-DOM-node-at-a-time insertion,
-  // since these are raw HTML strings (from renderWithBubblesSegments),
-  // not individually-tracked DOM elements to begin with.
+  // Confirmed as a real, direct fix per an explicit, direct
+  // recommendation: "Load earlier" (and its own wrap) now lives
+  // outside entry-content entirely (see renderLoadEarlierButtonHtml) —
+  // there's no longer a wrap element inside container at all to anchor
+  // 'afterend' against. Newly-revealed content always inserts directly
+  // at the very top of container itself now.
   var revealedHtml = '';
   for (var i = newStart; i < state.renderedFromIndex; i++) revealedHtml += state.segments[i];
-  var btn = document.getElementById('loadEarlierEntryBtn-' + entryId);
-  if (wrap) {
-    wrap.insertAdjacentHTML('afterend', revealedHtml);
-  } else {
-    container.insertAdjacentHTML('afterbegin', revealedHtml);
-  }
+  container.insertAdjacentHTML('afterbegin', revealedHtml);
   enhanceCodeBlocks(container);
   state.renderedFromIndex = newStart;
+  // Confirmed as a real, direct fix for a real, separate bug found
+  // directly: the wrap (holding both "Load earlier" and the
+  // collapse-back icon together) used to get removed entirely once
+  // nothing remained to reveal — but that meant the collapse-back icon
+  // disappeared right along with it, leaving genuinely no way left to
+  // collapse the entry back down after a full expansion (e.g. from a
+  // search). Now only the "Load earlier" button itself is ever
+  // removed once there's nothing left to load — the wrap and its
+  // collapse-back icon stay, using the wrap's own stable id regardless
+  // of wherever renderLoadEarlierButtonHtml's own call site placed it.
+  var btn = document.getElementById('loadEarlierEntryBtn-' + entryId);
   if (newStart === 0) {
-    // Confirmed as a real, direct fix for a real, reported cosmetic
-    // issue: only the button itself was ever removed here, not the
-    // surrounding wrap div — which still carries its own margin
-    // (margin:0 0 14px), so it kept taking up real space within the
-    // entry's own pane indefinitely after there was nothing left to
-    // load, occasionally pushing a search match down enough to land
-    // it partly behind whatever's still rendered above the entry's own
-    // main text. Removes the whole wrap now, not just the button
-    // inside it, once there's genuinely nothing left to reveal.
-    if (wrap) wrap.remove();
-    else if (btn) btn.remove();
+    if (btn) btn.remove();
   } else if (btn) {
     btn.textContent = 'Load earlier (' + newStart + ' more)';
   }
