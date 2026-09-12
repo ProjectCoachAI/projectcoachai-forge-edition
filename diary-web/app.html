@@ -1136,19 +1136,59 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
   }
   await loadDiary();
   await loadCategories();
-  // Deep-link from continue.html's own "Back to Diary" — land the user
-  // directly back in the specific entry they were just working with,
-  // not the generic top-of-list view. toggleEntry() already handles
-  // both expansion AND scroll-to-position together (confirmed directly
+  // Deep-link from continue.html's own "Back to Diary" (and now also
+  // from the dock's own quick-search results) — land the user directly
+  // back in the specific entry they were just working with, not the
+  // generic top-of-list view. toggleEntry() already handles both
+  // expansion AND scroll-to-position together (confirmed directly
   // before reusing it here, rather than duplicating that logic) — one
   // call does the whole job. Cleared from the URL afterward so a
   // refresh doesn't keep re-triggering the same jump.
-  (function() {
+  //
+  // Confirmed as a real, direct fix for a real, reported bug: loadDiary()
+  // above only ever loads one default, paginated page of the MOST
+  // RECENT entries — toggleEntry(id) requires that entry's own card to
+  // already exist in the DOM (document.getElementById('entry-' + id)),
+  // meaning a genuinely older entry (or simply one from a provider used
+  // less often, so it falls off the recent page sooner) silently failed
+  // to open at all — landing on the generic Diary view with no visible
+  // error, no indication anything was even attempted. This looked
+  // correlated with "which AI provider" only because whichever provider
+  // gets used most often naturally dominates the recent page — the real
+  // cause was pagination, not provider, confirmed directly by tracing
+  // loadDiary()'s own request (it never filters by provider at all
+  // unless the person has explicitly set that filter themselves).
+  // Fixed by fetching that specific entry directly by its own real ID
+  // (GET /api/diary/:id, an existing endpoint, already returns the same
+  // core fields renderEntryCard needs) whenever it isn't already present
+  // in the currently-loaded page, then prepending it and re-rendering
+  // before ever calling toggleEntry — rather than assuming it happens to
+  // already be part of the default, recency-sorted page.
+  (async function() {
     var openEntryId = new URLSearchParams(window.location.search).get('entryId');
-    if (openEntryId) {
-      history.replaceState({}, '', '/app.html');
-      setTimeout(function() { toggleEntry(parseInt(openEntryId, 10)); }, 100);
+    if (!openEntryId) return;
+    history.replaceState({}, '', '/app.html');
+    var targetId = parseInt(openEntryId, 10);
+    var alreadyLoaded = allEntries.some(function(e) { return e.id === targetId; });
+    if (!alreadyLoaded) {
+      try {
+        var r = await Forge.request('GET', '/api/diary/' + targetId);
+        if (r.ok && r.data.entry) {
+          allEntries = [r.data.entry].concat(allEntries);
+          filteredEntries = [r.data.entry].concat(filteredEntries);
+          window._diaryEntries = allEntries;
+          renderEntries();
+        } else {
+          // Genuinely missing (deleted, or belongs to a different
+          // account) — nothing safe to open at all; same, honest
+          // no-op as before rather than a broken toggle attempt.
+          return;
+        }
+      } catch (_e) {
+        return;
+      }
     }
+    setTimeout(function() { toggleEntry(targetId); }, 100);
   })();
 })();
 
@@ -1778,6 +1818,14 @@ function renderEntryCard(e) {
         renderListenButton('native-' + e.id, 'toggleListenNative(' + e.id + ')') +
         renderLoadEarlierButtonHtml(e.id) +
         renderJumpToButtonHtml(e.id) +
+        // Per explicit request: a second "Open original" alongside
+        // Listen/Jump to, at the top of the entry — the existing one
+        // further down (in .entry-actions, alongside Share/Copy/Move)
+        // stays exactly as it was, this is additive, not a replacement.
+        // Naturally absent here whenever origUrl itself is null (no
+        // captured source conversation to reopen), same guard the
+        // existing bottom button already uses.
+        (origUrl ? '<button class="entry-btn" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">' + heroicon('link') + ' Open original &#8599;</button>' : '') +
       '</div>' +
 
       '<div class="entry-content md" id="entry-content-' + e.id + '">' + entryContentHtml + '</div>' +
