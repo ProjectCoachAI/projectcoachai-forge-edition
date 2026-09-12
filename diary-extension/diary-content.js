@@ -9,6 +9,29 @@
   if (window.__diaryProviderActive) return;
   window.__diaryProviderActive = true;
 
+  // Added specifically to solve a real, repeated, practical problem
+  // this exact investigation kept running into: diary-content.js's own
+  // console.log output lives in the actual provider tab's own DevTools
+  // console (this file runs as a content script injected into that
+  // page) — a different, separate context from the extension's
+  // background-script console, which is where all the matching
+  // background.js-side timing checkpoints already show up. Reuses the
+  // exact same, already-proven window.postMessage -> diary-isolated.js
+  // -> chrome.runtime.sendMessage relay this file already uses
+  // elsewhere (GET_AUTH_TOKEN, SAVE_TO_DIARY) for a new purpose: a
+  // lightweight diagnostic-log relay, so both sides of a real timing
+  // trace land in the one console someone already has open, rather
+  // than requiring them to juggle two separate tabs' consoles to see
+  // the full picture. console.log() here is left in place, unchanged —
+  // this is additive, not a replacement.
+  function logToBackgroundToo() {
+    var message = Array.prototype.slice.call(arguments).join(' ');
+    console.log(message);
+    try {
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'DIAG_LOG', message: message } }, '*');
+    } catch (_e) {}
+  }
+
   // Persistent, window-backed storage for input-hook captured prompts
   // (Claude/Grok/Meta). Confirmed live: registry.grok._prompts came back
   // completely empty on a third question in a conversation where it had
@@ -2222,6 +2245,15 @@ function queryAllDeep(selector) {
     // all), every btn.* reference below is now guarded so it's simply
     // skipped rather than throwing on a missing element.
     async function performSaveToDiary(btn) {
+      // Real timing data — see the matching instrumentation added in
+      // background.js's own SAVE_TO_DIARY handler for the full
+      // rationale: a real, live Grok sync log showed 9593ms for a
+      // single attempt with 0 retries, and this function's own internal
+      // work (auth-token round-trip, image capture, DOM/thread
+      // building) is a real candidate for where that time goes,
+      // alongside the separate backend-request time already
+      // instrumented on the background.js side.
+      var _saveStartedAt = Date.now();
       if (PROVIDER === 'mistral') {
         console.log('[Diary DIAG] === Mistral save clicked ===');
         if (window.__diaryCapture && window.__diaryCapture.turns) {
@@ -2257,6 +2289,7 @@ function queryAllDeep(selector) {
           }
           return { success: false, error: 'not_authenticated' };
         }
+        logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: got auth token after', Date.now() - _saveStartedAt, 'ms');
 
         var prompt = '';
         // Claude-specific: try historySeed's own, true first question
@@ -2347,6 +2380,7 @@ function queryAllDeep(selector) {
           images = await captureResponseImages(token);
         }
         images = images.filter(function(s,i,a){ return a.indexOf(s)===i; }); // dedupe
+        logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: images resolved after', Date.now() - _saveStartedAt, 'ms (', images.length, 'images)');
 
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
@@ -2664,6 +2698,7 @@ function queryAllDeep(selector) {
             questionInnerSelector: null,
             answerInnerSelector: null
           });
+          logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: Grok DOM-paired thread built after', Date.now() - _saveStartedAt, 'ms (length:', grokThread ? grokThread.length : 0, ')');
           if (grokThread && grokThread.length > 50) {
             // NOTE: widget-text stripping ("Worked for Xm Ys", "N
             // sources") now happens per-turn, inside buildDomPairedThread
@@ -3116,6 +3151,8 @@ function queryAllDeep(selector) {
           }
         }
 
+                var _saveMessageSentAt = Date.now();
+                logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: sending SAVE_TO_DIARY message after', _saveMessageSentAt - _saveStartedAt, 'ms of internal work');
                 var data = await new Promise(function(resolve, reject) {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: {
             type: 'SAVE_TO_DIARY',
@@ -3141,6 +3178,13 @@ function queryAllDeep(selector) {
           window.addEventListener('message', handler);
           setTimeout(function() { reject(new Error('timeout')); }, 10000);
         });
+        // Real, direct evidence for the total sync time split — read
+        // this alongside background.js's own SAVE_TO_DIARY handler
+        // timing (lookup + patch/post) to see exactly how much of the
+        // total came from this round-trip specifically, versus this
+        // function's own earlier internal work (auth token, images,
+        // thread building) logged above.
+        logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: SAVE_TO_DIARY round-trip took', Date.now() - _saveMessageSentAt, 'ms; total elapsed', Date.now() - _saveStartedAt, 'ms');
         if (data.success) {
           if (btn) {
             btn.textContent = String.fromCharCode(10003) + ' Saved to Diary';

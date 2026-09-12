@@ -751,7 +751,24 @@ async function fetchSyncResultFromTab(tabId, conversationUrl) {
     // attempts this whole mechanism exists to provide. Reproduced live
     // on ChatGPT: one TRIGGER_SYNC_SAVE sent, one timeout, loop exited
     // — no retries at all.
-    var retryableErrors = result.error === 'no_content_found' || result.error === 'incomplete_response' || result.error === 'timeout';
+    // 'not_authenticated' added as retryable — confirmed live via a
+    // real, direct sync log: three separate attempts within the SAME
+    // sync run each got a real, valid auth token back quickly (347ms,
+    // 904ms, 144ms), before a fourth attempt's own GET_AUTH_TOKEN
+    // round-trip apparently missed its own 2s window entirely and
+    // returned not_authenticated instead — the exact same tab, same
+    // token, same storage, moments after it had already demonstrably
+    // worked three times in a row. Was NOT previously retryable at all,
+    // meaning this one transient, throttling-correlated miss
+    // permanently failed an otherwise-recoverable sync outright, with
+    // 22 of 25 retries still unused. Direct, explicit trade-off,
+    // accepted knowingly rather than defaulted into: a person who is
+    // genuinely, actually logged out will now wait out the same real
+    // retry ceiling (up to ~50s) before failing, instead of failing
+    // fast — accepted because a transient miss indistinguishable from
+    // this exact case has now been directly observed to cost an entire
+    // sync outright, and that's the worse failure mode of the two.
+    var retryableErrors = result.error === 'no_content_found' || result.error === 'incomplete_response' || result.error === 'timeout' || result.error === 'not_authenticated';
     if (!retryableErrors) break;
 
     // Direct, definitive check — not inference — before deciding how to
@@ -765,8 +782,8 @@ async function fetchSyncResultFromTab(tabId, conversationUrl) {
         try { await chrome.tabs.remove(tabId); } catch(_) {}
         var freshTab = await chrome.tabs.create({ url: conversationUrl, active: false });
         tabId = freshTab.id;
-        await waitForTabComplete(tabId);
-        console.log('[Diary Sync DIAG] fresh replacement tab', tabId, 'ready — resuming retries on it');
+        var freshLoadResult = await waitForTabComplete(tabId);
+        console.log('[Diary Sync DIAG] fresh replacement tab', tabId, 'ready — resuming retries on it (', freshLoadResult.hitCeiling ? 'hit 15s ceiling' : 'genuinely loaded', 'in', freshLoadResult.elapsedMs, 'ms)');
       }
     } catch (e) {
       console.log('[Diary Sync DIAG] frozen-check itself threw (tab may have closed):', e.message);
@@ -778,6 +795,7 @@ async function fetchSyncResultFromTab(tabId, conversationUrl) {
     result = await sendOneSyncAttempt(tabId, true);
   }
   result.tabId = tabId;
+  result.retryCount = retryCount;
   return result;
 }
 
@@ -807,12 +825,22 @@ async function findConversationTab(conversationUrl) {
 // delay would either be wasteful (always waiting the worst case) or
 // unreliable (too short for a slow page); this waits for the real,
 // specific signal instead.
+// Confirmed as a real, direct fix for a real, diagnostic gap: the old
+// log line ("reported complete (or 15s ceiling hit)") was genuinely
+// ambiguous about which branch actually fired — the exact "wait, which
+// was it?" question this file's own investigation ran into directly
+// when tracing a real Grok sync log. Now returns which branch actually
+// resolved, and how long it genuinely took, so a caller can log both
+// explicitly rather than leaving it to guesswork. Callers must update
+// to read the returned object; the previous no-argument resolve() is
+// gone.
 function waitForTabComplete(tabId) {
+  var startedAt = Date.now();
   return new Promise(function(resolve) {
     function listener(updatedTabId, info) {
       if (updatedTabId === tabId && info.status === 'complete') {
         chrome.tabs.onUpdated.removeListener(listener);
-        resolve();
+        resolve({ hitCeiling: false, elapsedMs: Date.now() - startedAt });
       }
     }
     chrome.tabs.onUpdated.addListener(listener);
@@ -820,7 +848,7 @@ function waitForTabComplete(tabId) {
     // (e.g. a redirect loop) — don't hang the whole sync forever on it.
     setTimeout(function() {
       chrome.tabs.onUpdated.removeListener(listener);
-      resolve();
+      resolve({ hitCeiling: true, elapsedMs: Date.now() - startedAt });
     }, 15000);
   });
 }
@@ -835,6 +863,17 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     }
     return;
   }
+  // Added specifically to solve a real, repeated, practical problem:
+  // diary-content.js's own console.log output lives in the actual
+  // provider tab's own DevTools console, a separate context from this
+  // background-script console where the matching timing checkpoints on
+  // this side already show up. Relays a content-script log line into
+  // this same console too, so both sides of a real timing trace land
+  // in one place someone already has open.
+  if (msg.type === 'DIAG_LOG') {
+    console.log('[Content Script]', msg.message);
+    return;
+  }
   if (msg.type === 'SYNC_SAVE_RESULT' && sender.tab) {
     const resolver = syncTabResolvers.get(sender.tab.id);
     if (resolver) {
@@ -843,18 +882,65 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     }
     return;
   }
+  // Confirmed as a real, direct fix for a real, reported bug: the
+  // dock's own quick-search feature was calling fetch() directly from
+  // diary-dock.js, which runs in the page's own MAIN world (per
+  // manifest.json) — meaning that fetch() is subject to the HOST
+  // PAGE's own Content Security Policy, not this extension's own
+  // host_permissions at all. Confirmed live via a real, direct CSP
+  // violation on Meta AI specifically: its own connect-src directive
+  // has no allowance for api.projectcoachai.com at all, so the browser
+  // blocked the request outright — no code change within the page
+  // context could work around this, since it's the page's own security
+  // policy being enforced, not a bug in this extension's own logic.
+  // Routes the actual fetch() through this service worker instead,
+  // exactly like every other real backend call (SAVE_TO_DIARY,
+  // fetchSyncResultFromTab's own by-url/PATCH requests) already does —
+  // a service worker is a separate, privileged context, never subject
+  // to any page's own CSP at all. Relays the result back to the page
+  // via the same DIARY_TO_PAGE -> diary-isolated.js -> window.postMessage
+  // chain already used for SAVE_TO_DIARY's own response.
+  if (msg.type === 'DIARY_SEARCH') {
+    (async () => {
+      try {
+        const res = await fetch('https://api.projectcoachai.com/api/diary/search?q=' + encodeURIComponent(msg.q || ''), {
+          headers: { 'Authorization': 'Bearer ' + msg.token }
+        });
+        const data = await res.json().catch(() => ({}));
+        chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_SEARCH_RESULT__', status: res.status, ok: res.ok, body: data } });
+      } catch (e) {
+        chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_SEARCH_RESULT__', status: 0, ok: false, body: { message: e.message } } });
+      }
+    })();
+    sendResponse({ ok: true });
+    return true;
+  }
   if (msg.type === 'SAVE_TO_DIARY') {
     try {
       const API = 'https://api.projectcoachai.com';
       const token = msg.token;
       const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+      // Real timing data — added specifically to trace where the total
+      // sync time genuinely goes, since a real, live Grok sync log
+      // showed 0 retries (meaning background.js's own 2s retry loop
+      // never even fired) yet still took 9593ms total inside a single
+      // sendOneSyncAttempt() call. This handler's own two real backend
+      // requests (lookup, then create/update) are a real, direct
+      // candidate for where that time goes, alongside diary-content.js's
+      // own internal work (auth-token fetch, image capture, DOM/thread
+      // building) — logged here specifically so the next real sync run
+      // shows which side of that split the time actually falls on,
+      // rather than guessing.
+      const saveHandlerStartedAt = Date.now();
 
       // Step 1: look up existing entry by URL
       let existingId = null;
       let existingContent = '';
       try {
+        const lookupStartedAt = Date.now();
         const lR = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(msg.url), { headers: { 'Authorization': 'Bearer ' + token } });
         const lD = await lR.json();
+        console.log('[Diary Sync DIAG] by-url lookup took', Date.now() - lookupStartedAt, 'ms');
         if (lD.success && lD.entry) {
           existingId = lD.entry.id;
           existingContent = lD.entry.content || '';
@@ -955,6 +1041,7 @@ let data;
             }
           }
         }
+        const patchStartedAt = Date.now();
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
@@ -962,9 +1049,11 @@ let data;
         });
         data = await pR.json();
         data.updated = true;
+        console.log('[Diary Sync DIAG] PATCH request took', Date.now() - patchStartedAt, 'ms');
         if (data.chatSessionSync) console.log('[Diary Sync DIAG] chatSessionSync result:', JSON.stringify(data.chatSessionSync));
       } else {
         // Step 2b: POST - create new entry
+        const postStartedAt = Date.now();
         const pR = await fetch(API + '/api/diary', {
           method: 'POST',
           headers,
@@ -972,7 +1061,14 @@ let data;
         });
         data = await pR.json();
         data.updated = false;
+        console.log('[Diary Sync DIAG] POST request took', Date.now() - postStartedAt, 'ms');
       }
+      // Real, direct evidence for tracing the total sync time split —
+      // read this line back alongside diary-content.js's own console
+      // output (auth-token/image-capture/thread-build timing, once
+      // instrumented there too) to see the full, real picture end to
+      // end, rather than guessing which side the time is really on.
+      console.log('[Diary Sync DIAG] SAVE_TO_DIARY handler total (lookup + patch/post):', Date.now() - saveHandlerStartedAt, 'ms');
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, updated: data.updated, error: data.error, chatSessionSync: data.chatSessionSync } });
     } catch(e) {
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
@@ -1142,8 +1238,22 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
       let openedNewTab = false;
       let tabId = null;
       let restoreFocus = null;
+      var requestSyncStartedAt = Date.now();
       try {
         console.log('[Diary Sync DIAG] REQUEST_SYNC starting for entry', entryId, 'url:', msg.conversationUrl);
+        // Real, direct evidence gathering — added specifically to help
+        // distinguish two real hypotheses raised during this
+        // investigation (variable timing from background-tab CPU
+        // throttling, versus something correlated with conversation
+        // size) without changing any actual behavior at all: a real,
+        // directly-measurable proxy for "how much else is competing for
+        // this browser's attention right now" alongside the existing
+        // tab-load and retry timing already logged elsewhere.
+        var otherTabsCountAtStart = 'unavailable';
+        try {
+          var allTabsAtStart = await chrome.tabs.query({});
+          otherTabsCountAtStart = allTabsAtStart.length;
+        } catch (_e) {}
         let existingTab = await findConversationTab(msg.conversationUrl);
         // Confirmed live, via direct research, why this whole class of
         // ChatGPT/DeepSeek/Meta AI stall happened at all: Chrome's own
@@ -1176,15 +1286,28 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         }
         if (existingTab) {
           tabId = existingTab.id;
+          // Real, direct evidence — added specifically to test whether
+          // Chrome's own background-tab throttling escalates with how
+          // long a tab has genuinely sat backgrounded (not a flat
+          // penalty from the moment it's backgrounded, per Chrome's own
+          // documented behavior), alongside the otherTabsCountAtStart
+          // proxy already added for the same investigation. For a
+          // reused tab, lastAccessed is the real, direct signal for
+          // when it was last actively viewed — it's been backgrounded
+          // since that exact moment.
+          var tabBackgroundedSince = existingTab.lastAccessed || Date.now();
           console.log('[Diary Sync DIAG] found existing tab', tabId, '(status:', existingTab.status, ', lastAccessed:', existingTab.lastAccessed, ')');
         } else {
           console.log('[Diary Sync DIAG] no existing (non-stale) tab found, opening a new one');
           const newTab = await chrome.tabs.create({ url: msg.conversationUrl, active: false });
           tabId = newTab.id;
           openedNewTab = true;
+          // A fresh tab is created with active:false — backgrounded
+          // from this exact moment, by construction.
+          var tabBackgroundedSince = Date.now();
           console.log('[Diary Sync DIAG] new tab', tabId, 'created, waiting for it to finish loading');
-          await waitForTabComplete(tabId);
-          console.log('[Diary Sync DIAG] tab', tabId, 'reported complete (or 15s ceiling hit)');
+          var newTabLoadResult = await waitForTabComplete(tabId);
+          console.log('[Diary Sync DIAG] tab', tabId, newTabLoadResult.hitCeiling ? 'hit the 15s ceiling without ever reporting complete' : 'genuinely reported complete', 'in', newTabLoadResult.elapsedMs, 'ms');
         }
         console.log('[Diary Sync DIAG] sending TRIGGER_SYNC_SAVE to tab', tabId);
 
@@ -1268,7 +1391,31 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         // live that combining focused:true and state:'minimized' in one
         // call is valid for windows.update(), unlike windows.create(),
         // which rejects that exact combination outright).
-        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl)) {
+        // NOTE: Meta AI removed from this list — a real, direct,
+        // testable hypothesis, not a confirmed fix yet, given this
+        // cannot be verified from here at all (genuine background-tab
+        // throttling behavior needs a real browser, not something this
+        // sandbox can simulate). The original commit that introduced
+        // this whole mechanism grouped ChatGPT/DeepSeek/Meta AI/Gemini
+        // together because all four "rely entirely on DOM rendering,
+        // which is subject to background-tab performance degradation" —
+        // a genuine, real reason at the time, not an oversight. But Meta
+        // AI already has its own direct DOM-pairing tied to a genuine
+        // completion event (buildDomPairedThread, same underlying
+        // mechanism Grok already uses successfully backgrounded, no
+        // focus at all) — and the separate stale-tab-replacement fix
+        // above (closing and replacing a tab before it can cross the
+        // 5-minute freeze threshold) was added AFTER this focus
+        // experiment, meaning it's genuinely possible that fix already
+        // resolved what originally motivated focus for Meta AI
+        // specifically, without anyone revisiting whether focus was
+        // still actually needed since. Worth testing directly, live: if
+        // Meta AI syncs continue succeeding reliably and quickly without
+        // this, that's real evidence the fully-visible flash for this
+        // provider specifically was never structurally required at all
+        // — if it doesn't, that's equally real evidence it genuinely is,
+        // and this should be reverted.
+        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl)) {
           try {
             const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
             const originalTab = activeTabs && activeTabs[0];
@@ -1351,7 +1498,8 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
           console.log('[Diary Sync DIAG] tab', tabId, 'had a stale connection — reloading and retrying once');
           try {
             await chrome.tabs.reload(tabId);
-            await waitForTabComplete(tabId);
+            var reloadResult = await waitForTabComplete(tabId);
+            console.log('[Diary Sync DIAG] reloaded tab', tabId, reloadResult.hitCeiling ? 'hit the 15s ceiling without ever reporting complete' : 'genuinely reported complete', 'in', reloadResult.elapsedMs, 'ms');
             result = await fetchSyncResultFromTab(tabId, msg.conversationUrl);
             tabId = result.tabId || tabId;
             console.log('[Diary Sync DIAG] retry result from tab', tabId, ':', JSON.stringify(result));
@@ -1359,23 +1507,58 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
             console.log('[Diary Sync DIAG] retry itself threw:', e.message);
           }
         }
-        if (openedNewTab && result.success) {
-          // Was a silent try/catch — confirmed live as a real gap in
-          // visibility: a report that the tab didn't close after a
-          // genuinely successful sync had no way to be diagnosed at all,
-          // since any failure here was discarded without a trace. Now
-          // logs explicitly either way, so a future "didn't close"
-          // report can actually be confirmed or ruled out directly
-          // rather than guessed at.
+        // Confirmed as a real, direct fix for a real, reported bug
+        // (Grok specifically, "on occasion, it doesn't close the browser
+        // tab"): only ever closed on result.success === true before —
+        // meaning a tab this code itself opened, that then genuinely
+        // failed all the way through the retry loop (up to 25 attempts,
+        // 50s), stayed open indefinitely. Confirmed this never actually
+        // served as a useful debugging aid for an ordinary person — a
+        // left-open tab doesn't "fix itself" by staying there, it's
+        // clutter, not diagnosis. Applies universally, not scoped to
+        // Grok specifically — the same principle holds for any
+        // provider's own genuine failure: closes tabs THIS code itself
+        // opened (openedNewTab still guards against ever touching a tab
+        // the person already had open before sync started) regardless
+        // of the real outcome, logging success/failure explicitly either
+        // way so a future report can still be confirmed or ruled out
+        // directly, exactly as intended when this same logging was added.
+        if (openedNewTab) {
           try {
             await chrome.tabs.remove(tabId);
-            console.log('[Diary Sync DIAG] closed tab', tabId, 'after successful sync');
+            console.log('[Diary Sync DIAG] closed tab', tabId, '(success:', result.success, ', error:', result.error || 'none', ')');
           } catch (e) {
             console.log('[Diary Sync DIAG] chrome.tabs.remove(', tabId, ') failed:', e.message);
           }
         } else {
-          console.log('[Diary Sync DIAG] leaving tab', tabId, 'open (openedNewTab:', openedNewTab, ', success:', result.success, ')');
+          console.log('[Diary Sync DIAG] leaving tab', tabId, 'open — not opened by this sync attempt (openedNewTab: false)');
         }
+        // Real, consolidated evidence — added specifically so a handful
+        // of real, live syncs can be compared side by side on one line
+        // each, rather than requiring a full trace through many
+        // scattered log lines every time, per direct request. Prefixed
+        // distinctly (SYNC SUMMARY) so it's easy to grep/scan for across
+        // a run of several real syncs pasted together.
+        console.log('[Diary Sync DIAG][SYNC SUMMARY]', JSON.stringify({
+          provider: (function() {
+            var m = /https:\/\/(?:www\.|chat\.)?([a-z]+)\.(?:ai|com|google\.com)/.exec(msg.conversationUrl);
+            return m ? m[1] : 'unknown';
+          })(),
+          entryId: entryId,
+          openedNewTab: openedNewTab,
+          tabLoad: typeof newTabLoadResult !== 'undefined' ? newTabLoadResult : 'reused existing tab, not measured',
+          retryCount: typeof result.retryCount === 'number' ? result.retryCount : 'n/a',
+          success: result.success,
+          error: result.error || 'none',
+          otherTabsCountAtStart: otherTabsCountAtStart,
+          // How long this tab had genuinely sat backgrounded by the
+          // time the whole sync finished — a direct, real signal for
+          // Chrome's own throttling escalation, since it's documented
+          // to worsen the longer a tab has been backgrounded, not a
+          // flat penalty from the moment it's backgrounded.
+          tabBackgroundedMsBySyncEnd: typeof tabBackgroundedSince !== 'undefined' ? (Date.now() - tabBackgroundedSince) : 'n/a',
+          totalMs: Date.now() - requestSyncStartedAt
+        }));
         sendResponse(result);
       } catch (e) {
         sendResponse({ success: false, error: e.message });

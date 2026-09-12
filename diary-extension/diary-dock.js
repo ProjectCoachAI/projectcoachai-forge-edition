@@ -5,30 +5,6 @@
 
   var DIARY_URL = 'https://diary.projectcoachai.com';
 
-  var PROVIDERS = [
-    { id: 'claude',     name: 'Claude',     color: '#C17D3C', url: 'https://claude.ai/new' },
-    { id: 'chatgpt',   name: 'ChatGPT',    color: '#10A37F', url: 'https://chatgpt.com' },
-    { id: 'gemini',    name: 'Gemini',     color: '#4A8EF4', url: 'https://gemini.google.com' },
-    { id: 'perplexity',name: 'Perplexity', color: '#20B2AA', url: 'https://www.perplexity.ai' },
-    { id: 'grok',      name: 'Grok',       color: '#888',    url: 'https://grok.com' },
-    { id: 'deepseek',  name: 'DeepSeek',   color: '#4169E1', url: 'https://chat.deepseek.com' },
-    { id: 'mistral',   name: 'Mistral',    color: '#FF7000', url: 'https://chat.mistral.ai' },
-    { id: 'meta',      name: 'Meta AI',    color: '#0668E1', url: 'https://www.meta.ai' },
-  ];
-
-  var CURRENT = (function() {
-    var h = location.hostname;
-    if (h.includes('claude.ai'))      return 'claude';
-    if (h.includes('chatgpt.com'))    return 'chatgpt';
-    if (h.includes('gemini.google'))  return 'gemini';
-    if (h.includes('perplexity.ai'))  return 'perplexity';
-    if (h.includes('grok.com'))       return 'grok';
-    if (h.includes('deepseek.com'))   return 'deepseek';
-    if (h.includes('mistral.ai'))     return 'mistral';
-    if (h.includes('meta.ai'))        return 'meta';
-    return null;
-  })();
-
   var style = document.createElement('style');
   style.textContent = [
     '#diary-dock{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:2147483640;display:flex;align-items:center;pointer-events:none;}',
@@ -45,11 +21,6 @@
     '.dp-close{background:none;border:1px solid #D6D2C8;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:13px;color:#9E9890;display:flex;align-items:center;justify-content:center;}',
     '.dp-close:hover{border-color:#1B2A4A;color:#1B2A4A;}',
     '.dp-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9E9890;}',
-    '.dp-chips{display:flex;flex-wrap:wrap;gap:5px;}',
-    '.dp-chip{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #D6D2C8;border-radius:20px;padding:4px 9px;font-size:11px;color:#1B2A4A;cursor:pointer;}',
-    '.dp-chip:hover{border-color:#C17D3C;}',
-    '.dp-chip.active{background:#F5F3EE;border-color:#C17D3C;}',
-    '.dp-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0;}',
     '.dp-actions{display:flex;gap:6px;}',
     '.dp-btn-primary{flex:1;padding:8px 12px;background:#1B2A4A;color:#F5F3EE;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;}',
     '.dp-btn-primary:hover{background:#243A63;}',
@@ -61,7 +32,29 @@
     '.dp-context.visible{display:block;}',
     '.dp-context-q{font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:4px;white-space:normal;}',
     '.dp-context-text{font-size:11px;color:#6B6559;line-height:1.5;max-height:120px;overflow-y:auto;background:#F5F3EE;border-radius:6px;padding:8px;white-space:normal;}',
-    '.dp-context-hint{font-size:10px;color:#9E9890;margin-top:6px;font-style:italic;white-space:normal;}'
+    '.dp-context-hint{font-size:10px;color:#9E9890;margin-top:6px;font-style:italic;white-space:normal;}',
+    // Quick-search styles — replaces the old provider-switcher chips.
+    // Getting a token, and the actual search request itself, both
+    // route through the isolated-world script and background service
+    // worker (this file runs in the page's own MAIN world per the
+    // manifest, which has no chrome.* access, and its own fetch() calls
+    // are subject to whatever CSP the current page enforces — confirmed
+    // live via a real violation on Meta AI specifically, whose own
+    // connect-src has no allowance for this extension's own API).
+    '.dp-search-row{display:flex;gap:6px;}',
+    '.dp-search-input{flex:1;min-width:0;padding:7px 10px;border:1px solid #D6D2C8;border-radius:8px;font-size:12px;font-family:system-ui,sans-serif;color:#1B2A4A;}',
+    '.dp-search-input:focus{outline:none;border-color:#C17D3C;}',
+    '.dp-search-btn{padding:7px 10px;background:#1B2A4A;color:#F5F3EE;border:none;border-radius:8px;font-size:12px;cursor:pointer;}',
+    '.dp-search-btn:hover{background:#243A63;}',
+    '.dp-search-btn:disabled{opacity:0.5;cursor:default;}',
+    '.dp-search-results{display:none;max-height:220px;overflow-y:auto;}',
+    '.dp-search-results.visible{display:flex;flex-direction:column;gap:6px;}',
+    '.dp-search-result{display:block;padding:8px 9px;background:#fff;border:1px solid #D6D2C8;border-radius:8px;text-decoration:none;cursor:pointer;}',
+    '.dp-search-result:hover{border-color:#C17D3C;}',
+    '.dp-search-result-title{font-size:11px;font-weight:600;color:#1B2A4A;white-space:normal;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;}',
+    '.dp-search-result-snippet{font-size:10px;color:#6B6559;margin-top:2px;white-space:normal;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4;}',
+    '.dp-search-status{font-size:11px;color:#9E9890;padding:4px 2px;white-space:normal;}',
+    '.dp-search-status.error{color:#C0392B;}'
   ].join('');
   document.head.appendChild(style);
 
@@ -102,9 +95,30 @@
   hdr.appendChild(brand); hdr.appendChild(closeBtn);
 
   var lbl = document.createElement('div'); lbl.className = 'dp-label';
-  lbl.textContent = 'Switch AI';
+  lbl.textContent = 'Search Diary';
 
-  var chipsWrap = document.createElement('div'); chipsWrap.className = 'dp-chips';
+  // Confirmed directly beforehand: /api/diary/search already exists,
+  // already does real semantic search (Voyage embeddings, not just
+  // keyword matching), already respects a person's own filters, and
+  // already handles its own rate limiting (20/day free tier) — this
+  // reuses that same, already-working endpoint and the same auth token
+  // already stored for Sync, rather than building anything new
+  // server-side. Search-on-submit only (Enter key or the button),
+  // deliberately not search-as-you-type, since every dock search draws
+  // from that same shared daily limit as searching within the full app.
+  var searchRow = document.createElement('div'); searchRow.className = 'dp-search-row';
+  var searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'dp-search-input';
+  searchInput.placeholder = 'Search your diary…';
+  var searchBtn = document.createElement('button');
+  searchBtn.className = 'dp-search-btn';
+  searchBtn.textContent = 'Go';
+  searchRow.appendChild(searchInput);
+  searchRow.appendChild(searchBtn);
+
+  var searchResults = document.createElement('div');
+  searchResults.className = 'dp-search-results';
 
   var actWrap = document.createElement('div'); actWrap.className = 'dp-actions';
   var diaryBtn = document.createElement('a');
@@ -129,27 +143,14 @@
 
   inner.appendChild(hdr);
   inner.appendChild(lbl);
-  inner.appendChild(chipsWrap);
+  inner.appendChild(searchRow);
+  inner.appendChild(searchResults);
   inner.appendChild(actWrap);
   inner.appendChild(ftr);
   panel.appendChild(inner);
   dock.appendChild(tab);
   dock.appendChild(panel);
   document.body.appendChild(dock);
-
-  PROVIDERS.forEach(function(p) {
-    var chip = document.createElement('div');
-    chip.className = 'dp-chip' + (p.id === CURRENT ? ' active' : '');
-    var dot = document.createElement('span');
-    dot.className = 'dp-dot';
-    dot.style.background = p.color;
-    chip.appendChild(dot);
-    chip.appendChild(document.createTextNode(p.name));
-    chip.addEventListener('click', function() {
-      if (p.id !== CURRENT) window.location.href = p.url;
-    });
-    chipsWrap.appendChild(chip);
-  });
 
   function openPanel() {
     isOpen = true;
@@ -182,18 +183,134 @@
     autoClose = setTimeout(function() { closePanel(); }, 2000);
   });
 
-})();
+  // Confirmed directly before building this: this script runs in the
+  // page's own MAIN world (per manifest.json), which has no chrome.*
+  // access at all — only the isolated-world script does. Reuses the
+  // exact same GET_AUTH_TOKEN message relay diary-content.js already
+  // uses for Sync, rather than inventing a second way to reach the
+  // same token. fetch() itself runs fine right here afterward, since
+  // that's an ordinary web API available in any JS context, not
+  // restricted to the isolated world the way chrome.* is.
+  function getAuthToken() {
+    return new Promise(function(resolve) {
+      var timeout = setTimeout(function() {
+        window.removeEventListener('message', handler);
+        resolve(null);
+      }, 2000);
+      function handler(e) {
+        if (e.source !== window) return;
+        if (!e.data || e.data.type !== '__DIARY_AUTH_TOKEN__') return;
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        resolve(e.data.token || null);
+      }
+      window.addEventListener('message', handler);
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_AUTH_TOKEN' } }, '*');
+    });
+  }
 
-// Separate Diary toggle — fixed below the dock tab
-(function() {
-  if (document.getElementById('diary-toggle-fixed')) return;
-  var toggle = document.createElement('div');
-  toggle.id = 'diary-toggle-fixed';
-  toggle.title = 'My Diary';
-  toggle.textContent = '\uD83D\uDCD4';
-  toggle.style.cssText = 'position:fixed;right:0;top:calc(50% + 76px);width:40px;height:36px;background:#1B2A4A;border:1px solid rgba(193,125,60,0.4);border-right:none;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;z-index:2147483641;transition:all 0.2s;';
-  toggle.addEventListener('mouseenter', function() { this.style.background = 'rgba(193,125,60,0.3)'; });
-  toggle.addEventListener('mouseleave', function() { this.style.background = '#1B2A4A'; });
-  toggle.addEventListener('click', function() { window.location.href = 'https://diary.projectcoachai.com/app.html'; });
-  document.body.appendChild(toggle);
+  function renderSearchStatus(text, isError) {
+    searchResults.innerHTML = '';
+    searchResults.classList.add('visible');
+    var status = document.createElement('div');
+    status.className = 'dp-search-status' + (isError ? ' error' : '');
+    status.textContent = text;
+    searchResults.appendChild(status);
+  }
+
+  function renderSearchResults(entries) {
+    searchResults.innerHTML = '';
+    if (!entries.length) {
+      renderSearchStatus('No matching entries found.', false);
+      return;
+    }
+    searchResults.classList.add('visible');
+    // Capped at 5 here — the panel is a quick-glance surface, not a
+    // full results page; the full app (already linked below) is where
+    // browsing every match belongs.
+    entries.slice(0, 5).forEach(function(entry) {
+      var item = document.createElement('a');
+      item.className = 'dp-search-result';
+      item.href = DIARY_URL + '/app.html?entryId=' + encodeURIComponent(entry.id);
+      item.target = '_self';
+      var title = document.createElement('div');
+      title.className = 'dp-search-result-title';
+      title.textContent = entry.title || entry.prompt || '(untitled entry)';
+      item.appendChild(title);
+      if (entry.snippet) {
+        var snippet = document.createElement('div');
+        snippet.className = 'dp-search-result-snippet';
+        snippet.textContent = entry.snippet;
+        item.appendChild(snippet);
+      }
+      searchResults.appendChild(item);
+    });
+  }
+
+  // Confirmed as a real, direct fix for a real, reported bug: calling
+  // fetch() directly from here (the page's own MAIN world) subjects
+  // the request to the HOST PAGE's own Content Security Policy, not
+  // this extension's own permissions — confirmed live via a real CSP
+  // violation on Meta AI specifically, whose own connect-src has no
+  // allowance for api.projectcoachai.com at all. Routes the actual
+  // request through the background service worker instead (a separate,
+  // privileged context never subject to any page's own CSP), same as
+  // every other real backend call this extension already makes.
+  function searchDiaryViaExtension(token, q) {
+    return new Promise(function(resolve) {
+      var timeout = setTimeout(function() {
+        window.removeEventListener('message', handler);
+        resolve({ ok: false, status: 0, body: { message: 'timeout' } });
+      }, 10000);
+      function handler(e) {
+        if (e.source !== window) return;
+        if (!e.data || e.data.type !== '__DIARY_SEARCH_RESULT__') return;
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        resolve({ ok: e.data.ok, status: e.data.status, body: e.data.body });
+      }
+      window.addEventListener('message', handler);
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'DIARY_SEARCH', token: token, q: q } }, '*');
+    });
+  }
+
+  async function runDockSearch() {
+    var q = searchInput.value.trim();
+    if (q.length < 2) {
+      searchResults.classList.remove('visible');
+      searchResults.innerHTML = '';
+      return;
+    }
+    searchBtn.disabled = true;
+    searchInput.disabled = true;
+    renderSearchStatus('Searching…', false);
+    try {
+      var token = await getAuthToken();
+      if (!token) {
+        renderSearchStatus('Sign in to Diary to search.', true);
+        return;
+      }
+      var result = await searchDiaryViaExtension(token, q);
+      var data = result.body || {};
+      if (result.status === 402) {
+        renderSearchStatus(data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', true);
+      } else if (result.ok && data.success) {
+        renderSearchResults(data.entries || []);
+      } else {
+        renderSearchStatus('Search failed. Please try again.', true);
+      }
+    } catch (_e) {
+      renderSearchStatus('Search failed. Please check your connection.', true);
+    } finally {
+      searchBtn.disabled = false;
+      searchInput.disabled = false;
+    }
+  }
+
+  searchBtn.addEventListener('click', function(e) { e.stopPropagation(); runDockSearch(); });
+  searchInput.addEventListener('click', function(e) { e.stopPropagation(); });
+  searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.stopPropagation(); runDockSearch(); }
+  });
+
 })();
