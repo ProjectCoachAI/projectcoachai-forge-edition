@@ -791,10 +791,38 @@ async function performEntrySync(entryId) {
   if (!conversationUrl) return;
   var previousText = btn ? btn.textContent : '';
   if (btn) { btn.textContent = '\u{1F504} Syncing\u2026'; btn.disabled = true; }
+  // Confirmed live, twice, as a real, genuine dead end -- not shipped:
+  // adding a note about the tab possibly switching, and separately a
+  // deliberate ~700ms pause to make that note visible for longer,
+  // neither one was actually seen in real, live testing. Reverted back
+  // to the plain, original label entirely -- a feature that doesn't
+  // reliably do what it claims isn't safe to ship, per explicit
+  // decision. The one genuinely separate, correct fix kept from that
+  // investigation: this double-requestAnimationFrame wait, which
+  // guarantees the browser has actually painted the button's current
+  // text before continuing (setting textContent alone doesn't
+  // guarantee a real paint happens before the tab can switch away for
+  // a provider that briefly takes real focus) -- a real, harmless
+  // reliability fix independent of whatever text the button happens to
+  // show, kept on its own merits rather than reverted along with the
+  // abandoned messaging experiment.
+  await new Promise(function(resolve) {
+    requestAnimationFrame(function() { requestAnimationFrame(resolve); });
+  });
   try {
     const result = await extSyncSendMessage({ type: 'REQUEST_SYNC', conversationUrl: conversationUrl, diaryEntryId: entryId });
     if (!result || !result.success) {
-      Forge.showToast((result && result.error) || 'Sync failed — extension may not be installed.', 'error');
+      // Confirmed live as a real, direct product gap: a person not
+      // logged into the AI provider previously saw the exact same
+      // generic failure a transient rendering delay would also
+      // produce (or, before this specific message, the raw error code
+      // string itself) -- no indication at all that the real fix was
+      // simply to log in. A real, specific, human-readable message for
+      // this one, now-distinguishable case.
+      var syncErrorMessage = result && result.error === 'provider_not_authenticated'
+        ? 'Sync failed — you don\u2019t appear to be logged in. Please log in and try again.'
+        : (result && result.error) || 'Sync failed — extension may not be installed.';
+      Forge.showToast(syncErrorMessage, 'error');
       if (btn) btn.textContent = previousText;
       return;
     }
