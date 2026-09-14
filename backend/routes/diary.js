@@ -1694,6 +1694,20 @@ router.patch('/:id', requireAuth, async (req, res) => {
               '| old role/content:', JSON.stringify(oldMessagesForCompare[firstMismatchIdx]),
               '| new role/content:', JSON.stringify(newMessagesForCompare[firstMismatchIdx]));
           }
+          // Real, direct evidence gathering — added specifically because
+          // a real, live, reported DeepSeek case had already directly
+          // confirmed (via a separate, content-script-side diagnostic)
+          // that the newest turn's own real text genuinely was present
+          // in the full, raw content string sent here -- yet this route
+          // still reported no_new_content. Since that outcome only ever
+          // fires when isCleanExtension is true AND the two sides'
+          // message COUNTS are equal, the raw content containing the new
+          // text isn't enough on its own -- this specifically checks
+          // whether splitEntryIntoMessages's own parsing of that raw
+          // content is what's actually failing to recognize it as a
+          // separate, new message, rather than the comparison logic
+          // itself.
+          console.log('[Diary Sync DIAG] [EXPERIMENT] message-count comparison — old:', oldMessagesForCompare.length, '| new:', newMessagesForCompare.length, '| isCleanExtension:', isCleanExtension, '| last OLD message preview:', JSON.stringify((oldMessagesForCompare[oldMessagesForCompare.length - 1] || {}).content || '').slice(0, 150), '| last NEW message preview:', JSON.stringify((newMessagesForCompare[newMessagesForCompare.length - 1] || {}).content || '').slice(0, 150));
           if (isCleanExtension && newMessagesForCompare.length > oldMessagesForCompare.length) {
             const newMessagesFull = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
             const trailingNew = newMessagesFull.slice(oldMessagesForCompare.length);

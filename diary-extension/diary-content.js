@@ -3104,6 +3104,25 @@ function queryAllDeep(selector) {
           return { success: false, error: 'incomplete_response' };
         }
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
+        // Real, direct evidence gathering — added specifically because
+        // the "preview" above only ever shows the FIRST ~300 characters
+        // of the full, combined thread, which always starts with the
+        // OLDEST question first (this is a growing, chronological
+        // transcript) -- seeing an older Q&A pair there does NOT prove
+        // the newest turn was left out, only that it isn't at the very
+        // start, which is expected. Confirmed live: a real, reported
+        // DeepSeek attempt captured a genuinely new turn (real, distinct
+        // length each time) yet the backend still reported
+        // "no_new_content" -- this checks directly, unambiguously,
+        // whether that newest turn's own real text actually made it
+        // into the full contentToSave being sent, rather than relying
+        // on an ambiguous preview to infer it.
+        if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+          var _newestTurn = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1];
+          var _newestTurnFirstPara = (_newestTurn.text || '').split(/\n{2,}/)[0].trim().slice(0, 60);
+          var _newestTurnMadeIt = _newestTurnFirstPara && contentToSave.indexOf(_newestTurnFirstPara) !== -1;
+          console.log('[Diary Sync DIAG] [EXPERIMENT] full contentToSave length:', contentToSave.length, '| newest captured turn\'s own first paragraph found in it:', _newestTurnMadeIt, '| newest turn\'s own preview:', _newestTurnFirstPara);
+        }
         // saveUrl: use most specific URL available
         //
         // NOTE: fixed — confirmed live as a real, reproduced, serious
@@ -3153,9 +3172,11 @@ function queryAllDeep(selector) {
 
                 var _saveMessageSentAt = Date.now();
                 logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: sending SAVE_TO_DIARY message after', _saveMessageSentAt - _saveStartedAt, 'ms of internal work');
+                var _saveRequestId = 'save_' + Date.now() + '_' + Math.random().toString(36).slice(2);
                 var data = await new Promise(function(resolve, reject) {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: {
             type: 'SAVE_TO_DIARY',
+            requestId: _saveRequestId,
             token: token,
             source: PROVIDER,
             prompt: prompt,
@@ -3169,8 +3190,23 @@ function queryAllDeep(selector) {
             // this call site; providers without one correctly send [].
             attachments: (registry[PROVIDER] && registry[PROVIDER].getAttachments) ? registry[PROVIDER].getAttachments() : []
           }}, '*');
+          // Confirmed as a real, direct bug: this listener previously
+          // resolved on ANY matching __DIARY_EXT_DATA__ message, with no
+          // way to verify it was actually the response to THIS specific
+          // request. If two SAVE_TO_DIARY attempts were ever in flight
+          // at the same time, the content script could resolve the
+          // WRONG promise with a DIFFERENT attempt's real response --
+          // directly reported live: a real "no_new_content" result with
+          // no corresponding by-url-lookup/PATCH logs ever appearing in
+          // background.js's own console for that same attempt, strongly
+          // suggesting the response actually belonged to a different,
+          // separate save. The new live-auto-save experiment makes this
+          // meaningfully more likely to occur than before, by firing
+          // saves automatically and far more often than only-on-manual-
+          // click ever did. Now only resolves when the response's own
+          // requestId matches this specific outgoing request.
           var handler = function(e) {
-            if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
+            if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary && e.data.requestId === _saveRequestId) {
               window.removeEventListener('message', handler);
               resolve({ success: e.data.success, error: e.data.error, chatSessionSync: e.data.chatSessionSync });
             }
@@ -4720,6 +4756,35 @@ function queryAllDeep(selector) {
         var last = turns.length ? turns[turns.length - 1] : null;
         var tooSoon = last && (Date.now() - last.ts < 2000);
         var sameAsLast = last && text === last.text;
+        // Real, direct evidence gathering — added specifically because a
+        // real, live test showed only 1 of 3 real, distinct DeepSeek
+        // messages ever triggered the new live-auto-save attempt at all,
+        // and even that one reported "no_new_content" despite readDomResponse
+        // always reading the full, current conversation snapshot (which
+        // should have included all three). Logs exactly which guard (if
+        // either) suppressed a given capture, and the real, actual length
+        // of what was captured when neither guard suppressed it — since
+        // neither of these was previously visible enough to distinguish
+        // "genuinely suppressed by a guard" from "captured, but the
+        // backend itself found nothing new" as two different problems.
+        //
+        // Re-added here after a real, confirmed regression: this same
+        // block, plus the live-auto-save experiment right below it, was
+        // silently lost during a later, unrelated edit (the SAVE_TO_DIARY
+        // requestId fix) after the file was accidentally restored from an
+        // outdated commit predating both. Caught only because the
+        // experiment stopped appearing in real, live logs entirely --
+        // same class of regression already caught once earlier this same
+        // session (three fixes lost during a diff-reapplication step) --
+        // a reminder to verify previously-existing code is still present,
+        // not just that a new change is additive, after any restore.
+        if (tooSoon) {
+          console.log('[Diary Sync DIAG] [EXPERIMENT] capture suppressed: tooSoon (', Date.now() - last.ts, 'ms since last stored turn, need 2000ms), real length would have been:', text.length);
+        } else if (sameAsLast) {
+          console.log('[Diary Sync DIAG] [EXPERIMENT] capture suppressed: sameAsLast (byte-for-byte identical to already-stored turn), real length:', text.length);
+        } else {
+          console.log('[Diary Sync DIAG] [EXPERIMENT] capture NOT suppressed — real, actual length being stored and auto-saved:', text.length);
+        }
         if (!tooSoon && !sameAsLast) {
           var turnText = text; // Full conversation snapshot from readDomResponse
           // Capture images from response DOM
@@ -4733,6 +4798,56 @@ function queryAllDeep(selector) {
           // same cache-population fix, same rationale.
           try { getAllCapturedPrompts(); } catch(e) {}
           console.log('[Diary DOM] Captured (after', _domPollAttempts, 'attempt(s),', settled ? 'settled' : 'ceiling', '):', text.slice(0, 80));
+          // [EXPERIMENT] Live auto-save — per explicit request, following
+          // up on the idea that since the person is already actively,
+          // visibly using this exact page right now (this whole handler
+          // only ever runs while a real response just finished
+          // streaming here), there's no tab to open at all for THIS
+          // specific turn -- calling the exact same save function the
+          // existing manual-sync flow already calls remotely
+          // (window.__diaryPerformSave, already exposed for that exact
+          // purpose) means this turn can be pushed to the backend right
+          // now, with zero flash, rather than waiting for some later,
+          // separate, tab-opening sync to go find it. Does NOT replace
+          // that existing sync mechanism at all -- it remains the only
+          // way to catch up on anything that happened while no tab was
+          // open, which this can never help with by its own nature.
+          //
+          // Deliberately scoped to only the three providers whose own
+          // completion signal (background.js's own webRequest pattern)
+          // is already confirmed narrowly matched to a real completion
+          // event specifically -- explicitly excluding Perplexity, whose
+          // own pattern is already known to match nearly every request
+          // on the whole domain (fonts, analytics, settings, etc.).
+          // Under the old, save-nothing-here behavior that noise was
+          // harmless; calling a real save on every one of those
+          // irrelevant matches would not be -- that's a separate, real
+          // problem to fix on its own before this could safely extend
+          // there too.
+          //
+          // A simple, real in-flight guard (module-level, not per-call)
+          // prevents a second, overlapping auto-save from starting while
+          // one is already running -- e.g. two messages sent in quick
+          // succession -- rather than assuming the backend's own
+          // separate merge-safety logic alone is enough to make
+          // concurrent calls harmless.
+          var LIVE_AUTOSAVE_EXPERIMENT_ENABLED = true;
+          var LIVE_AUTOSAVE_PROVIDERS = ['meta', 'deepseek', 'grok'];
+          if (LIVE_AUTOSAVE_EXPERIMENT_ENABLED && LIVE_AUTOSAVE_PROVIDERS.indexOf(PROVIDER) !== -1) {
+            if (window.__diaryLiveAutoSaveInFlight) {
+              console.log('[Diary Sync DIAG] [EXPERIMENT] live auto-save already in flight, skipping this overlapping attempt');
+            } else if (window.__diaryPerformSave) {
+              window.__diaryLiveAutoSaveInFlight = true;
+              console.log('[Diary Sync DIAG] [EXPERIMENT] live auto-save: calling performSaveToDiary directly, no tab-open needed — person is already on this page right now');
+              Promise.resolve(window.__diaryPerformSave(undefined)).then(function(result) {
+                console.log('[Diary Sync DIAG] [EXPERIMENT] live auto-save result:', JSON.stringify(result));
+              }).catch(function(e) {
+                console.log('[Diary Sync DIAG] [EXPERIMENT] live auto-save threw:', e && e.message);
+              }).finally(function() {
+                window.__diaryLiveAutoSaveInFlight = false;
+              });
+            }
+          }
         } else if (sameAsLast) {
           console.log('[Diary DOM] Settled read matched last stored turn exactly — genuinely nothing new, skipping');
         }

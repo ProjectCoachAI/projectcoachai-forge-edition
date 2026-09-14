@@ -663,6 +663,18 @@ async function sendOneSyncAttempt(tabId, isRetry) {
       clearTimeout(timeout);
       resolve(result);
     });
+    // Real, direct evidence gathering — added specifically to test a
+    // real hypothesis for a real, reported ChatGPT case: attempt 0 came
+    // back with 'timeout' rather than 'no_content_found', with no
+    // existing way to tell whether that's a genuine message-delivery
+    // delay (the content script taking a real, meaningful amount of
+    // time to even start processing this, on a cold, backgrounded tab
+    // with zero focus help) versus something slow within
+    // performSaveToDiary() itself. Logs the real, absolute Date.now()
+    // right at the moment this message is sent — directly comparable
+    // against the matching, real, absolute timestamp logged the moment
+    // diary-content.js's own listener actually receives it.
+    console.log('[Diary Sync DIAG] TRIGGER_SYNC_SAVE actually sent to tab', tabId, 'at absolute time', Date.now());
     chrome.tabs.sendMessage(tabId, { type: 'TRIGGER_SYNC_SAVE', isRetry: !!isRetry }, function() {
       // Confirmed live: "Could not establish connection. Receiving end
       // does not exist" means no content script is listening on this
@@ -735,6 +747,95 @@ function sleep(ms) {
 // included since it can genuinely change if a frozen tab gets replaced
 // mid-loop; callers must use the returned tabId from here on, not
 // whatever they originally passed in.
+// [EXPERIMENT] Off-screen dedicated window for Meta AI specifically —
+// added per explicit request, to test whether a genuinely different
+// mechanism can give Meta AI the speed and reliability real focus
+// provides, without the visible flash the shared-window approach
+// requires. Confirmed live, directly, that Meta AI's own DOM-paired
+// capture structurally needs real focus to work at all (without it,
+// a real sync exhausted all 25 retries and still failed completely) —
+// so this experiment isn't about avoiding focus, it's about finding a
+// way to give it without disrupting the person's own active window.
+//
+// A prior, separate attempt at a dedicated window (found directly in
+// this repo's own git history) was tried once and reverted -- but for
+// three concrete, fixable reasons, not because separate windows are
+// fundamentally unworkable: it opened on the wrong monitor, it broke
+// capture entirely at a reduced size, and it was still visible as its
+// own Chrome window. None of those are addressed by minimizing (already
+// separately confirmed both physically impossible -- a minimized
+// window cannot hold real OS-level focus at all -- and actively
+// harmful, minimizing the person's entire active browser). This
+// experiment addresses the same three problems differently: explicit,
+// real screen coordinates far outside any real monitor's bounds
+// (rather than leaving position to chance), a real, normal, full size
+// (rather than shrinking it), and off-screen positioning instead of
+// minimizing to solve visibility -- a window can still hold real focus
+// while positioned somewhere no physical monitor reaches, unlike a
+// minimized one.
+//
+// Clearly flagged, easy to fully disable and fall back to the current,
+// working (but visibly-flashing) shared-window approach if this
+// doesn't behave as hoped on real, live Chrome -- something that can
+// only genuinely be confirmed by a real, live test, not from here.
+//
+// CONFIRMED DEAD END, DISABLED -- a real, live test hit "Invalid value
+// for bounds. Bounds must be at least 50% within visible screen
+// space." Confirmed directly against Chromium's own source history:
+// this is a hard, deliberate security restriction added in Chrome 102
+// specifically to stop extensions creating or moving windows off-
+// screen (to prevent abuse -- e.g. hidden mining/ad fraud) -- not a
+// fixable implementation detail, and not something any choice of
+// coordinates, size, or timing can work around. Independently
+// confirmed by a real, separate, unrelated project (github.com/
+// jackwener/OpenCLI issue #739) that hit this exact same problem and
+// documented every one of these same workarounds (minimize, off-
+// screen position, secondary monitor, --window-position flag) already
+// failing the same way -- this is a hard limitation of Chrome's
+// current extension API surface, not something specific to how this
+// was built. That issue's own suggested fix (follow the pattern used
+// by Claude's own Chrome extension: tabs in an existing window, not a
+// separate one) turned out to be a false lead for this specific
+// case -- that pattern already is what this extension does for every
+// other provider; the real difference is that automation doesn't rely
+// on navigator.clipboard, so it never needs genuine OS-level focus at
+// all in the first place, unlike Meta AI's own capture here. Left in
+// place, disabled, as a permanent record of a real, tested, and
+// independently-confirmed dead end, rather than deleted and
+// potentially re-attempted again later without this same context.
+const META_AI_OFFSCREEN_EXPERIMENT_ENABLED = false;
+
+async function syncMetaAiViaOffscreenWindow(conversationUrl) {
+  let offscreenWindowId = null;
+  try {
+    const newWindow = await chrome.windows.create({
+      url: conversationUrl,
+      type: 'normal',
+      left: -3000,
+      top: -3000,
+      width: 1280,
+      height: 800,
+      focused: true
+    });
+    offscreenWindowId = newWindow.id;
+    const tabId = newWindow.tabs && newWindow.tabs[0] && newWindow.tabs[0].id;
+    if (!tabId) throw new Error('offscreen window created but has no tab');
+    console.log('[Diary Sync DIAG] [EXPERIMENT] off-screen window', offscreenWindowId, 'created with tab', tabId, '(positioned at -3000,-3000, real size 1280x800, focused — testing whether a real, separate window can hold real focus without ever being visible)');
+
+    const loadResult = await waitForTabComplete(tabId);
+    console.log('[Diary Sync DIAG] [EXPERIMENT] off-screen tab', tabId, loadResult.hitCeiling ? 'hit the 15s ceiling without ever reporting complete' : 'genuinely reported complete', 'in', loadResult.elapsedMs, 'ms');
+
+    const result = await fetchSyncResultFromTab(tabId, conversationUrl);
+    return result;
+  } finally {
+    // Always close the entire, separate window (not just the tab) —
+    // this window was created specifically and only for this one sync.
+    if (offscreenWindowId) {
+      try { await chrome.windows.remove(offscreenWindowId); } catch (_e) {}
+    }
+  }
+}
+
 async function fetchSyncResultFromTab(tabId, conversationUrl) {
   var saveRetryMax = 25; // matches diary-content.js's own previous ceiling
   var result = await sendOneSyncAttempt(tabId, false);
@@ -1069,9 +1170,9 @@ let data;
       // instrumented there too) to see the full, real picture end to
       // end, rather than guessing which side the time is really on.
       console.log('[Diary Sync DIAG] SAVE_TO_DIARY handler total (lookup + patch/post):', Date.now() - saveHandlerStartedAt, 'ms');
-      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, updated: data.updated, error: data.error, chatSessionSync: data.chatSessionSync } });
+      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', requestId: msg.requestId, savedToDiary: true, success: data.success, updated: data.updated, error: data.error, chatSessionSync: data.chatSessionSync } });
     } catch(e) {
-      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
+      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', requestId: msg.requestId, savedToDiary: true, success: false, error: e.message } });
     }
     sendResponse({ ok: true });
 
@@ -1241,6 +1342,32 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
       var requestSyncStartedAt = Date.now();
       try {
         console.log('[Diary Sync DIAG] REQUEST_SYNC starting for entry', entryId, 'url:', msg.conversationUrl);
+        // [EXPERIMENT] Meta AI routes entirely through the off-screen
+        // dedicated window instead, when enabled — see
+        // syncMetaAiViaOffscreenWindow's own comment for the full
+        // rationale. Deliberately bypasses all of the existing
+        // shared-window tab-finding/creation/focus logic below entirely
+        // for this one provider when this flag is on, rather than
+        // interleaving a second mechanism into that same, already-
+        // complex flow. Explicitly calls sendResponse itself here, since
+        // returning early skips the shared sendResponse(result) call
+        // further below — the outer try/finally already handles
+        // syncEntryLocks cleanup correctly either way, since that's
+        // unconditional regardless of which path returns.
+        if (META_AI_OFFSCREEN_EXPERIMENT_ENABLED && /meta\.ai/.test(msg.conversationUrl)) {
+          var metaResult = await syncMetaAiViaOffscreenWindow(msg.conversationUrl);
+          console.log('[Diary Sync DIAG][SYNC SUMMARY]', JSON.stringify({
+            provider: 'meta',
+            entryId: entryId,
+            experiment: 'offscreen-window',
+            success: metaResult.success,
+            error: metaResult.error || 'none',
+            retryCount: typeof metaResult.retryCount === 'number' ? metaResult.retryCount : 'n/a',
+            totalMs: Date.now() - requestSyncStartedAt
+          }));
+          sendResponse(metaResult);
+          return;
+        }
         // Real, direct evidence gathering — added specifically to help
         // distinguish two real hypotheses raised during this
         // investigation (variable timing from background-tab CPU
@@ -1415,7 +1542,123 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         // provider specifically was never structurally required at all
         // — if it doesn't, that's equally real evidence it genuinely is,
         // and this should be reverted.
-        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl)) {
+        //
+        // Confirmed as a real, direct, SERIOUS UX bug affecting BOTH
+        // providers, reported live: the previous "minimize+focus" call
+        // on this shared window doesn't just affect the sync tab — it
+        // genuinely minimizes the person's ENTIRE active browser window,
+        // every other tab included, then pops back up again once focus
+        // is re-applied (the exact "flash" reported live: "shrank the
+        // user's entire screen, then flashed, leaving the screen
+        // minimized"). This is confirmed materially worse than the
+        // original visible-tab flash this whole audit exists to
+        // eliminate — a real, active disruption to someone's entire
+        // browsing session, not just one tab switching briefly. Combined
+        // with the separate, already-confirmed finding that "minimized
+        // but still focused" is very likely physically unachievable at
+        // the OS level (a real, live test showed the window ending up
+        // un-minimized after the focus call, every time) — this whole
+        // mechanism is abandoned entirely for both providers, not
+        // merely tuned further.
+        //
+        // Gemini: already has its own real, working, focus-independent
+        // capture path (buildGeminiPairedThread — a plain DOM read, same
+        // class of mechanism as Grok's own buildDomPairedThread, already
+        // confirmed elsewhere in this same investigation to work fine
+        // fully backgrounded). It never actually needed focus at all —
+        // removed from this experiment entirely, same as Meta AI's own
+        // earlier removal for the same underlying reason.
+        //
+        // ChatGPT: genuinely different — its own primary method
+        // (clipboard) structurally requires real focus to function at
+        // all, and has no Gemini-style safe alternative. Given the
+        // confirmed severity of the shared-window minimize bug and the
+        // person's own explicit, repeated priority (no visible
+        // disruption, even at a real cost to speed/reliability), also
+        // removed from focus entirely for now — its own clipboard
+        // method will now always fail immediately (no focus to make it
+        // work), correctly and quickly falling through to its own
+        // existing history-fetch fallback every time, accepting that
+        // fallback's own known, separate risks (backend-propagation
+        // delay) as the primary path rather than a rare backup. This is
+        // a real, explicit trade-off, not a clean fix — worth revisiting
+        // directly if ChatGPT's own fallback proves unreliable enough in
+        // practice to warrant reconsidering the visible-flash trade-off
+        // instead.
+        //
+        // Meta AI: restored to real, plain focus (never minimize — that
+        // combination is already confirmed physically impossible on
+        // Chrome, and separately confirmed to minimize a person's ENTIRE
+        // active browser window, not just the sync tab). Directly
+        // reversed here based on real, live evidence, not a return to
+        // the original assumption: with focus removed, a real sync
+        // exhausted all 25 retries and still failed completely --
+        // "incomplete_response" on every single attempt, ~88s total,
+        // never once succeeding. This directly disproves the earlier
+        // hypothesis that Meta AI's own DOM-paired capture (same class
+        // of mechanism as Grok's, confirmed elsewhere to work fine fully
+        // backgrounded) would behave the same way here -- it clearly
+        // doesn't, confirming the original commit's own reasoning for
+        // including Meta AI in this experiment was correct all along.
+        // Unlike ChatGPT, Meta AI has no separate, working,
+        // focus-independent fallback at all -- its DOM-paired read IS
+        // its only capture method -- so there is no safe middle ground
+        // available here the way there is for ChatGPT. Given a real,
+        // direct requirement that sync actually work reliably to ship
+        // at all, accepting the visible flash for this one provider
+        // specifically is the only option that produces a working sync.
+        //
+        // [EXPERIMENT] A real, genuinely different, untested lever for
+        // Meta AI specifically, before accepting the visible flash as
+        // final: Chrome exposes two separate signals here that every
+        // attempt so far has always combined together -- whether a
+        // WINDOW has real, OS-level focus, and whether a TAB is the
+        // active tab within its own window (document.visibilityState).
+        // Many modern web apps gate their own rendering specifically on
+        // the second signal, not the first. Testing whether making the
+        // tab active WITHOUT also giving its window OS-level focus is
+        // enough on its own for Meta AI's page to render properly --
+        // if so, this genuinely never steals focus from whatever window
+        // the person is actually using, no flash at all, since the
+        // window itself never becomes the front, active window on
+        // screen. Scoped to Meta AI only; DeepSeek stays on its own,
+        // already-working, unchanged full-focus branch below -- no
+        // reason to touch something that already works reliably.
+        // Clearly flagged, trivially reversible: if this doesn't hold up
+        // on real, live Chrome, disable the flag and Meta AI falls
+        // straight back to the exact same full-focus approach that's
+        // already confirmed reliable.
+        //
+        // CONFIRMED FLAWED, DISABLED -- a real, live test showed two
+        // pages flashing visibly, and the person's own browser was left
+        // on the wrong tab afterward (never returned to the Diary entry
+        // they'd been on). Root cause was a genuine logical error in
+        // this hypothesis, not a Chrome restriction: "the window has
+        // real, OS-level focus" and "the window is visible on screen"
+        // are two separate things, but this experiment conflated them.
+        // The shared window was already the front, visible window the
+        // whole time -- the person was actively working in it -- so
+        // switching which TAB is active within an already-visible
+        // window is still fully, directly visible regardless of
+        // whether that window separately has OS-level focus. Making
+        // the tab active was never going to be invisible; it was always
+        // going to show. Compounding this, this experiment deliberately
+        // never set restoreFocus at all (on the incorrect assumption it
+        // never took focus from anything), so the existing
+        // restore-original-tab logic never ran either -- meaning this
+        // was confirmed worse than the current, working approach in
+        // that specific respect, not merely a neutral non-improvement.
+        // Left in place, disabled, as a documented, tested dead end,
+        // same as the off-screen-window attempt above.
+        const META_AI_ACTIVE_TAB_ONLY_EXPERIMENT_ENABLED = false;
+        if (META_AI_ACTIVE_TAB_ONLY_EXPERIMENT_ENABLED && /meta\.ai/.test(msg.conversationUrl)) {
+          try {
+            await chrome.tabs.update(tabId, { active: true });
+            console.log('[Diary Sync DIAG] [EXPERIMENT] made tab', tabId, 'active WITHOUT giving its window OS-level focus (testing whether document.visibilityState alone is enough for Meta AI to render, with zero visible flash at all)');
+          } catch (e) {
+            console.log('[Diary Sync DIAG] [EXPERIMENT] active-tab-only attempt threw:', e.message);
+          }
+        } else if (/deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl)) {
           try {
             const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
             const originalTab = activeTabs && activeTabs[0];
@@ -1426,18 +1669,6 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
             console.log('[Diary Sync DIAG] [EXPERIMENT] briefly focused tab', tabId, '(testing whether focus speeds up DOM rendering / unblocks clipboard, depending on provider)');
           } catch (e) {
             console.log('[Diary Sync DIAG] [EXPERIMENT] brief-focus attempt threw:', e.message);
-          }
-        } else if (/gemini\.google\.com/.test(msg.conversationUrl)) {
-          try {
-            const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-            const originalTab = activeTabs && activeTabs[0];
-            if (originalTab) restoreFocus = { tabId: originalTab.id, windowId: originalTab.windowId };
-            const targetTab = await chrome.tabs.get(tabId);
-            await chrome.windows.update(targetTab.windowId, { focused: true, state: 'minimized' });
-            await chrome.tabs.update(tabId, { active: true });
-            console.log('[Diary Sync DIAG] [EXPERIMENT] focused+minimized tab', tabId, '(testing whether a minimized window can still hold real focus, avoiding the visible flash)');
-          } catch (e) {
-            console.log('[Diary Sync DIAG] [EXPERIMENT] focused+minimized attempt threw:', e.message);
           }
         }
 
