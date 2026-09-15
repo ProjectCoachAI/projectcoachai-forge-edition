@@ -363,6 +363,41 @@
       .sidebar-backdrop.sidebar-backdrop-visible { display: block; position: fixed; inset: 0; background: rgba(20,20,20,0.4); z-index: 199; }
       .diary-main { padding: 1rem; }
       .forge-upsell { flex-direction: column; text-align: center; }
+      /* Confirmed as the real, direct cause of a specifically, precisely
+         reported bug: on mobile, .entry-meta laid out .entry-title-block
+         and .entry-sub side-by-side in a row, with align-items:center on
+         the parent. .entry-title-block also had a fixed width:320px,
+         which alone left very little room on a narrow phone screen for
+         .entry-sub to share the same row. As a long title wrapped to
+         several lines, the whole row grew taller, and align-items:center
+         then centered .entry-sub vertically relative to that entire tall
+         block -- landing it somewhere in the middle of the wrapped title
+         text rather than cleanly below it. Directly reported live,
+         screenshots across multiple entries: category tag, provider, and
+         timestamp visibly colliding with wrapped title text.
+         Fixed by stacking title and metadata vertically on mobile
+         instead — title first, metadata row below it, each given its
+         own, separate space — and letting the metadata row itself wrap
+         if the category tag, provider, and timestamp together don't fit
+         one line, rather than clipping (the separately reported
+         timestamp-truncated-at-the-edge issue). */
+      .entry-meta { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .entry-title-block { width: 100%; }
+      .entry-sub { flex-wrap: wrap; margin-left: 0; }
+      /* Confirmed as a real, direct fix for a specifically, precisely
+         reported bug: this row (Listen, Sync, Load earlier, Jump to,
+         Open original) had no flex-wrap rule at all, so on a narrow
+         phone screen the individual buttons shrank instead, causing
+         each one's own text label to wrap awkwardly within itself
+         ("Load / earlier / (1 more)") rather than the row wrapping as a
+         whole. Per the explicit recommendation to consider a compact
+         mobile layout rather than a tall wrapping grid: this makes the
+         row scroll horizontally instead — buttons keep their normal,
+         single-line width and never wrap internally, and the row itself
+         becomes swipeable if it doesn't fit, a well-established mobile
+         pattern, rather than growing tall. */
+      .entry-action-row { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+      .entry-action-row .entry-btn, .entry-action-row button { flex-shrink: 0; white-space: nowrap; }
     }
   </style>
   <!-- PostHog Analytics -->
@@ -1842,7 +1877,7 @@ function renderEntryCard(e) {
       // "Load earlier" now renders here too, alongside Listen —
       // outside entry-content entirely, per the explicit
       // recommendation above.
-      '<div id="entry-listen-row-' + e.id + '" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;" onclick="event.stopPropagation();">' +
+      '<div id="entry-listen-row-' + e.id + '" class="entry-action-row" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;" onclick="event.stopPropagation();">' +
         renderListenButton('native-' + e.id, 'toggleListenNative(' + e.id + ')') +
         renderLoadEarlierButtonHtml(e.id) +
         renderJumpToButtonHtml(e.id) +
