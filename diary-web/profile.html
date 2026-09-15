@@ -349,6 +349,28 @@
       setTimeout(() => t.classList.remove('show'), duration || 3000);
     }
 
+    // Confirmed as a real, direct, missing-function bug: this page's own
+    // avatar-upload code (below) calls showNotification(msg, type) in
+    // four places, but that function was never actually defined
+    // anywhere in this file, or anywhere else under diary-web/ -- only
+    // in the separate, sibling forge-web/profile.html this page was
+    // originally derived from. Directly reported live: uploading a
+    // photo threw an uncaught ReferenceError instead of ever showing
+    // the real, intended success or error message to the person.
+    // Wraps this page's own, already-existing local showToast rather
+    // than the separate, global Forge.showToast, since this page
+    // already has its own toast DOM element and styling -- reusing the
+    // global one could show nothing at all if it expects a different
+    // element this page doesn't have. Accepts the type argument so it
+    // doesn't throw when called with two arguments (as every call site
+    // here already does), even though the local toast's own styling
+    // doesn't yet visually distinguish error from success -- a real,
+    // separate, later improvement, not required to fix the actual
+    // reported bug (the error being thrown at all).
+    function showNotification(msg, type) {
+      showToast(msg);
+    }
+
     async function loadProfile() {
       var user = Forge.getUser();
       if (!user) return;

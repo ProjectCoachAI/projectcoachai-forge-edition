@@ -1455,13 +1455,22 @@ function getResetDateString() {
   return nextMonth.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 }
 
-function showLimitBanner(used, limit, customMessage) {
+function showLimitBanner(used, limit, customMessage, isPaidTier) {
   var el = document.getElementById('chatLimitBanner');
   var text = customMessage
     ? customMessage
     : 'Monthly free entries used (' + used + '/' + limit + '). Resets ' + getResetDateString() + '.';
-  el.innerHTML = '<div class="chat-limit-banner">' + text + ' ' +
-    '<a href="https://diary.projectcoachai.com/#pricing">Upgrade to Diary Pro</a> for unlimited continues.</div>';
+  // Confirmed as a real, direct bug: this always appended an "Upgrade
+  // to Diary Pro for unlimited continues" link after whatever message
+  // was passed in, even when that message (the message_cap branch's
+  // own customMessage, from chat.js) already correctly said "for your
+  // plan" -- meaning upgrading would change nothing at all for that
+  // person. Directly reported live: a genuine Diary Pro subscriber saw
+  // this misleading upgrade prompt despite already being on the
+  // highest tier. Now only shown when the person is confirmed, from
+  // the backend's own real isPaidTier flag, not already on paid.
+  var upgradeHtml = isPaidTier ? '' : ' <a href="https://diary.projectcoachai.com/#pricing">Upgrade to Diary Pro</a> for unlimited continues.';
+  el.innerHTML = '<div class="chat-limit-banner">' + text + upgradeHtml + '</div>';
 }
 
 // Same Stripe checkout pattern already established in app.html's own
@@ -1668,7 +1677,7 @@ async function sendChatMessage() {
       // try a different entry," the other says "you're out of entries
       // to continue this month at all."
       if (errData.reason === 'message_cap') {
-        showLimitBanner(null, null, errData.error);
+        showLimitBanner(null, null, errData.error, errData.isPaidTier);
       } else {
         showLimitBanner(errData.entriesUsed, errData.entryLimit);
         showUpgradeModal();

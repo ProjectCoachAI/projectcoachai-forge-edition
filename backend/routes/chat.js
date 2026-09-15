@@ -265,7 +265,22 @@ router.post('/', requireAuth, async (req, res) => {
                 return res.status(429).json({
                     success: false,
                     error: capMessage,
-                    reason: 'message_cap'
+                    reason: 'message_cap',
+                    // Confirmed as a real, missing piece needed to fully
+                    // fix the same misleading-upgrade-prompt bug this
+                    // branch's own capMessage already addresses above:
+                    // isPaidTier was computed here to build the right
+                    // message text, but was never actually included in
+                    // this JSON response body itself -- leaving the
+                    // frontend with no way to know a person's real tier
+                    // from this response alone, and no way to correctly
+                    // decide whether to show its own separate "Upgrade
+                    // to Diary Pro" link (see showLimitBanner in
+                    // continue.html). A real, live report confirmed a
+                    // genuine Diary Pro subscriber still saw that
+                    // upgrade link despite the message text itself
+                    // already correctly saying "for your plan."
+                    isPaidTier: usage.isPaidTier
                 });
             }
             return res.status(429).json({
