@@ -117,7 +117,7 @@
       // Confirmed as the actual root cause of attachments never reaching
       // the saved entry despite correct detection — this exact line was
       // where the data was lost.
-      chrome.runtime.sendMessage({ type: 'SAVE_TO_DIARY', requestId: payload.requestId, token: payload.token, source: payload.source, prompt: payload.prompt, content: payload.content, url: payload.url, images: payload.images, attachments: payload.attachments }, function(r) {});
+      chrome.runtime.sendMessage({ type: 'SAVE_TO_DIARY', token: payload.token, source: payload.source, prompt: payload.prompt, content: payload.content, url: payload.url, images: payload.images, attachments: payload.attachments }, function(r) {});
       return;
     }
     if (payload.type === 'GET_AUTH_TOKEN') {
