@@ -760,7 +760,12 @@ const CHAT_CONTINUE_ENTRY_LIMITS = {
 // designed to catch — deliberately NOT unlimited, since the original
 // cost-control reasoning for having a cap at all remains legitimate.
 const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_FREE = 8;
-const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_PAID = 50;
+// Raised from 50 to 100 per explicit request, after a real Pro
+// subscriber hit the original 50 in genuine use. Circle-back item: this
+// number itself, and whether 100 is the right long-term ceiling, is
+// intentionally left open for revisiting once other in-flight changes
+// are complete -- not a final decision made here.
+const CHAT_CONTINUE_MESSAGES_PER_ENTRY_CAP_PAID = 100;
 function getMessagesPerEntryCap(tier) {
   // Same "unlimited entries" tiers get the higher, paid cap — reuses
   // CHAT_CONTINUE_ENTRY_LIMITS' own, already-correct tier classification
