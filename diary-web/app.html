@@ -398,6 +398,27 @@
          pattern, rather than growing tall. */
       .entry-action-row { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
       .entry-action-row .entry-btn, .entry-action-row button { flex-shrink: 0; white-space: nowrap; }
+      /* Confirmed as the real, direct root cause of a specifically,
+         precisely reported bug: the whole page could be dragged
+         sideways on mobile, cutting off the sidebar and shifting the
+         header. .diary-nav's own children — the logo, the text-size
+         control, and .nav-right (containing the avatar plus THREE
+         fully-text-labeled buttons: "Chat with AI", "Import", "Sign
+         out") — all had flex-shrink:0. Only the search box could
+         shrink; everything else refused to, so on a narrow phone their
+         combined natural width alone could exceed the viewport, forcing
+         the entire row (and with it, the whole page) wider than 100vw.
+         Fixed at the source: these three buttons go icon-only on
+         mobile (their own text hidden, icon kept, aria-label added so
+         the action is still named for screen readers), matching a
+         well-established compact-nav mobile pattern. overflow-x:hidden
+         added to body as a defensive safety net regardless — so even
+         an unrelated element overflowing in the future can't make the
+         whole page draggable sideways again. */
+      body { overflow-x: hidden; }
+      .nav-right .btn-import span.btn-import-label, .nav-right .btn-signout span.btn-signout-label { display: none; }
+      .nav-right { gap: 0.5rem; }
+      .nav-right .btn-import, .nav-right .btn-signout { padding: 6px 8px; }
     }
   </style>
   <!-- PostHog Analytics -->
@@ -489,10 +510,10 @@
         <div id="navAvatar" style="width:30px;height:30px;border-radius:50%;background:#C17D3C;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;overflow:hidden;flex-shrink:0;"></div>
         <span class="nav-user" id="navUser"></span>
       </a>
-      <button class="btn-import" id="chatWithAiBtn" onclick="window.location.href='/chat.html'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>Chat with AI</button>
-      <button class="btn-import" onclick="openImportModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"/></svg>Import</button>
+      <button class="btn-import" id="chatWithAiBtn" aria-label="Chat with AI" onclick="window.location.href='/chat.html'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg><span class="btn-import-label">Chat with AI</span></button>
+      <button class="btn-import" aria-label="Import" onclick="openImportModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"/></svg><span class="btn-import-label">Import</span></button>
       <!-- Try Forge nav button hidden for Diary launch -->
-      <button class="btn-signout" onclick="handleSignOut()">Sign out</button>
+      <button class="btn-signout" aria-label="Sign out" onclick="handleSignOut()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25"/></svg><span class="btn-signout-label">Sign out</span></button>
     </div>
   </nav>
 </div>
