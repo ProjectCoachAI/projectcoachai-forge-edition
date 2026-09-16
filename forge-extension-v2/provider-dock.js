@@ -137,6 +137,10 @@
       try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge.projectcoachai.com/excel.html' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge.projectcoachai.com/excel.html'; }); }
       catch(_) { window.location.href = 'https://forge.projectcoachai.com/excel.html'; }
     });
+    // Disabled per explicit request — the "split" button itself and its
+    // click handler are left intact below (not deleted), in case this
+    // feature is revisited later, but it's deliberately never appended
+    // to the actions row, so it never appears or is clickable.
     const split = document.createElement('button'); split.className = 'fgd-action-secondary'; split.id = 'fgd-split-btn'; split.title = 'Split screen — compare two AIs side by side';
     split.textContent = '⊟ Split';
     split.addEventListener('click', function() {
@@ -149,7 +153,7 @@
       window.open(url, 'forge-split',
         `width=${w},height=${window.screen.availHeight},left=${left},top=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes`);
     }
-    actions.appendChild(persp); actions.appendChild(excel); actions.appendChild(split); inner.appendChild(actions);
+    actions.appendChild(persp); actions.appendChild(excel); inner.appendChild(actions);
 
     // Footer
     const ftr = document.createElement('div'); ftr.className = 'fgd-footer'; ftr.textContent = 'Forge · ';
