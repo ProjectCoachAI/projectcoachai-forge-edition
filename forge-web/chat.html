@@ -33,7 +33,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .chat-msg-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
   .chat-msg-label.user-label { color:var(--muted); }
   .chat-msg-label.ai-label { color:#f97316; }
-  .chat-msg-body { font-size:14px; line-height:1.75; color:var(--text); }
+  .chat-msg-body { font-size: calc(14px * var(--forge-chat-font-scale, 1)); line-height:1.75; color:var(--text); }
   .chat-msg-body p { margin:4px 0; }
   .chat-msg-body h1,.chat-msg-body h2,.chat-msg-body h3,.chat-msg-body h4 { margin:8px 0 2px; }
   .chat-msg-body ul,.chat-msg-body ol { margin:2px 0 4px; padding-left:1.4em; }
@@ -67,6 +67,18 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   <div class="chat-header">
     <a href="/synthesis.html" class="back" id="chatBackLink">&larr; Back to Synthesis</a>
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <!-- Ported directly from diary-web/continue.html's own
+           adjustDiaryFontScale feature — same bounds, same step, same
+           functions, per explicit request. Deliberately uses its own,
+           separate localStorage key ('forgeChatFontScale') rather than
+           the Diary product's 'diaryFontScale' key -- these are two
+           genuinely separate products sharing a database, not the same
+           product, so a person's text-size preference in one context
+           has no reason to silently affect the other. -->
+      <span style="display:inline-flex;gap:4px;margin-right:4px;">
+        <button onclick="adjustForgeFontScale(-1)" title="Decrease text size" class="chat-icon-btn" style="width:24px;height:24px;padding:0;font-size:11px;font-weight:700;line-height:1;">A&#8722;</button>
+        <button onclick="adjustForgeFontScale(1)" title="Increase text size" class="chat-icon-btn" style="width:24px;height:24px;padding:0;font-size:14px;font-weight:700;line-height:1;">A&#43;</button>
+      </span>
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <button class="chat-icon-btn" onclick="downloadChatThread()" title="Download conversation">&#8595; Download</button>
       <a href="/diary.html" class="chat-icon-btn" style="text-decoration:none" title="Open Diary">&#128214; Diary</a>
@@ -104,6 +116,32 @@ let chatDiaryEntryId = null;
 let chatHistory = [];
 let chatSessionId = null;
 let chatIsSending = false;
+
+// ── Text size — ported from diary-web/continue.html's own
+// adjustDiaryFontScale, same bounds/step/functions, per explicit
+// request. Own, separate localStorage key and CSS variable (not
+// Diary's 'diaryFontScale') since these are two separate products
+// sharing a database, not the same product.
+var FORGE_FONT_SCALE_MIN = 0.85;
+var FORGE_FONT_SCALE_MAX = 2.0;
+var FORGE_FONT_SCALE_STEP = 0.1;
+function getForgeFontScale() {
+  var stored = parseFloat(localStorage.getItem('forgeChatFontScale'));
+  return (!isNaN(stored) && stored >= FORGE_FONT_SCALE_MIN && stored <= FORGE_FONT_SCALE_MAX) ? stored : 1;
+}
+function applyForgeFontScale(scale) {
+  document.documentElement.style.setProperty('--forge-chat-font-scale', scale);
+}
+function adjustForgeFontScale(direction) {
+  var current = getForgeFontScale();
+  var next = Math.round((current + direction * FORGE_FONT_SCALE_STEP) * 100) / 100;
+  next = Math.max(FORGE_FONT_SCALE_MIN, Math.min(FORGE_FONT_SCALE_MAX, next));
+  localStorage.setItem('forgeChatFontScale', next);
+  applyForgeFontScale(next);
+}
+window.adjustForgeFontScale = adjustForgeFontScale;
+applyForgeFontScale(getForgeFontScale()); // apply immediately on script load, before messages render
+
 
 function autoResizeChatInput(el) {
   el.style.height = 'auto';
