@@ -15,7 +15,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
 <style>
-  .chat-page { display:flex; flex-direction:column; height:100vh; max-width:760px; margin:0 auto; }
+  .chat-page { display:flex; flex-direction:column; height:100vh; max-width:760px; margin:0 auto; transition: max-width 0.2s ease; }
+  .chat-page.chat-page-expanded { max-width: 1100px; }
   .chat-header { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .chat-header a.back { color:var(--muted); text-decoration:none; font-size:13px; display:flex; align-items:center; gap:4px; }
   .chat-header a.back:hover { color:var(--text); }
@@ -63,7 +64,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </head>
 <body>
 
-<div class="chat-page">
+<div class="chat-page" id="chatPage">
   <div class="chat-header">
     <a href="/synthesis.html" class="back" id="chatBackLink">&larr; Back to Synthesis</a>
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
@@ -79,6 +80,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <button onclick="adjustForgeFontScale(-1)" title="Decrease text size" class="chat-icon-btn" style="width:24px;height:24px;padding:0;font-size:11px;font-weight:700;line-height:1;">A&#8722;</button>
         <button onclick="adjustForgeFontScale(1)" title="Increase text size" class="chat-icon-btn" style="width:24px;height:24px;padding:0;font-size:14px;font-weight:700;line-height:1;">A&#43;</button>
       </span>
+      <!-- Ported directly from diary-web/continue.html's own
+           toggleChatPageWidth feature — same CSS approach (a
+           max-width toggle via a CSS class), same icons, same
+           localStorage-persisted behavior. Own, separate localStorage
+           key ('forgeChatPageExpanded') for the same reason as the
+           font-scale port above: two genuinely separate products
+           sharing a database, not the same product. -->
+      <button class="chat-icon-btn" id="chatWidthToggleBtn" onclick="toggleChatPageWidth()" title="Expand for a wider reading view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg> Expand</button>
       <button class="chat-icon-btn" onclick="toggleChatSearch()" title="Search this conversation">&#128269; Search</button>
       <!-- Ported concept from diary-web/app.html's own Jump-to feature —
            simplified for this page's own, much simpler structure: no
@@ -167,6 +176,31 @@ function adjustForgeFontScale(direction) {
 }
 window.adjustForgeFontScale = adjustForgeFontScale;
 applyForgeFontScale(getForgeFontScale()); // apply immediately on script load, before messages render
+
+// ── Expand/narrow reading width — ported directly from
+// diary-web/continue.html's own toggleChatPageWidth feature. Own,
+// separate localStorage key ('forgeChatPageExpanded'), same reasoning
+// as the font-scale port above.
+var CHAT_ICON_EXPAND = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg> Expand';
+var CHAT_ICON_NARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"/></svg> Narrow';
+function toggleChatPageWidth() {
+  var page = document.getElementById('chatPage');
+  var btn = document.getElementById('chatWidthToggleBtn');
+  if (!page) return;
+  var expanded = page.classList.toggle('chat-page-expanded');
+  localStorage.setItem('forgeChatPageExpanded', expanded ? '1' : '0');
+  if (btn) btn.innerHTML = expanded ? CHAT_ICON_NARROW : CHAT_ICON_EXPAND;
+}
+window.toggleChatPageWidth = toggleChatPageWidth;
+(function applyInitialChatPageWidth() {
+  var page = document.getElementById('chatPage');
+  var btn = document.getElementById('chatWidthToggleBtn');
+  if (page && localStorage.getItem('forgeChatPageExpanded') === '1') {
+    page.classList.add('chat-page-expanded');
+    if (btn) btn.innerHTML = CHAT_ICON_NARROW;
+  }
+})();
+
 
 // ── Search — ported directly from diary-web/continue.html's own chat
 // search feature, same functions/behavior. Simplified: no equivalent of
