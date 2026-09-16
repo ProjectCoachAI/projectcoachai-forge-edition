@@ -5438,6 +5438,18 @@ function renderMessagesAsSegments(messages, entryId) {
   var segments = [];
   var current = '';
   (messages || []).forEach(function(m, idx) {
+    // Real, direct evidence gathering — added specifically because a
+    // real, live, reported case showed a second user turn in the same
+    // entry rendering as plain body text (the "else" branch below,
+    // meant for real assistant answers) instead of a real user bubble,
+    // while an earlier user turn in that same entry rendered correctly.
+    // Logs the real, actual role value and a preview of the content for
+    // every message, so this can be directly confirmed as either a
+    // data-level bug (the role is genuinely not "user" in storage) or a
+    // render-level bug (the role is correctly "user" but something else
+    // about this specific check fails for it) — rather than guessing at
+    // either.
+    console.log('[Diary Sync DIAG] [EXPERIMENT] renderMessagesAsSegments message', idx, '— real role value:', JSON.stringify(m.role), '| typeof:', typeof m.role, '| content preview:', (m.content || '').slice(0, 80));
     if (m.role === 'user') {
       if (current) { segments.push(current); current = ''; }
       var parsed = extractFileAttachmentsFromContent(m.content);

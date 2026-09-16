@@ -1417,31 +1417,18 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         // live that combining focused:true and state:'minimized' in one
         // call is valid for windows.update(), unlike windows.create(),
         // which rejects that exact combination outright).
-        // NOTE: Meta AI removed from this list — a real, direct,
-        // testable hypothesis, not a confirmed fix yet, given this
-        // cannot be verified from here at all (genuine background-tab
-        // throttling behavior needs a real browser, not something this
-        // sandbox can simulate). The original commit that introduced
-        // this whole mechanism grouped ChatGPT/DeepSeek/Meta AI/Gemini
-        // together because all four "rely entirely on DOM rendering,
-        // which is subject to background-tab performance degradation" —
-        // a genuine, real reason at the time, not an oversight. But Meta
-        // AI already has its own direct DOM-pairing tied to a genuine
-        // completion event (buildDomPairedThread, same underlying
-        // mechanism Grok already uses successfully backgrounded, no
-        // focus at all) — and the separate stale-tab-replacement fix
-        // above (closing and replacing a tab before it can cross the
-        // 5-minute freeze threshold) was added AFTER this focus
-        // experiment, meaning it's genuinely possible that fix already
-        // resolved what originally motivated focus for Meta AI
-        // specifically, without anyone revisiting whether focus was
-        // still actually needed since. Worth testing directly, live: if
-        // Meta AI syncs continue succeeding reliably and quickly without
-        // this, that's real evidence the fully-visible flash for this
-        // provider specifically was never structurally required at all
-        // — if it doesn't, that's equally real evidence it genuinely is,
-        // and this should be reverted.
-        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl)) {
+        // NOTE: Meta AI's own removal from this list was a real, direct,
+        // testable hypothesis (see the reasoning above), not a
+        // confirmed fix -- explicitly meant to be settled by live
+        // testing. That testing is now in: a real, live sync stalled
+        // for 14 retries (~28s) with no answer ever rendering, until
+        // the person manually clicked into the tab to give it real
+        // focus themselves -- the very next capture attempt succeeded
+        // immediately afterward. That's precisely the outcome the
+        // original hypothesis said should mean reverting this. Restored
+        // here, back to the same brief-focus mechanism already
+        // confirmed working for ChatGPT/DeepSeek.
+        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl)) {
           try {
             const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
             const originalTab = activeTabs && activeTabs[0];

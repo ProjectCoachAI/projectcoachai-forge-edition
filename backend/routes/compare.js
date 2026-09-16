@@ -460,7 +460,25 @@ function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096, onUsage = null) {
 }
 
 // ── OpenAI-compatible generic caller (Mistral, DeepSeek, Perplexity, Grok) ──
-function callOpenAICompatible(prompt, apiKey, hostname, path, model, onUsage = null) {
+// Confirmed as a real, direct, external rate-limit -- not a code bug --
+// seen live in production on Mistral specifically ("Mistral: API error
+// (429)"), affecting real users already on Forge. This function is
+// shared across Mistral/DeepSeek/Grok/Meta, so a fix here benefits
+// every provider using it, not just the one that happened to surface
+// it first. A 429 ("too many requests") is very often transient and
+// resolves on its own within a few seconds -- but the previous code
+// failed permanently on the very first attempt with no retry at all,
+// even though simply waiting a moment and trying again is the standard,
+// correct response to this specific status code. Deliberately scoped to
+// ONLY retry on 429: every other error (400 bad request, 401 invalid
+// key, etc.) is a real, permanent problem that retrying would never
+// fix, and retrying those would only waste time before the same,
+// correct failure. Exponential backoff (1s, then 2s) with a small,
+// fixed retry ceiling (2 retries, 3 attempts total) balances giving a
+// genuine transient spike a real chance to clear against not leaving a
+// person's Compare request hanging indefinitely if the underlying
+// quota issue is actually persistent, not transient.
+function callOpenAICompatibleOnce(prompt, apiKey, hostname, path, model, onUsage) {
     return new Promise((resolve, reject) => {
         const sysMsg = { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' };
         let messages;
@@ -529,7 +547,9 @@ function callOpenAICompatible(prompt, apiKey, hostname, path, model, onUsage = n
                         }
                         resolve(text);
                     } else {
-                        reject(new Error(parsed.error?.message || `API error (${res.statusCode})`));
+                        const err = new Error(parsed.error?.message || `API error (${res.statusCode})`);
+                        err.statusCode = res.statusCode;
+                        reject(err);
                     }
                 } catch (e) { reject(new Error('Failed to parse response')); }
             });
@@ -539,6 +559,27 @@ function callOpenAICompatible(prompt, apiKey, hostname, path, model, onUsage = n
         req.write(body);
         req.end();
     });
+}
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function callOpenAICompatible(prompt, apiKey, hostname, path, model, onUsage = null) {
+    const maxRetries = 2;
+    const backoffMs = [1000, 2000];
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await callOpenAICompatibleOnce(prompt, apiKey, hostname, path, model, onUsage);
+        } catch (e) {
+            const isRateLimited = e.statusCode === 429;
+            const hasRetriesLeft = attempt < maxRetries;
+            if (isRateLimited && hasRetriesLeft) {
+                console.log(`[Compare] ${hostname} returned 429 (rate limited), retrying in ${backoffMs[attempt]}ms (attempt ${attempt + 1}/${maxRetries})`);
+                await sleep(backoffMs[attempt]);
+                continue;
+            }
+            throw e;
+        }
+    }
 }
 
 function callMistralAPI(prompt, apiKey, onUsage = null) {

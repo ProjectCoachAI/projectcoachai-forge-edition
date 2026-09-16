@@ -1399,6 +1399,19 @@ function queryAllDeep(selector) {
           // anything. Verified via direct simulation before applying
           // this to the real, complex Turndown-conversion code below.
           var aEls = opts.answerInnerSelector ? Array.from(el.querySelectorAll(opts.answerInnerSelector)) : [el];
+          // Real, direct evidence gathering — added specifically because
+          // a real, live, reported case showed a history_mismatch where
+          // the newly captured thread had two consecutive questions with
+          // no answer between them, while the already-stored version
+          // correctly had the real answer in between. Since a real
+          // answer with empty text is silently dropped entirely further
+          // below (parts only ever gets pushed to inside "if (text)"),
+          // this logs directly whether aEls came back empty for any
+          // given answer element -- the one, specific condition that
+          // would cause exactly this symptom.
+          if (!aEls.length) {
+            console.log('[Diary Sync DIAG] [EXPERIMENT] answer element matched by isQuestion===false, but answerInnerSelector found ZERO child elements inside it — this real answer will be silently dropped entirely. Element\'s own outerHTML preview:', (el.outerHTML || '').slice(0, 200));
+          }
           if (aEls.length) {
             var text = '';
             try {
