@@ -80,6 +80,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <button onclick="adjustForgeFontScale(1)" title="Increase text size" class="chat-icon-btn" style="width:24px;height:24px;padding:0;font-size:14px;font-weight:700;line-height:1;">A&#43;</button>
       </span>
       <button class="chat-icon-btn" onclick="toggleChatSearch()" title="Search this conversation">&#128269; Search</button>
+      <!-- Ported concept from diary-web/app.html's own Jump-to feature —
+           simplified for this page's own, much simpler structure: no
+           reveal-hidden-content-first step is needed here, since
+           everything is already in the DOM (no pagination exists on
+           this page at all). -->
+      <div style="position:relative;display:inline-block;">
+        <button class="chat-icon-btn" onclick="toggleJumpToMenu()" title="Jump to a question in this conversation">&#128214; Jump to</button>
+        <div id="jumpToMenu" style="display:none;position:absolute;top:100%;right:0;background:var(--bg);border:1px solid var(--border);border-radius:6px;max-height:300px;overflow-y:auto;min-width:220px;max-width:340px;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.15);margin-top:4px;"></div>
+      </div>
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <button class="chat-icon-btn" onclick="downloadChatThread()" title="Download conversation">&#8595; Download</button>
       <a href="/diary.html" class="chat-icon-btn" style="text-decoration:none" title="Open Diary">&#128214; Diary</a>
@@ -131,6 +140,8 @@ let chatDiaryEntryId = null;
 let chatHistory = [];
 let chatSessionId = null;
 let chatIsSending = false;
+var _chatUserTurnTitles = [];
+window._chatUserTurnTitles = _chatUserTurnTitles;
 
 // ── Text size — ported from diary-web/continue.html's own
 // adjustDiaryFontScale, same bounds/step/functions, per explicit
@@ -274,6 +285,39 @@ function prevChatSearchMatch() {
 }
 window.prevChatSearchMatch = prevChatSearchMatch;
 
+// ── Jump to — ported concept from diary-web/app.html's own Jump-to
+// feature, simplified for this page's own much simpler structure: no
+// reveal-hidden-content-first step is needed here (no pagination exists
+// on this page at all, unlike Diary's own paginated entries), so this
+// only ever needs to build the menu from the already-tracked titles and
+// scroll directly to the target element.
+function toggleJumpToMenu() {
+  var menu = document.getElementById('jumpToMenu');
+  if (!menu) return;
+  var isHidden = menu.style.display === 'none' || !menu.style.display;
+  if (isHidden) {
+    menu.innerHTML = window._chatUserTurnTitles.map(function(title, idx) {
+      return '<div onclick="jumpToTurn(' + idx + ')" style="padding:6px 10px;cursor:pointer;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(title) + '</div>';
+    }).join('');
+    menu.style.display = 'block';
+  } else {
+    menu.style.display = 'none';
+  }
+}
+window.toggleJumpToMenu = toggleJumpToMenu;
+
+function jumpToTurn(turnIndex) {
+  var menu = document.getElementById('jumpToMenu');
+  if (menu) menu.style.display = 'none';
+  var container = document.getElementById('chatMessages');
+  if (!container) return;
+  var targetEl = container.querySelector('[data-turn-index="' + turnIndex + '"]');
+  if (!targetEl) return;
+  targetEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+window.jumpToTurn = jumpToTurn;
+
+
 
 
 function autoResizeChatInput(el) {
@@ -355,6 +399,17 @@ function addMessageToDOM(role, content, opts) {
   var div = document.createElement('div');
   div.className = 'chat-msg ' + role + (opts.loading ? ' loading' : '');
   if (opts.id) div.id = opts.id;
+
+  // Ported concept from diary-web/app.html's own Jump-to feature — much
+  // simpler here since this page has no pagination/"Load earlier" at
+  // all (everything's already in the DOM), so this only needs to tag
+  // each real user turn with its own index and record a short title for
+  // it, not diary's own reveal-hidden-content-first logic.
+  if (role === 'user' && !opts.loading) {
+    div.setAttribute('data-turn-index', String(window._chatUserTurnTitles.length));
+    var titleText = (content || '').trim().slice(0, 80);
+    window._chatUserTurnTitles.push(titleText || '(untitled turn)');
+  }
 
   if (role === 'assistant') {
     var modelLabel = chatDisplayName || (chatModel ? (MODEL_LABELS[chatModel] || chatModel) : 'AI');
