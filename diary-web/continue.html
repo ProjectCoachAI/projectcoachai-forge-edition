@@ -93,6 +93,15 @@
   @media (max-width: 600px) {
     .chat-page { max-width:100%; }
     .chat-msg .chat-msg-body { max-width:90%; }
+    /* Confirmed as a real, direct, well-evidenced root cause: this
+       input's own font-size:14px triggers iOS Safari's automatic
+       zoom-on-focus, and the page can stay zoomed in even after the
+       keyboard closes -- confirmed live, directly, side by side
+       (identical input box visibly larger/shifted when focused vs.
+       not). Scoped to mobile only; desktop's own, already-fine 14px is
+       deliberately left untouched, since this iOS-specific behavior
+       doesn't apply there. */
+    .chat-input { font-size: 16px; }
   }
 
   /* Ported directly from app.html's own upgrade-modal styling, for the
