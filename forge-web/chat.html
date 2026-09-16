@@ -79,12 +79,27 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <button onclick="adjustForgeFontScale(-1)" title="Decrease text size" class="chat-icon-btn" style="width:24px;height:24px;padding:0;font-size:11px;font-weight:700;line-height:1;">A&#8722;</button>
         <button onclick="adjustForgeFontScale(1)" title="Increase text size" class="chat-icon-btn" style="width:24px;height:24px;padding:0;font-size:14px;font-weight:700;line-height:1;">A&#43;</button>
       </span>
+      <button class="chat-icon-btn" onclick="toggleChatSearch()" title="Search this conversation">&#128269; Search</button>
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <button class="chat-icon-btn" onclick="downloadChatThread()" title="Download conversation">&#8595; Download</button>
       <a href="/diary.html" class="chat-icon-btn" style="text-decoration:none" title="Open Diary">&#128214; Diary</a>
 
       <div class="chat-model-badge" id="modelBadge"><span class="dot"></span><span id="modelBadgeText">Loading...</span></div>
     </div>
+  </div>
+
+  <!-- Ported directly from diary-web/continue.html's own chat search
+       feature — same markup, same behavior. Simplified in one way: this
+       page always loads its full conversation into memory at once (no
+       batched/"Load earlier" pagination exists here), so there's no
+       equivalent of Diary's own expandAllChatContentForSearch() step
+       needed before searching -- everything is already in the DOM. -->
+  <div id="chatSearchBar" style="display:none;align-items:center;gap:8px;padding:8px 16px;background:var(--surface2);border-bottom:1px solid var(--border);">
+    <input id="chatSearchInput" type="text" placeholder="Search this conversation..." oninput="runChatSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){prevChatSearchMatch()}else{nextChatSearchMatch()}}else if(event.key==='Escape'){toggleChatSearch()}" style="flex:1;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:5px;font-family:inherit;outline:none;background:var(--bg);color:var(--text);"/>
+    <span id="chatSearchCounter" style="font-size:11px;color:var(--muted);white-space:nowrap;min-width:52px;text-align:center;"></span>
+    <button onclick="prevChatSearchMatch()" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 4px;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg></button>
+    <button onclick="nextChatSearchMatch()" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 4px;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></button>
+    <button onclick="toggleChatSearch()" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 4px;font-size:16px;">&times;</button>
   </div>
 
   <div class="chat-messages" id="chatMessages">
@@ -141,6 +156,124 @@ function adjustForgeFontScale(direction) {
 }
 window.adjustForgeFontScale = adjustForgeFontScale;
 applyForgeFontScale(getForgeFontScale()); // apply immediately on script load, before messages render
+
+// ── Search — ported directly from diary-web/continue.html's own chat
+// search feature, same functions/behavior. Simplified: no equivalent of
+// Diary's own expandAllChatContentForSearch() step is needed here,
+// since this page always loads its full conversation into memory at
+// once already (no batched/"Load earlier" pagination exists on this
+// page at all).
+var chatSearchState = { matches: [], index: -1 };
+
+function toggleChatSearch() {
+  var bar = document.getElementById('chatSearchBar');
+  var isHidden = bar.style.display === 'none' || !bar.style.display;
+  bar.style.display = isHidden ? 'flex' : 'none';
+  var input = document.getElementById('chatSearchInput');
+  if (isHidden) {
+    if (input) input.focus({ preventScroll: true });
+  } else {
+    if (input) input.value = '';
+    clearChatSearchHighlights();
+  }
+}
+window.toggleChatSearch = toggleChatSearch;
+
+function clearChatSearchHighlights() {
+  var container = document.getElementById('chatMessages');
+  if (container) {
+    var marks = container.querySelectorAll('mark.chat-search-hit');
+    marks.forEach(function(m) {
+      var parent = m.parentNode;
+      if (!parent) return;
+      parent.replaceChild(document.createTextNode(m.textContent), m);
+      parent.normalize();
+    });
+  }
+  chatSearchState = { matches: [], index: -1 };
+  updateChatSearchCounter();
+}
+
+function updateChatSearchCounter() {
+  var counter = document.getElementById('chatSearchCounter');
+  var input = document.getElementById('chatSearchInput');
+  if (!counter) return;
+  if (!input || !input.value.trim()) { counter.textContent = ''; return; }
+  var matches = chatSearchState.matches;
+  counter.textContent = matches.length ? (chatSearchState.index + 1) + ' of ' + matches.length : '0 of 0';
+}
+
+function runChatSearch() {
+  clearChatSearchHighlights();
+  var input = document.getElementById('chatSearchInput');
+  var query = input ? input.value.trim() : '';
+  if (!query) return;
+  var container = document.getElementById('chatMessages');
+  if (!container) return;
+
+  var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+  var textNodes = [];
+  var node;
+  while ((node = walker.nextNode())) {
+    if (node.nodeValue && node.nodeValue.trim()) textNodes.push(node);
+  }
+
+  var lowerQuery = query.toLowerCase();
+  textNodes.forEach(function(textNode) {
+    var text = textNode.nodeValue;
+    var lowerText = text.toLowerCase();
+    if (lowerText.indexOf(lowerQuery) === -1) return;
+
+    var frag = document.createDocumentFragment();
+    var lastEnd = 0;
+    var idx = lowerText.indexOf(lowerQuery);
+    while (idx !== -1) {
+      frag.appendChild(document.createTextNode(text.slice(lastEnd, idx)));
+      var mark = document.createElement('mark');
+      mark.className = 'chat-search-hit';
+      mark.style.background = '#FFE58A';
+      mark.style.borderRadius = '2px';
+      mark.textContent = text.slice(idx, idx + query.length);
+      frag.appendChild(mark);
+      lastEnd = idx + query.length;
+      idx = lowerText.indexOf(lowerQuery, lastEnd);
+    }
+    frag.appendChild(document.createTextNode(text.slice(lastEnd)));
+    textNode.parentNode.replaceChild(frag, textNode);
+  });
+
+  var matches = Array.prototype.slice.call(container.querySelectorAll('mark.chat-search-hit'));
+  chatSearchState = { matches: matches, index: matches.length ? 0 : -1 };
+  updateChatSearchCounter();
+  focusCurrentChatSearchMatch();
+}
+window.runChatSearch = runChatSearch;
+
+function focusCurrentChatSearchMatch() {
+  chatSearchState.matches.forEach(function(m, i) {
+    m.style.background = i === chatSearchState.index ? '#FFA500' : '#FFE58A';
+  });
+  if (chatSearchState.index >= 0 && chatSearchState.matches[chatSearchState.index]) {
+    chatSearchState.matches[chatSearchState.index].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+function nextChatSearchMatch() {
+  if (!chatSearchState.matches.length) return;
+  chatSearchState.index = (chatSearchState.index + 1) % chatSearchState.matches.length;
+  updateChatSearchCounter();
+  focusCurrentChatSearchMatch();
+}
+window.nextChatSearchMatch = nextChatSearchMatch;
+
+function prevChatSearchMatch() {
+  if (!chatSearchState.matches.length) return;
+  chatSearchState.index = (chatSearchState.index - 1 + chatSearchState.matches.length) % chatSearchState.matches.length;
+  updateChatSearchCounter();
+  focusCurrentChatSearchMatch();
+}
+window.prevChatSearchMatch = prevChatSearchMatch;
+
 
 
 function autoResizeChatInput(el) {
