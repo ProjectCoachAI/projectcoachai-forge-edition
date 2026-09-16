@@ -2182,6 +2182,18 @@ async function loadLiveData() {
           + '</div>'
         ).join('') || '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px">No recent activity</div>';
       }
+      // Added specifically because a real, live Mistral 429 in
+      // production went completely unnoticed: the dashboard's own
+      // issues-banner below only ever checked unread inbox messages,
+      // never any real API-provider health data at all, despite its own
+      // wording ("All systems operating normally") implying broader
+      // coverage. Stored here (rather than fetched separately in the
+      // Inbox block below, which is where the banner is actually
+      // updated) since this same recent-activity data already carries
+      // it — avoids a second, redundant network call for the same data.
+      window._recentApiErrors = ra.ok && ra.data && ra.data.activity
+        ? ra.data.activity.filter(a => a.type === 'api_error')
+        : [];
     }
   } catch(e) { console.warn('Activity failed:', e); }
 
@@ -2205,6 +2217,24 @@ async function loadLiveData() {
       if (banner) {
         const issues = [];
         if (unread > 0) issues.push(unread + ' unread message' + (unread > 1 ? 's' : '') + ' in inbox');
+        // Real, direct fix for a real, confirmed gap: this banner
+        // previously never checked API-provider health at all. Groups
+        // by provider (rather than listing every individual failure) so
+        // several errors from the same provider in the last hour still
+        // read as one clear, specific issue, not a wall of repeats.
+        const apiErrors = window._recentApiErrors || [];
+        if (apiErrors.length) {
+          const byProvider = {};
+          apiErrors.forEach(e => {
+            const m = e.text.match(/^(\S+) API error/);
+            const provider = m ? m[1] : 'a provider';
+            byProvider[provider] = (byProvider[provider] || 0) + 1;
+          });
+          Object.keys(byProvider).forEach(provider => {
+            const count = byProvider[provider];
+            issues.push(provider + ' API error' + (count > 1 ? ' (' + count + 'x in the last hour)' : ' in the last hour'));
+          });
+        }
         banner.innerHTML = issues.length
           ? '<strong>' + issues.length + ' item' + (issues.length > 1 ? 's' : '') + ' need attention:</strong> ' + issues.join(' · ')
           : '<span style="color:var(--green)">&#10003; All systems operating normally</span>';

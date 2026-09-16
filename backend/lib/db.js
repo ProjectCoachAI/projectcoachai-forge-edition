@@ -446,6 +446,24 @@ CREATE TABLE IF NOT EXISTS diary_chat_errors (
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_diary_chat_errors_provider_date ON diary_chat_errors(provider, created_at);
+-- Same pattern as diary_chat_errors above, kept separate rather than
+-- shared -- that table is specifically scoped to Diary's own Continue
+-- Conversation errors, and mixing a different feature's errors into it
+-- would be misleading given its own name. Added specifically because a
+-- real, live Mistral 429 in production went completely unnoticed on the
+-- admin dashboard -- the "All systems operating normally" banner only
+-- ever checked unread contact-inbox messages, never any real API-
+-- provider health data at all, despite its own wording implying
+-- broader coverage. This gives that banner (and any other future
+-- admin-facing view) a real, persistent record of Compare's own
+-- per-provider failures to actually check against.
+CREATE TABLE IF NOT EXISTS compare_api_errors (
+  id             SERIAL PRIMARY KEY,
+  provider       TEXT NOT NULL,
+  error_message  TEXT,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_compare_api_errors_provider_date ON compare_api_errors(provider, created_at);
 `;
 
 async function query(sql, params = []) {
@@ -1582,7 +1600,26 @@ async function logDiaryChatError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
+// Logs one Compare provider call's own failure — same fire-and-forget,
+// never-throw pattern as logDiaryChatError above, and for the same
+// reason: a logging failure here should never compound an
+// already-failing Compare request with a second, unrelated error.
+// Added specifically to give the admin dashboard's "All systems
+// operating normally" banner a real, persistent record of per-provider
+// API failures to actually check against, since it previously had none
+// at all.
+async function logCompareApiError(provider, errorMessage) {
+  try {
+    await query(
+      'INSERT INTO compare_api_errors (provider, error_message) VALUES ($1,$2)',
+      [provider, errorMessage || null]
+    );
+  } catch (e) {
+    console.error('[Compare API Errors] logging failed (non-fatal):', e.message);
+  }
+}
+
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

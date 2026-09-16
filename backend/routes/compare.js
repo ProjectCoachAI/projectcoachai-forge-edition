@@ -8,6 +8,7 @@ const LANGUAGE_INSTRUCTIONS = {
 };
 const https = require('https');
 const router = express.Router();
+const db = require('../lib/db');
 
 // Safe async wrapper
 const wrap = fn => async (req, res, next) => {
@@ -879,6 +880,7 @@ router.post('/', optionalAuth, async (req, res) => {
                 results[model] = { content: null, error: err.message, elapsed: Date.now() - t0 };
                 send({ type: 'response', model, content: null, error: err.message, elapsed: results[model].elapsed });
                 console.error(`  ❌ ${model}: ${err.message}`);
+                db.logCompareApiError(model, err.message);
             }
         });
 
@@ -917,6 +919,7 @@ router.post('/', optionalAuth, async (req, res) => {
         } catch (err) {
             results[model] = { content: null, error: err.message, elapsed: Date.now() - t0 };
             console.error(`  ❌ ${model}: ${err.message}`);
+            db.logCompareApiError(model, err.message);
         }
     });
 

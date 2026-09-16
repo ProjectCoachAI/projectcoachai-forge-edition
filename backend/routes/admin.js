@@ -323,6 +323,22 @@ router.get('/recent-activity', requireAuth, requireAdmin, async (req, res) => {
     const msgs = await db.query(
       "SELECT name, email, type, created_at FROM contact_messages ORDER BY created_at DESC LIMIT 4"
     ).catch(() => ({ rows: [] }));
+    // Added specifically because a real, live Mistral 429 in production
+    // went completely unnoticed: the admin dashboard's "All systems
+    // operating normally" banner only ever checked unread contact-inbox
+    // messages, never any real API-provider health data at all. This
+    // surfaces Compare's own, real, persistently-logged per-provider
+    // failures (see logCompareApiError in lib/db.js) the same way
+    // registrations and messages already are here, and the dashboard's
+    // own issues-banner logic (in forge-web/command-center.html) checks
+    // this same activity feed for a real 'api_error' entry to flag.
+    // Scoped to the last hour specifically -- a single provider failure
+    // from days ago shouldn't keep showing as an active, current issue
+    // once the real, live activity feed (limited to the 10 most recent
+    // events, mixed with registrations/messages) has moved past it.
+    const apiErrors = await db.query(
+      "SELECT provider, error_message, created_at FROM compare_api_errors WHERE created_at >= NOW() - INTERVAL '1 hour' ORDER BY created_at DESC LIMIT 4"
+    ).catch(() => ({ rows: [] }));
 
     const activity = [];
     users.rows.forEach(u => activity.push({
@@ -334,6 +350,11 @@ router.get('/recent-activity', requireAuth, requireAdmin, async (req, res) => {
       type: 'message', icon: '✉', color: 'blue',
       text: (m.type || 'Message') + ' from ' + (m.name || m.email),
       time: m.created_at
+    }));
+    apiErrors.rows.forEach(e => activity.push({
+      type: 'api_error', icon: '!', color: 'red',
+      text: e.provider + ' API error: ' + (e.error_message || 'unknown error'),
+      time: e.created_at
     }));
 
     activity.sort((a,b) => new Date(b.time) - new Date(a.time));
