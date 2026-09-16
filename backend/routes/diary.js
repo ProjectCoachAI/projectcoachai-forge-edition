@@ -1667,7 +1667,20 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // before comparing means only genuine content differences can
           // still trigger a real mismatch, while inconsequential
           // formatting drift no longer can.
-          const normalizeForCompare = (s) => (s || '').replace(/\s+/g, ' ').trim();
+          //
+          // Extended to also strip out URLs entirely before comparing.
+          // Confirmed live as a real, direct root cause of a
+          // false-positive history_mismatch on ChatGPT: a search-
+          // citation link embedded mid-sentence genuinely re-resolved to
+          // a DIFFERENT URL across two separate captures of the exact
+          // same conversation -- verified directly, byte-for-byte, that
+          // the two captures were identical everywhere except these
+          // embedded links. A citation's own target link changing is not
+          // a genuine content change to the actual answer text, the same
+          // reasoning already applied to whitespace drift above -- so
+          // URLs are stripped before comparing, the same way whitespace
+          // already is.
+          const normalizeForCompare = (s) => (s || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
           // Diagnostic added specifically to pin down a real, reported
           // case: an entry whose lastSyncDiverged flag won't clear even
           // after the whitespace-normalization fix above, suggesting the

@@ -1428,7 +1428,38 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         // original hypothesis said should mean reverting this. Restored
         // here, back to the same brief-focus mechanism already
         // confirmed working for ChatGPT/DeepSeek.
-        if (/chatgpt\.com/.test(msg.conversationUrl) || /deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl)) {
+        // Split into its own, fully isolated branch per explicit
+        // request — previously shared this exact same code with
+        // DeepSeek/Meta AI below purely because all three were each,
+        // separately, confirmed to need the identical fix; isolating it
+        // means a change to ChatGPT's own behavior can never
+        // accidentally affect DeepSeek or Meta AI's own, already-working
+        // behavior, and vice versa.
+        //
+        // Focus mechanism briefly removed entirely as a direct, live
+        // test of a real, testable hypothesis: that ChatGPT might behave
+        // more like Claude (which needs no focus mechanism at all) than
+        // like DeepSeek/Meta AI. Live testing disproved this: without
+        // focus, a real sync went through 10 retries over ~135 seconds
+        // before eventually succeeding — genuinely worse than the 1-2
+        // retries typical with brief focus in place, and the same
+        // pattern already seen with Meta AI before its own focus
+        // mechanism was restored. Restored here, unchanged from the
+        // version already confirmed working, on its own fully isolated
+        // branch this time.
+        if (/chatgpt\.com/.test(msg.conversationUrl)) {
+          try {
+            const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            const originalTab = activeTabs && activeTabs[0];
+            if (originalTab) restoreFocus = { tabId: originalTab.id, windowId: originalTab.windowId };
+            const targetTab = await chrome.tabs.get(tabId);
+            await chrome.windows.update(targetTab.windowId, { focused: true });
+            await chrome.tabs.update(tabId, { active: true });
+            console.log('[Diary Sync DIAG] [EXPERIMENT] briefly focused tab', tabId, '(testing whether focus speeds up DOM rendering / unblocks clipboard, depending on provider)');
+          } catch (e) {
+            console.log('[Diary Sync DIAG] [EXPERIMENT] brief-focus attempt threw:', e.message);
+          }
+        } else if (/deepseek\.com/.test(msg.conversationUrl) || /meta\.ai/.test(msg.conversationUrl)) {
           try {
             const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
             const originalTab = activeTabs && activeTabs[0];
