@@ -453,10 +453,23 @@ function addMessageToDOM(role, content, opts) {
         '<div class="chat-msg-body">••• thinking...</div>';
     } else {
       var msgId = 'cmsg_' + Date.now();
+      // Listen only ever shown when this conversation started from an
+      // already-saved Diary entry (chatDiaryEntryId is set once, at
+      // handoff, and never populated later) — the existing Read-Aloud
+      // backend route requires a genuine, already-saved diary_entries
+      // row to exist, and fails outright otherwise. A conversation that
+      // never gets saved to Diary at all simply never gets a Listen
+      // button for its whole duration — a real, accepted limitation for
+      // now, not an oversight; a fully Diary-independent read-aloud
+      // endpoint is a separate, larger task queued up on its own.
+      var listenBtnHtml = chatDiaryEntryId
+        ? '<button class="chat-icon-btn" id="listen-btn-' + msgId + '" onclick="toggleListenMsg(\'' + msgId + '\')" title="Listen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"/></svg> Listen</button>'
+        : '';
       div.innerHTML =
         '<div class="chat-msg-header"><span class="chat-msg-label ai-label">🔥 ' + modelLabel + '</span></div>' +
         '<div class="chat-msg-body" id="' + msgId + '">' + renderMarkdown(content) + '</div>' +
         '<div class="chat-msg-footer">' +
+          listenBtnHtml +
           '<button class="chat-icon-btn" onclick="copyMsgContent(\'' + msgId + '\')">&#128203; Copy</button>' +
         '</div>';
     }
@@ -481,6 +494,107 @@ function copyMsgContent(msgId) {
   });
 }
 window.copyMsgContent = copyMsgContent;
+
+// ── Listen — ported directly from diary-web/continue.html's own
+// Read-Aloud feature. Calls the existing, real backend route (POST
+// /api/diary/:id/read-aloud) using chatDiaryEntryId — the real,
+// already-saved Diary entry this conversation started from. Only ever
+// called when the Listen button exists at all, which itself only ever
+// renders when chatDiaryEntryId is truthy (see addMessageToDOM above),
+// so this never needs to separately guard against a missing entry ID.
+function cleanTextForSpeech(text) {
+  if (!text) return '';
+  return text
+    .replace(/(?:^\|.*\|[ \t]*\n)(?:^\|(?:[ :-]+\|)+[ \t]*\n)(?:^\|.*\|[ \t]*\n?)+/gm, ' A table is shown here — see the entry to view it. ')
+    .replace(/```[a-zA-Z0-9_+-]*\n?[\s\S]*?```/g, ' A code example is shown here — see the entry to read it. ')
+    .replace(/`([^`]+)`/g, ' code ')
+    .replace(/\n*---\n*\*\*Sources:\*\*\n(?:\d+\. \[[^\]]*\]\([^)]+\)\n?)+/g, ' ')
+    .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/^[-*_]{3,}$/gm, '')
+    .replace(/^[ \t]*[-*•]\s+/gm, '')
+    .replace(/^[ \t]*\d+\.\s+/gm, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+var _currentListenMsgId = null;
+var _currentListenAudio = null;
+
+async function toggleListenMsg(msgId) {
+  var wasPlayingThisMessage = _currentListenMsgId === msgId;
+  if (_currentListenAudio) { _currentListenAudio.pause(); _currentListenAudio = null; }
+  resetListenButtonIcon(_currentListenMsgId);
+  _currentListenMsgId = null;
+  if (wasPlayingThisMessage) return;
+
+  var el = document.getElementById(msgId);
+  if (!el) return;
+  var cleaned = cleanTextForSpeech(el.innerText || el.textContent || '');
+  if (!cleaned) { Forge.showToast('Nothing to read.', 'error'); return; }
+
+  var btn = document.getElementById('listen-btn-' + msgId);
+  var originalBtnHtml = btn ? btn.innerHTML : null;
+  if (btn) { btn.innerHTML = 'Loading…'; btn.disabled = true; }
+
+  try {
+    var r = await Forge.request('POST', '/api/diary/' + chatDiaryEntryId + '/read-aloud', { text: cleaned });
+    if (btn) btn.disabled = false;
+    if (!r.ok || !r.data || !r.data.success) {
+      if (btn) btn.innerHTML = originalBtnHtml;
+      if (r.data && r.data.limitReached) {
+        Forge.showToast('Monthly Listen limit reached.', 'error');
+      } else {
+        Forge.showToast('Could not generate audio right now. Please try again.', 'error');
+      }
+      return;
+    }
+    var audioUrls = r.data.audioUrls || (r.data.audioUrl ? [r.data.audioUrl] : []);
+    if (!audioUrls.length) { Forge.showToast('Could not generate audio right now. Please try again.', 'error'); return; }
+    _currentListenMsgId = msgId;
+    setListenButtonPlayingIcon(msgId);
+    playListenQueue(msgId, audioUrls, 0);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
+    console.warn('[Forge Chat] Read-Aloud request failed:', e.message);
+    Forge.showToast('Could not generate audio right now. Please try again.', 'error');
+  }
+}
+window.toggleListenMsg = toggleListenMsg;
+
+function playListenQueue(msgId, audioUrls, index) {
+  if (index >= audioUrls.length) {
+    if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+    return;
+  }
+  var audio = new Audio(audioUrls[index]);
+  audio.onended = function() {
+    if (_currentListenMsgId === msgId) playListenQueue(msgId, audioUrls, index + 1);
+  };
+  audio.onerror = function() {
+    if (_currentListenMsgId === msgId) { resetListenButtonIcon(msgId); _currentListenMsgId = null; _currentListenAudio = null; }
+    Forge.showToast('Could not play the generated audio.', 'error');
+  };
+  _currentListenAudio = audio;
+  audio.play();
+}
+
+function setListenButtonPlayingIcon(msgId) {
+  var btn = document.getElementById('listen-btn-' + msgId);
+  if (btn) btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5"/></svg> Stop';
+}
+
+function resetListenButtonIcon(msgId) {
+  if (!msgId) return;
+  var btn = document.getElementById('listen-btn-' + msgId);
+  if (btn) btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"/></svg> Listen';
+}
+
 
 async function sendChatMessage() {
   if (chatIsSending) return;
