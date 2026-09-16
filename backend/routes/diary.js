@@ -1695,24 +1695,55 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // next occurrence is directly diagnosable rather than
           // requiring more guesswork.
           let firstMismatchIdx = -1;
+          // Extended to also treat a message that genuinely GREW in
+          // place as a clean extension, not just new messages appended
+          // after the old ones. Confirmed live as a real, direct root
+          // cause of a second, separate history_mismatch on ChatGPT
+          // (distinct from the citation-URL fix above): the same
+          // answer, at the same position in the conversation, legitimately
+          // got longer between two captures (confirmed byte-for-byte:
+          // the old content was an exact prefix of the new content, not
+          // a coincidental partial resemblance) -- likely ChatGPT
+          // continuing to stream/append to an answer that a first,
+          // slightly-early capture caught mid-generation. The previous
+          // exact-match-only check had no way to represent "same
+          // message, just longer now" and treated this as a full
+          // mismatch even though nothing was lost or changed, only
+          // added.
+          const grownMessageIndices = [];
           const isCleanExtension = oldMessagesForCompare.length <= newMessagesForCompare.length &&
             oldMessagesForCompare.every(function(m, idx) {
-              const matches = newMessagesForCompare[idx] && newMessagesForCompare[idx].role === m.role &&
-                normalizeForCompare(newMessagesForCompare[idx].content) === normalizeForCompare(m.content);
-              if (!matches && firstMismatchIdx === -1) firstMismatchIdx = idx;
-              return matches;
+              const newMsg = newMessagesForCompare[idx];
+              if (!newMsg || newMsg.role !== m.role) {
+                if (firstMismatchIdx === -1) firstMismatchIdx = idx;
+                return false;
+              }
+              const oldNorm = normalizeForCompare(m.content);
+              const newNorm = normalizeForCompare(newMsg.content);
+              if (oldNorm === newNorm) return true;
+              if (newNorm.startsWith(oldNorm)) { grownMessageIndices.push(idx); return true; }
+              if (firstMismatchIdx === -1) firstMismatchIdx = idx;
+              return false;
             });
           if (firstMismatchIdx !== -1) {
             console.log('[Diary Sync DIAG] history_mismatch at message index', firstMismatchIdx,
               '| old role/content:', JSON.stringify(oldMessagesForCompare[firstMismatchIdx]),
               '| new role/content:', JSON.stringify(newMessagesForCompare[firstMismatchIdx]));
           }
-          if (isCleanExtension && newMessagesForCompare.length > oldMessagesForCompare.length) {
+          if (isCleanExtension && (newMessagesForCompare.length > oldMessagesForCompare.length || grownMessageIndices.length > 0)) {
             const newMessagesFull = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
             const trailingNew = newMessagesFull.slice(oldMessagesForCompare.length);
             const session = await db.getChatSession(chatSessionId, req.userEmail);
             if (session) {
               const merged = session.messages.slice();
+              // Update any messages that genuinely grew in place BEFORE
+              // splicing in trailing new ones below, so index math for
+              // the splice point isn't affected by these in-place
+              // updates (which don't change the array's own length).
+              grownMessageIndices.forEach(function(idx) {
+                const targetIdx = seedCount + idx;
+                if (merged[targetIdx]) merged[targetIdx] = Object.assign({}, merged[targetIdx], { content: newMessagesFull[idx].content });
+              });
               merged.splice(seedCount, 0, ...trailingNew);
               await db.updateChatSession(chatSessionId, req.userEmail, merged);
               // Confirmed as a real, genuine bug via direct review before
@@ -1744,7 +1775,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
                 `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'false'::jsonb) WHERE id=$1 AND user_email=$2`,
                 [id, req.userEmail]
               );
-              chatSessionSyncResult = { merged: true, addedCount: trailingNew.length, lastSyncedAt };
+              chatSessionSyncResult = { merged: true, addedCount: trailingNew.length, updatedCount: grownMessageIndices.length, lastSyncedAt };
             }
           } else if (!isCleanExtension) {
             // Confirmed as a real, necessary addition before building the
