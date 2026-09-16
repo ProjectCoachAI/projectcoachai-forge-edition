@@ -415,7 +415,18 @@
          added to body as a defensive safety net regardless — so even
          an unrelated element overflowing in the future can't make the
          whole page draggable sideways again. */
-      body { overflow-x: hidden; }
+      /* Confirmed real, direct, precisely-reported evidence that
+         body's own overflow-x:hidden alone was not sufficient: actual
+         page content (sidebar stats, the Quick Answer box, entry
+         cards) was still shown shifted horizontally on a real device
+         after this exact fix was already live. This is a well-known
+         mobile Safari quirk — overflow-x:hidden on body alone often
+         doesn't fully prevent horizontal scroll/pan on iOS; it also
+         needs to be on html, the root element, since iOS Safari can
+         still treat the viewport's own scrollable extent as
+         determined by html rather than body. Both together, not
+         html alone, since some older engines only honor it on body. */
+      html, body { overflow-x: hidden; max-width: 100vw; }
       .nav-right .btn-import span.btn-import-label, .nav-right .btn-signout span.btn-signout-label { display: none; }
       .nav-right { gap: 0.5rem; }
       .nav-right .btn-import, .nav-right .btn-signout { padding: 6px 8px; }
