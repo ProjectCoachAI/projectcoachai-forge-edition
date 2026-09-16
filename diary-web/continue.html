@@ -11,7 +11,18 @@
   html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; min-height: 100vh; }
   a { text-decoration: none; color: inherit; }
 
-  .chat-page { display:flex; flex-direction:column; height:100vh; max-width:760px; margin:0 auto; transition: max-width 0.2s ease; }
+  /* Confirmed as a real, likely root cause of a specifically, precisely
+     reported bug: page content shifting/expanding horizontally the
+     instant the on-screen keyboard opens. Fixed height:100vh on iOS
+     Safari can refer to the full layout viewport rather than the
+     actual, currently-visible visual viewport once the keyboard opens
+     and shrinks it -- a well-known trigger for exactly this kind of
+     unexpected reflow. 100dvh (dynamic viewport height) is the modern
+     fix, correctly tracking the real visible area including keyboard
+     state; 100vh is kept first as a fallback for older browsers that
+     don't yet support dvh, since the later declaration wins when both
+     are supported. */
+  .chat-page { display:flex; flex-direction:column; height:100vh; height:100dvh; max-width:760px; margin:0 auto; transition: max-width 0.2s ease; }
   /* Confirmed 760px is a genuinely good default for text readability
      (optimal line length lands around 50-75 characters at typical font
      sizes), but leaves substantial, unused whitespace on wide monitors

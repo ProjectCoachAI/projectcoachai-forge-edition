@@ -6132,6 +6132,16 @@ document.addEventListener('keydown', function(e) {
      type: "confirm the working view renders an actual interactive grid
      (not a static re-render of the markdown), and CSV export produces a
      file that opens correctly with the same rows/columns." -->
+<!-- Confirmed as a real, specific, precisely-reported bug: this modal's
+     own overflow:auto on #tableArtifactBody should already technically
+     enable horizontal scrolling for a table wider than the modal (the
+     table itself is deliberately width:100% but grows past that if its
+     own no-wrap header/cell content needs more room). But on iOS Safari
+     specifically, overflow:auto alone is a known-insufficient way to
+     get smooth, responsive touch-scrolling — swiping can feel stuck or
+     simply not work, with no visible indicator anything is scrollable
+     at all, even though it's technically enabled. -webkit-overflow-
+     scrolling:touch added below fixes this specific iOS gotcha. -->
 <div id="tableArtifactModal" onclick="if(event.target===this)closeTableArtifact()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
   <div style="background:#F5F3EE;width:min(880px,92vw);height:80vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;gap:12px;">
@@ -6139,7 +6149,7 @@ document.addEventListener('keydown', function(e) {
       <button onclick="exportTableArtifactCsv()" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export CSV</button>
       <button onclick="closeTableArtifact()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
     </div>
-    <div id="tableArtifactBody" style="flex:1;overflow:auto;padding:0;"></div>
+    <div id="tableArtifactBody" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0;"></div>
   </div>
 </div>
 
