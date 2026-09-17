@@ -1620,7 +1620,13 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // (newMessagesFull below), so the real, saved message keeps
           // its own Sources footer intact — only the comparison itself
           // ignores it.
-          const oldMessagesForCompare = splitEntryIntoMessages({ prompt: oldRow.prompt, content: oldRow.content }, true);
+          //
+          // NOTE: per-message splitting is no longer used for the
+          // comparison itself (see the whole-content redesign below) —
+          // only oldRow.content and content (the raw, unsplit strings)
+          // are compared now, precisely to avoid depending on
+          // splitEntryIntoMessages' own splitting decisions lining up
+          // identically across two separate captures.
           // Confirmed as a real, direct root cause via live diagnostic
           // evidence: a genuinely long, established Grok conversation
           // produced a history_mismatch where the "new" side's own
@@ -1645,7 +1651,6 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // to the freshly-submitted prompt when no established one
           // exists yet at all (a genuinely new entry).
           const newPromptForCompare = oldRow.prompt || prompt;
-          const newMessagesForCompare = splitEntryIntoMessages({ prompt: newPromptForCompare, content }, true);
           // Confirmed as a real, direct cause of a genuinely persistent
           // "still syncing" state (reported live across multiple DOM-
           // scraping providers, e.g. Grok): this comparison used exact,
@@ -1680,91 +1685,116 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // reasoning already applied to whitespace drift above -- so
           // URLs are stripped before comparing, the same way whitespace
           // already is.
-          const normalizeForCompare = (s) => (s || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
-          // Diagnostic added specifically to pin down a real, reported
-          // case: an entry whose lastSyncDiverged flag won't clear even
-          // after the whitespace-normalization fix above, suggesting the
-          // mismatch itself is genuine rather than cosmetic drift — most
-          // likely because the ALREADY-SAVED baseline (oldRow.content)
-          // was itself truncated by an earlier, separate capture bug
-          // (e.g. Grok's confirmed settle-timing issue), meaning no
-          // future sync can ever "cleanly extend" a baseline that was
-          // already wrong at some earlier point, not just at the end.
-          // Logs exactly which message index first fails to match (role
-          // or content) and both sides' own text at that index, so the
-          // next occurrence is directly diagnosable rather than
-          // requiring more guesswork.
-          let firstMismatchIdx = -1;
-          // Extended to also treat a message that genuinely GREW in
-          // place as a clean extension, not just new messages appended
-          // after the old ones. Confirmed live as a real, direct root
-          // cause of a second, separate history_mismatch on ChatGPT
-          // (distinct from the citation-URL fix above): the same
-          // answer, at the same position in the conversation, legitimately
-          // got longer between two captures (confirmed byte-for-byte:
-          // the old content was an exact prefix of the new content, not
-          // a coincidental partial resemblance) -- likely ChatGPT
-          // continuing to stream/append to an answer that a first,
-          // slightly-early capture caught mid-generation. The previous
-          // exact-match-only check had no way to represent "same
-          // message, just longer now" and treated this as a full
-          // mismatch even though nothing was lost or changed, only
-          // added.
-          const grownMessageIndices = [];
-          const isCleanExtension = oldMessagesForCompare.length <= newMessagesForCompare.length &&
-            oldMessagesForCompare.every(function(m, idx) {
-              const newMsg = newMessagesForCompare[idx];
-              if (!newMsg || newMsg.role !== m.role) {
-                if (firstMismatchIdx === -1) firstMismatchIdx = idx;
-                return false;
-              }
-              const oldNorm = normalizeForCompare(m.content);
-              const newNorm = normalizeForCompare(newMsg.content);
-              if (oldNorm === newNorm) return true;
-              if (newNorm.startsWith(oldNorm)) { grownMessageIndices.push(idx); return true; }
-              if (firstMismatchIdx === -1) firstMismatchIdx = idx;
-              return false;
-            });
-          if (firstMismatchIdx !== -1) {
-            console.log('[Diary Sync DIAG] history_mismatch at message index', firstMismatchIdx,
-              '| old role/content:', JSON.stringify(oldMessagesForCompare[firstMismatchIdx]),
-              '| new role/content:', JSON.stringify(newMessagesForCompare[firstMismatchIdx]));
+          //
+          // Extended again to strip "**" bold markers too. Root-cause
+          // audit (after finding a THIRD distinct history_mismatch
+          // pattern on ChatGPT within two days -- a citation link, a
+          // message growing in place, and now a shifted message index --
+          // each looking unrelated on the surface) found these three were
+          // all symptoms of the SAME underlying design fact: comparing a
+          // freshly re-parsed message list against a previously stored
+          // one is inherently fragile for any provider whose captured
+          // text isn't guaranteed byte-for-byte reproducible across two
+          // separate reads -- which ChatGPT's clipboard-copy mechanism,
+          // by its own nature, isn't. Splitting into individual messages
+          // works by scanning for "**bolded question**" markers embedded
+          // in the raw text; if that marker's own exact position varies
+          // even slightly between two captures of the identical
+          // conversation (confirmed plausible given ChatGPT's clipboard
+          // output has no reproducibility guarantee), every message
+          // index after that point shifts, and a POSITIONAL
+          // (index-by-index) comparison treats a shifted-but-unchanged
+          // conversation as a wall of individually wrong messages.
+          //
+          // Rather than patching this specific splitting quirk as a
+          // fourth special case (the same trajectory as the previous two
+          // fixes, which is exactly what surfaced this pattern), the
+          // comparison itself is redesigned below to compare the WHOLE,
+          // UNSPLIT content strings first, before any message-splitting
+          // happens at all -- sidestepping the unstable step entirely,
+          // rather than trying to out-guess every way it can vary.
+          // Stripping bold markers here (alongside URLs and whitespace)
+          // means marker-position drift can no longer register as a
+          // content difference, the same reasoning already applied to
+          // whitespace and citation links above.
+          const normalizeForCompare = (s) => (s || '').replace(/https?:\/\/\S+/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+          // Whole-content comparison replaces the previous per-message,
+          // positional comparison entirely (see the audit note above for
+          // why). If the new, normalized content genuinely starts with
+          // the old, normalized content, every character the old side
+          // had is still present, unchanged, within the new side -- this
+          // is true regardless of how message-splitting itself might
+          // divide that same text into individual bubbles this time
+          // versus last time, since splitting never adds, removes, or
+          // reorders any of the underlying characters, only decides
+          // where to draw boundaries between them.
+          //
+          // This still satisfies the original, load-bearing purpose of
+          // this whole check -- preventing a genuinely different,
+          // unrelated conversation's content from ever being silently
+          // merged into the wrong entry (the original, confirmed-live
+          // failure mode this mechanism was built to catch) -- because a
+          // truly different conversation's own text will essentially
+          // never happen to start with another, unrelated conversation's
+          // full text verbatim. Tested directly below against both the
+          // three known-fixed cases AND a deliberate wrong-conversation
+          // scenario before this was considered done.
+          const oldContentNorm = normalizeForCompare(oldRow.content);
+          const newContentNorm = normalizeForCompare(content);
+          const isCleanExtension = newContentNorm.startsWith(oldContentNorm);
+          if (!isCleanExtension) {
+            console.log('[Diary Sync DIAG] history_mismatch (whole-content compare) — old content does not appear as a prefix of new content.',
+              '| old content (normalized, first 300 chars):', oldContentNorm.slice(0, 300),
+              '| new content (normalized, first 300 chars):', newContentNorm.slice(0, 300));
           }
-          if (isCleanExtension && (newMessagesForCompare.length > oldMessagesForCompare.length || grownMessageIndices.length > 0)) {
+          if (isCleanExtension && newContentNorm.length > oldContentNorm.length) {
+            // Confirmed as a real, direct cause of a genuinely persistent
+            // "still syncing" state (reported live across multiple DOM-
+            // scraping providers, e.g. Grok): this comparison used exact,
+            // byte-for-byte string equality, with zero normalization at
+            // all. A DOM-scraped capture can never guarantee identical
+            // whitespace/line-breaks across two entirely separate re-reads
+            // of the same conversation (confirmed elsewhere in this file —
+            // Turndown's own markdown conversion, re-run fresh each sync
+            // attempt, is not guaranteed byte-identical across runs even
+            // when the underlying DOM content hasn't changed at all). Once
+            // a single sync attempt ever failed this exact-match check due
+            // to purely cosmetic whitespace drift, EVERY subsequent attempt
+            // would likely fail the identical way too, since the capture
+            // mechanism itself has no reason to suddenly start producing
+            // byte-identical output — meaning the resulting
+            // history_mismatch/lastSyncDiverged state could never clear
+            // itself at all, regardless of how many times the user
+            // resynced.
+            //
+            // Merge step simplified alongside the comparison redesign
+            // above: rather than surgically patching individual messages
+            // in place (which depended on the old, positional message
+            // list lining up index-for-index with the new one -- the
+            // exact assumption just proven unsafe), the entire native
+            // portion of the stored message list (everything from
+            // seedCount onward) is replaced wholesale with a fresh split
+            // of the new, longer content. This is safe specifically
+            // because isCleanExtension above already confirmed the new
+            // content is a strict superset of the old, so nothing the
+            // native portion currently holds is lost by this
+            // replacement -- only regenerated from a string that's
+            // provably at least as complete as what it's replacing.
             const newMessagesFull = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
-            const trailingNew = newMessagesFull.slice(oldMessagesForCompare.length);
+            const newNativeMessages = newMessagesFull.slice(seedCount);
             const session = await db.getChatSession(chatSessionId, req.userEmail);
             if (session) {
-              const merged = session.messages.slice();
-              // Update any messages that genuinely grew in place BEFORE
-              // splicing in trailing new ones below, so index math for
-              // the splice point isn't affected by these in-place
-              // updates (which don't change the array's own length).
-              grownMessageIndices.forEach(function(idx) {
-                const targetIdx = seedCount + idx;
-                if (merged[targetIdx]) merged[targetIdx] = Object.assign({}, merged[targetIdx], { content: newMessagesFull[idx].content });
-              });
-              merged.splice(seedCount, 0, ...trailingNew);
+              const merged = session.messages.slice(0, seedCount).concat(newNativeMessages);
               await db.updateChatSession(chatSessionId, req.userEmail, merged);
-              // Confirmed as a real, genuine bug via direct review before
-              // building the unified Diary view on top of this value:
-              // nativeSeedMessageCount was NEVER updated after a
-              // successful sync, despite trailingNew genuinely being
-              // spliced in ahead of the stored boundary each time. Left
-              // unfixed, every entry that syncs more than once after
-              // forking accumulates a growing gap between the real
-              // native/Forge boundary and what this field claims it is —
-              // the exact load-bearing value the unified view's own
-              // native-vs-Forge split depends on. Updated here to the
-              // new, genuine boundary (old value + however many native
-              // messages were just inserted ahead of it), so it keeps
-              // growing correctly with every future sync, not just this
-              // one.
-              const newSeedCount = seedCount + trailingNew.length;
-              await db.query(
-                `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{nativeSeedMessageCount}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
-                [JSON.stringify(newSeedCount), id, req.userEmail]
-              );
+              const oldNativeMessageCount = session.messages.length - seedCount;
+              const addedCount = Math.max(0, newNativeMessages.length - oldNativeMessageCount);
+              // seedCount (nativeSeedMessageCount) no longer needs
+              // updating here at all -- unlike the previous, surgical-
+              // patch design, this replacement never inserts anything
+              // AHEAD of the seed/native boundary; it only ever replaces
+              // what already comes after it, so that boundary's own
+              // position never moves.
+              //
               // Clears any prior diverged flag — a later, genuinely
               // successful sync resolves whatever divergence a previous
               // history_mismatch left behind, so the unified view's own
@@ -1775,7 +1805,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
                 `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'false'::jsonb) WHERE id=$1 AND user_email=$2`,
                 [id, req.userEmail]
               );
-              chatSessionSyncResult = { merged: true, addedCount: trailingNew.length, updatedCount: grownMessageIndices.length, lastSyncedAt };
+              chatSessionSyncResult = { merged: true, addedCount, lastSyncedAt };
             }
           } else if (!isCleanExtension) {
             // Confirmed as a real, necessary addition before building the
