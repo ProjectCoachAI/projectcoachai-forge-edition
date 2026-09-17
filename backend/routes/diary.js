@@ -1735,7 +1735,31 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // at its original position at all, correctly failing the
           // prefix check for entirely the wrong reason (a footer that
           // relocated, not a real difference in the actual answer).
-          const stripSourcesFooter = (s) => (s || '').replace(/\n\n---\n\n\*\*Sources:\*\*\n[\s\S]*$/, '');
+          //
+          // Fixed a second time, same day: the regex above used a plain
+          // (non-global) match anchored to end-of-string ($), which finds
+          // the FIRST "\n\n---\n\n**Sources:**\n" occurrence still capable
+          // of matching through to the end -- but a conversation with
+          // MULTIPLE search-backed answers has one such footer per
+          // answer, not just one for the whole entry. Confirmed live: a
+          // real ChatGPT conversation with two separate search-backed
+          // turns had its comparison silently treat the SECOND turn's own
+          // real question and answer as part of "the footer" and strip
+          // them entirely, making the new content look no longer than
+          // the old one and returning "no_new_content" even though a
+          // second, genuinely new exchange existed and was never saved
+          // at all. Fixed by greedily consuming everything up to the
+          // LAST such marker instead of the first ([\s\S]* before the
+          // marker itself, rather than after it), so only the single,
+          // truly final footer -- whichever answer currently sits last
+          // -- is ever removed, regardless of how many earlier answers
+          // also happen to have their own footers.
+          const stripSourcesFooter = (s) => {
+            var str = s || '';
+            var marker = '\n\n---\n\n**Sources:**\n';
+            var idx = str.lastIndexOf(marker);
+            return idx === -1 ? str : str.slice(0, idx);
+          };
           const normalizeForCompare = (s) => stripSourcesFooter(s || '').replace(/https?:\/\/\S+/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
           // Whole-content comparison replaces the previous per-message,
           // positional comparison entirely (see the audit note above for
