@@ -121,8 +121,21 @@
       return;
     }
     if (payload.type === 'GET_AUTH_TOKEN') {
+      // Timing added specifically to investigate a real, reported
+      // slowdown: performSaveToDiary's own "got auth token after Xms"
+      // log occasionally shows ~1300ms instead of the typical 5-24ms.
+      // Splits the delay into two separately-measurable parts: how long
+      // this handler took to even START running once the message event
+      // fired (a real candidate given this shared listener processes
+      // every single message event synchronously, in order, and the
+      // page's own message traffic — already visible in this same
+      // console as frequent "message received" lines — isn't
+      // controlled by this extension at all), versus how long the
+      // chrome.storage.local.get() call itself took once it started.
+      var _getAuthTokenReceivedAt = Date.now();
       try {
         chrome.storage.local.get(['diary_token'], function(r) {
+          console.log('[Diary Sync DIAG] GET_AUTH_TOKEN storage.get() took', Date.now() - _getAuthTokenReceivedAt, 'ms');
           window.postMessage({ type: '__DIARY_AUTH_TOKEN__', token: r.diary_token || null }, '*');
         });
       } catch(_) { window.postMessage({ type: '__DIARY_AUTH_TOKEN__', token: null }, '*'); }

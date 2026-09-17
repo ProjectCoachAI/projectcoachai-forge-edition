@@ -2296,11 +2296,19 @@ function queryAllDeep(selector) {
       if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
       try {
         var token = null;
+        // Timestamp captured at the exact moment GET_AUTH_TOKEN is
+        // dispatched — paired with diary-isolated.js's own timing log
+        // for the same request, so a genuine dispatch/receive delay
+        // (time between this postMessage and diary-isolated.js's
+        // handler actually starting) can be measured separately from
+        // time spent inside chrome.storage.local.get() itself.
+        var _getAuthTokenDispatchedAt = Date.now();
         await new Promise(function(resolve) {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_AUTH_TOKEN' } }, '*');
           var handler = function(e) {
             if (e.data && e.data.type === '__DIARY_AUTH_TOKEN__') {
               token = e.data.token;
+              console.log('[Diary Sync DIAG] GET_AUTH_TOKEN round-trip (dispatch to response received) took', Date.now() - _getAuthTokenDispatchedAt, 'ms');
               window.removeEventListener('message', handler);
               resolve();
             }
