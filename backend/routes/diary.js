@@ -1743,9 +1743,26 @@ router.patch('/:id', requireAuth, async (req, res) => {
           const newContentNorm = normalizeForCompare(content);
           const isCleanExtension = newContentNorm.startsWith(oldContentNorm);
           if (!isCleanExtension) {
+            // Finds the EXACT character index where the two normalized
+            // strings first diverge, rather than logging a fixed first-
+            // 300-char window that may show nothing useful at all if
+            // both sides happen to share a longer common start (exactly
+            // what happened on a real, live case: both previews were
+            // identical for 300+ chars, with the actual divergence
+            // somewhere further in — meaning the previous window-based
+            // log couldn't diagnose it at all). Walks both strings
+            // together, character by character, and logs a small window
+            // immediately around the first point they differ, so the
+            // actual difference is directly visible regardless of how
+            // far into the content it occurs.
+            var divergeAt = 0;
+            var maxCheck = Math.min(oldContentNorm.length, newContentNorm.length);
+            while (divergeAt < maxCheck && oldContentNorm[divergeAt] === newContentNorm[divergeAt]) divergeAt++;
+            var windowStart = Math.max(0, divergeAt - 80);
             console.log('[Diary Sync DIAG] history_mismatch (whole-content compare) — old content does not appear as a prefix of new content.',
-              '| old content (normalized, first 300 chars):', oldContentNorm.slice(0, 300),
-              '| new content (normalized, first 300 chars):', newContentNorm.slice(0, 300));
+              '| diverges at character index', divergeAt, 'of', oldContentNorm.length, '(old) /', newContentNorm.length, '(new)',
+              '| old around divergence:', JSON.stringify(oldContentNorm.slice(windowStart, divergeAt + 120)),
+              '| new around divergence:', JSON.stringify(newContentNorm.slice(windowStart, divergeAt + 120)));
           }
           if (isCleanExtension && newContentNorm.length > oldContentNorm.length) {
             // Confirmed as a real, direct cause of a genuinely persistent
