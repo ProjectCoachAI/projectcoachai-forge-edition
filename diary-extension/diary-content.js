@@ -2267,6 +2267,21 @@ function queryAllDeep(selector) {
       // alongside the separate backend-request time already
       // instrumented on the background.js side.
       var _saveStartedAt = Date.now();
+      // Explicit turn count (user + assistant turns actually captured
+      // this time), sent to the backend alongside the content itself —
+      // per explicit design decision, following the same "compare
+      // something the extension already knows directly and reliably,
+      // rather than something re-derived from unstable, cosmetically-
+      // variable text" lesson already applied to the history_mismatch
+      // redesign this same day. Currently only ever set for ChatGPT
+      // (the one provider whose captured text has repeatedly proven
+      // cosmetically variable across separate reads of an unchanged
+      // conversation — citation links, Sources-footer position/count);
+      // left null for every other provider, whose own capture methods
+      // haven't shown this same fragility, so the backend's own
+      // existing content-based comparison remains their sole check
+      // unchanged.
+      var turnCountForSync = null;
       if (PROVIDER === 'mistral') {
         console.log('[Diary DIAG] === Mistral save clicked ===');
         if (window.__diaryCapture && window.__diaryCapture.turns) {
@@ -2969,6 +2984,7 @@ function queryAllDeep(selector) {
             if (expectedCount > 0 && clipSuccessCount === expectedCount) {
               chatgptClipboardWorked = true;
               fullThread = clipParts.join('\n\n');
+              turnCountForSync = expectedCount;
               if (firstUserClip) prompt = firstUserClip.slice(0, 500); // overrides the earlier DOM-based getPrompt() result for the title
               console.log('[Diary] ChatGPT clipboard-copy method, ALL', expectedCount, 'turns (both roles) succeeded, length:', fullThread.length, 'title:', prompt.slice(0,60));
             } else {
@@ -3190,6 +3206,14 @@ function queryAllDeep(selector) {
             append: false, // always send complete conversation snapshot
             url: saveUrl,
             images: images,
+            // Sent explicitly (not re-derived from content server-side)
+            // per the same-day design decision covering this whole
+            // field: the extension already knows this number directly
+            // and reliably; only ChatGPT ever sets it (see its own
+            // declaration comment above for why), so this is null for
+            // every other provider, leaving their own sync behavior
+            // completely unchanged.
+            turnCount: turnCountForSync,
             // Generic across all providers via registry[PROVIDER] — any
             // provider with its own getAttachments() defined is picked
             // up automatically here with no further change needed to

@@ -1056,7 +1056,7 @@ let data;
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ content: patchContent, prompt: msg.prompt, metadata: { url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
+          body: JSON.stringify({ content: patchContent, prompt: msg.prompt, turnCount: msg.turnCount, metadata: { url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
         });
         data = await pR.json();
         data.updated = true;

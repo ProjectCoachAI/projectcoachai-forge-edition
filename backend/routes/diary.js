@@ -1533,7 +1533,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // real scenarios (category-only, decision_note-only, a full content
     // re-save, and an empty body correctly signaling 400) before
     // implementing here.
-    const { content, metadata, prompt, category, decision_note, rating, is_favorite } = req.body;
+    const { content, metadata, prompt, category, decision_note, rating, is_favorite, turnCount } = req.body;
 
     const sets = [];
     const params = [];
@@ -1595,6 +1595,12 @@ router.patch('/:id', requireAuth, async (req, res) => {
         const oldMeta = oldRow.metadata || {};
         const chatSessionId = oldMeta.chatSessionId;
         const seedCount = oldMeta.nativeSeedMessageCount;
+        // Last-known turn count, set only by a provider that explicitly
+        // sends its own turnCount (currently ChatGPT only — see
+        // diary-content.js's own declaration comment for why). Absent
+        // (undefined) for every entry never synced with such a provider,
+        // or synced before this field existed at all.
+        const oldTurnCount = oldMeta.lastKnownTurnCount;
         if (chatSessionId && typeof seedCount === 'number') {
           // lastSyncedAt is set whenever this check runs at all,
           // regardless of outcome (merged, mismatch, or no new content
@@ -1807,7 +1813,54 @@ router.patch('/:id', requireAuth, async (req, res) => {
               '| old around divergence:', JSON.stringify(oldContentNorm.slice(windowStart, divergeAt + 120)),
               '| new around divergence:', JSON.stringify(newContentNorm.slice(windowStart, divergeAt + 120)));
           }
-          if (isCleanExtension && newContentNorm.length > oldContentNorm.length) {
+          // "Has new content" decision, redesigned per explicit direction
+          // to apply the SAME lesson already applied to isCleanExtension
+          // itself: compare something the extension already knows
+          // directly and reliably (turnCount — an explicit integer sent
+          // alongside the content) rather than something re-derived from
+          // unstable, cosmetically-variable text (content length). Three
+          // separate same-day bugs (a citation link, a Sources-footer
+          // relocation, a Sources-footer occurrence count) each
+          // independently caused newContentNorm's own LENGTH to come out
+          // equal to or shorter than oldContentNorm's, despite genuinely
+          // new content existing — because each was a different way the
+          // TEXT could cosmetically shrink or shift, a category of bug
+          // with no natural end, versus turnCount, a single integer with
+          // no equivalent cosmetic-variation surface at all.
+          //
+          // Deliberately narrow in scope: turnCount, when available, is
+          // an ADDITIONAL signal alongside the length check (see the
+          // corrected note below on why this is OR, not replacement) —
+          // never touching isCleanExtension itself, which still runs
+          // unconditionally as the wrong-conversation protection. Turn
+          // count alone cannot distinguish "6 turns, 2 genuinely new at the
+          // end" from "6 turns, someone silently edited turn 3" -- both
+          // look identical to a pure count comparison -- but isCleanExtension's
+          // own full prefix check already catches that case on its own:
+          // an edited EARLIER message breaks the "new starts with old"
+          // relationship regardless of whether the turn count stayed the
+          // same, so this is a real, tested guard against exactly that
+          // risk, not an unaddressed gap.
+          //
+          // Only ever engages when turnCount is explicitly provided as a
+          // number (currently ChatGPT only) — every other provider falls
+          // straight through to the original, untouched length-based
+          // check, so their own sync behavior is completely unchanged.
+          //
+          // Deliberately an ADDITIONAL signal, not a REPLACEMENT for the
+          // length check — confirmed necessary by direct testing: turn
+          // count alone would wrongly say "nothing new" for the already-
+          // fixed "message grew in place" case (same turn count, longer
+          // text), since growing an existing answer never changes how
+          // many turns exist at all. Either signal being true (a genuine
+          // new turn, OR a genuine growth within an existing turn) is
+          // sufficient on its own to mean real new content exists.
+          const turnCountProvided = typeof turnCount === 'number' && typeof oldTurnCount === 'number';
+          const hasNewContent = (turnCountProvided && turnCount > oldTurnCount) || (newContentNorm.length > oldContentNorm.length);
+          if (turnCountProvided) {
+            console.log('[Diary Sync DIAG] turn-count compare — old:', oldTurnCount, '| new:', turnCount, '| hasNewContent:', hasNewContent);
+          }
+          if (isCleanExtension && hasNewContent) {
             // Confirmed as a real, direct cause of a genuinely persistent
             // "still syncing" state (reported live across multiple DOM-
             // scraping providers, e.g. Grok): this comparison used exact,
@@ -1865,6 +1918,21 @@ router.patch('/:id', requireAuth, async (req, res) => {
                 `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'false'::jsonb) WHERE id=$1 AND user_email=$2`,
                 [id, req.userEmail]
               );
+              // Persists this sync's own turnCount (when the provider
+              // sent one) as the new baseline for the NEXT sync's own
+              // turn-count comparison above. Only ever written when
+              // turnCount was actually provided this time -- an entry
+              // never synced by a turnCount-aware provider (or one
+              // synced before this field existed at all) simply never
+              // gets this field at all, correctly falling through to the
+              // original length-based comparison on its own next sync
+              // too, exactly as intended.
+              if (typeof turnCount === 'number') {
+                await db.query(
+                  `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastKnownTurnCount}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+                  [JSON.stringify(turnCount), id, req.userEmail]
+                );
+              }
               chatSessionSyncResult = { merged: true, addedCount, lastSyncedAt };
             }
           } else if (!isCleanExtension) {
