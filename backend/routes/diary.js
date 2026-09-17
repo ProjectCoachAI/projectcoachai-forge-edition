@@ -1717,7 +1717,26 @@ router.patch('/:id', requireAuth, async (req, res) => {
           // means marker-position drift can no longer register as a
           // content difference, the same reasoning already applied to
           // whitespace and citation links above.
-          const normalizeForCompare = (s) => (s || '').replace(/https?:\/\/\S+/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+          //
+          // Extended again to also strip the Sources footer entirely
+          // (same regex already used in splitEntryIntoMessages' own
+          // dropSourcesForComparison path above). This whole-content
+          // redesign never called that function for comparison purposes
+          // at all, so the footer's own already-documented behavior --
+          // it always re-attaches to whichever message is LAST at parse
+          // time, meaning its position genuinely moves every time a new
+          // Q&A pair is added -- was never actually accounted for here,
+          // a genuine regression from this redesign rather than a new,
+          // separate bug. Confirmed live: a real old content string
+          // ending in a Sources footer was compared against a real new
+          // string where a further turn had been added, moving that same
+          // footer to the new end -- meaning the old content's own
+          // trailing text (the footer) never appeared in the new content
+          // at its original position at all, correctly failing the
+          // prefix check for entirely the wrong reason (a footer that
+          // relocated, not a real difference in the actual answer).
+          const stripSourcesFooter = (s) => (s || '').replace(/\n\n---\n\n\*\*Sources:\*\*\n[\s\S]*$/, '');
+          const normalizeForCompare = (s) => stripSourcesFooter(s || '').replace(/https?:\/\/\S+/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
           // Whole-content comparison replaces the previous per-message,
           // positional comparison entirely (see the audit note above for
           // why). If the new, normalized content genuinely starts with
