@@ -1901,8 +1901,22 @@ window.sendChatMessage = sendChatMessage;
     // never embeds the first question in entry.content at all — in
     // that case messages[0] won't already be the user's first turn, so
     // prepending is still exactly right.
+    // Confirmed live as a real, distinct root cause of this same
+    // "title shown twice" bug resurfacing: entry.prompt (Claude's own
+    // prompt-extraction, diary-content.js) and this same first question
+    // as embedded in entry.content (via boldQuestion(), consumed above)
+    // are truncated to two DIFFERENT lengths -- 500 chars vs 2000 chars
+    // respectively. For any question longer than 500 characters, these
+    // two truncated strings can never be exactly equal even though
+    // they're genuinely the same question, silently defeating this
+    // exact-match check and causing entry.prompt to get wrongly
+    // re-prepended as a duplicate. Compares only up to the SHORTER of
+    // the two truncation lengths (i.e. entry.prompt's own, since it's
+    // always the smaller one) so a genuine truncation difference is
+    // correctly recognized as the same question, not mistaken for a
+    // real content difference.
     var firstQuestionAlreadyCaptured = messages.length > 0 && messages[0].role === 'user' &&
-      entry.prompt && messages[0].content.trim() === entry.prompt.trim();
+      entry.prompt && messages[0].content.trim().slice(0, entry.prompt.trim().length) === entry.prompt.trim();
     if (entry.prompt && !firstQuestionAlreadyCaptured) {
       messages.unshift({ role: 'user', content: entry.prompt });
     }

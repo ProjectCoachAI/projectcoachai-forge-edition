@@ -2757,22 +2757,62 @@ function queryAllDeep(selector) {
             console.log('[Diary] Mistral DOM-paired thread used, length:', fullThread.length);
           }
         }
+        // ChatGPT-specific: try the CACHED history-JSON text first
+        // (window.__diaryCapture.historySeed, populated passively by the
+        // interceptor eavesdropping on ChatGPT's own client-issued
+        // fetch — no clicking, no focus, no clipboard involved at all).
+        //
+        // Reordered per explicit request to revisit this, isolated
+        // entirely within ChatGPT's own branch so no other provider is
+        // touched: ChatGPT and Claude originally shared this same
+        // network-interception approach as their primary method (see
+        // git history, commit 7fd29b5 and its predecessors), before an
+        // August 8 rebuild moved ChatGPT to clipboard-copy instead,
+        // citing DOM virtualization and unreliable history-endpoint
+        // fetching. That rebuild's own reasoning, read from its commit
+        // message, was about UNRELIABILITY, not about visible UI
+        // side-effects -- there's no record of the clipboard method's
+        // own visible tab-focus flash being a factor in that decision at
+        // all, and this flash was never present before that rebuild.
+        // Trying the cached history-JSON path FIRST directly tests
+        // whether it's reliable enough today to serve as ChatGPT's
+        // primary method again, eliminating the flash entirely when it
+        // works, while the clipboard-copy method (and the same
+        // last-resort direct-fetch logic already inside the history
+        // branch below) remain fully intact as a fallback if this cached
+        // data isn't available or is too short.
+        var chatgptHistoryWorked = false;
+        if (PROVIDER === 'chatgpt') {
+          try {
+            var cachedSeedForPrimary = window.__diaryCapture && window.__diaryCapture.historySeed;
+            if (cachedSeedForPrimary && cachedSeedForPrimary.text && cachedSeedForPrimary.text.length > 50) {
+              fullThread = cachedSeedForPrimary.text;
+              chatgptHistoryWorked = true;
+              console.log('[Diary] ChatGPT using CACHED history text as PRIMARY method (age', Math.round((Date.now() - cachedSeedForPrimary.ts) / 1000), 's), length:', fullThread.length);
+            } else {
+              console.log('[Diary] ChatGPT no cached history text available yet — falling through to clipboard-copy method');
+            }
+          } catch(e) {
+            console.error('[Diary] ChatGPT primary history-JSON attempt FAILED:', e);
+          }
+        }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
         // per turn, then read the clipboard — this has been 100% clean in
         // every manual test tonight (no PUA-artifact stripping needed, no
         // backend-propagation-delay risk, no virtualization risk), unlike
         // both the DOM-reading and history-fetch approaches this session,
-        // which each had a real, evidenced failure mode. This is now the
-        // primary method; the history-fetch-with-retry logic below remains
-        // as a fallback if clipboard access fails (e.g. permission denied)
-        // or a turn's copy button can't be found.
+        // which each had a real, evidenced failure mode. Now runs only as
+        // a fallback when the cached-history-JSON attempt above didn't
+        // have usable data yet; the history-fetch-with-retry logic
+        // further below remains as a final fallback if BOTH the cached
+        // history-JSON above and clipboard here come up empty.
         //
         // NOTE: this temporarily overwrites the user's system clipboard —
         // we save and restore whatever was there beforehand so Save to
         // Diary doesn't have a surprising side effect on unrelated
         // copy/paste the user may be in the middle of.
         var chatgptClipboardWorked = false;
-        if (PROVIDER === 'chatgpt') {
+        if (PROVIDER === 'chatgpt' && !chatgptHistoryWorked) {
           try {
             var originalClipboard = '';
             try { originalClipboard = await navigator.clipboard.readText(); } catch(e) {}
@@ -2996,7 +3036,7 @@ function queryAllDeep(selector) {
         // client-issued fetch succeeds consistently (see trueTurnCount
         // block above for the full explanation). Only attempts a direct
         // fetch as a last resort if no cache exists at all.
-        if (PROVIDER === 'chatgpt' && !chatgptClipboardWorked) {
+        if (PROVIDER === 'chatgpt' && !chatgptHistoryWorked && !chatgptClipboardWorked) {
           try {
             var cachedSeedForContent = window.__diaryCapture && window.__diaryCapture.historySeed;
             if (cachedSeedForContent && cachedSeedForContent.text && cachedSeedForContent.text.length > 50) {
