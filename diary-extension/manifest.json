@@ -87,7 +87,8 @@
         "lib/turndown.js",
         "lib/turndown-plugin-gfm.js",
         "diary-content.js",
-        "diary-content-chatgpt.js"
+        "diary-content-chatgpt.js",
+        "diary-content-dom-parsing.js"
       ],
       "run_at": "document_idle",
       "world": "MAIN"
