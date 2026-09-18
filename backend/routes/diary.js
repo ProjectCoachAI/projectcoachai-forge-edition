@@ -1834,6 +1834,17 @@ router.get('/:id/diag-chat-session-size', requireAuth, async (req, res) => {
       success: true,
       forked: true,
       chatSessionId,
+      // Added specifically to test a direct hypothesis: a "conversation
+      // too long, bridged" message the user genuinely saw, but this
+      // entry's own actual stored data confirmed small (well under the
+      // bridge's own 100,000-token threshold) -- if bridgedFromSessionId
+      // is set here, this entry IS ALREADY the new, post-bridge
+      // conversation the user was looking at, meaning the bridge fired
+      // correctly on a real, different, larger, now-archived session,
+      // not this one -- a real event the user saw, just not evidence of
+      // a bug in the small conversation being inspected here.
+      bridgedFromSessionId: meta.bridgedFromSessionId || null,
+      bridgedAt: meta.bridgedAt || null,
       nativeSeedMessageCount: meta.nativeSeedMessageCount,
       nativeMessageCount: meta.nativeMessageCount,
       totalMessageCount: messages.length,
