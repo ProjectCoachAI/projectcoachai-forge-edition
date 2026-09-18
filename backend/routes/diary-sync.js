@@ -432,8 +432,68 @@ async function performChatSessionSync({ id, content, prompt, turnCount, userEmai
       const newNativeMessages = newMessagesFull.slice(seedCount);
       const session = await db.getChatSession(chatSessionId, userEmail);
       if (session) {
-        const merged = session.messages.slice(0, seedCount).concat(newNativeMessages);
+        // Confirmed as a real, direct, serious bug -- reported live and
+        // reproduced across two separate providers (Perplexity, then
+        // Gemini): this line was introduced by the whole-content
+        // redesign the day before this fix, replacing the PREVIOUS
+        // design's own explicit handling for exactly this case (see its
+        // own comment, still partially visible in git history: "inserts
+        // newly-detected native messages at that index, pushing any
+        // existing Forge-only messages down"). That handling depended on
+        // knowing where the native portion currently ENDS -- a second
+        // boundary this redesign never tracked at all, only ever
+        // recording where it STARTED at the original moment of forking
+        // (nativeSeedMessageCount). Without that second boundary,
+        // `session.messages.slice(0, seedCount).concat(newNativeMessages)`
+        // has no way to tell "old native message, safe to replace" apart
+        // from "genuine Continue Conversation addition, must be
+        // preserved" within session.messages.slice(seedCount) -- it
+        // silently treated everything past the seed as replaceable
+        // native content, discarding any real Forge-side conversation
+        // that had been added there entirely. Directly simulated and
+        // confirmed: a session with genuine Forge-only messages past the
+        // seed lost them completely under the old line the moment a new,
+        // legitimately-longer native sync came in.
+        //
+        // Fixed with a new, second metadata field -- nativeMessageCount
+        // -- tracking how many messages currently in chat_sessions.messages
+        // are native, updated after every successful merge (below),
+        // separate from nativeSeedMessageCount which correctly never
+        // changes after the initial fork. This restores the ORIGINAL,
+        // pre-redesign guarantee (insert new native content only up to
+        // the current native/Forge boundary, leaving anything past it
+        // untouched) while keeping this session's own whole-content
+        // comparison redesign, which solved a real, separate problem
+        // (see isCleanExtension's own comment above) and is unrelated to
+        // this bug.
+        //
+        // Fallback for an entry that hasn't been through a sync since
+        // this field was introduced: defaults to session.messages.length
+        // at this moment -- the same assumption the previous, buggy line
+        // effectively made. This is deliberately the LESS disruptive of
+        // two imperfect options for an entry in this specific, one-time
+        // transitional state: it keeps today's exact (still-buggy)
+        // behavior for this ONE sync only, rather than risking duplicate
+        // native messages for the likely-common case of an entry with no
+        // Forge-only additions at all (which the alternative fallback --
+        // treating everything past the seed as Forge-only -- would cause,
+        // by pushing already-correct native content down instead of
+        // replacing it). Once nativeMessageCount is backfilled by this
+        // same merge, below, every subsequent sync for this entry is
+        // correctly protected going forward.
+        const nativeMessageCount = typeof oldMeta.nativeMessageCount === 'number' ? oldMeta.nativeMessageCount : session.messages.length;
+        const forgeOnlyMessages = session.messages.slice(nativeMessageCount);
+        const merged = session.messages.slice(0, seedCount).concat(newNativeMessages).concat(forgeOnlyMessages);
         await db.updateChatSession(chatSessionId, userEmail, merged);
+        // Records the new native/Forge boundary for the NEXT sync's own
+        // use of this same field, above -- the native portion just
+        // became seedCount + newNativeMessages.length messages long, so
+        // that's where the next sync should resume looking for the
+        // Forge-only tail to preserve.
+        await db.query(
+          `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{nativeMessageCount}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+          [JSON.stringify(seedCount + newNativeMessages.length), id, userEmail]
+        );
         // search_text kept alive post-fork, now derived from
         // chat_sessions.messages (the only thing ever actually
         // displayed after a fork) instead of the diary_entries.content
@@ -447,7 +507,7 @@ async function performChatSessionSync({ id, content, prompt, turnCount, userEmai
           'UPDATE diary_entries SET search_text=$1 WHERE id=$2 AND user_email=$3',
           [searchTextFromMerged, id, userEmail]
         );
-        const oldNativeMessageCount = session.messages.length - seedCount;
+        const oldNativeMessageCount = nativeMessageCount - seedCount;
         const addedCount = Math.max(0, newNativeMessages.length - oldNativeMessageCount);
         // seedCount (nativeSeedMessageCount) no longer needs
         // updating here at all -- unlike the previous, surgical-
