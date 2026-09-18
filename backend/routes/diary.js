@@ -1796,6 +1796,60 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Built specifically to investigate a real, reported case: an "Oversized
+// conversation, automatically continued" bridge message appeared on a
+// Gemini entry the user described as brand-new, with a single, short
+// (~1,300 character) message visible on screen -- nowhere near the
+// bridge's own 100,000-token (~400,000 character) threshold. Since
+// continue.html's own chatHistory is seeded directly from this entry's
+// chat_sessions.messages (confirmed by reading that code), and its own
+// default pagination only ever renders the most RECENT messages (older
+// ones are only visible via "Load earlier"), stale bloat left over from
+// an earlier bug (e.g. the whole-content merge bug fixed the day
+// before this, which could have duplicated content into this exact
+// array before that fix went live) could sit in this array entirely
+// unnoticed by scrolling through what's displayed. Reports the actual
+// stored size directly, rather than guessing from what's visible on
+// screen.
+router.get('/:id/diag-chat-session-size', requireAuth, async (req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2`,
+      [req.params.id, req.userEmail]
+    );
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
+    const meta = r.rows[0].metadata || {};
+    const chatSessionId = meta.chatSessionId;
+    if (!chatSessionId) {
+      return res.json({ success: true, forked: false, note: 'This entry has never been forked to Continue Conversation — no chat_sessions row exists for it.' });
+    }
+    const session = await db.getChatSession(chatSessionId, req.userEmail);
+    if (!session) {
+      return res.json({ success: true, forked: true, chatSessionId, note: 'chatSessionId is set on this entry, but no matching chat_sessions row was found.' });
+    }
+    const messages = session.messages || [];
+    const totalCharCount = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0);
+    const approxTokenCount = Math.ceil(totalCharCount / 4);
+    res.json({
+      success: true,
+      forked: true,
+      chatSessionId,
+      nativeSeedMessageCount: meta.nativeSeedMessageCount,
+      nativeMessageCount: meta.nativeMessageCount,
+      totalMessageCount: messages.length,
+      totalCharCount,
+      approxTokenCount,
+      bridgeThresholdTokens: 100000,
+      // Per-message lengths so an obviously oversized single message
+      // (rather than genuinely many messages) can be spotted directly.
+      messageLengths: messages.map((m, i) => ({ index: i, role: m.role, contentLength: typeof m.content === 'string' ? m.content.length : 0 }))
+    });
+  } catch(e) {
+    console.error('[Diary] diag-chat-session-size error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not inspect chat session' });
+  }
+});
+
 // ── PATCH /api/diary/:id — update decision note, category, rating, or append conversation ─────────
 
 router.delete('/:id', requireAuth, async (req, res) => {
