@@ -592,6 +592,42 @@
       // pattern already used for lists below.
       .replace(/^&gt; ?(.*)$/gm, '<bq>$1</bq>')
       .replace(/(<bq>[\s\S]*?<\/bq>\n*)+/g, s => `<blockquote>${s.replace(/<\/?bq>/g, m => m === '<bq>' ? '' : '<br>').replace(/<br>\n*$/, '')}</blockquote>`)
+      // NOTE: header normalization added — confirmed live (reported
+      // directly, reproduced exactly) that a table whose header row is
+      // tab- or multi-space-separated instead of pipe-delimited (a very
+      // common shape for an AI-generated table, especially one that
+      // reads like it was drafted from or pasted alongside a spreadsheet
+      // or similar tabular source) was left completely unrecognized by
+      // the table rule below, which requires EVERY row — including the
+      // header — to both start and end with "|". Confirmed exactly via
+      // direct simulation: the header stayed as raw, unconverted text,
+      // while the separator row directly beneath it (itself genuinely
+      // pipe-delimited) got converted to a lone <tr>, then discarded by
+      // the table-grouping rule below as a separator-only row with
+      // nothing to attach to — never reaching a real <table> at all, an
+      // exact match for the reported "broken, disconnected" symptom.
+      // Detects a non-pipe-delimited line directly followed by a
+      // genuine markdown separator row (pipe-delimited, containing only
+      // dashes/colons/whitespace between pipes — a shape essentially
+      // unique to a table's own separator, so this is a safe, narrow
+      // signal rather than a broad one) and rewrites the header line
+      // into real pipe-delimited syntax before the existing table rule
+      // ever runs. Splits on runs of tabs OR two-or-more spaces (never a
+      // single space, so an ordinary multi-word column name like "Fund
+      // Type" isn't itself split into two separate columns). Requires
+      // at least 2 resulting columns; a single-column match falls
+      // through unchanged, since a real table header essentially always
+      // has more than one column. Verified directly: the exact reported
+      // case now renders as a genuine <table>; an already-correct,
+      // normal pipe-delimited table is unaffected; and plain prose that
+      // happens to contain a literal tab character is correctly left
+      // alone, since the very next line practically never happens to
+      // look like a genuine separator row by coincidence.
+      .replace(/^([^|\n].*\S)[ \t]*\n(\|[\s:|-]+\|)$/gm, (fullMatch, headerLine, separatorLine) => {
+        const cells = headerLine.split(/\t+|\s{2,}/).map(c => c.trim()).filter(Boolean);
+        if (cells.length < 2) return fullMatch;
+        return '| ' + cells.join(' | ') + ' |\n' + separatorLine;
+      })
       .replace(/^\|(.+)\|$/gm, (row) => {
         const cells = row.slice(1,-1).split('|').map(c => c.trim());
         return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
