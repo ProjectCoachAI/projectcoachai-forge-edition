@@ -1547,10 +1547,13 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // dropping already-resolved entries.
     let imagesToRehost = null;
 
-    if (content !== undefined) {
-      sets.push(`content=$${i++}`); params.push(content);
-      sets.push(`search_text=$${i++}`); params.push(content.slice(0, 500).toLowerCase());
-    }
+    // NOTE: the actual content/search_text write is now handled further
+    // below, inside the existingForSync block, once whether this entry
+    // has been forked (chatSessionId) is known -- see that block's own
+    // comment for why this moved. This keeps the original, correct
+    // fallback for the one case that block can't cover: content sent for
+    // an id that turns out not to exist at all (existingForSync.rows.length
+    // === 0), which the check further below handles directly.
 
     // ── Sync feature (Diary Priority 9): chat_sessions merge ──────────────
     // Deliberately runs whenever content is being updated AND this entry
@@ -1594,6 +1597,32 @@ router.patch('/:id', requireAuth, async (req, res) => {
         const oldRow = existingForSync.rows[0];
         const oldMeta = oldRow.metadata || {};
         const chatSessionId = oldMeta.chatSessionId;
+        // Architectural simplification (Diary sync audit): once an entry
+        // is forked to Forge, the unified view (app.html's own
+        // renderUnifiedEntryContent) reads EXCLUSIVELY from
+        // chat_sessions.messages -- confirmed directly by reading that
+        // function -- never falling back to reading this column again.
+        // Every sync was nonetheless still unconditionally overwriting
+        // this column too, on every single save, regardless of whether
+        // the chat_sessions merge below even succeeded -- provably wasted
+        // work for a column nobody ever reads again post-fork, and,
+        // architecturally, the exact root structural fact behind every
+        // history_mismatch bug chased the day before this: two
+        // independently-written "sources of truth" for the same
+        // conversation that could genuinely disagree with each other,
+        // since one (this column) updates unconditionally while the
+        // other (chat_sessions.messages, below) is gated behind real
+        // comparison logic. Skipping this column's own write entirely
+        // once chatSessionId exists doesn't just optimize around that
+        // fact -- it removes the disagreement from ever being possible
+        // in the first place, by construction, rather than continuing to
+        // detect and patch its symptoms one at a time. Pre-fork entries
+        // are entirely unaffected -- this column is still their only
+        // source of truth, so it's still written exactly as before.
+        if (!chatSessionId) {
+          sets.push(`content=$${i++}`); params.push(content);
+          sets.push(`search_text=$${i++}`); params.push(content.slice(0, 500).toLowerCase());
+        }
         const seedCount = oldMeta.nativeSeedMessageCount;
         // Last-known turn count, set only by a provider that explicitly
         // sends its own turnCount (currently ChatGPT only — see
@@ -1899,6 +1928,19 @@ router.patch('/:id', requireAuth, async (req, res) => {
             if (session) {
               const merged = session.messages.slice(0, seedCount).concat(newNativeMessages);
               await db.updateChatSession(chatSessionId, req.userEmail, merged);
+              // search_text kept alive post-fork, now derived from
+              // chat_sessions.messages (the only thing ever actually
+              // displayed after a fork) instead of the diary_entries.content
+              // column, which is deliberately no longer written at all once
+              // chatSessionId exists (see this block's own opening comment).
+              // Without this, the standalone search feature would silently
+              // freeze at whatever text existed at the moment of forking,
+              // never reflecting anything synced in afterward.
+              const searchTextFromMerged = merged.map(m => (m && m.content) || '').join(' ').slice(0, 500).toLowerCase();
+              await db.query(
+                'UPDATE diary_entries SET search_text=$1 WHERE id=$2 AND user_email=$3',
+                [searchTextFromMerged, id, req.userEmail]
+              );
               const oldNativeMessageCount = session.messages.length - seedCount;
               const addedCount = Math.max(0, newNativeMessages.length - oldNativeMessageCount);
               // seedCount (nativeSeedMessageCount) no longer needs
@@ -1963,6 +2005,15 @@ router.patch('/:id', requireAuth, async (req, res) => {
             chatSessionSyncResult = { merged: false, reason: 'no_new_content', lastSyncedAt };
           }
         }
+      } else {
+        // Edge case: content sent for an id that turns out not to exist
+        // at all (shouldn't normally happen given the route already
+        // requires an existing id, but handled directly rather than
+        // silently dropping the write). No chatSessionId to check here
+        // at all, so this is unambiguously the pre-fork case -- same
+        // behavior as before this change.
+        sets.push(`content=$${i++}`); params.push(content);
+        sets.push(`search_text=$${i++}`); params.push(content.slice(0, 500).toLowerCase());
       }
     }
 
