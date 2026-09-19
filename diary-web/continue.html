@@ -1458,6 +1458,28 @@ function linkChatSessionToDiaryEntry(sessionId, isFirstFork, nativeSeedCount) {
   if (isFirstFork) {
     patch.metadata.forkedToForgeAt = new Date().toISOString();
     patch.metadata.nativeSeedMessageCount = nativeSeedCount;
+    // Confirmed as a real, direct, serious data-loss bug via live
+    // report: without this, nativeMessageCount stayed undefined on any
+    // entry whose sync attempts kept returning no_new_content/
+    // history_mismatch (both leave it untouched -- it's only ever
+    // written inside diary-sync.js's own successful-merge branch).
+    // That field's own fallback there (typeof oldMeta.nativeMessageCount
+    // === 'number' ? ... : session.messages.length) was deliberately
+    // designed to assume no real Forge-only content existed yet -- a
+    // real, explicit trade-off at the time, but confirmed live to be
+    // wrong the moment genuine Forge-only messages (typed directly here
+    // in Continue Conversation) already exist by the time a sync
+    // FINALLY succeeds: the fallback then treated the entire existing
+    // array, Forge-only content included, as "native," causing it to
+    // be silently overwritten rather than preserved the first time a
+    // real merge went through. Initializing this here, at the same
+    // moment nativeSeedMessageCount itself is set, means it's never
+    // undefined by the time any later sync runs, regardless of how
+    // many no_new_content/history_mismatch results happen first -- the
+    // fallback in diary-sync.js now only ever engages for an entry
+    // that was forked before this fix existed at all, not for any
+    // entry forked from this point forward.
+    patch.metadata.nativeMessageCount = nativeSeedCount;
   }
   Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, patch).catch(function() {});
 }

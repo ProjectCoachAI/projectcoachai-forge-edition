@@ -58,7 +58,7 @@
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
           if (qText && qText === lastQuestionText) continue;
-          if (qText) { parts.push(boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
+          if (qText) { parts.push(window.boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
         } else {
           // Reset the consecutive-question tracker the moment a real
           // answer is seen — the dedup above must only ever catch a
@@ -380,8 +380,8 @@
             }
             if (text) {
               var host = window.location.hostname;
-              var config = DOM_SELECTORS[host];
-              text = config ? cleanDomText(config.clean(text)) : cleanDomText(text);
+              var config = window.DOM_SELECTORS[host];
+              text = config ? window.cleanDomText(config.clean(text)) : window.cleanDomText(text);
               parts.push(text);
             }
           }
@@ -454,7 +454,7 @@
     try {
       var els = document.querySelectorAll('user-query, model-response');
       if (!els.length) return null;
-      var config = DOM_SELECTORS['gemini.google.com'];
+      var config = window.DOM_SELECTORS['gemini.google.com'];
       var parts = [];
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
@@ -462,7 +462,7 @@
         if (tag === 'user-query') {
           var qEl = el.querySelector('.query-text-line');
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText) parts.push(boldQuestion(qText.slice(0, 2000)));
+          if (qText) parts.push(window.boldQuestion(qText.slice(0, 2000)));
         } else if (tag === 'model-response') {
           var rEl = el.querySelector(config.response);
           if (rEl) {
@@ -752,7 +752,7 @@
               }
             } catch (e) {}
             if (!text) text = (rEl.innerText || rEl.textContent || '').trim();
-            if (text) parts.push(cleanDomText(config.clean(text)));
+            if (text) parts.push(window.cleanDomText(config.clean(text)));
           }
         }
       }

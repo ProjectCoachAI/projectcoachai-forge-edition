@@ -1311,6 +1311,76 @@ function detectStructuredFactsArtifacts(text) {
   return facts.length ? [{ type: 'structured_facts', facts, position: 0 }] : [];
 }
 
+// Code block artifact (seventh of the brief's own build order, the one
+// genuinely missing from detectAndStoreArtifacts below — confirmed via
+// direct code inspection, not assumed, that no code-specific detection
+// function existed anywhere in this file at all). Follows the exact
+// same synchronous, line-based scanning pattern as detectTableArtifacts
+// above — one artifact per fenced block, since a single entry can
+// genuinely contain several separate code blocks across different
+// turns or even within one answer.
+//
+// Only scans for the standard triple-backtick fence ("```language" /
+// "```"), deliberately not the rarer "~~~" alternate markdown fence —
+// this matches htmlToMarkdown()'s own `case 'pre':` handling
+// (diary-content.js), already confirmed as the actual, sole fence
+// style every provider's own captured content produces; supporting a
+// fence style nothing in the capture pipeline ever generates would add
+// complexity with no real content to match.
+//
+// The language tag (the text immediately after the opening ``` on its
+// own line, e.g. "```python") is optional in real markdown and often
+// absent — captured as an empty string rather than a placeholder like
+// "text" or "plain" when missing, so the display layer can decide how
+// to represent "no language specified" rather than this function
+// guessing at one.
+//
+// An unterminated fence (an opening ``` with no matching closing ```
+// anywhere after it — possible if a very long response was cut short
+// by a token/length limit mid-code-block) is deliberately excluded
+// entirely rather than included with whatever partial content follows
+// the opening fence: that partial content cannot be reliably
+// distinguished from ordinary prose that simply never closes, and
+// including it risks silently mislabeling regular text as code.
+//
+// Verified via direct simulation against six cases before being wired
+// into detectAndStoreArtifacts: a labeled block (python), an unlabeled
+// block (empty language), multiple separate blocks in one text,
+// consecutive blocks with no prose between them, an unterminated
+// trailing fence (correctly excluded), and plain text containing no
+// fence at all (correctly returns nothing).
+function detectCodeArtifacts(text) {
+  const artifacts = [];
+  const lines = (text || '').split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const openMatch = lines[i].match(/^```(\S*)\s*$/);
+    if (openMatch) {
+      const language = openMatch[1] || '';
+      const codeLines = [];
+      let j = i + 1;
+      let closed = false;
+      while (j < lines.length) {
+        if (/^```\s*$/.test(lines[j])) { closed = true; break; }
+        codeLines.push(lines[j]);
+        j++;
+      }
+      if (closed) {
+        artifacts.push({ type: 'code', language, code: codeLines.join('\n'), position: i });
+        i = j + 1;
+      } else {
+        // Unterminated fence — nothing after this point can be
+        // confidently treated as more code vs. more prose, so stop
+        // scanning entirely rather than guess turn by turn.
+        break;
+      }
+    } else {
+      i++;
+    }
+  }
+  return artifacts;
+}
+
 // Images artifact (sixth of the brief's own build order). Deliberately
 // different from every prior artifact type in one respect: images
 // aren't extracted from unified_content at all — they're already
@@ -1470,7 +1540,7 @@ async function detectAndStoreArtifacts(entryId, userEmail, callClaudeHaikuAPI, a
     const meta = entryRes.rows[0].metadata || {};
     const checklistArtifacts = await detectChecklistArtifacts(unifiedContent, existingArtifacts, callClaudeHaikuAPI, apiKey);
     const reasoningArtifacts = await detectReasoningArtifacts(unifiedContent, callClaudeHaikuAPI, apiKey);
-    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent)).concat(detectImagesArtifacts(meta)).concat(reasoningArtifacts);
+    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent)).concat(detectImagesArtifacts(meta)).concat(reasoningArtifacts).concat(detectCodeArtifacts(unifiedContent));
     await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
   } catch (e) {
     console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);

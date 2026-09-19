@@ -1338,6 +1338,17 @@ function queryAllDeep(selector) {
     var TITLE_MARK = '\u2063';
     return TITLE_MARK + '**' + text + '**' + TITLE_MARK;
   }
+  // NOTE: same category of pre-existing bug as the DOM_SELECTORS fix
+  // above, confirmed via a second, separate live console error
+  // (ReferenceError: boldQuestion is not defined at
+  // buildGeminiPairedThread, diary-content-dom-parsing.js:465) — the
+  // same file split left this function referenced directly in that
+  // separate file too, with no access to it. Unlike
+  // diary-interceptor.js (which already carries its own deliberate,
+  // explicitly-commented local duplicate of this exact function),
+  // diary-content-dom-parsing.js has neither a local copy nor global
+  // access. Exposed here on window, same minimal-fix pattern.
+  window.boldQuestion = boldQuestion;
 
   function stripLeadingEcho(question, answer) {
     if (!question || !answer) return answer;
@@ -1473,6 +1484,12 @@ function queryAllDeep(selector) {
       .replace(/[ \t]+$/gm, '')
       .trim();
   }
+  // NOTE: same category of pre-existing bug as the two fixes above
+  // (DOM_SELECTORS, boldQuestion), confirmed via a third, separate live
+  // console error from the same file split (ReferenceError:
+  // cleanDomText is not defined at buildGeminiPairedThread,
+  // diary-content-dom-parsing.js:755). Same minimal fix, same pattern.
+  window.cleanDomText = cleanDomText;
 
   function injectSaveDiaryButton(responseText) {
     var existingBtn = document.getElementById('diary-save-btn');
@@ -3027,6 +3044,22 @@ function queryAllDeep(selector) {
       }
     }
   };
+  // NOTE: confirmed as a real, genuine, pre-existing bug via a live
+  // console error — not something introduced today. The file split that
+  // extracted buildDomPairedThread() and buildGeminiPairedThread() into
+  // the separate diary-content-dom-parsing.js (already present before
+  // today's session started) left both functions referencing
+  // DOM_SELECTORS directly, but this var is declared in THIS file's own
+  // local scope, never in the global/window scope the other, separately-
+  // loaded content script file can see. That commit's own message
+  // claimed "verified byte-identical to the original," but a real,
+  // pasted console log shows this throwing ReferenceError:
+  // DOM_SELECTORS is not defined at buildGeminiPairedThread — silently
+  // falling back to a lower-quality capture path every single time,
+  // rather than the intended DOM-paired-thread logic ever actually
+  // running. Exposed here, explicitly, on window — the minimal fix that
+  // doesn't require restructuring either file.
+  window.DOM_SELECTORS = DOM_SELECTORS;
 
   // ── Shared: HTML structure -> Markdown conversion ──────────────────────────
   // Global default per the architecture already documented at the top of
@@ -3115,6 +3148,49 @@ function queryAllDeep(selector) {
           return '\n\n' + tableToMarkdown(node) + '\n\n';
         case 'p': case 'div':
           return '\n\n' + childrenText(listDepth).trim() + '\n\n';
+        case 'button': {
+          // NOTE: Gemini-specific citation chip — confirmed live via direct
+          // DOM inspection of a real "Wikipedia" citation that was being
+          // captured as bare text with no link at all. Gemini doesn't use
+          // a real <a href> for these; it's a <button
+          // aria-haspopup="dialog"> that opens a source-details popover
+          // via JavaScript, with the actual destination URL encoded
+          // separately inside its own jslog attribute — a
+          // click-analytics attribute holding a base64-encoded,
+          // URI-encoded JSON payload with the URL embedded inside a
+          // ["https://..."] entry at a fixed-but-unlabeled position.
+          // Rather than depend on that exact JSON shape (which is
+          // Google-internal and could shift), scans the DECODED payload
+          // directly for the first https?:// URL — confirmed via direct
+          // test against a real, captured jslog value to correctly
+          // recover the genuine Wikipedia URL. Falls through to the
+          // default (plain text) if this isn't a recognized citation
+          // button, or if decoding fails for any reason, so an ordinary
+          // button is never affected.
+          if (node.getAttribute('aria-haspopup') === 'dialog') {
+            try {
+              var jslog = node.getAttribute('jslog') || '';
+              var b64Match = jslog.match(/[A-Za-z0-9+/]{40,}={0,2}/);
+              if (b64Match) {
+                // NOTE: no decodeURIComponent here — confirmed via direct
+                // test that applying it to the whole decoded payload also
+                // decodes the URL's own %20/%2C-style sequences into
+                // literal spaces, breaking the URL (which needs to STAY
+                // percent-encoded to remain valid and clickable). The
+                // base64 layer and the URL's own percent-encoding are two
+                // separate, independent encodings — only the base64 one
+                // needs undoing here.
+                var decodedPayload = atob(b64Match[0]);
+                var urlMatch = decodedPayload.match(/https?:\/\/[^"\\]+/);
+                if (urlMatch) {
+                  var citeText = childrenText(listDepth).trim();
+                  if (citeText) return '[' + citeText + '](' + urlMatch[0] + ')';
+                }
+              }
+            } catch(e) {}
+          }
+          return childrenText(listDepth);
+        }
         default:
           return childrenText(listDepth);
       }
