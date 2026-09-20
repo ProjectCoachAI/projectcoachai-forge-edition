@@ -1649,7 +1649,19 @@ const AI_URL_PATTERNS = [
 const AI_COMPLETION_PATTERNS = [
   /gemini\.google\.com/,
   /generativelanguage\.googleapis\.com/,
-  /perplexity\.ai/,
+  // NOTE: tightened — confirmed as a real, direct bug via live log,
+  // found and fixed earlier this session then lost in a revert. The
+  // bare, unanchored /perplexity\.ai/ matches ANY request containing
+  // that substring anywhere at all, including genuinely unrelated
+  // static-asset and telemetry subdomains confirmed live in real
+  // console logs (pplx-next-static-public.perplexity.ai/_spa/assets/,
+  // count.perplexity.ai/api/v1/bs, .../cdn-cgi/rum) — firing
+  // AI_RESPONSE_COMPLETE repeatedly on a page's own routine requests,
+  // re-entering the DOM polling loop each time. Fixed by excluding only
+  // the two confirmed-unrelated subdomains rather than narrowing to one
+  // specific guessed-at path — so any genuine www.perplexity.ai
+  // endpoint still triggers correctly.
+  /^(?!.*(?:pplx-next-static-public|count)\.perplexity\.ai).*perplexity\.ai/,
   /chat\.mistral\.ai\/api\/chat$/,
   /deepseek\.com\/api\/v0\/chat\/completion/,
   /grok\.com\/rest\//,

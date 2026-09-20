@@ -102,8 +102,48 @@
         } catch(_e) { return ''; }
       }
       if (host.includes('perplexity.ai')) {
-        try { var _o=JSON.parse(chunk.replace(/^data:\s*/,'')); return _o.text||_o.answer||''; } catch(_e) {}
-        var m=chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/); return m?JSON.parse('"'+m[1]+'"'):'';
+        // Rewritten — confirmed as a real, direct bug via live, pasted
+        // SSE stream data: the old parser tried _o.text || _o.answer at
+        // the top level of each SSE message's JSON payload, neither of
+        // which exist in Perplexity's actual format. The real answer
+        // text arrives as incremental chunks inside:
+        //   blocks[N].diff_block.patches[M].value
+        // ...but ONLY when blocks[N].intended_usage === 'workflow_root'
+        // and patches[M].path contains 'text_payload/chunks/' (other
+        // blocks in the same message — 'web_results',
+        // 'sources_answer_mode', etc. — carry search metadata and must
+        // be ignored entirely, not treated as answer text). Each SSE
+        // message carries exactly one text chunk; the existing
+        // processLines() accumulation already joins them correctly into
+        // the full answer over the course of the stream.
+        // Verified directly against three real pasted SSE events: old
+        // parser returned '' for all three; new parser returns the
+        // correct chunk text for each, accumulated result matches the
+        // real, visible answer text. The old fallback (_o.text ||
+        // _o.answer) is kept at the bottom in case format ever changes.
+        try {
+          var _o = JSON.parse(chunk.replace(/^data:\s*/, ''));
+          if (_o.blocks && Array.isArray(_o.blocks)) {
+            for (var bi = 0; bi < _o.blocks.length; bi++) {
+              var block = _o.blocks[bi];
+              if (block.intended_usage === 'workflow_root' &&
+                  block.diff_block && Array.isArray(block.diff_block.patches)) {
+                for (var pi = 0; pi < block.diff_block.patches.length; pi++) {
+                  var patch = block.diff_block.patches[pi];
+                  if (patch.op === 'add' &&
+                      patch.path && patch.path.indexOf('text_payload/chunks/') !== -1 &&
+                      typeof patch.value === 'string') {
+                    return patch.value;
+                  }
+                }
+              }
+            }
+          }
+          return _o.text || _o.answer || '';
+        } catch(_e) {}
+        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ||
+                 chunk.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (host.includes('gemini.google.com')) {
         var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
