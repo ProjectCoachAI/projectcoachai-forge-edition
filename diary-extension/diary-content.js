@@ -2929,7 +2929,14 @@ function queryAllDeep(selector) {
         // (also confirmed broken before, now fixed), no Sources section
         // present at all (no regression), and the singular "Source"
         // wording (no regression).
-        return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|(?![\s\S]))/m, '')
+        // NOTE: Sources regex fixed — confirmed live gap via direct test:
+        // the old non-greedy pattern stopped at the first \n\n, leaving
+        // source cards with double-newline separators (image thumbnails,
+        // attribution text) partially unstripped. Since the Sources
+        // section is always the last meaningful content in a Gemini
+        // answer, stripping everything from "Sources\n" to end of string
+        // is safe and correct.
+        return text.replace(/^Sources?\n[\s\S]*/m, '')
                    .replace(/\n{0,2}Explore related .+? topics:[\s\S]*$/, '')
                    .replace(/\n{3,}/g, '\n\n')
                    .trim();

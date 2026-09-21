@@ -495,6 +495,27 @@
                 cb.remove();
               }
             });
+            // NOTE: strip ALL explicitly display:none elements from the
+            // clone — confirmed as a real, direct bug via live DOM
+            // inspection of Gemini's sequence-step (recipe/process step)
+            // component: each step contains a hidden
+            // <span class="only-show-to-message-actions" style="display:
+            // none"> carrying a malformed concatenated export string
+            // ("1.Macerate the Fruit:15 to 30 minutes." with no spaces)
+            // specifically for Gemini's own clipboard/copy feature.
+            // Turndown processes this hidden span anyway (it walks the
+            // DOM tree regardless of CSS visibility), producing the
+            // malformed bold line in the saved entry before the real
+            // instruction paragraph. Stripping all display:none elements
+            // is the correct, principled behavior — the diary should
+            // never capture content explicitly hidden from the user's
+            // own view — and is safe because we already operate on
+            // rClone (not the live page DOM). The existing code-block
+            // stripping above is not affected (it runs first, by tag
+            // name; this catches everything else by inline style).
+            rClone.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach(function(el) {
+              el.remove();
+            });
             var text = '';
             try {
               if (typeof TurndownService !== 'undefined') {
@@ -621,6 +642,10 @@
                       var src = node.src || node.getAttribute('src') || '';
                       var alt = node.getAttribute('alt') || '';
                       if (!src) return '';
+                      // Strip Google thumbnail CDN images — confirmed live
+                      // as Gemini source-card UI artifacts, never genuine
+                      // content images from the actual answer text.
+                      if (src.indexOf('encrypted-tbn0.gstatic.com') !== -1) return '';
                       return '![' + alt + '](' + src + ')';
                     }
                   });
@@ -744,6 +769,102 @@
                       var label = (node.textContent || '').trim().replace(/\+\d+$/, '').trim();
                       if (!url || !label) return content;
                       return '[' + label + '](' + url + ')';
+                    }
+                  });
+                  svc.addRule('geminiCitationButton', {
+                    // NOTE: added — confirmed as a real, direct gap via live
+                    // user report ("sources not being recognized / not
+                    // clickable in the diary entry") after buildGeminiPairedThread
+                    // was confirmed working via the ReferenceError fixes. Root
+                    // cause traced precisely: this function uses Turndown for
+                    // HTML-to-markdown conversion, NOT the custom htmlToMarkdown()
+                    // function in diary-content.js where the case 'button': handler
+                    // was added. Turndown's own default handling of <button> elements
+                    // extracts only plain text content ("Wikipedia") and discards the
+                    // URL entirely. Gemini's citations are <button aria-haspopup=
+                    // "dialog"> elements (not real <a href> links — confirmed via live
+                    // DOM inspection) whose actual destination URL is encoded inside
+                    // the button's own jslog click-analytics attribute as a base64-
+                    // encoded JSON array. URL extraction matches the already-verified
+                    // case 'button': handler in diary-content.js exactly — atob()
+                    // only (no decodeURIComponent on the whole payload, confirmed bug
+                    // in the first attempt: decodes %20/%2C sequences into literal
+                    // spaces, breaking the URL), first https?:// URL match wins.
+                    // Verified against the real, live jslog value from the first
+                    // confirmed Gemini citation before applying here.
+                    filter: function(node) {
+                      return node.nodeName === 'BUTTON' &&
+                             node.getAttribute('aria-haspopup') === 'dialog' &&
+                             !!node.getAttribute('jslog');
+                    },
+                    replacement: function(content, node) {
+                      try {
+                        var jslog = node.getAttribute('jslog') || '';
+                        var b64Match = jslog.match(/[A-Za-z0-9+/]{40,}={0,2}/);
+                        if (b64Match) {
+                          var decodedPayload = atob(b64Match[0]);
+                          var urlMatch = decodedPayload.match(/https?:\/\/[^"\\]+/);
+                          if (urlMatch) {
+                            var label = (node.querySelector('.source-title') || node).textContent.trim();
+                            if (label) return '[' + label + '](' + urlMatch[0] + ')';
+                          }
+                        }
+                      } catch(e) {}
+                      return content;
+                    }
+                  });
+                  svc.addRule('geminiSequenceStep', {
+                    // NOTE: added — confirmed via live DOM inspection of
+                    // Gemini's sequence-step component (recipe/process
+                    // steps). Each .sequence-event contains: a visible
+                    // step number (.sequence-event-marker), a visible
+                    // title (.sequence-event-title) and duration
+                    // (.sequence-event-subtitle) inside a
+                    // hide-from-message-actions container, and a NOW-
+                    // STRIPPED display:none export span (removed above
+                    // in the rClone preprocessing step). Without this
+                    // rule, Turndown would walk all the remaining
+                    // visible children and produce three bare
+                    // unformatted lines (number, title, duration)
+                    // before the instruction paragraph. This rule reads
+                    // the semantic elements directly from the DOM node
+                    // and produces a clean, properly-spaced heading:
+                    //   **N. Title**
+                    //   *duration*
+                    //
+                    //   Instruction paragraph.
+                    // Verified against the real, pasted DOM for all
+                    // five steps before applying here.
+                    filter: function(node) {
+                      return node.classList && node.classList.contains('sequence-event');
+                    },
+                    replacement: function(content, node) {
+                      var numEl = node.querySelector('.sequence-event-marker');
+                      var titleEl = node.querySelector('.sequence-event-title');
+                      var subtitleEl = node.querySelector('.sequence-event-subtitle');
+                      var num = numEl ? (numEl.textContent || '').trim() : '';
+                      var title = titleEl ? (titleEl.textContent || '').trim() : '';
+                      var subtitle = subtitleEl ? (subtitleEl.textContent || '').trim() : '';
+                      var descEl = node.querySelector('.sequence-event-description');
+                      var descText = '';
+                      if (descEl) {
+                        var pEls = descEl.querySelectorAll('p');
+                        var texts = [];
+                        pEls.forEach(function(p) {
+                          var t = (p.textContent || '').trim();
+                          if (t) texts.push(t);
+                        });
+                        descText = texts.join('\n\n');
+                        // Fallback: if no <p> tags, use text content directly
+                        if (!descText) descText = (descEl.textContent || '').trim();
+                      }
+                      var header = '';
+                      if (num && title) header = '**' + num + '. ' + title + '**';
+                      else if (title) header = '**' + title + '**';
+                      if (subtitle) header += '\n*' + subtitle + '*';
+                      if (header && descText) return '\n\n' + header + '\n\n' + descText;
+                      if (header) return '\n\n' + header;
+                      return descText ? '\n\n' + descText : '';
                     }
                   });
                   window.__diaryTurndownInstance = svc;
