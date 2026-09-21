@@ -320,7 +320,18 @@ async function performChatSessionSync({ id, content, prompt, turnCount, userEmai
       var idx = str.lastIndexOf(marker);
       return idx === -1 ? str : str.slice(0, idx);
     };
-    const normalizeForCompare = (s) => stripSourcesFooter(s || '').replace(/https?:\/\/\S+/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+    const normalizeForCompare = (s) => stripSourcesFooter(s || '')
+      .replace(/https?:\/\/\S+/g, '')  // URLs
+      .replace(/\*\*/g, '')            // bold markers
+      .replace(/\*/g, '')              // italic markers — confirmed live: network-interceptor
+                                       // captures and DOM Turndown captures use the same
+                                       // underlying markdown but single-asterisk italic
+                                       // wrapping can differ in placement or presence,
+                                       // causing false-positive history_mismatch. Safe to
+                                       // strip: the word content they wrap is unchanged.
+      .replace(/^#+\s*/gm, '')         // header markers — same reasoning: # vs ## vs plain
+                                       // heading text differs between capture paths
+      .replace(/\s+/g, ' ').trim();
     // Whole-content comparison replaces the previous per-message,
     // positional comparison entirely (see the audit note above for
     // why). If the new, normalized content genuinely starts with
@@ -596,12 +607,31 @@ async function performChatSessionSync({ id, content, prompt, turnCount, userEmai
                 `UPDATE diary_entries SET metadata = jsonb_set(jsonb_set(COALESCE(metadata, '{}'::jsonb), '{nativeMessageCount}', $1::jsonb), '{lastSyncDiverged}', 'false'::jsonb) WHERE id=$2 AND user_email=$3`,
                 [JSON.stringify(newNativeTotal), id, userEmail]
               );
+              // NOTE: also update diary_entries.content to the new
+              // DOM-captured content — this is the fix for the
+              // auto-reset cycle confirmed live: the auto-reset
+              // previously only updated chat_sessions.messages and
+              // nativeMessageCount, leaving diary_entries.content as
+              // the original network-interceptor-captured text. On the
+              // very next sync, oldRow.content still had the old
+              // format, newContentNorm had Turndown DOM format, and
+              // isCleanExtension failed again immediately —
+              // lastSyncDiverged was set to true again right away,
+              // cycling indefinitely. By updating content here, the
+              // next sync's oldRow.content is in Turndown format, and
+              // newContentNorm (also Turndown) matches it correctly.
+              // Safe on a forked entry: display already reads from
+              // chat_sessions.messages exclusively, not content.
+              await db.query(
+                'UPDATE diary_entries SET content=$1 WHERE id=$2 AND user_email=$3',
+                [content, id, userEmail]
+              );
               const searchTextReset = resetMerged.map(m => (m && m.content) || '').join(' ').slice(0, 500).toLowerCase();
               await db.query(
                 'UPDATE diary_entries SET search_text=$1 WHERE id=$2 AND user_email=$3',
                 [searchTextReset, id, userEmail]
               );
-              console.log('[Diary Sync DIAG] force-reset applied — entry was stuck in lastSyncDiverged; re-seeded native portion (' + newNativeMessages.length + ' new native msgs) + preserved ' + forgeOnlyTail.length + ' Forge-only messages. lastSyncDiverged cleared.');
+              console.log('[Diary Sync DIAG] force-reset applied — entry was stuck in lastSyncDiverged; re-seeded native portion (' + newNativeMessages.length + ' new native msgs) + preserved ' + forgeOnlyTail.length + ' Forge-only messages. content + lastSyncDiverged cleared.');
               chatSessionSyncResult = { merged: true, addedCount: 0, reason: 'force_reset', lastSyncedAt };
               forceResetApplied = true;
             }
