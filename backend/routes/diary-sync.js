@@ -355,7 +355,10 @@ async function performChatSessionSync({ id, content, prompt, turnCount, userEmai
     const extractQuestions = (str) => {
       if (!str) return [];
       const results = [];
-      const re = new RegExp(TITLE_MARK + '\\*\\*([^' + TITLE_MARK + ']+)\\*\\*' + TITLE_MARK, 'g');
+      const TM = '\u2063'; // TITLE_MARK — defined locally since the module-level
+                            // TITLE_MARK lives inside splitEntryIntoMessages(),
+                            // not at a scope accessible here
+      const re = new RegExp(TM + '\\*\\*([^' + TM + ']+)\\*\\*' + TM, 'g');
       let m;
       while ((m = re.exec(str)) !== null) results.push(m[1].trim().toLowerCase());
       return results;
