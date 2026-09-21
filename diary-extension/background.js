@@ -1014,16 +1014,39 @@ let data;
             let trimmedNew = patchContent.trim();
             const TITLE_MARK_MERGE = '\u2063';
             const markerRe2 = new RegExp(TITLE_MARK_MERGE + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK_MERGE, 'g');
-            let lastMarkerMatch = null, mm;
-            while ((mm = markerRe2.exec(existingContent)) !== null) lastMarkerMatch = mm;
             let overlapConfirmed = false;
-            if (lastMarkerMatch) {
-              const overlapMarker = lastMarkerMatch[0];
-              const overlapIdx = trimmedNew.indexOf(overlapMarker);
-              if (overlapIdx !== -1 && overlapIdx < 50) {
-                trimmedNew = trimmedNew.slice(overlapIdx + overlapMarker.length).replace(/^\n+/, '');
-                overlapConfirmed = true;
+            // NOTE: original approach (find last stored question marker,
+            // require it at overlapIdx < 50 in the new capture) confirmed
+            // as a real, live regression via Gemini virtual scrolling:
+            // as the conversation grows, Gemini removes the oldest answers
+            // from the DOM (e.g. a 13-answer conversation shows only
+            // answers 4-13). Every save then looks "partial" (new content
+            // shorter than stored), and the last stored question appears
+            // FAR into the new capture (not within 50 chars), so
+            // overlapConfirmed stayed false and existing content was kept
+            // unchanged forever. The < 50 limit was a safety guard against
+            // duplicating already-stored answers — but the correct fix is
+            // to search differently, not to loosen the position constraint.
+            //
+            // Replaced with: find the FIRST question in the new capture
+            // that does NOT already appear in the existing stored content.
+            // That's the exact boundary where genuinely new content starts.
+            // Everything from that question onward is appended. If ALL
+            // questions in the new capture already exist in the stored
+            // content, there's nothing new to add — overlapConfirmed stays
+            // false and existing content is kept unchanged. Safe against
+            // wrong-conversation merges: a different conversation's
+            // question text would not appear in the existing stored content.
+            let m2, firstNewIdx = -1;
+            while ((m2 = markerRe2.exec(trimmedNew)) !== null) {
+              if (!existingContent.includes(m2[0])) {
+                firstNewIdx = m2.index;
+                break;
               }
+            }
+            if (firstNewIdx !== -1) {
+              trimmedNew = trimmedNew.slice(firstNewIdx);
+              overlapConfirmed = true;
             }
             // Confirmed as a real, direct gap found during a priority-
             // ordering audit: when the overlap boundary itself can't be
