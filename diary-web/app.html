@@ -5650,24 +5650,29 @@ async function renderUnifiedEntryContent(entryId) {
 
     if (forgeMessages.length) {
       var forgeSegments = renderMessagesAsSegments(forgeMessages, entryId);
+      // NOTE: forge segments now wrapped with wrapTurnHtml using indices
+      // continuing from where native segments end — confirmed as the
+      // direct root cause of "Jump to doesn't extend to Continue
+      // Conversation": native segments had data-turn-index attributes,
+      // forge segments had none (forgeSegments.join('') with no wrapping),
+      // so jumpToTurn's querySelector('[data-turn-index="N"]') could never
+      // find them. Fixed by wrapping with continuing indices and extending
+      // _entryContentSegments[entryId].titles to include forge user turns.
+      var forgeStartIdx = nativeSegments.length;
+      var wrappedForgeHtml = forgeSegments.map(function(seg, j) {
+        return wrapTurnHtml(seg, forgeStartIdx + j);
+      }).join('');
+      var forgeTitles = extractMessageTurnTitles(forgeMessages);
+      window._entryContentSegments[entryId].titles = window._entryContentSegments[entryId].titles.concat(forgeTitles);
       html += '<div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px;">' +
         '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
         '<span style="font-size:11px;color:#9E9890;white-space:nowrap;display:flex;align-items:center;gap:4px;">' +
           heroicon('chat-bubble-left-right') + ' Continued in Forge' +
-          // Answers a real, direct user question about this exact
-          // section: once Continue Conversation has been opened on an
-          // entry, every later Sync/Save adds to this section too
-          // (alongside anything typed directly here) rather than to a
-          // separate copy — nothing here is ever overwritten by a later
-          // Sync. Native `title` hover tooltip, matching the pattern
-          // already used elsewhere on this same page (filters, favorite
-          // toggle, in-entry search) rather than introducing a new
-          // tooltip mechanism for just this one spot.
           '<span style="cursor:help;display:inline-flex;" title="Once you\'ve used Continue Conversation on this entry, future Sync/Save updates are added here too — nothing you\'ve typed in Continue Conversation is ever overwritten.">' + heroicon('information-circle') + '</span>' +
         '</span>' +
         '<div style="flex:1;height:1px;background:#E8DCC8;"></div>' +
       '</div>' +
-      '<div style="background:#FBF9F4;border-radius:10px;padding:14px;">' + forgeSegments.join('') + '</div>';
+      '<div style="background:#FBF9F4;border-radius:10px;padding:14px;">' + wrappedForgeHtml + '</div>';
     }
 
     container.innerHTML = html;
