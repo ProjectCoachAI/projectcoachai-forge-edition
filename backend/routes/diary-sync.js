@@ -544,22 +544,91 @@ async function performChatSessionSync({ id, content, prompt, turnCount, userEmai
         chatSessionSyncResult = { merged: true, addedCount, lastSyncedAt };
       }
     } else if (!isCleanExtension) {
-      // Confirmed as a real, necessary addition before building the
-      // unified view on top of this: previously, ONLY lastSyncedAt
-      // (a timestamp) was ever persisted here — the actual outcome
-      // (history_mismatch vs. genuine success) existed only in this
-      // one API response and was gone the moment it was sent. That
-      // meant a later visit to this same entry had no way to know
-      // it was in a diverged state at all. Persisted here so the
-      // unified Diary view can show a light, honest "still syncing
-      // the Forge side" indicator instead of silently displaying a
-      // native portion that's ahead of what the Forge-only portion
-      // reflects, with no explanation.
-      await db.query(
-        `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'true'::jsonb) WHERE id=$1 AND user_email=$2`,
-        [id, userEmail]
-      );
-      chatSessionSyncResult = { merged: false, reason: 'history_mismatch', lastSyncedAt };
+      // NOTE: auto-reset added — confirmed as a real, live problem via
+      // user report: an entry whose very first sync returned
+      // history_mismatch (setting lastSyncDiverged = true) would stay
+      // permanently stuck, because every subsequent sync attempt also
+      // returned history_mismatch (same format mismatch between the
+      // network-interceptor-captured content stored on the first save
+      // and the DOM-scraped Turndown markdown the sync tab produces
+      // every time it re-reads the page). The old branch just kept
+      // writing lastSyncDiverged = true over and over, which was
+      // already true, so nothing ever changed. The "Still syncing the
+      // Forge side" indicator persisted indefinitely regardless of how
+      // many times the user triggered a sync.
+      //
+      // Auto-reset strategy: on history_mismatch, if lastSyncDiverged
+      // is ALREADY true (meaning the entry is in the confirmed-stuck
+      // state), treat the current sync's own content as the new native
+      // baseline and re-seed the chat session from it — same operation
+      // as a regular successful merge, but without requiring
+      // isCleanExtension (since the mismatch is a known, persistent
+      // format difference rather than a genuine content divergence).
+      // The Forge-only tail is preserved from session.messages using
+      // the same nativeMessageCount boundary already maintained for
+      // the regular merge path. If this is the FIRST mismatch (entry
+      // not yet stuck), the old behavior is preserved: set
+      // lastSyncDiverged = true so the indicator appears and a
+      // subsequent sync can attempt the reset.
+      //
+      // Safety: only force-reset if the new content actually has
+      // messages after the seed (i.e., the sync tab captured real
+      // content), and only if the chat session is accessible. If
+      // either guard fails, falls through to the same lastSyncDiverged
+      // = true outcome as before — a failed force-reset is no worse
+      // than no reset at all.
+      const alreadyStuck = oldMeta.lastSyncDiverged === true;
+      let forceResetApplied = false;
+
+      if (alreadyStuck) {
+        try {
+          const resetSession = await db.getChatSession(chatSessionId, userEmail);
+          if (resetSession) {
+            const newMessagesFull = splitEntryIntoMessages({ prompt: newPromptForCompare, content });
+            const newNativeMessages = newMessagesFull.slice(seedCount);
+            if (newNativeMessages.length > 0) {
+              const currentNativeCount = typeof oldMeta.nativeMessageCount === 'number' ? oldMeta.nativeMessageCount : resetSession.messages.length;
+              const forgeOnlyTail = resetSession.messages.slice(currentNativeCount);
+              const resetMerged = resetSession.messages.slice(0, seedCount).concat(newNativeMessages).concat(forgeOnlyTail);
+              await db.updateChatSession(chatSessionId, userEmail, resetMerged);
+              const newNativeTotal = seedCount + newNativeMessages.length;
+              await db.query(
+                `UPDATE diary_entries SET metadata = jsonb_set(jsonb_set(COALESCE(metadata, '{}'::jsonb), '{nativeMessageCount}', $1::jsonb), '{lastSyncDiverged}', 'false'::jsonb) WHERE id=$2 AND user_email=$3`,
+                [JSON.stringify(newNativeTotal), id, userEmail]
+              );
+              const searchTextReset = resetMerged.map(m => (m && m.content) || '').join(' ').slice(0, 500).toLowerCase();
+              await db.query(
+                'UPDATE diary_entries SET search_text=$1 WHERE id=$2 AND user_email=$3',
+                [searchTextReset, id, userEmail]
+              );
+              console.log('[Diary Sync DIAG] force-reset applied — entry was stuck in lastSyncDiverged; re-seeded native portion (' + newNativeMessages.length + ' new native msgs) + preserved ' + forgeOnlyTail.length + ' Forge-only messages. lastSyncDiverged cleared.');
+              chatSessionSyncResult = { merged: true, addedCount: 0, reason: 'force_reset', lastSyncedAt };
+              forceResetApplied = true;
+            }
+          }
+        } catch (resetErr) {
+          console.warn('[Diary Sync DIAG] force-reset attempt failed, falling through to history_mismatch:', resetErr && resetErr.message);
+        }
+      }
+
+      if (!forceResetApplied) {
+        // Confirmed as a real, necessary addition before building the
+        // unified view on top of this: previously, ONLY lastSyncedAt
+        // (a timestamp) was ever persisted here — the actual outcome
+        // (history_mismatch vs. genuine success) existed only in this
+        // one API response and was gone the moment it was sent. That
+        // meant a later visit to this same entry had no way to know
+        // it was in a diverged state at all. Persisted here so the
+        // unified Diary view can show a light, honest "still syncing
+        // the Forge side" indicator instead of silently displaying a
+        // native portion that's ahead of what the Forge-only portion
+        // reflects, with no explanation.
+        await db.query(
+          `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{lastSyncDiverged}', 'true'::jsonb) WHERE id=$1 AND user_email=$2`,
+          [id, userEmail]
+        );
+        chatSessionSyncResult = { merged: false, reason: 'history_mismatch', lastSyncedAt };
+      }
     } else {
       // Genuine "nothing new to merge" is not a divergence — clears
       // any stale diverged flag from an earlier, since-resolved
