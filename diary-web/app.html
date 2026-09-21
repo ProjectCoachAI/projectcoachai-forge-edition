@@ -521,6 +521,17 @@
        handles attaching new files itself, so it had no need for this
        at all before now. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- mammoth.js — for DOCX text extraction in the attachment reader.
+       Already used the same way in continue.html; added here because
+       app.html's own renderMarkdownIntoReader() previously fell through
+       to a raw fetch() → resp.text() path for .docx files, returning
+       binary ZIP bytes (the PK... garbage visible to the user) instead
+       of readable text. Loaded the same version and CDN as continue.html
+       for consistency. Degrades gracefully — the DOCX branch below
+       checks for window.mammoth before using it, falling back to the
+       same "can't preview" message already shown for truly unsupported
+       types rather than showing binary garbage. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <!-- highlight.js — for the Code artifact's own syntax highlighting
        (enhanceCodeBlocks below). A minimal-theme CSS matching this
        page's own warm, muted palette rather than a stock, high-contrast
@@ -4438,6 +4449,38 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
       console.warn('[Diary] Failed to re-extract PPTX with images, falling back to plain text:', e.message);
       // Falls through intentionally.
     }
+  }
+  // NOTE: DOCX-specific branch added — confirmed as a real, direct bug
+  // via a live report of binary ZIP garbage (PK... bytes) being
+  // displayed when opening a .docx file via Read more. The old code fell
+  // straight through to fetch(url) → resp.text() for every type in
+  // ATTACHMENT_READER_MARKDOWN_TYPES that wasn't pptx, which for a .docx
+  // file returns raw binary ZIP content (DOCX files are ZIP archives),
+  // not readable text. mammoth.js (now loaded in <head> alongside JSZip,
+  // same version as continue.html which already uses it the same way)
+  // converts the binary arrayBuffer directly to HTML, which is then
+  // rendered via the existing Forge.renderMarkdown pipeline. Degrades
+  // gracefully: if mammoth isn't loaded or extraction produces nothing,
+  // falls through to the same "can't preview" message shown for truly
+  // unsupported types, rather than showing binary garbage.
+  if (type === 'docx') {
+    if (typeof mammoth !== 'undefined') {
+      try {
+        var docxResp = await fetch(url);
+        if (!docxResp.ok) throw new Error('Fetch failed with status ' + docxResp.status);
+        var arrayBuffer = await docxResp.arrayBuffer();
+        var result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+        if (result.value && result.value.trim()) {
+          body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);font-family:Inter,sans-serif;font-size:14px;line-height:1.7;color:#1B2A4A;">' + result.value + '</div>';
+          return;
+        }
+      } catch (e) {
+        console.warn('[Diary] mammoth DOCX extraction failed:', e.message);
+        // Falls through to "can't preview" below.
+      }
+    }
+    body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This file type can\'t be previewed here yet. <a href="' + escHtml(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+    return;
   }
   var resp = await fetch(url);
   if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
