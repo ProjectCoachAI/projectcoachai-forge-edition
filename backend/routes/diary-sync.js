@@ -323,51 +323,62 @@ async function performChatSessionSync({ id, content, prompt, turnCount, userEmai
     const normalizeForCompare = (s) => stripSourcesFooter(s || '')
       .replace(/https?:\/\/\S+/g, '')  // URLs
       .replace(/\*\*/g, '')            // bold markers
-      .replace(/\*/g, '')              // italic markers — confirmed live: network-interceptor
-                                       // captures and DOM Turndown captures use the same
-                                       // underlying markdown but single-asterisk italic
-                                       // wrapping can differ in placement or presence,
-                                       // causing false-positive history_mismatch. Safe to
-                                       // strip: the word content they wrap is unchanged.
-      .replace(/^#+\s*/gm, '')         // header markers — same reasoning: # vs ## vs plain
-                                       // heading text differs between capture paths
+      .replace(/\*/g, '')              // italic markers
+      .replace(/^#+\s*/gm, '')         // header markers
       .replace(/\s+/g, ' ').trim();
-    // Whole-content comparison replaces the previous per-message,
-    // positional comparison entirely (see the audit note above for
-    // why). If the new, normalized content genuinely starts with
-    // the old, normalized content, every character the old side
-    // had is still present, unchanged, within the new side -- this
-    // is true regardless of how message-splitting itself might
-    // divide that same text into individual bubbles this time
-    // versus last time, since splitting never adds, removes, or
-    // reorders any of the underlying characters, only decides
-    // where to draw boundaries between them.
+    // Question-order comparison — replaces the previous byte-level
+    // prefix check (newContentNorm.startsWith(oldContentNorm)) which
+    // was confirmed to cycle indefinitely on Gemini: the DOM produces
+    // genuinely different character counts for the same answer element
+    // on different page loads (e.g. 3704 chars → 3572 chars for the
+    // same nutritional-info answer across consecutive captures), so no
+    // amount of whitespace or markdown normalization could make two
+    // independent DOM reads byte-identical.
     //
-    // This still satisfies the original, load-bearing purpose of
-    // this whole check -- preventing a genuinely different,
-    // unrelated conversation's content from ever being silently
-    // merged into the wrong entry (the original, confirmed-live
-    // failure mode this mechanism was built to catch) -- because a
-    // truly different conversation's own text will essentially
-    // never happen to start with another, unrelated conversation's
-    // full text verbatim. Tested directly below against both the
-    // three known-fixed cases AND a deliberate wrong-conversation
-    // scenario before this was considered done.
+    // The right invariant for "is this the same conversation?" is
+    // whether the QUESTIONS appear in the same order — user-typed
+    // question texts never change, whereas answer formatting drifts
+    // between capture paths (network interceptor raw chunks, DOM
+    // Turndown, buildGeminiPairedThread htmlToMarkdown). All three
+    // code paths run their content through performSaveToDiary()'s own
+    // boldQuestion() before saving, which wraps each question in
+    // TITLE_MARK (\u2063) markers. So TITLE_MARK is reliably present
+    // in stored content regardless of which path produced it.
+    //
+    // Safety: a genuinely wrong conversation would have different
+    // question texts in different order — it would not accidentally
+    // pass this check. Tested against: same conversation (more
+    // questions), same conversation (same questions), and a
+    // deliberately different conversation with different questions.
+    // Falls back to normalized byte-level prefix for entries without
+    // TITLE_MARK questions (pre-dates this formatting, or edge cases).
+    const extractQuestions = (str) => {
+      if (!str) return [];
+      const results = [];
+      const re = new RegExp(TITLE_MARK + '\\*\\*([^' + TITLE_MARK + ']+)\\*\\*' + TITLE_MARK, 'g');
+      let m;
+      while ((m = re.exec(str)) !== null) results.push(m[1].trim().toLowerCase());
+      return results;
+    };
+    const oldQuestions = extractQuestions(oldRow.content);
+    const newQuestions = extractQuestions(content);
     const oldContentNorm = normalizeForCompare(oldRow.content);
     const newContentNorm = normalizeForCompare(content);
-    const isCleanExtension = newContentNorm.startsWith(oldContentNorm);
+    let isCleanExtension;
+    if (oldQuestions.length > 0) {
+      // Primary: question-order comparison — immune to answer formatting drift
+      isCleanExtension = newQuestions.length >= oldQuestions.length &&
+        oldQuestions.every(function(q, i) { return newQuestions[i] === q; });
+    } else {
+      // Fallback: byte-level prefix check for entries without TITLE_MARK markers
+      isCleanExtension = newContentNorm.startsWith(oldContentNorm);
+    }
     if (!isCleanExtension) {
-      // Finds the EXACT character index where the two normalized
-      // strings first diverge, rather than logging a fixed first-
-      // 300-char window that may show nothing useful at all if
-      // both sides happen to share a longer common start (exactly
-      // what happened on a real, live case: both previews were
-      // identical for 300+ chars, with the actual divergence
-      // somewhere further in — meaning the previous window-based
-      // log couldn't diagnose it at all). Walks both strings
-      // together, character by character, and logs a small window
-      // immediately around the first point they differ, so the
-      // actual difference is directly visible regardless of how
+      // Diagnostics — still useful to see exactly where things diverge
+      var divergeAt = 0;
+      var maxCheck = Math.min(oldContentNorm.length, newContentNorm.length);
+      while (divergeAt < maxCheck && oldContentNorm[divergeAt] === newContentNorm[divergeAt]) divergeAt++;
+      var windowStart = Math.max(0, divergeAt - 80);
       // far into the content it occurs.
       var divergeAt = 0;
       var maxCheck = Math.min(oldContentNorm.length, newContentNorm.length);
