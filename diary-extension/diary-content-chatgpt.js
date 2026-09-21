@@ -32,8 +32,38 @@
 async function attemptChatGPTClipboardCapture() {
   var result = { success: false, fullThread: null, turnCount: null, prompt: null };
   try {
+    // NOTE: early-exit added — confirmed as the direct root cause of
+    // "indefinite sync" for ChatGPT: navigator.clipboard.readText() in
+    // a backgrounded tab returns a promise that NEVER resolves (doesn't
+    // throw, doesn't reject, just hangs). The try/catch below only
+    // catches thrown errors, not a hanging promise. Every sync tab
+    // attempt hit this hang, waited out the 10-second per-attempt
+    // timeout, retried — 25 times over 6 minutes total (confirmed live
+    // via log: 25 retries × "capture not ready yet" × 2s each, with
+    // tabBackgroundedMsBySyncEnd: 357074ms). document.hasFocus() is
+    // false in a backgrounded tab, which is also the exact condition
+    // that makes clipboard writes fail silently (no document focus →
+    // copyBtn.click() does nothing → clipboard unchanged → capture
+    // would fail anyway even if readText() resolved). Returning early
+    // skips the entire clipboard loop, letting performSaveToDiary()
+    // fall through to the DOM-captured turns already in
+    // window.__diaryCapture.turns (pushed by _chatgptCheckStable's own
+    // background polling, which runs independently and successfully
+    // even in backgrounded tabs via MutationObserver). The Promise.race
+    // timeouts below are kept as a safety net for the focused case,
+    // in case focus changes between this check and the actual read.
+    if (!document.hasFocus()) {
+      console.log('[Diary] ChatGPT clipboard skipped — tab not focused; falling through to DOM-captured turns');
+      return result;
+    }
+
     var originalClipboard = '';
-    try { originalClipboard = await navigator.clipboard.readText(); } catch(e) {}
+    try {
+      originalClipboard = await Promise.race([
+        navigator.clipboard.readText(),
+        new Promise(function(_, rej) { setTimeout(function() { rej(new Error('clipboard_timeout')); }, 3000); })
+      ]);
+    } catch(e) {}
 
     // ChatGPT virtualizes the conversation view — confirmed live:
     // turn counts changed after scrolling to the top. A SINGLE
@@ -159,7 +189,10 @@ async function attemptChatGPTClipboardCapture() {
       copyBtn.click();
       await new Promise(function(r){ setTimeout(r, 400); }); // let the clipboard write complete
       try {
-        var clipText = await navigator.clipboard.readText();
+        var clipText = await Promise.race([
+          navigator.clipboard.readText(),
+          new Promise(function(_, rej) { setTimeout(function() { rej(new Error('clipboard_timeout')); }, 3000); })
+        ]);
         // Confirmed live as a real, serious bug — not cosmetic:
         // this previously only checked "is clipText non-empty,"
         // with no check at all that the clipboard actually,
