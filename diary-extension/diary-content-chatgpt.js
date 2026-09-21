@@ -288,6 +288,17 @@ async function attemptChatGPTClipboardCapture() {
 // history-fetch fallback (still in diary-content.js) already does for
 // itself.
 async function runChatGPTCaptureWithStability() {
+  // NOTE: fast-path added — even with the document.hasFocus() early
+  // return now in attemptChatGPTClipboardCapture(), this stability
+  // loop still ran 3 attempts with 2-second waits between them
+  // (confirmed as 4+ seconds of wasted delay in a backgrounded sync
+  // tab: each clipboard attempt returned immediately but the loop
+  // still waited 2s × 2 inter-attempt delays = 4s before returning).
+  // Returning here immediately when not focused eliminates that delay.
+  if (!document.hasFocus()) {
+    console.log('[Diary] ChatGPT stability capture skipped — tab not focused; DOM-captured turns used directly');
+    return { success: false, fullThread: null, turnCount: null, prompt: null };
+  }
   var normalize = function(s) {
     return (s || '').replace(/\n\n---\n\n\*\*Sources:\*\*\n[\s\S]*$/, '').replace(/https?:\/\/\S+/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
   };
