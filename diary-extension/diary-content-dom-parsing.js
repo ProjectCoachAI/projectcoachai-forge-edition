@@ -813,6 +813,32 @@
                       return content;
                     }
                   });
+                  svc.addRule('geminiSequenceMarkerContainer', {
+                    // NOTE: safety-net suppression rule — confirmed as the
+                    // direct source of bare-number lines ("1" on its own
+                    // line before the step heading) via live DOM inspection
+                    // of a second Gemini stepper component (tea fermentation
+                    // process steps). The .sequence-event-marker-container
+                    // holds a visual step-number badge and a vertical
+                    // connecting line — both purely decorative UI chrome,
+                    // not content. When geminiSequenceStep fires on the
+                    // parent .sequence-event, it overrides content entirely
+                    // (ignores Turndown's already-converted children) so the
+                    // bare "1" is never visible. But if geminiSequenceStep
+                    // doesn't fire (e.g., cached old Turndown instance from
+                    // a previous page load before the extension was updated),
+                    // Turndown's default processing extracts "1" from
+                    // .sequence-event-marker and produces it as a standalone
+                    // block. This rule suppresses the entire container
+                    // regardless, so bare-number lines can't appear even in
+                    // the fallback case.
+                    filter: function(node) {
+                      return node.classList &&
+                             node.classList.contains('sequence-event-marker-container') &&
+                             node.classList.contains('hide-from-message-actions');
+                    },
+                    replacement: function() { return ''; }
+                  });
                   svc.addRule('geminiSequenceStep', {
                     // NOTE: added — confirmed via live DOM inspection of
                     // Gemini's sequence-step component (recipe/process
@@ -859,8 +885,22 @@
                         if (!descText) descText = (descEl.textContent || '').trim();
                       }
                       var header = '';
-                      if (num && title) header = '**' + num + '. ' + title + '**';
-                      else if (title) header = '**' + title + '**';
+                      // NOTE: double-number fix — confirmed via live DOM
+                      // inspection of a second Gemini stepper (tea
+                      // fermentation steps): the title text ALREADY
+                      // contains the number ("1. Harvest & Wither"),
+                      // unlike fig-jam steps ("Macerate the Fruit"). The
+                      // original rule unconditionally prepended num +
+                      // ". " + title, producing "**1. 1. Harvest &
+                      // Wither**". Fixed by checking whether the title
+                      // already starts with a number followed by a period
+                      // — if so, use title directly without prepending.
+                      var titleAlreadyNumbered = /^\d+\./.test(title);
+                      if (num && title && !titleAlreadyNumbered) {
+                        header = '**' + num + '. ' + title + '**';
+                      } else if (title) {
+                        header = '**' + title + '**';
+                      }
                       if (subtitle) header += '\n*' + subtitle + '*';
                       if (header && descText) return '\n\n' + header + '\n\n' + descText;
                       if (header) return '\n\n' + header;
