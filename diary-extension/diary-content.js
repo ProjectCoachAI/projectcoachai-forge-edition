@@ -3044,8 +3044,24 @@ function queryAllDeep(selector) {
       // patches structurally cannot see this, on ANY response (not just
       // "Fast answer" ones — confirmed on a normal long response too), so
       // DOM reading is the primary capture path here, not a fallback.
-      response: 'section[data-turn="assistant"] .text-base',
-      prompt: 'section[data-turn="user"] .text-base', // TODO: verify against live DOM — not yet directly confirmed
+      response: '[data-message-author-role="assistant"] .markdown, section[data-turn="assistant"] .text-base',
+      // NOTE: selector extended — confirmed via live DOM inspection that
+      // ChatGPT web-search-backed answers use a completely different
+      // rendering path: the body text lives in
+      //   div[data-message-author-role="assistant"] .markdown
+      // rather than in section[data-turn="assistant"] .text-base. The
+      // original single selector captured regular answers correctly (4
+      // elements, all substantial lengths confirmed in live logs) but
+      // silently missed the prose body for web-search answers, saving
+      // only the title and sources block. Added the data-message-author-role
+      // selector as the primary (covers both regular and web-search), kept
+      // the data-turn selector as a fallback for any format variants.
+      // readDomResponse() already has a duplicateKey deduplication check
+      // (first 60 chars of each captured text, confirmed via live log:
+      // "duplicateKey: false" on all parts) so the same prose can never
+      // be captured twice even if both selectors happen to match the
+      // same element.
+      prompt: 'section[data-turn="user"] .text-base',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
