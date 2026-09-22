@@ -2333,6 +2333,7 @@ function queryAllDeep(selector) {
             append: false, // always send complete conversation snapshot
             url: saveUrl,
             images: images,
+
             // Sent explicitly (not re-derived from content server-side)
             // per the same-day design decision covering this whole
             // field: the extension already knows this number directly

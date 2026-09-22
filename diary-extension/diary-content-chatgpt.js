@@ -32,38 +32,8 @@
 async function attemptChatGPTClipboardCapture() {
   var result = { success: false, fullThread: null, turnCount: null, prompt: null };
   try {
-    // NOTE: early-exit added — confirmed as the direct root cause of
-    // "indefinite sync" for ChatGPT: navigator.clipboard.readText() in
-    // a backgrounded tab returns a promise that NEVER resolves (doesn't
-    // throw, doesn't reject, just hangs). The try/catch below only
-    // catches thrown errors, not a hanging promise. Every sync tab
-    // attempt hit this hang, waited out the 10-second per-attempt
-    // timeout, retried — 25 times over 6 minutes total (confirmed live
-    // via log: 25 retries × "capture not ready yet" × 2s each, with
-    // tabBackgroundedMsBySyncEnd: 357074ms). document.hasFocus() is
-    // false in a backgrounded tab, which is also the exact condition
-    // that makes clipboard writes fail silently (no document focus →
-    // copyBtn.click() does nothing → clipboard unchanged → capture
-    // would fail anyway even if readText() resolved). Returning early
-    // skips the entire clipboard loop, letting performSaveToDiary()
-    // fall through to the DOM-captured turns already in
-    // window.__diaryCapture.turns (pushed by _chatgptCheckStable's own
-    // background polling, which runs independently and successfully
-    // even in backgrounded tabs via MutationObserver). The Promise.race
-    // timeouts below are kept as a safety net for the focused case,
-    // in case focus changes between this check and the actual read.
-    if (!document.hasFocus()) {
-      console.log('[Diary] ChatGPT clipboard skipped — tab not focused; falling through to DOM-captured turns');
-      return result;
-    }
-
     var originalClipboard = '';
-    try {
-      originalClipboard = await Promise.race([
-        navigator.clipboard.readText(),
-        new Promise(function(_, rej) { setTimeout(function() { rej(new Error('clipboard_timeout')); }, 3000); })
-      ]);
-    } catch(e) {}
+    try { originalClipboard = await navigator.clipboard.readText(); } catch(e) {}
 
     // ChatGPT virtualizes the conversation view — confirmed live:
     // turn counts changed after scrolling to the top. A SINGLE
@@ -143,7 +113,7 @@ async function attemptChatGPTClipboardCapture() {
       var lastTurnCount = -1;
       for (var settleAttempt = 0; settleAttempt < 12; settleAttempt++) {
         await new Promise(function(r){ setTimeout(r, 500); });
-        var curCount = document.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]').length;
+        var curCount = document.querySelectorAll('section[data-turn="user"], section[data-turn="assistant"]').length;
         // Success condition: reached the known-true count (best
         // case), OR — if we couldn't determine a true count —
         // fall back to the old "stopped changing" heuristic, which
@@ -167,15 +137,10 @@ async function attemptChatGPTClipboardCapture() {
     // again, exactly the failure this whole check exists to catch.
     var domKnownIncomplete = (trueTurnCount !== null && lastTurnCount < trueTurnCount);
 
-    // ChatGPT changed DOM structure: section[data-turn] is completely gone,
-    // replaced by div[data-message-author-role="user/assistant"]. Both
-    // selectors included so the clipboard loop works across the transition.
-    var _cgAllEls = domKnownIncomplete ? [] : document.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]');
-    var allTurnEls = [];
-    for (var _cgI = 0; _cgI < _cgAllEls.length; _cgI++) {
-      var _cgR = _cgAllEls[_cgI].getAttribute('data-message-author-role') || _cgAllEls[_cgI].getAttribute('data-turn');
-      if (_cgR === 'user' || _cgR === 'assistant') allTurnEls.push(_cgAllEls[_cgI]);
-    }
+    // Combined query, document order — each element carries its own
+    // role via data-turn, so pairing no longer depends on two
+    // separate NodeLists having matching lengths.
+    var allTurnEls = domKnownIncomplete ? [] : document.querySelectorAll('section[data-turn="user"], section[data-turn="assistant"]');
     var clipParts = [];
     var expectedCount = allTurnEls.length;
     var clipSuccessCount = 0;
@@ -185,8 +150,7 @@ async function attemptChatGPTClipboardCapture() {
 
     for (var ti = 0; ti < allTurnEls.length; ti++) {
       var turnEl = allTurnEls[ti];
-      // Read role from either attribute depending on which format is in use
-      var role = turnEl.getAttribute('data-message-author-role') || turnEl.getAttribute('data-turn');
+      var role = turnEl.getAttribute('data-turn');
       var copyBtn = turnEl.querySelector('button[data-testid="copy-turn-action-button"]');
       if (!copyBtn) {
         console.error('[Diary] ChatGPT copy button not found on', role, 'turn at position', ti, '— treating whole attempt as failed');
@@ -195,10 +159,7 @@ async function attemptChatGPTClipboardCapture() {
       copyBtn.click();
       await new Promise(function(r){ setTimeout(r, 400); }); // let the clipboard write complete
       try {
-        var clipText = await Promise.race([
-          navigator.clipboard.readText(),
-          new Promise(function(_, rej) { setTimeout(function() { rej(new Error('clipboard_timeout')); }, 3000); })
-        ]);
+        var clipText = await navigator.clipboard.readText();
         // Confirmed live as a real, serious bug — not cosmetic:
         // this previously only checked "is clipText non-empty,"
         // with no check at all that the clipboard actually,
@@ -294,17 +255,6 @@ async function attemptChatGPTClipboardCapture() {
 // history-fetch fallback (still in diary-content.js) already does for
 // itself.
 async function runChatGPTCaptureWithStability() {
-  // NOTE: fast-path added — even with the document.hasFocus() early
-  // return now in attemptChatGPTClipboardCapture(), this stability
-  // loop still ran 3 attempts with 2-second waits between them
-  // (confirmed as 4+ seconds of wasted delay in a backgrounded sync
-  // tab: each clipboard attempt returned immediately but the loop
-  // still waited 2s × 2 inter-attempt delays = 4s before returning).
-  // Returning here immediately when not focused eliminates that delay.
-  if (!document.hasFocus()) {
-    console.log('[Diary] ChatGPT stability capture skipped — tab not focused; DOM-captured turns used directly');
-    return { success: false, fullThread: null, turnCount: null, prompt: null };
-  }
   var normalize = function(s) {
     return (s || '').replace(/\n\n---\n\n\*\*Sources:\*\*\n[\s\S]*$/, '').replace(/https?:\/\/\S+/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
   };
@@ -312,18 +262,8 @@ async function runChatGPTCaptureWithStability() {
   var stableAfterAttempts = null;
   for (var stabilityAttempt = 0; stabilityAttempt < 3; stabilityAttempt++) {
     var thisAttempt = await attemptChatGPTClipboardCapture();
-    // NOTE: accept immediately on first success — the previous two-pass
-    // stability check (requiring two consecutive identical captures) was
-    // necessary when the section[data-turn] selectors were returning wrong
-    // or mismatched content between reads. Now that all DOM queries use the
-    // correct data-message-author-role selectors, captures are reliable on
-    // the first attempt. The two-pass check added ~10s of pure overhead:
-    // each attemptChatGPTClipboardCapture() takes ~6s (scroll-settle) +
-    // ~2s (clipboard reads for all turns) = ~8s, and two passes + 2s wait
-    // between them = ~18s total. Confirmed live: save-to-diary content is
-    // always correct, making the second pass redundant. Falls through to
-    // additional attempts only if the first fails (same safety net as before).
-    if (thisAttempt.success) {
+    if (captureAttempt && thisAttempt.success && captureAttempt.success &&
+        normalize(thisAttempt.fullThread) === normalize(captureAttempt.fullThread)) {
       stableAfterAttempts = stabilityAttempt + 1;
       captureAttempt = thisAttempt;
       break;
