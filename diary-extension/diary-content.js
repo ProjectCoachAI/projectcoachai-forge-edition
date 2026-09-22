@@ -179,13 +179,9 @@
       // — see DOM_SELECTORS['chatgpt.com'] above). That mismatch meant
       // getPrompt() always returned '', which is why diary entry titles
       // were coming through blank.
-      // NOTE: extended to include data-message-author-role="user" —
-      // ChatGPT changed DOM structure: section[data-turn] is completely
-      // gone, replaced by div[data-message-author-role]. Confirmed via
-      // live DOM inspection: user messages now use data-message-author-role.
-      promptSelectors: ['[data-message-author-role="user"]', 'section[data-turn="user"] .text-base'],
+      promptSelectors: ['section[data-turn="user"] .text-base'],
       getPrompt: function() {
-        var els = document.querySelectorAll('[data-message-author-role="user"], section[data-turn="user"] .text-base');
+        var els = document.querySelectorAll('section[data-turn="user"] .text-base');
         if (els.length > 0) {
           var t = (els[0].textContent||'').trim().slice(0,500); // first user message = conversation topic
           if (t.length > 2) return t;
@@ -2333,7 +2329,6 @@ function queryAllDeep(selector) {
             append: false, // always send complete conversation snapshot
             url: saveUrl,
             images: images,
-
             // Sent explicitly (not re-derived from content server-side)
             // per the same-day design decision covering this whole
             // field: the extension already knows this number directly
@@ -2934,14 +2929,7 @@ function queryAllDeep(selector) {
         // (also confirmed broken before, now fixed), no Sources section
         // present at all (no regression), and the singular "Source"
         // wording (no regression).
-        // NOTE: Sources regex fixed — confirmed live gap via direct test:
-        // the old non-greedy pattern stopped at the first \n\n, leaving
-        // source cards with double-newline separators (image thumbnails,
-        // attribution text) partially unstripped. Since the Sources
-        // section is always the last meaningful content in a Gemini
-        // answer, stripping everything from "Sources\n" to end of string
-        // is safe and correct.
-        return text.replace(/^Sources?\n[\s\S]*/m, '')
+        return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|(?![\s\S]))/m, '')
                    .replace(/\n{0,2}Explore related .+? topics:[\s\S]*$/, '')
                    .replace(/\n{3,}/g, '\n\n')
                    .trim();
@@ -3031,7 +3019,7 @@ function queryAllDeep(selector) {
       }
     },
     'www.meta.ai': {
-      response: '.ur-markdown',
+      response: '[class*="assistant"] [class*="content"]',
       prompt: '[class*="user"] [class*="content"]',
       clean: function(text) {
         return text.replace(/Here\'s the map.*$/m, '')
@@ -3049,24 +3037,8 @@ function queryAllDeep(selector) {
       // patches structurally cannot see this, on ANY response (not just
       // "Fast answer" ones — confirmed on a normal long response too), so
       // DOM reading is the primary capture path here, not a fallback.
-      response: '[data-message-author-role="assistant"] .markdown, section[data-turn="assistant"] .text-base',
-      // NOTE: selector extended — confirmed via live DOM inspection that
-      // ChatGPT web-search-backed answers use a completely different
-      // rendering path: the body text lives in
-      //   div[data-message-author-role="assistant"] .markdown
-      // rather than in section[data-turn="assistant"] .text-base. The
-      // original single selector captured regular answers correctly (4
-      // elements, all substantial lengths confirmed in live logs) but
-      // silently missed the prose body for web-search answers, saving
-      // only the title and sources block. Added the data-message-author-role
-      // selector as the primary (covers both regular and web-search), kept
-      // the data-turn selector as a fallback for any format variants.
-      // readDomResponse() already has a duplicateKey deduplication check
-      // (first 60 chars of each captured text, confirmed via live log:
-      // "duplicateKey: false" on all parts) so the same prose can never
-      // be captured twice even if both selectors happen to match the
-      // same element.
-      prompt: '[data-message-author-role="user"], section[data-turn="user"] .text-base',
+      response: 'section[data-turn="assistant"] .text-base',
+      prompt: 'section[data-turn="user"] .text-base', // TODO: verify against live DOM — not yet directly confirmed
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
