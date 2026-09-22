@@ -179,9 +179,13 @@
       // — see DOM_SELECTORS['chatgpt.com'] above). That mismatch meant
       // getPrompt() always returned '', which is why diary entry titles
       // were coming through blank.
-      promptSelectors: ['section[data-turn="user"] .text-base'],
+      // NOTE: extended to include data-message-author-role="user" —
+      // ChatGPT changed DOM structure: section[data-turn] is completely
+      // gone, replaced by div[data-message-author-role]. Confirmed via
+      // live DOM inspection: user messages now use data-message-author-role.
+      promptSelectors: ['[data-message-author-role="user"]', 'section[data-turn="user"] .text-base'],
       getPrompt: function() {
-        var els = document.querySelectorAll('section[data-turn="user"] .text-base');
+        var els = document.querySelectorAll('[data-message-author-role="user"], section[data-turn="user"] .text-base');
         if (els.length > 0) {
           var t = (els[0].textContent||'').trim().slice(0,500); // first user message = conversation topic
           if (t.length > 2) return t;
@@ -3061,7 +3065,7 @@ function queryAllDeep(selector) {
       // "duplicateKey: false" on all parts) so the same prose can never
       // be captured twice even if both selectors happen to match the
       // same element.
-      prompt: 'section[data-turn="user"] .text-base',
+      prompt: '[data-message-author-role="user"], section[data-turn="user"] .text-base',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
