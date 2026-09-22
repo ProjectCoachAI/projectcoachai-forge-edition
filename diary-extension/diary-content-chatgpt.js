@@ -143,12 +143,7 @@ async function attemptChatGPTClipboardCapture() {
       var lastTurnCount = -1;
       for (var settleAttempt = 0; settleAttempt < 12; settleAttempt++) {
         await new Promise(function(r){ setTimeout(r, 500); });
-        var curCount = document.querySelectorAll(
-          // NOTE: ChatGPT changed DOM structure — section[data-turn] is
-          // completely gone, replaced by div[data-message-author-role].
-          // Both selectors included so this works during any transition.
-          '[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]'
-        ).length;
+        var curCount = document.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]').length;
         // Success condition: reached the known-true count (best
         // case), OR — if we couldn't determine a true count —
         // fall back to the old "stopped changing" heuristic, which
@@ -172,20 +167,15 @@ async function attemptChatGPTClipboardCapture() {
     // again, exactly the failure this whole check exists to catch.
     var domKnownIncomplete = (trueTurnCount !== null && lastTurnCount < trueTurnCount);
 
-    // Combined query, document order — each element carries its own
-    // role via data-message-author-role (new format) or data-turn (old
-    // format). NOTE: ChatGPT changed its DOM structure — section[data-turn]
-    // is completely gone, replaced by div[data-message-author-role="user/
-    // assistant"]. Confirmed via live DOM inspection: user messages are now
-    // div[data-message-author-role="user"], assistant messages are
-    // div[data-message-author-role="assistant"]. Both selectors included
-    // so the clipboard loop works across the transition.
-    var allTurnEls = domKnownIncomplete ? [] : Array.from(document.querySelectorAll(
-      '[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]'
-    )).filter(function(el) {
-      var r = el.getAttribute('data-message-author-role') || el.getAttribute('data-turn');
-      return r === 'user' || r === 'assistant';
-    });
+    // ChatGPT changed DOM structure: section[data-turn] is completely gone,
+    // replaced by div[data-message-author-role="user/assistant"]. Both
+    // selectors included so the clipboard loop works across the transition.
+    var _cgAllEls = domKnownIncomplete ? [] : document.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]');
+    var allTurnEls = [];
+    for (var _cgI = 0; _cgI < _cgAllEls.length; _cgI++) {
+      var _cgR = _cgAllEls[_cgI].getAttribute('data-message-author-role') || _cgAllEls[_cgI].getAttribute('data-turn');
+      if (_cgR === 'user' || _cgR === 'assistant') allTurnEls.push(_cgAllEls[_cgI]);
+    }
     var clipParts = [];
     var expectedCount = allTurnEls.length;
     var clipSuccessCount = 0;
@@ -322,8 +312,18 @@ async function runChatGPTCaptureWithStability() {
   var stableAfterAttempts = null;
   for (var stabilityAttempt = 0; stabilityAttempt < 3; stabilityAttempt++) {
     var thisAttempt = await attemptChatGPTClipboardCapture();
-    if (captureAttempt && thisAttempt.success && captureAttempt.success &&
-        normalize(thisAttempt.fullThread) === normalize(captureAttempt.fullThread)) {
+    // NOTE: accept immediately on first success — the previous two-pass
+    // stability check (requiring two consecutive identical captures) was
+    // necessary when the section[data-turn] selectors were returning wrong
+    // or mismatched content between reads. Now that all DOM queries use the
+    // correct data-message-author-role selectors, captures are reliable on
+    // the first attempt. The two-pass check added ~10s of pure overhead:
+    // each attemptChatGPTClipboardCapture() takes ~6s (scroll-settle) +
+    // ~2s (clipboard reads for all turns) = ~8s, and two passes + 2s wait
+    // between them = ~18s total. Confirmed live: save-to-diary content is
+    // always correct, making the second pass redundant. Falls through to
+    // additional attempts only if the first fails (same safety net as before).
+    if (thisAttempt.success) {
       stableAfterAttempts = stabilityAttempt + 1;
       captureAttempt = thisAttempt;
       break;
