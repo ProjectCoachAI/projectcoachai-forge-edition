@@ -3031,7 +3031,7 @@ function queryAllDeep(selector) {
       }
     },
     'www.meta.ai': {
-      response: '[class*="assistant"] [class*="content"]',
+      response: '.ur-markdown',
       prompt: '[class*="user"] [class*="content"]',
       clean: function(text) {
         return text.replace(/Here\'s the map.*$/m, '')
