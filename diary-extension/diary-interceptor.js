@@ -405,6 +405,43 @@
 
   function parseChatGPTHistorySeed(json) {
     try {
+      // NOTE: new format added — confirmed live via DevTools Network tab
+      // that ChatGPT's /backend-api/conversation/{id} response now uses a
+      // top-level 'messages' ARRAY rather than a 'mapping' OBJECT. The old
+      // parser's very first check was 'var mapping = json && json.mapping'
+      // which returned undefined for this format, causing the entire function
+      // to return '' immediately and the historySeed to be silently discarded
+      // on every single history-endpoint response. This explained why the
+      // save-to-diary clipboard path (focused tab, works correctly) produced
+      // full content while the sync path (backgrounded tab, relies on
+      // historySeed) always produced empty content.
+      //
+      // New format: messages are in document order (no parent-link walking
+      // needed), each has author.role and content.content_type / content.parts.
+      // Empty placeholder messages ('parts: [""]') are filtered by checking
+      // that the joined string is non-empty after trim — the same guard the
+      // mapping format already applied implicitly via the non-empty text check.
+      // Keeps the mapping format as a fallback in case the API serves it for
+      // older conversations or if the format changes back.
+      if (json && Array.isArray(json.messages)) {
+        var parts2 = [];
+        for (var i = 0; i < json.messages.length; i++) {
+          var msg = json.messages[i];
+          if (!msg || !msg.content || msg.content.content_type !== 'text') continue;
+          var role = msg.author && msg.author.role;
+          if (role !== 'user' && role !== 'assistant') continue;
+          var parts = msg.content.parts;
+          if (!Array.isArray(parts)) continue;
+          var text = parts.filter(function(p){ return typeof p === 'string'; }).join('\n').trim();
+          if (!text) continue;
+          var cleaned = cleanText(text);
+          if (!cleaned) continue;
+          parts2.push(role === 'user' ? boldQuestion(cleaned.slice(0, 2000)) : cleaned);
+        }
+        return parts2.join('\n\n');
+      }
+
+      // Fallback: old mapping-object format (parent-link traversal)
       var mapping = json && json.mapping;
       if (!mapping || typeof mapping !== 'object') return '';
       // NOTE: create_time is NOT reliable for ordering — verified against real
@@ -424,22 +461,22 @@
         guard++;
       }
       chain.reverse(); // root-to-tip order
-      var parts2 = [];
-      for (var i = 0; i < chain.length; i++) {
-        var node = mapping[chain[i]];
-        var msg = node && node.message;
-        if (!msg || !msg.content || msg.content.content_type !== 'text') continue;
-        var role = msg.author && msg.author.role;
-        if (role !== 'user' && role !== 'assistant') continue;
-        var parts = msg.content.parts;
-        if (!Array.isArray(parts)) continue;
-        var text = parts.filter(function(p){ return typeof p === 'string'; }).join('\n').trim();
-        if (!text) continue;
-        var cleaned = cleanText(text); // reuse existing entity[...]/image_group{...} stripper
-        if (!cleaned) continue;
-        parts2.push(role === 'user' ? boldQuestion(cleaned.slice(0,2000)) : cleaned);
+      var parts2m = [];
+      for (var j = 0; j < chain.length; j++) {
+        var node = mapping[chain[j]];
+        var msgm = node && node.message;
+        if (!msgm || !msgm.content || msgm.content.content_type !== 'text') continue;
+        var rolem = msgm.author && msgm.author.role;
+        if (rolem !== 'user' && rolem !== 'assistant') continue;
+        var partsm = msgm.content.parts;
+        if (!Array.isArray(partsm)) continue;
+        var textm = partsm.filter(function(p){ return typeof p === 'string'; }).join('\n').trim();
+        if (!textm) continue;
+        var cleanedm = cleanText(textm);
+        if (!cleanedm) continue;
+        parts2m.push(rolem === 'user' ? boldQuestion(cleanedm.slice(0, 2000)) : cleanedm);
       }
-      return parts2.join('\n\n');
+      return parts2m.join('\n\n');
     } catch(e) { return ''; }
   }
 
