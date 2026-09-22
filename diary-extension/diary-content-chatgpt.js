@@ -143,7 +143,12 @@ async function attemptChatGPTClipboardCapture() {
       var lastTurnCount = -1;
       for (var settleAttempt = 0; settleAttempt < 12; settleAttempt++) {
         await new Promise(function(r){ setTimeout(r, 500); });
-        var curCount = document.querySelectorAll('section[data-turn="user"], section[data-turn="assistant"]').length;
+        var curCount = document.querySelectorAll(
+          // NOTE: ChatGPT changed DOM structure — section[data-turn] is
+          // completely gone, replaced by div[data-message-author-role].
+          // Both selectors included so this works during any transition.
+          '[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]'
+        ).length;
         // Success condition: reached the known-true count (best
         // case), OR — if we couldn't determine a true count —
         // fall back to the old "stopped changing" heuristic, which
@@ -168,9 +173,19 @@ async function attemptChatGPTClipboardCapture() {
     var domKnownIncomplete = (trueTurnCount !== null && lastTurnCount < trueTurnCount);
 
     // Combined query, document order — each element carries its own
-    // role via data-turn, so pairing no longer depends on two
-    // separate NodeLists having matching lengths.
-    var allTurnEls = domKnownIncomplete ? [] : document.querySelectorAll('section[data-turn="user"], section[data-turn="assistant"]');
+    // role via data-message-author-role (new format) or data-turn (old
+    // format). NOTE: ChatGPT changed its DOM structure — section[data-turn]
+    // is completely gone, replaced by div[data-message-author-role="user/
+    // assistant"]. Confirmed via live DOM inspection: user messages are now
+    // div[data-message-author-role="user"], assistant messages are
+    // div[data-message-author-role="assistant"]. Both selectors included
+    // so the clipboard loop works across the transition.
+    var allTurnEls = domKnownIncomplete ? [] : Array.from(document.querySelectorAll(
+      '[data-message-author-role="user"], [data-message-author-role="assistant"], section[data-turn="user"], section[data-turn="assistant"]'
+    )).filter(function(el) {
+      var r = el.getAttribute('data-message-author-role') || el.getAttribute('data-turn');
+      return r === 'user' || r === 'assistant';
+    });
     var clipParts = [];
     var expectedCount = allTurnEls.length;
     var clipSuccessCount = 0;
@@ -180,7 +195,8 @@ async function attemptChatGPTClipboardCapture() {
 
     for (var ti = 0; ti < allTurnEls.length; ti++) {
       var turnEl = allTurnEls[ti];
-      var role = turnEl.getAttribute('data-turn');
+      // Read role from either attribute depending on which format is in use
+      var role = turnEl.getAttribute('data-message-author-role') || turnEl.getAttribute('data-turn');
       var copyBtn = turnEl.querySelector('button[data-testid="copy-turn-action-button"]');
       if (!copyBtn) {
         console.error('[Diary] ChatGPT copy button not found on', role, 'turn at position', ti, '— treating whole attempt as failed');
