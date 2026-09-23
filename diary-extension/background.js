@@ -1688,8 +1688,12 @@ const AI_COMPLETION_PATTERNS = [
   /chat\.mistral\.ai\/api\/chat$/,
   /deepseek\.com\/api\/v0\/chat\/completion/,
   /grok\.com\/rest\//,
-  /meta\.ai\/api/,
-  /meta\.ai\/graphql/,
+  // NOTE: tightened — confirmed live: /meta\.ai\/api/ matched analytics,
+  // recent-upload-media and other telemetry, firing AI_RESPONSE_COMPLETE
+  // 20+ times per response, causing save button to flicker and disappear.
+  // Meta AI streams via WebSocket so no HTTP endpoint carries the AI
+  // response. api/graphql is kept as the best proxy signal.
+  /meta\.ai\/api\/graphql/,
 ];
 
 function isAIResponseUrl(url) {
