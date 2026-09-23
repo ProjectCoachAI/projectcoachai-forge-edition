@@ -1987,33 +1987,6 @@ function queryAllDeep(selector) {
         // fallback, never regress below it. Verified via direct
         // simulation of a two-question conversation before wiring in
         // here.
-        if (PROVIDER === 'meta') {
-          // Claude-matching guard: captureTurns.length must equal prompts.length.
-          // Claude only builds content when every question has a captured answer
-          // in window.__diaryCapture.turns. For Meta AI, captureTurns are
-          // cumulative DOM snapshots — one turn per settled answer. The previous
-          // guard (length > 0) failed because old turns from Q1/Q2 made it pass
-          // even when Q3's .ur-markdown was still empty (graphql fires at 26-33ms,
-          // before React renders Q3's answer). Correct guard: only run
-          // buildDomPairedThread when the number of settled turns matches the
-          // number of captured prompts — meaning every question including the
-          // latest one has a confirmed, settled answer in the DOM.
-          var metaConfirmedTurns = ((window.__diaryCapture && window.__diaryCapture.turns) || [])
-            .filter(function(t) { return t.url === canonicalUrl(); });
-          var metaPrompts = getAllCapturedPrompts();
-          if (metaConfirmedTurns.length > 0 && metaConfirmedTurns.length >= metaPrompts.length) {
-            var metaThread = buildDomPairedThread({
-              combinedSelector: '[data-message-type="user"], .ur-markdown',
-              isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
-              questionInnerSelector: '.text-response',
-              answerInnerSelector: null
-            });
-            if (metaThread && metaThread.length > 50) {
-              fullThread = metaThread;
-              console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
-            }
-          }
-        }
         // Grok-specific override: same principle as Gemini/Perplexity/
         // Meta AI above. Confirmed live via diagnostic logging that the
         // counting-based capture system's "wait until the answer has
