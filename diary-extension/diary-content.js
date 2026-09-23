@@ -1989,10 +1989,10 @@ function queryAllDeep(selector) {
         // here.
         if (PROVIDER === 'meta') {
           var metaThread = buildDomPairedThread({
-            combinedSelector: '[data-message-type="user"], [data-testid="assistant-message"]',
+            combinedSelector: '[data-message-type="user"], .ur-markdown',
             isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
             questionInnerSelector: '.text-response',
-            answerInnerSelector: '.ur-markdown'
+            answerInnerSelector: null
           });
           if (metaThread && metaThread.length > 50) {
             fullThread = metaThread;
