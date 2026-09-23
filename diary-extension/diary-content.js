@@ -1988,31 +1988,15 @@ function queryAllDeep(selector) {
         // simulation of a two-question conversation before wiring in
         // here.
         if (PROVIDER === 'meta') {
-          // NOTE: approach changed to match Claude's proven pattern.
-          // Claude uses window.__diaryCapture.turns (from network interceptor)
-          // + prompts. Meta AI has no network interceptor, but the DOM poll
-          // already settles content correctly into window.__diaryCapture.turns
-          // before showing the save button. buildDomPairedThread was re-querying
-          // the DOM at save time — a different moment from when the DOM poll
-          // confirmed stability — causing timing mismatches (empty .ur-markdown).
-          // Instead: use the already-settled captureTurns directly, same as
-          // Claude uses its already-captured historySeed + turns. The DOM poll
-          // (readDomResponse with [class*="assistant"] [class*="content"])
-          // already captures correct answer text and puts it in turns before
-          // the save button appears. Prompts come from getAllCapturedPrompts()
-          // which reads [data-message-type="user"] .text-response confirmed DOM.
-          var metaCaptureTurns = (window.__diaryCapture && window.__diaryCapture.turns) ? window.__diaryCapture.turns.filter(function(t) { return t.url === canonicalUrl(); }) : [];
-          var metaPrompts = getAllCapturedPrompts();
-          if (metaCaptureTurns.length > 0) {
-            var metaParts = [];
-            for (var _mci = 0; _mci < metaCaptureTurns.length; _mci++) {
-              if (metaPrompts[_mci]) metaParts.push(boldQuestion(metaPrompts[_mci].slice(0, 2000)));
-              metaParts.push(metaCaptureTurns[_mci].text.replace(/\n{3,}/g, '\n\n').trim());
-            }
-            if (metaParts.length) {
-              fullThread = metaParts.join('\n\n');
-              console.log('[Diary] Meta AI using settled captureTurns, length:', fullThread.length);
-            }
+          var metaThread = buildDomPairedThread({
+            combinedSelector: '[data-message-type="user"], [data-testid="assistant-message"]',
+            isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
+            questionInnerSelector: '.text-response',
+            answerInnerSelector: '.ur-markdown'
+          });
+          if (metaThread && metaThread.length > 50) {
+            fullThread = metaThread;
+            console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
           }
         }
         // Grok-specific override: same principle as Gemini/Perplexity/
