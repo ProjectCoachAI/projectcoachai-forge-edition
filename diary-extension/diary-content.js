@@ -1988,19 +1988,20 @@ function queryAllDeep(selector) {
         // simulation of a two-question conversation before wiring in
         // here.
         if (PROVIDER === 'meta') {
-          // Claude-matching guard: only run buildDomPairedThread AFTER
-          // window.__diaryCapture.turns has been populated for this URL.
-          // Claude never reads DOM directly — it only builds content after
-          // the interceptor confirms turns are ready. For Meta AI, the DOM
-          // poll (captureTurns) is the equivalent confirmation that the DOM
-          // is stable and .ur-markdown elements are populated. Without this
-          // guard, buildDomPairedThread runs in 26-33ms (auto-save from
-          // graphql firing before React renders), finds empty .ur-markdown
-          // elements, and writes titles-only to diary_entries.content even
-          // though chat_sessions.messages correctly gets addedCount:2.
+          // Claude-matching guard: captureTurns.length must equal prompts.length.
+          // Claude only builds content when every question has a captured answer
+          // in window.__diaryCapture.turns. For Meta AI, captureTurns are
+          // cumulative DOM snapshots — one turn per settled answer. The previous
+          // guard (length > 0) failed because old turns from Q1/Q2 made it pass
+          // even when Q3's .ur-markdown was still empty (graphql fires at 26-33ms,
+          // before React renders Q3's answer). Correct guard: only run
+          // buildDomPairedThread when the number of settled turns matches the
+          // number of captured prompts — meaning every question including the
+          // latest one has a confirmed, settled answer in the DOM.
           var metaConfirmedTurns = ((window.__diaryCapture && window.__diaryCapture.turns) || [])
             .filter(function(t) { return t.url === canonicalUrl(); });
-          if (metaConfirmedTurns.length > 0) {
+          var metaPrompts = getAllCapturedPrompts();
+          if (metaConfirmedTurns.length > 0 && metaConfirmedTurns.length >= metaPrompts.length) {
             var metaThread = buildDomPairedThread({
               combinedSelector: '[data-message-type="user"], .ur-markdown',
               isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
