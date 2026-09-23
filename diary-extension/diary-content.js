@@ -1988,41 +1988,31 @@ function queryAllDeep(selector) {
         // simulation of a two-question conversation before wiring in
         // here.
         if (PROVIDER === 'meta') {
-          // NOTE: guard added — confirmed via live log analysis that
-          // meta.ai/api/graphql fires AI_RESPONSE_COMPLETE BEFORE React
-          // has populated the .ur-markdown answer elements. buildDomPairedThread
-          // then finds empty answer elements and produces question bubbles
-          // only (titles), writing that as diary_entries.content. The DOM
-          // poll (MutationObserver) correctly captures full content later.
-          // Guard: only run buildDomPairedThread if at least one .ur-markdown
-          // element has real content (> 50 chars). If answers aren't populated
-          // yet, skip — the DOM poll will capture when content is truly ready
-          // and the user's next save will have full Q+A content.
-          var metaAnswerEls = document.querySelectorAll('.ur-markdown');
-          var metaHasContent = false;
-          if (metaAnswerEls.length > 0) {
-            // Check the LAST element — the most recently generated answer.
-            // Previous answers are always populated. The timing issue is
-            // specifically that the LATEST .ur-markdown is still empty when
-            // graphql fires AI_RESPONSE_COMPLETE. Checking any prior element
-            // would pass the guard while the latest answer is still empty,
-            // producing a question bubble with no answer (title only).
-            var _lastMeta = metaAnswerEls[metaAnswerEls.length - 1];
-            metaHasContent = (_lastMeta.textContent || '').trim().length > 50;
-          }
-          if (metaHasContent) {
-            var metaThread = buildDomPairedThread({
-              combinedSelector: '[data-message-type="user"], .ur-markdown',
-              isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
-              questionInnerSelector: '.text-response',
-              answerInnerSelector: null
-            });
-            if (metaThread && metaThread.length > 50) {
-              fullThread = metaThread;
-              console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+          // NOTE: approach changed to match Claude's proven pattern.
+          // Claude uses window.__diaryCapture.turns (from network interceptor)
+          // + prompts. Meta AI has no network interceptor, but the DOM poll
+          // already settles content correctly into window.__diaryCapture.turns
+          // before showing the save button. buildDomPairedThread was re-querying
+          // the DOM at save time — a different moment from when the DOM poll
+          // confirmed stability — causing timing mismatches (empty .ur-markdown).
+          // Instead: use the already-settled captureTurns directly, same as
+          // Claude uses its already-captured historySeed + turns. The DOM poll
+          // (readDomResponse with [class*="assistant"] [class*="content"])
+          // already captures correct answer text and puts it in turns before
+          // the save button appears. Prompts come from getAllCapturedPrompts()
+          // which reads [data-message-type="user"] .text-response confirmed DOM.
+          var metaCaptureTurns = (window.__diaryCapture && window.__diaryCapture.turns) ? window.__diaryCapture.turns.filter(function(t) { return t.url === canonicalUrl(); }) : [];
+          var metaPrompts = getAllCapturedPrompts();
+          if (metaCaptureTurns.length > 0) {
+            var metaParts = [];
+            for (var _mci = 0; _mci < metaCaptureTurns.length; _mci++) {
+              if (metaPrompts[_mci]) metaParts.push(boldQuestion(metaPrompts[_mci].slice(0, 2000)));
+              metaParts.push(metaCaptureTurns[_mci].text.replace(/\n{3,}/g, '\n\n').trim());
             }
-          } else {
-            console.log('[Diary] Meta AI: .ur-markdown not yet populated — skipping buildDomPairedThread, DOM poll will capture when ready');
+            if (metaParts.length) {
+              fullThread = metaParts.join('\n\n');
+              console.log('[Diary] Meta AI using settled captureTurns, length:', fullThread.length);
+            }
           }
         }
         // Grok-specific override: same principle as Gemini/Perplexity/
