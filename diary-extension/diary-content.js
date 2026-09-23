@@ -1988,25 +1988,29 @@ function queryAllDeep(selector) {
         // simulation of a two-question conversation before wiring in
         // here.
         if (PROVIDER === 'meta') {
-          // Follows Perplexity's confirmed-working pattern exactly.
-          // captureTurns for Meta AI are cumulative DOM snapshots:
-          // turn1=A1, turn2=A1+A2, turn3=A1+A2+A3. Index-based pairing
-          // on cumulative snapshots produces duplicates. buildDomPairedThread
-          // reads the DOM at save time (fully rendered when user clicks)
-          // and interleaves correctly in document order.
-          // All three selectors confirmed from real DOM inspection:
-          // [data-message-type="user"] — outer user message container
-          // .text-response — inner question text span
-          // .ur-markdown — answer content div
-          var metaThread = buildDomPairedThread({
-            combinedSelector: '[data-message-type="user"], .ur-markdown',
-            isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
-            questionInnerSelector: '.text-response',
-            answerInnerSelector: null
-          });
-          if (metaThread && metaThread.length > 50) {
-            fullThread = metaThread;
-            console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+          // Claude-matching guard: only run buildDomPairedThread AFTER
+          // window.__diaryCapture.turns has been populated for this URL.
+          // Claude never reads DOM directly — it only builds content after
+          // the interceptor confirms turns are ready. For Meta AI, the DOM
+          // poll (captureTurns) is the equivalent confirmation that the DOM
+          // is stable and .ur-markdown elements are populated. Without this
+          // guard, buildDomPairedThread runs in 26-33ms (auto-save from
+          // graphql firing before React renders), finds empty .ur-markdown
+          // elements, and writes titles-only to diary_entries.content even
+          // though chat_sessions.messages correctly gets addedCount:2.
+          var metaConfirmedTurns = ((window.__diaryCapture && window.__diaryCapture.turns) || [])
+            .filter(function(t) { return t.url === canonicalUrl(); });
+          if (metaConfirmedTurns.length > 0) {
+            var metaThread = buildDomPairedThread({
+              combinedSelector: '[data-message-type="user"], .ur-markdown',
+              isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
+              questionInnerSelector: '.text-response',
+              answerInnerSelector: null
+            });
+            if (metaThread && metaThread.length > 50) {
+              fullThread = metaThread;
+              console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+            }
           }
         }
         // Grok-specific override: same principle as Gemini/Perplexity/
