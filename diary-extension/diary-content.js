@@ -2000,11 +2000,15 @@ function queryAllDeep(selector) {
           // and the user's next save will have full Q+A content.
           var metaAnswerEls = document.querySelectorAll('.ur-markdown');
           var metaHasContent = false;
-          for (var _mi = 0; _mi < metaAnswerEls.length; _mi++) {
-            if ((metaAnswerEls[_mi].textContent || '').trim().length > 50) {
-              metaHasContent = true;
-              break;
-            }
+          if (metaAnswerEls.length > 0) {
+            // Check the LAST element — the most recently generated answer.
+            // Previous answers are always populated. The timing issue is
+            // specifically that the LATEST .ur-markdown is still empty when
+            // graphql fires AI_RESPONSE_COMPLETE. Checking any prior element
+            // would pass the guard while the latest answer is still empty,
+            // producing a question bubble with no answer (title only).
+            var _lastMeta = metaAnswerEls[metaAnswerEls.length - 1];
+            metaHasContent = (_lastMeta.textContent || '').trim().length > 50;
           }
           if (metaHasContent) {
             var metaThread = buildDomPairedThread({
