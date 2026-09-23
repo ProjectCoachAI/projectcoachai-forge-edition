@@ -1904,8 +1904,16 @@ function queryAllDeep(selector) {
             // Any question asked after the last captured answer (e.g. its
             // response hasn't finished rendering/being captured yet) still
             // gets shown — better to display an unanswered question than
-            // silently drop it.
-            if (promptsShownCount < allPromptsFinal.length) {
+            // silently drop it. EXCEPTION: Meta AI — where graphql fires
+            // AI_RESPONSE_COMPLETE repeatedly before React renders the answer,
+            // the prompt listener captures Q3 immediately when typed but the
+            // answer turn isn't pushed until 2+ seconds later. Adding Q3 as
+            // a bare title here (with no answer) then saving it permanently
+            // causes the titles-only display confirmed live. Skip for Meta AI:
+            // the save button re-appears once the answer settles and turn3 is
+            // pushed, at which point promptsShownCount === allPromptsFinal.length
+            // and this block correctly adds nothing.
+            if (promptsShownCount < allPromptsFinal.length && PROVIDER !== 'meta') {
               allPromptsFinal.slice(promptsShownCount).forEach(function(p) { interleavedParts.push(boldQuestion(p.slice(0, 2000))); });
             }
             fullThread = interleavedParts.join('\n\n');

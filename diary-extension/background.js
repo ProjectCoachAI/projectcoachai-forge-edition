@@ -990,7 +990,20 @@ let data;
         let patchContent = msg.content;
         const looksPartial = existingContent && patchContent &&
           patchContent.length < existingContent.length &&
-          !patchContent.includes(existingContent.slice(0, 200));
+          (
+            !patchContent.includes(existingContent.slice(0, 200)) ||
+            // NOTE: prefix-truncation detection added — confirmed as the direct
+            // cause of Meta AI alternating wipeout behavior. When a race-condition
+            // auto-save fires before the latest answer settles, it sends content
+            // that is a PREFIX of what's already stored (Q1+A1+Q2+A2 vs stored
+            // Q1+A1+Q2+A2+Q3+A3). The old check incorrectly returned looksPartial=false
+            // because patchContent DOES include existingContent's beginning. This
+            // let the truncated content reach the backend, isCleanExtension failed
+            // (fewer questions), history_mismatch fired, auto-reset wiped Q3+A3.
+            // Fix: if existingContent starts with patchContent's own beginning,
+            // patchContent is a truncated prefix → treat as partial → keep existing.
+            existingContent.startsWith(patchContent.trim().slice(0, 200))
+          );
         if (looksPartial) {
           if (existingContent.includes(patchContent.trim())) {
             // Incoming content is already fully present in what's saved
