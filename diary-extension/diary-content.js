@@ -1988,15 +1988,37 @@ function queryAllDeep(selector) {
         // simulation of a two-question conversation before wiring in
         // here.
         if (PROVIDER === 'meta') {
-          var metaThread = buildDomPairedThread({
-            combinedSelector: '[data-message-type="user"], .ur-markdown',
-            isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
-            questionInnerSelector: '.text-response',
-            answerInnerSelector: null
-          });
-          if (metaThread && metaThread.length > 50) {
-            fullThread = metaThread;
-            console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+          // NOTE: guard added — confirmed via live log analysis that
+          // meta.ai/api/graphql fires AI_RESPONSE_COMPLETE BEFORE React
+          // has populated the .ur-markdown answer elements. buildDomPairedThread
+          // then finds empty answer elements and produces question bubbles
+          // only (titles), writing that as diary_entries.content. The DOM
+          // poll (MutationObserver) correctly captures full content later.
+          // Guard: only run buildDomPairedThread if at least one .ur-markdown
+          // element has real content (> 50 chars). If answers aren't populated
+          // yet, skip — the DOM poll will capture when content is truly ready
+          // and the user's next save will have full Q+A content.
+          var metaAnswerEls = document.querySelectorAll('.ur-markdown');
+          var metaHasContent = false;
+          for (var _mi = 0; _mi < metaAnswerEls.length; _mi++) {
+            if ((metaAnswerEls[_mi].textContent || '').trim().length > 50) {
+              metaHasContent = true;
+              break;
+            }
+          }
+          if (metaHasContent) {
+            var metaThread = buildDomPairedThread({
+              combinedSelector: '[data-message-type="user"], .ur-markdown',
+              isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
+              questionInnerSelector: '.text-response',
+              answerInnerSelector: null
+            });
+            if (metaThread && metaThread.length > 50) {
+              fullThread = metaThread;
+              console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+            }
+          } else {
+            console.log('[Diary] Meta AI: .ur-markdown not yet populated — skipping buildDomPairedThread, DOM poll will capture when ready');
           }
         }
         // Grok-specific override: same principle as Gemini/Perplexity/
