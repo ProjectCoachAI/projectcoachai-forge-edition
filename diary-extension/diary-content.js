@@ -2064,7 +2064,7 @@ function queryAllDeep(selector) {
             combinedSelector: '[data-message-author-role="user"], [data-message-part-type="answer"]',
             isQuestion: function(el) { return el.getAttribute('data-message-author-role') === 'user'; },
             questionInnerSelector: 'span.whitespace-pre-wrap',
-            answerInnerSelector: '.markdown-container-style'
+            answerInnerSelector: null
           });
           if (mistralThread && mistralThread.length > 50) {
             fullThread = mistralThread;
