@@ -2022,8 +2022,8 @@ function queryAllDeep(selector) {
           var grokThread = buildDomPairedThread({
             combinedSelector: '.message-bubble',
             isQuestion: function(el) { return el.getAttribute('data-testid') === 'user-message'; },
-            questionInnerSelector: null,
-            answerInnerSelector: null
+            questionInnerSelector: '.response-content-markdown',
+            answerInnerSelector: '.response-content-markdown'
           });
           logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: Grok DOM-paired thread built after', Date.now() - _saveStartedAt, 'ms (length:', grokThread ? grokThread.length : 0, ')');
           if (grokThread && grokThread.length > 50) {
@@ -3000,22 +3000,15 @@ function queryAllDeep(selector) {
       }
     },
     'grok.com': {
-      // NOTE: response tightened from '.message-bubble' to exclude
-      // elements carrying data-testid="user-message" — confirmed live via
-      // direct DOM inspection that Grok uses the SAME .message-bubble
-      // class for both the user's question and the assistant's answer,
-      // distinguished only by this attribute on the user's version. The
-      // old, unqualified selector was capturing both roles together,
-      // meaning readDomResponse() joined the user's own question text
-      // into what was supposed to be just the answer — explaining a real,
-      // confirmed duplication (the question appearing correctly bolded
-      // once from the real prompt-capture mechanism, then AGAIN as plain
-      // text, swept in by this over-broad selector). Verified via direct
-      // test against the real confirmed structure before applying.
-      response: '.message-bubble:not([data-testid="user-message"])',
-      prompt: '[data-testid="user-message"], .user-message',
+      // Confirmed from real DOM inspection:
+      // Answer: div[data-testid="assistant-message"].message-bubble →
+      //   .response-content-markdown (excludes .thinking-container "Worked for Xs")
+      // User: div[data-testid="user-message"].message-bubble
+      response: '[data-testid="assistant-message"] .response-content-markdown',
+      prompt: '[data-testid="user-message"]',
       clean: function(text) {
-        return text.replace(/\n{3,}/g, '\n\n').trim();
+        return text.replace(/Worked for \d+s\s*/g, '')
+                   .replace(/\n{3,}/g, '\n\n').trim();
       }
     },
     'www.meta.ai': {
