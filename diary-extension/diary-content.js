@@ -2061,10 +2061,10 @@ function queryAllDeep(selector) {
         // re-applied here unchanged from its original, verified form.
         if (PROVIDER === 'mistral') {
           var mistralThread = buildDomPairedThread({
-            combinedSelector: '.ms-auto span.whitespace-pre-wrap, [data-message-part-type="answer"]',
-            isQuestion: function(el) { return !el.hasAttribute('data-message-part-type'); },
+            combinedSelector: '[data-message-author-role="user"] span.whitespace-pre-wrap, [data-message-part-type="answer"]',
+            isQuestion: function(el) { return el.tagName === 'SPAN' && !el.hasAttribute('data-message-part-type'); },
             questionInnerSelector: null,
-            answerInnerSelector: null
+            answerInnerSelector: '.markdown-container-style'
           });
           if (mistralThread && mistralThread.length > 50) {
             fullThread = mistralThread;
