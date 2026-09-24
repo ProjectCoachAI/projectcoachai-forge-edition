@@ -349,7 +349,7 @@
             // combined multi-turn thread — a multi-question conversation
             // could have this leak at the end of ANY turn, not just the
             // very last one in the whole conversation.
-            if (text && PROVIDER === 'grok') {
+            if (text && window.location.hostname.includes('grok.com')) {
               text = text.replace(/\bWorked for \d+m? ?\d*s\b\n*/g, '');
               text = text.replace(/\n*\b\d+ sources?\b\s*$/g, '');
             }
@@ -368,7 +368,7 @@
             // gallery-grouping and rendering logic every other
             // provider's images already use, rather than a separate,
             // bespoke mechanism.
-            if (text && PROVIDER === 'meta') {
+            if (text && window.location.hostname.includes('meta.ai')) {
               var metaImgEls = Array.from(el.querySelectorAll('img[data-testid="ur-image-tile"]'));
               if (metaImgEls.length) {
                 var metaImgMarkdown = metaImgEls.map(function(img) {
