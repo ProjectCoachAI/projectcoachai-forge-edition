@@ -1814,30 +1814,16 @@ function queryAllDeep(selector) {
           // Extract the incremental new answer from each turn (diff from prev)
           // then pair with prompts[ci] exactly like Claude does.
           if (PROVIDER === 'meta') {
-            // Gemini-matching approach: buildDomPairedThread reads DOM at
-            // save time with confirmed selectors, same as buildGeminiPairedThread.
-            // Previous captureTurns-based approaches failed because:
-            // 1. Turns are not reliably cumulative (virtual scrolling)
-            // 2. Prompt listener misses Q2 when page loads mid-conversation
-            // 3. Length-based diff is fragile when Turndown output varies
-            //
-            // Guard: only run when .ur-markdown element count matches
-            // prompt count AND all elements have content. This ensures:
-            // - Every question has a settled, populated answer in the DOM
-            // - Early auto-saves from graphql (before rendering) are blocked
-            // - The DOM read produces correct Q+A pairs for all questions
-            //
-            // Confirmed selectors from real DOM inspection:
-            // [data-message-type="user"] — user message container
-            // .text-response — inner question text span
-            // .ur-markdown — answer content div
-            var metaPromptsForDom = getAllCapturedPrompts();
+            // Guard uses DOM counts directly — getAllCapturedPrompts() is
+            // unreliable (misses Q2 when page loads mid-conversation), causing
+            // count mismatch that blocks buildDomPairedThread entirely.
+            // Count user message elements from DOM: if user count = answer
+            // count, every question has a rendered answer → safe to proceed.
+            var metaUserEls = document.querySelectorAll('[data-message-type="user"]');
             var metaAnswerEls = document.querySelectorAll('.ur-markdown');
-            var metaAllReady = metaAnswerEls.length > 0 &&
-              metaAnswerEls.length === metaPromptsForDom.length &&
-              Array.from(metaAnswerEls).every(function(el) {
-                return (el.textContent || '').trim().length > 50;
-              });
+            var metaAllReady = metaUserEls.length > 0 &&
+              metaUserEls.length === metaAnswerEls.length &&
+              (metaAnswerEls[metaAnswerEls.length - 1].textContent || '').trim().length > 50;
             if (metaAllReady) {
               var metaThread = buildDomPairedThread({
                 combinedSelector: '[data-message-type="user"], .ur-markdown',
