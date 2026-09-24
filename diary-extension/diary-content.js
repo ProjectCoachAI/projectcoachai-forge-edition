@@ -1816,31 +1816,47 @@ function queryAllDeep(selector) {
           if (PROVIDER === 'meta') {
             var metaUserEls = document.querySelectorAll('[data-message-type="user"]');
             var metaAnswerEls = document.querySelectorAll('.ur-markdown');
-            // Meta AI may have more .ur-markdown elements than user messages
-            // (confirmed live: 2 user msgs, 3 answer elements — one extra intro element).
-            // Use user count as the truth. Take the last N answer elements where
-            // N = user message count, check that the last one has content.
             var metaN = metaUserEls.length;
-            var metaLastEl = metaAnswerEls.length >= metaN && metaN > 0 ? metaAnswerEls[metaAnswerEls.length - 1] : null;
+            var metaLastEl = metaAnswerEls.length > 0 ? metaAnswerEls[metaAnswerEls.length - 1] : null;
             var metaLastAnswerLen = metaLastEl ? (metaLastEl.textContent || '').trim().length : 0;
+            // Guard: at least as many answer elements as user messages, last has content.
+            // Meta AI renders multiple .ur-markdown per answer (intro + main answer),
+            // so answerEls >= userEls, not strictly equal.
             var metaAllReady = metaN > 0 && metaAnswerEls.length >= metaN && metaLastAnswerLen > 50;
-            logToBackgroundToo('[Diary DIAG] Meta AI guard: userEls=' + metaUserEls.length + ' answerEls=' + metaAnswerEls.length + ' lastAnswerLen=' + metaLastAnswerLen + ' ready=' + metaAllReady);
+            logToBackgroundToo('[Diary DIAG] Meta AI guard: userEls=' + metaN + ' answerEls=' + metaAnswerEls.length + ' lastAnswerLen=' + metaLastAnswerLen + ' ready=' + metaAllReady);
             if (metaAllReady) {
-              var metaThread = buildDomPairedThread({
-                combinedSelector: '[data-message-type="user"], .ur-markdown',
-                isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
-                questionInnerSelector: '.text-response',
-                answerInnerSelector: null
+              // Custom pairing: accumulate ALL .ur-markdown elements between two
+              // user messages as ONE combined answer. buildDomPairedThread only
+              // pairs the FIRST answer element per question, leaving subsequent
+              // elements (e.g. Meta AI's intro + main answer pattern) unpaired.
+              var metaAllEls = Array.from(document.querySelectorAll('[data-message-type="user"], .ur-markdown'));
+              var metaParts = [];
+              var metaCurQ = null;
+              var metaCurAParts = [];
+              metaAllEls.forEach(function(el) {
+                if (el.getAttribute('data-message-type') === 'user') {
+                  if (metaCurQ && metaCurAParts.length) {
+                    var aText = metaCurAParts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+                    if (aText.length > 50) metaParts.push(boldQuestion(metaCurQ) + '\n\n' + aText);
+                  }
+                  var qEl = el.querySelector('.text-response') || el;
+                  metaCurQ = (qEl.textContent || '').trim();
+                  metaCurAParts = [];
+                } else {
+                  var t = (el.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+                  if (t.length > 10) metaCurAParts.push(t);
+                }
               });
-              logToBackgroundToo('[Diary DIAG] Meta AI buildDomPairedThread: length=' + (metaThread ? metaThread.length : 'null') + ' preview=' + (metaThread || '').slice(0, 120));
-              if (metaThread && metaThread.length > 50) {
-                fullThread = metaThread;
-                logToBackgroundToo('[Diary DIAG] Meta AI fullThread SET from buildDomPairedThread');
-              } else {
-                logToBackgroundToo('[Diary DIAG] Meta AI buildDomPairedThread returned null/short — falling through to else-branch');
+              if (metaCurQ && metaCurAParts.length) {
+                var lastAText = metaCurAParts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+                if (lastAText.length > 50) metaParts.push(boldQuestion(metaCurQ) + '\n\n' + lastAText);
+              }
+              if (metaParts.length) {
+                fullThread = metaParts.join('\n\n');
+                logToBackgroundToo('[Diary DIAG] Meta AI custom pairing: ' + metaParts.length + ' pairs, length=' + fullThread.length + ' preview=' + fullThread.slice(0, 120));
               }
             } else {
-              logToBackgroundToo('[Diary DIAG] Meta AI guard FAILED — buildDomPairedThread skipped');
+              logToBackgroundToo('[Diary DIAG] Meta AI guard FAILED — skipped');
             }
           }
           // Sort by capture timestamp — confirmed live as a real, necessary
