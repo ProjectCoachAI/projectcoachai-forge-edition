@@ -109,33 +109,38 @@ Content: ${text}`
 //   described in category_audit.md's Phase 2 design (not built in this
 //   change — badge rendering is a separate, frontend-side follow-up)
 async function maybeRecategorizeForkedEntry(id, userEmail) {
-  console.log('[Category Audit DIAG] maybeRecategorizeForkedEntry ENTERED for id=' + id);
   const row = await db.query(
     'SELECT prompt, content, source, category, metadata FROM diary_entries WHERE id=$1 AND user_email=$2',
     [id, userEmail]
   );
-  if (!row.rows.length) { console.log('[Category Audit DIAG] id=' + id + ' — no row found, exiting'); return; }
+  if (!row.rows.length) return;
   const entry = row.rows[0];
   const meta = entry.metadata || {};
-  if (!meta.chatSessionId) { console.log('[Category Audit DIAG] id=' + id + ' — no chatSessionId, exiting'); return; } // never forked — Phase 2 only applies here
+  if (!meta.chatSessionId) return; // never forked — Phase 2 only applies here
   const seedCount = meta.nativeSeedMessageCount;
   const currentCount = meta.nativeMessageCount;
-  console.log('[Category Audit DIAG] id=' + id + ' seedCount=' + seedCount + ' currentCount=' + currentCount + ' currentCategory=' + entry.category);
-  if (typeof seedCount !== 'number' || typeof currentCount !== 'number') { console.log('[Category Audit DIAG] id=' + id + ' — seed/current not numeric, exiting'); return; } // can't compute growth, skip
-  if (currentCount - seedCount < 5) { console.log('[Category Audit DIAG] id=' + id + ' — growth ' + (currentCount - seedCount) + ' below threshold 5, exiting'); return; } // below threshold
+  if (typeof seedCount !== 'number' || typeof currentCount !== 'number') return; // can't compute growth, skip
+  if (currentCount - seedCount < 5) return; // below threshold
 
   // Avoid re-triggering on every subsequent save once already re-categorized
   // for this amount of growth — only fire again if the entry has grown by
   // another 5+ messages since the LAST auto-recategorization, not every
   // single sync after the first one crosses the threshold.
   const lastAutoAtCount = meta.categoryAutoUpdatedAtMessageCount;
-  if (typeof lastAutoAtCount === 'number' && currentCount - lastAutoAtCount < 5) { console.log('[Category Audit DIAG] id=' + id + ' — grown only ' + (currentCount - lastAutoAtCount) + ' since last auto-update, exiting'); return; }
+  if (typeof lastAutoAtCount === 'number' && currentCount - lastAutoAtCount < 5) return;
 
   const oldCategory = entry.category;
-  console.log('[Category Audit DIAG] id=' + id + ' — threshold met, calling autoCategorizeDiary...');
   const result = await autoCategorizeDiary(entry.prompt, entry.content, entry.source);
-  console.log('[Category Audit DIAG] id=' + id + ' — classifier returned: ' + JSON.stringify(result) + ' (old was: ' + oldCategory + ')');
-  if (!result || !result.category || result.category === oldCategory) { console.log('[Category Audit DIAG] id=' + id + ' — no category change, exiting'); return; } // no change, nothing to log or write
+  // Confirmed live (2026-09-24): this is the expected, common outcome —
+  // an entry whose topic hasn't genuinely drifted gets re-confirmed in
+  // its existing category, not changed. One quiet, permanent log line
+  // here (rather than the fuller diagnostic trace used to confirm this
+  // behavior originally) is enough for future monitoring without being
+  // noisy on every qualifying save.
+  if (!result || !result.category || result.category === oldCategory) {
+    console.log(`[Category Audit] entry ${id} re-checked at ${currentCount} messages — category confirmed unchanged (${oldCategory})`);
+    return;
+  }
 
   const newMeta = Object.assign({}, meta, {
     categoryAutoUpdatedAt: new Date().toISOString(),
@@ -1782,7 +1787,6 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // Only runs when this PATCH actually merged new content
     // (chatSessionSyncResult.merged && addedCount > 0) — no point
     // checking a threshold against a save that added nothing new.
-    console.log('[Category Audit DIAG] PATCH id=' + id + ' chatSessionSyncResult=' + JSON.stringify(chatSessionSyncResult));
     if (chatSessionSyncResult && chatSessionSyncResult.merged && chatSessionSyncResult.addedCount > 0) {
       maybeRecategorizeForkedEntry(id, req.userEmail).catch(function(e) {
         console.warn('[Category Audit] Phase 2 recategorization check failed:', e.message);
