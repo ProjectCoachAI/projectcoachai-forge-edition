@@ -1574,15 +1574,15 @@ function queryAllDeep(selector) {
       // unchanged.
       var turnCountForSync = null;
       if (PROVIDER === 'mistral') {
-        logToBackgroundToo('[Diary DIAG] === Mistral save clicked ===');
+        console.log('[Diary DIAG] === Mistral save clicked ===');
         if (window.__diaryCapture && window.__diaryCapture.turns) {
-          logToBackgroundToo('[Diary DIAG] turns count:', window.__diaryCapture.turns.length);
+          console.log('[Diary DIAG] turns count:', window.__diaryCapture.turns.length);
           window.__diaryCapture.turns.forEach(function(t, i) {
-            logToBackgroundToo('[Diary DIAG] turn', i, '| length:', t.text.length, '| promptCountAtCapture:', t.promptCountAtCapture, '| ts:', t.ts, '| preview:', t.text.slice(0, 60));
+            console.log('[Diary DIAG] turn', i, '| length:', t.text.length, '| promptCountAtCapture:', t.promptCountAtCapture, '| ts:', t.ts, '| preview:', t.text.slice(0, 60));
           });
         }
-        logToBackgroundToo('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
-        try { logToBackgroundToo('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { logToBackgroundToo('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
+        console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
+        try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
       }
       if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
       try {
@@ -1778,7 +1778,7 @@ function queryAllDeep(selector) {
             });
             if (captureTurns.length) {
               var prompts = PROVIDER_CONFIG._prompts || [];
-              logToBackgroundToo('[Diary DIAG] captureTurns.length:', captureTurns.length, '| prompts:', JSON.stringify(prompts));
+              console.log('[Diary DIAG] captureTurns.length:', captureTurns.length, '| prompts:', JSON.stringify(prompts));
               for (var ci = 0; ci < captureTurns.length; ci++) {
                 // The history endpoint can refetch mid-session (not just at page
                 // load), so historySeed may already contain turns that were also
@@ -1786,7 +1786,7 @@ function queryAllDeep(selector) {
                 // to avoid duplicating it.
                 var turnText = captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim();
                 var skippedBySeed = !!(seed && seed.text && turnText && seed.text.includes(turnText.slice(0, 200)));
-                logToBackgroundToo('[Diary DIAG] ci:', ci, '| prompts[ci]:', JSON.stringify(prompts[ci]), '| skippedBySeed:', skippedBySeed);
+                console.log('[Diary DIAG] ci:', ci, '| prompts[ci]:', JSON.stringify(prompts[ci]), '| skippedBySeed:', skippedBySeed);
                 if (skippedBySeed) {
                   continue;
                 }
@@ -1807,58 +1807,6 @@ function queryAllDeep(selector) {
             var curUrl = canonicalUrl();
             return t.url === curUrl || /\/new(\?|$)/.test(t.url);
           });
-          // Meta AI dedicated block — mirrors Claude's simple index pairing.
-          // Claude: each turn = ONE answer from streaming interceptor, paired
-          // directly with prompts[ci]. Meta AI has no interceptor so turns are
-          // cumulative DOM snapshots: T1=A1, T2=A1+A2, T3=A1+A2+A3.
-          // Extract the incremental new answer from each turn (diff from prev)
-          // then pair with prompts[ci] exactly like Claude does.
-          if (PROVIDER === 'meta') {
-            var metaUserEls = document.querySelectorAll('[data-message-type="user"]');
-            var metaAnswerEls = document.querySelectorAll('.ur-markdown');
-            var metaN = metaUserEls.length;
-            var metaLastEl = metaAnswerEls.length > 0 ? metaAnswerEls[metaAnswerEls.length - 1] : null;
-            var metaLastAnswerLen = metaLastEl ? (metaLastEl.textContent || '').trim().length : 0;
-            // Guard: at least as many answer elements as user messages, last has content.
-            // Meta AI renders multiple .ur-markdown per answer (intro + main answer),
-            // so answerEls >= userEls, not strictly equal.
-            var metaAllReady = metaN > 0 && metaAnswerEls.length >= metaN && metaLastAnswerLen > 50;
-            logToBackgroundToo('[Diary DIAG] Meta AI guard: userEls=' + metaN + ' answerEls=' + metaAnswerEls.length + ' lastAnswerLen=' + metaLastAnswerLen + ' ready=' + metaAllReady);
-            if (metaAllReady) {
-              // Custom pairing: accumulate ALL .ur-markdown elements between two
-              // user messages as ONE combined answer. buildDomPairedThread only
-              // pairs the FIRST answer element per question, leaving subsequent
-              // elements (e.g. Meta AI's intro + main answer pattern) unpaired.
-              var metaAllEls = Array.from(document.querySelectorAll('[data-message-type="user"], .ur-markdown'));
-              var metaParts = [];
-              var metaCurQ = null;
-              var metaCurAParts = [];
-              metaAllEls.forEach(function(el) {
-                if (el.getAttribute('data-message-type') === 'user') {
-                  if (metaCurQ && metaCurAParts.length) {
-                    var aText = metaCurAParts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
-                    if (aText.length > 50) metaParts.push(boldQuestion(metaCurQ) + '\n\n' + aText);
-                  }
-                  var qEl = el.querySelector('.text-response') || el;
-                  metaCurQ = (qEl.textContent || '').trim();
-                  metaCurAParts = [];
-                } else {
-                  var t = (el.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
-                  if (t.length > 10) metaCurAParts.push(t);
-                }
-              });
-              if (metaCurQ && metaCurAParts.length) {
-                var lastAText = metaCurAParts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
-                if (lastAText.length > 50) metaParts.push(boldQuestion(metaCurQ) + '\n\n' + lastAText);
-              }
-              if (metaParts.length) {
-                fullThread = metaParts.join('\n\n');
-                logToBackgroundToo('[Diary DIAG] Meta AI custom pairing: ' + metaParts.length + ' pairs, length=' + fullThread.length + ' preview=' + fullThread.slice(0, 120));
-              }
-            } else {
-              logToBackgroundToo('[Diary DIAG] Meta AI guard FAILED — skipped');
-            }
-          }
           // Sort by capture timestamp — confirmed live as a real, necessary
           // fix, not a defensive-only safeguard: when a tab is reused
           // across multiple, SEPARATE Sync attempts (rather than freshly
@@ -1956,16 +1904,8 @@ function queryAllDeep(selector) {
             // Any question asked after the last captured answer (e.g. its
             // response hasn't finished rendering/being captured yet) still
             // gets shown — better to display an unanswered question than
-            // silently drop it. EXCEPTION: Meta AI — where graphql fires
-            // AI_RESPONSE_COMPLETE repeatedly before React renders the answer,
-            // the prompt listener captures Q3 immediately when typed but the
-            // answer turn isn't pushed until 2+ seconds later. Adding Q3 as
-            // a bare title here (with no answer) then saving it permanently
-            // causes the titles-only display confirmed live. Skip for Meta AI:
-            // the save button re-appears once the answer settles and turn3 is
-            // pushed, at which point promptsShownCount === allPromptsFinal.length
-            // and this block correctly adds nothing.
-            if (promptsShownCount < allPromptsFinal.length && PROVIDER !== 'meta') {
+            // silently drop it.
+            if (promptsShownCount < allPromptsFinal.length) {
               allPromptsFinal.slice(promptsShownCount).forEach(function(p) { interleavedParts.push(boldQuestion(p.slice(0, 2000))); });
             }
             fullThread = interleavedParts.join('\n\n');
@@ -2047,6 +1987,18 @@ function queryAllDeep(selector) {
         // fallback, never regress below it. Verified via direct
         // simulation of a two-question conversation before wiring in
         // here.
+        if (PROVIDER === 'meta') {
+          var metaThread = buildDomPairedThread({
+            combinedSelector: '[data-message-type="user"], [data-testid="assistant-message"]',
+            isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
+            questionInnerSelector: '.text-response',
+            answerInnerSelector: '.ur-markdown'
+          });
+          if (metaThread && metaThread.length > 50) {
+            fullThread = metaThread;
+            console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+          }
+        }
         // Grok-specific override: same principle as Gemini/Perplexity/
         // Meta AI above. Confirmed live via diagnostic logging that the
         // counting-based capture system's "wait until the answer has
@@ -3067,7 +3019,7 @@ function queryAllDeep(selector) {
       }
     },
     'www.meta.ai': {
-      response: '.ur-markdown',
+      response: '[class*="assistant"] [class*="content"]',
       prompt: '[class*="user"] [class*="content"]',
       clean: function(text) {
         return text.replace(/Here\'s the map.*$/m, '')
@@ -3309,14 +3261,6 @@ function queryAllDeep(selector) {
       try {
         var md = '';
         if (typeof TurndownService !== 'undefined') {
-          // NOTE: always recreate the instance — the singleton cache
-          // (window.__diaryTurndownInstance) may have been created by
-          // buildDomPairedThread for Grok or another provider before the
-          // SVG-stripping and blockquote-simplification rules were added,
-          // meaning those rules would never be applied to Meta AI's content.
-          // Recreating ensures all rules including stripSvg and
-          // simplifyBlockquote are always present regardless of call order.
-          window.__diaryTurndownInstance = null;
           if (!window.__diaryTurndownInstance) {
             var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
             if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
@@ -3527,22 +3471,6 @@ function queryAllDeep(selector) {
                 if (!url || !label) return content;
                 return '[' + label + '](' + url + ')';
               }
-            });
-            // Strip SVG elements entirely — Turndown's default falls through
-            // to textContent for unknown SVG elements, which for Meta AI's
-            // citation pill icons produces garbage characters (SVG path data,
-            // clip-path ids, etc.) including the > > > > > chain confirmed
-            // live in Meta AI's converted answers.
-            svc.addRule('stripSvg', {
-              filter: 'svg',
-              replacement: function() { return ''; }
-            });
-            // Simplify blockquotes to plain content — Turndown's default
-            // adds '> ' prefix to every line, creating long > > > > > chains
-            // when Meta AI wraps callout/summary boxes in <blockquote>.
-            svc.addRule('simplifyBlockquote', {
-              filter: 'blockquote',
-              replacement: function(content) { return '\n\n' + content + '\n\n'; }
             });
             window.__diaryTurndownInstance = svc;
           }
