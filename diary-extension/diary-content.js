@@ -1820,20 +1820,39 @@ function queryAllDeep(selector) {
             for (var mi = 0; mi < captureTurns.length; mi++) {
               var currText = captureTurns[mi].text.replace(/\n{3,}/g, '\n\n').trim();
               var prevText = mi > 0 ? captureTurns[mi - 1].text.replace(/\n{3,}/g, '\n\n').trim() : '';
-              // Extract only the new portion: paragraphs in currText not in prevText
-              var currParas = currText.split(/\n{2,}/).map(function(p) { return p.trim(); }).filter(function(p) { return p.length >= 10; });
-              var prevParas = prevText ? prevText.split(/\n{2,}/).map(function(p) { return p.trim(); }) : [];
-              var newParas = currParas.filter(function(p) { return prevParas.indexOf(p) === -1; });
-              var newText = newParas.join('\n\n').trim();
-              if (!newText && mi === 0) newText = currText; // first turn has no prev
-              if (newText.length >= 10) {
+              var newText = '';
+              if (!prevText) {
+                // First turn — the whole text is new (like Claude's T1)
+                newText = currText;
+              } else if (currText.length > prevText.length) {
+                // Cumulative snapshot: T2 = T1 + A2. Find A2 by locating
+                // the first clean paragraph break after prevText.length.
+                // More robust than paragraph-level matching because Turndown
+                // may produce slightly different output for the same element
+                // on different captures (different instance state), causing
+                // exact paragraph matching to mis-identify A1 content as
+                // "new" in T2. Length-based extraction confirmed correct:
+                // Meta AI always appends new answers at the END of the DOM,
+                // so A2 always starts after T1's content in T2's text.
+                var approxStart = prevText.length;
+                // Search for paragraph break AT prevText.length — that's where
+                // T2's new content starts (T2 = T1 + '\n\n' + A2).
+                // Small tolerance for slight Turndown variation between captures.
+                var breakIdx = currText.indexOf('\n\n', approxStart);
+                if (breakIdx !== -1 && breakIdx < approxStart + 300) {
+                  newText = currText.slice(breakIdx + 2).trim();
+                } else {
+                  newText = currText.slice(approxStart).trim();
+                }
+              }
+              if (newText && newText.length >= 10) {
                 if (metaPrompts[mi]) metaParts.push(boldQuestion(metaPrompts[mi].slice(0, 2000)));
                 metaParts.push(newText);
               }
             }
             if (metaParts.length) {
               fullThread = metaParts.join('\n\n');
-              console.log('[Diary] Meta AI incremental pairing, turns:', captureTurns.length, 'prompts:', metaPrompts.length, fullThread.slice(0, 80));
+              console.log('[Diary] Meta AI length-based pairing, turns:', captureTurns.length, 'prompts:', metaPrompts.length, fullThread.slice(0, 80));
             }
           }
           // Sort by capture timestamp — confirmed live as a real, necessary
