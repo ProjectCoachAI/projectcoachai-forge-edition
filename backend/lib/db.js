@@ -349,6 +349,24 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_email, updated_at DESC);
 
+-- Category Audit Phase 1: logs every manual category correction a user
+-- makes via the "Move to category" feature. Purely additive — does not
+-- change any existing categorization or PATCH behavior. Exists so that
+-- corrections, which were previously discarded entirely at the moment
+-- of the plain column overwrite in PATCH /api/diary/:id, are preserved
+-- as real signal for future classifier improvement (Phase 3 taxonomy
+-- work) rather than being thrown away. See category_audit.md, Finding 3.
+CREATE TABLE IF NOT EXISTS category_corrections (
+  id            SERIAL PRIMARY KEY,
+  entry_id      INTEGER NOT NULL REFERENCES diary_entries(id) ON DELETE CASCADE,
+  user_email    TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  old_category  TEXT,
+  new_category  TEXT NOT NULL,
+  corrected_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_category_corrections_entry ON category_corrections(entry_id);
+CREATE INDEX IF NOT EXISTS idx_category_corrections_user ON category_corrections(user_email, corrected_at DESC);
+
 CREATE TABLE IF NOT EXISTS diary_entries (
   id             SERIAL PRIMARY KEY,
   user_email     TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,

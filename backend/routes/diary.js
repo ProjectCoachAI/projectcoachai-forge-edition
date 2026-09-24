@@ -1645,7 +1645,31 @@ router.patch('/:id', requireAuth, async (req, res) => {
         sets.push(`prompt=$${i++}`); params.push(prompt);
       }
     }
-    if (category !== undefined) { sets.push(`category=$${i++}`); params.push(category); }
+    if (category !== undefined) {
+      sets.push(`category=$${i++}`); params.push(category);
+      // Category Audit Phase 1: log this correction for future signal
+      // (see category_audit.md, Finding 3 — corrections were previously
+      // discarded entirely). Purely additive: fetches the entry's current
+      // category for comparison, and only logs when it's an actual manual
+      // change to a different value — not every PATCH that happens to
+      // include a category field unchanged. Wrapped so any failure here
+      // (missing table on an unmigrated environment, a transient DB
+      // hiccup, etc.) can never block or fail the real category update
+      // that follows; logging is best-effort observability, not a
+      // dependency of the feature itself.
+      try {
+        const oldCatRow = await db.query('SELECT category FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+        const oldCategory = oldCatRow.rows[0] ? oldCatRow.rows[0].category : null;
+        if (oldCategory !== category) {
+          await db.query(
+            'INSERT INTO category_corrections (entry_id, user_email, old_category, new_category) VALUES ($1, $2, $3, $4)',
+            [id, req.userEmail, oldCategory, category]
+          );
+        }
+      } catch (logErr) {
+        console.error('[Category Audit] correction logging failed (non-blocking):', logErr.message);
+      }
+    }
     if (decision_note !== undefined) { sets.push(`decision_note=$${i++}`); params.push(decision_note); }
     if (rating !== undefined) { sets.push(`rating=$${i++}`); params.push(rating); }
     if (is_favorite !== undefined) { sets.push(`is_favorite=$${i++}`); params.push(is_favorite); }
