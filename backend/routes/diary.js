@@ -80,6 +80,76 @@ Content: ${text}`
   });
 }
 
+// ── Category Audit Phase 2: re-categorization for forked entries ────────────
+// Checks whether a just-synced entry's native conversation has grown
+// enough since fork time to warrant re-running classification against
+// its current full content, rather than leaving the category frozen at
+// whatever the first ~1000 characters looked like at initial save (the
+// confirmed cause of the 26-point forked-vs-non-forked accuracy gap in
+// category_audit.md, Finding 2). Called fire-and-forget from the PATCH
+// handler, after the response has already been sent to the user.
+//
+// Threshold: flat +5 messages grown since fork (nativeMessageCount -
+// nativeSeedMessageCount >= 5). Deliberately simple for v1 — see the
+// call site's own comment for why a relative/proportional threshold
+// was deferred rather than built now.
+//
+// Re-categorization is NOT applied silently: given the audit's confirmed
+// classifier non-determinism (identical input produced two different
+// categories on two separate real save events), a re-run isn't
+// guaranteed to be "more correct" than the original, just possibly
+// different. Applying it silently risks a user noticing an unexplained
+// category flip and reasonably concluding the feature is buggy. Instead:
+// - the new category is written to diary_entries.category as normal
+// - a category_corrections row is logged with source='auto', distinct
+//   from source='manual' (the user's own "Move to category" corrections)
+//   so Phase 3's taxonomy work can tell the two signals apart
+// - metadata.categoryAutoUpdatedAt and .categoryPreviousValue are set,
+//   which the frontend uses to render the persistent, dismissible badge
+//   described in category_audit.md's Phase 2 design (not built in this
+//   change — badge rendering is a separate, frontend-side follow-up)
+async function maybeRecategorizeForkedEntry(id, userEmail) {
+  const row = await db.query(
+    'SELECT prompt, content, source, category, metadata FROM diary_entries WHERE id=$1 AND user_email=$2',
+    [id, userEmail]
+  );
+  if (!row.rows.length) return;
+  const entry = row.rows[0];
+  const meta = entry.metadata || {};
+  if (!meta.chatSessionId) return; // never forked — Phase 2 only applies here
+  const seedCount = meta.nativeSeedMessageCount;
+  const currentCount = meta.nativeMessageCount;
+  if (typeof seedCount !== 'number' || typeof currentCount !== 'number') return; // can't compute growth, skip
+  if (currentCount - seedCount < 5) return; // below threshold
+
+  // Avoid re-triggering on every subsequent save once already re-categorized
+  // for this amount of growth — only fire again if the entry has grown by
+  // another 5+ messages since the LAST auto-recategorization, not every
+  // single sync after the first one crosses the threshold.
+  const lastAutoAtCount = meta.categoryAutoUpdatedAtMessageCount;
+  if (typeof lastAutoAtCount === 'number' && currentCount - lastAutoAtCount < 5) return;
+
+  const oldCategory = entry.category;
+  const result = await autoCategorizeDiary(entry.prompt, entry.content, entry.source);
+  if (!result || !result.category || result.category === oldCategory) return; // no change, nothing to log or write
+
+  const newMeta = Object.assign({}, meta, {
+    categoryAutoUpdatedAt: new Date().toISOString(),
+    categoryPreviousValue: oldCategory,
+    categoryAutoUpdatedAtMessageCount: currentCount
+  });
+
+  await db.query(
+    'UPDATE diary_entries SET category=$1, metadata=$2 WHERE id=$3 AND user_email=$4',
+    [result.category, JSON.stringify(newMeta), id, userEmail]
+  );
+  await db.query(
+    'INSERT INTO category_corrections (entry_id, user_email, old_category, new_category, source) VALUES ($1, $2, $3, $4, $5)',
+    [id, userEmail, oldCategory, result.category, 'auto']
+  );
+  console.log(`[Category Audit] Phase 2 auto-recategorized entry ${id}: ${oldCategory} -> ${result.category} (grown to ${currentCount} messages, seed was ${seedCount})`);
+}
+
 // ── Priority 4 (revised): pending-capture adoption ──────────────────────────
 // See pending_attachment_captures' own comment in db.js for the full
 // design rationale. Called right before an entry is actually saved
@@ -1662,7 +1732,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
         const oldCategory = oldCatRow.rows[0] ? oldCatRow.rows[0].category : null;
         if (oldCategory !== category) {
           await db.query(
-            'INSERT INTO category_corrections (entry_id, user_email, old_category, new_category) VALUES ($1, $2, $3, $4)',
+            "INSERT INTO category_corrections (entry_id, user_email, old_category, new_category, source) VALUES ($1, $2, $3, $4, 'manual')",
             [id, req.userEmail, oldCategory, category]
           );
         }
@@ -1687,6 +1757,32 @@ router.patch('/:id', requireAuth, async (req, res) => {
     );
 
     res.json({ success: true, chatSessionSync: chatSessionSyncResult });
+
+    // Category Audit Phase 2: background re-categorization for forked
+    // entries that have grown substantially since their category was
+    // first frozen at initial save (see category_audit.md, Finding 2 —
+    // the confirmed 26-point accuracy gap between forked and non-forked
+    // entries). Fire-and-forget, following the same pattern already used
+    // by cleanupExpiredPendingCaptures() above: response already sent,
+    // so this adds zero latency to the user's actual save. Any failure
+    // here is caught and logged, never surfaced to the user or retried
+    // inline — this is best-effort background housekeeping, not a
+    // dependency of the save itself.
+    //
+    // Trigger: v1 uses a flat threshold (nativeMessageCount grown by 5+
+    // since nativeSeedMessageCount) rather than a relative/proportional
+    // one — deliberately simple to start, with the relative-threshold
+    // refinement flagged as a likely v2 once Phase 1's correction-log
+    // data shows whether drift actually concentrates in specific entry
+    // shapes (e.g., small-seed entries growing disproportionately).
+    // Only runs when this PATCH actually merged new content
+    // (chatSessionSyncResult.merged && addedCount > 0) — no point
+    // checking a threshold against a save that added nothing new.
+    if (chatSessionSyncResult && chatSessionSyncResult.merged && chatSessionSyncResult.addedCount > 0) {
+      maybeRecategorizeForkedEntry(id, req.userEmail).catch(function(e) {
+        console.warn('[Category Audit] Phase 2 recategorization check failed:', e.message);
+      });
+    }
 
     // Fire-and-forget — see computeAndStoreUnifiedContent's own comment
     // for the full context (the Artifacts brief's own flagged hard

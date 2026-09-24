@@ -366,6 +366,16 @@ CREATE TABLE IF NOT EXISTS category_corrections (
 );
 CREATE INDEX IF NOT EXISTS idx_category_corrections_entry ON category_corrections(entry_id);
 CREATE INDEX IF NOT EXISTS idx_category_corrections_user ON category_corrections(user_email, corrected_at DESC);
+-- Category Audit Phase 2: distinguishes a user's own manual correction
+-- (source='manual', the only kind Phase 1 could log) from an automatic
+-- background re-categorization of a grown forked entry (source='auto').
+-- Added via ALTER rather than only in the CREATE TABLE above because
+-- Phase 1 already shipped and this table already exists with real rows
+-- in production — CREATE TABLE IF NOT EXISTS alone would not add this
+-- column to that existing table. Defaults existing (pre-Phase-2) rows to
+-- 'manual', which is accurate: every row logged before this change came
+-- from the moveEntry() UI path, the only call site Phase 1 covered.
+ALTER TABLE category_corrections ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';
 
 CREATE TABLE IF NOT EXISTS diary_entries (
   id             SERIAL PRIMARY KEY,
