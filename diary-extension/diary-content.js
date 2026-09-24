@@ -1574,15 +1574,15 @@ function queryAllDeep(selector) {
       // unchanged.
       var turnCountForSync = null;
       if (PROVIDER === 'mistral') {
-        console.log('[Diary DIAG] === Mistral save clicked ===');
+        logToBackgroundToo('[Diary DIAG] === Mistral save clicked ===');
         if (window.__diaryCapture && window.__diaryCapture.turns) {
-          console.log('[Diary DIAG] turns count:', window.__diaryCapture.turns.length);
+          logToBackgroundToo('[Diary DIAG] turns count:', window.__diaryCapture.turns.length);
           window.__diaryCapture.turns.forEach(function(t, i) {
-            console.log('[Diary DIAG] turn', i, '| length:', t.text.length, '| promptCountAtCapture:', t.promptCountAtCapture, '| ts:', t.ts, '| preview:', t.text.slice(0, 60));
+            logToBackgroundToo('[Diary DIAG] turn', i, '| length:', t.text.length, '| promptCountAtCapture:', t.promptCountAtCapture, '| ts:', t.ts, '| preview:', t.text.slice(0, 60));
           });
         }
-        console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
-        try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
+        logToBackgroundToo('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
+        try { logToBackgroundToo('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { logToBackgroundToo('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
       }
       if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
       try {
@@ -1778,7 +1778,7 @@ function queryAllDeep(selector) {
             });
             if (captureTurns.length) {
               var prompts = PROVIDER_CONFIG._prompts || [];
-              console.log('[Diary DIAG] captureTurns.length:', captureTurns.length, '| prompts:', JSON.stringify(prompts));
+              logToBackgroundToo('[Diary DIAG] captureTurns.length:', captureTurns.length, '| prompts:', JSON.stringify(prompts));
               for (var ci = 0; ci < captureTurns.length; ci++) {
                 // The history endpoint can refetch mid-session (not just at page
                 // load), so historySeed may already contain turns that were also
@@ -1786,7 +1786,7 @@ function queryAllDeep(selector) {
                 // to avoid duplicating it.
                 var turnText = captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim();
                 var skippedBySeed = !!(seed && seed.text && turnText && seed.text.includes(turnText.slice(0, 200)));
-                console.log('[Diary DIAG] ci:', ci, '| prompts[ci]:', JSON.stringify(prompts[ci]), '| skippedBySeed:', skippedBySeed);
+                logToBackgroundToo('[Diary DIAG] ci:', ci, '| prompts[ci]:', JSON.stringify(prompts[ci]), '| skippedBySeed:', skippedBySeed);
                 if (skippedBySeed) {
                   continue;
                 }
@@ -1820,7 +1820,7 @@ function queryAllDeep(selector) {
             var metaAllReady = metaUserEls.length > 0 &&
               metaUserEls.length === metaAnswerEls.length &&
               metaLastAnswerLen > 50;
-            console.log('[Diary DIAG] Meta AI guard: userEls=' + metaUserEls.length + ' answerEls=' + metaAnswerEls.length + ' lastAnswerLen=' + metaLastAnswerLen + ' ready=' + metaAllReady);
+            logToBackgroundToo('[Diary DIAG] Meta AI guard: userEls=' + metaUserEls.length + ' answerEls=' + metaAnswerEls.length + ' lastAnswerLen=' + metaLastAnswerLen + ' ready=' + metaAllReady);
             if (metaAllReady) {
               var metaThread = buildDomPairedThread({
                 combinedSelector: '[data-message-type="user"], .ur-markdown',
@@ -1828,15 +1828,15 @@ function queryAllDeep(selector) {
                 questionInnerSelector: '.text-response',
                 answerInnerSelector: null
               });
-              console.log('[Diary DIAG] Meta AI buildDomPairedThread: length=' + (metaThread ? metaThread.length : 'null') + ' preview=' + (metaThread || '').slice(0, 120));
+              logToBackgroundToo('[Diary DIAG] Meta AI buildDomPairedThread: length=' + (metaThread ? metaThread.length : 'null') + ' preview=' + (metaThread || '').slice(0, 120));
               if (metaThread && metaThread.length > 50) {
                 fullThread = metaThread;
-                console.log('[Diary DIAG] Meta AI fullThread SET from buildDomPairedThread');
+                logToBackgroundToo('[Diary DIAG] Meta AI fullThread SET from buildDomPairedThread');
               } else {
-                console.log('[Diary DIAG] Meta AI buildDomPairedThread returned null/short — falling through to else-branch');
+                logToBackgroundToo('[Diary DIAG] Meta AI buildDomPairedThread returned null/short — falling through to else-branch');
               }
             } else {
-              console.log('[Diary DIAG] Meta AI guard FAILED — buildDomPairedThread skipped');
+              logToBackgroundToo('[Diary DIAG] Meta AI guard FAILED — buildDomPairedThread skipped');
             }
           }
           // Sort by capture timestamp — confirmed live as a real, necessary
