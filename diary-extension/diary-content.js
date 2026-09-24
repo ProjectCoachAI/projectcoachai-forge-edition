@@ -1814,16 +1814,13 @@ function queryAllDeep(selector) {
           // Extract the incremental new answer from each turn (diff from prev)
           // then pair with prompts[ci] exactly like Claude does.
           if (PROVIDER === 'meta') {
-            // Guard uses DOM counts directly — getAllCapturedPrompts() is
-            // unreliable (misses Q2 when page loads mid-conversation), causing
-            // count mismatch that blocks buildDomPairedThread entirely.
-            // Count user message elements from DOM: if user count = answer
-            // count, every question has a rendered answer → safe to proceed.
             var metaUserEls = document.querySelectorAll('[data-message-type="user"]');
             var metaAnswerEls = document.querySelectorAll('.ur-markdown');
+            var metaLastAnswerLen = metaAnswerEls.length > 0 ? (metaAnswerEls[metaAnswerEls.length - 1].textContent || '').trim().length : 0;
             var metaAllReady = metaUserEls.length > 0 &&
               metaUserEls.length === metaAnswerEls.length &&
-              (metaAnswerEls[metaAnswerEls.length - 1].textContent || '').trim().length > 50;
+              metaLastAnswerLen > 50;
+            console.log('[Diary DIAG] Meta AI guard: userEls=' + metaUserEls.length + ' answerEls=' + metaAnswerEls.length + ' lastAnswerLen=' + metaLastAnswerLen + ' ready=' + metaAllReady);
             if (metaAllReady) {
               var metaThread = buildDomPairedThread({
                 combinedSelector: '[data-message-type="user"], .ur-markdown',
@@ -1831,10 +1828,15 @@ function queryAllDeep(selector) {
                 questionInnerSelector: '.text-response',
                 answerInnerSelector: null
               });
+              console.log('[Diary DIAG] Meta AI buildDomPairedThread: length=' + (metaThread ? metaThread.length : 'null') + ' preview=' + (metaThread || '').slice(0, 120));
               if (metaThread && metaThread.length > 50) {
                 fullThread = metaThread;
-                console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+                console.log('[Diary DIAG] Meta AI fullThread SET from buildDomPairedThread');
+              } else {
+                console.log('[Diary DIAG] Meta AI buildDomPairedThread returned null/short — falling through to else-branch');
               }
+            } else {
+              console.log('[Diary DIAG] Meta AI guard FAILED — buildDomPairedThread skipped');
             }
           }
           // Sort by capture timestamp — confirmed live as a real, necessary
