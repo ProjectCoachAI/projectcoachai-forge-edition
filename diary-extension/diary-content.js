@@ -1989,10 +1989,10 @@ function queryAllDeep(selector) {
         // here.
         if (PROVIDER === 'meta') {
           var metaThread = buildDomPairedThread({
-            combinedSelector: '[data-message-type="user"], [data-testid="assistant-message"]',
+            combinedSelector: '[data-message-type="user"], .ur-markdown',
             isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
             questionInnerSelector: '.text-response',
-            answerInnerSelector: '.ur-markdown'
+            answerInnerSelector: null
           });
           if (metaThread && metaThread.length > 50) {
             fullThread = metaThread;
@@ -3012,8 +3012,11 @@ function queryAllDeep(selector) {
       }
     },
     'www.meta.ai': {
-      response: '[class*="assistant"] [class*="content"]',
-      prompt: '[class*="user"] [class*="content"]',
+      // Confirmed from real DOM inspection: answer content is in
+      // .ur-markdown (Meta AI's markdown renderer class). User message
+      // is [data-message-type="user"], question text in .text-response.
+      response: '.ur-markdown',
+      prompt: '[data-message-type="user"] .text-response',
       clean: function(text) {
         return text.replace(/Here\'s the map.*$/m, '')
                    .replace(/\n{3,}/g, '\n\n')
