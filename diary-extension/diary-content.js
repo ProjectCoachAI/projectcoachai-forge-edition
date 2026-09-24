@@ -1816,10 +1816,14 @@ function queryAllDeep(selector) {
           if (PROVIDER === 'meta') {
             var metaUserEls = document.querySelectorAll('[data-message-type="user"]');
             var metaAnswerEls = document.querySelectorAll('.ur-markdown');
-            var metaLastAnswerLen = metaAnswerEls.length > 0 ? (metaAnswerEls[metaAnswerEls.length - 1].textContent || '').trim().length : 0;
-            var metaAllReady = metaUserEls.length > 0 &&
-              metaUserEls.length === metaAnswerEls.length &&
-              metaLastAnswerLen > 50;
+            // Meta AI may have more .ur-markdown elements than user messages
+            // (confirmed live: 2 user msgs, 3 answer elements — one extra intro element).
+            // Use user count as the truth. Take the last N answer elements where
+            // N = user message count, check that the last one has content.
+            var metaN = metaUserEls.length;
+            var metaLastEl = metaAnswerEls.length >= metaN && metaN > 0 ? metaAnswerEls[metaAnswerEls.length - 1] : null;
+            var metaLastAnswerLen = metaLastEl ? (metaLastEl.textContent || '').trim().length : 0;
+            var metaAllReady = metaN > 0 && metaAnswerEls.length >= metaN && metaLastAnswerLen > 50;
             logToBackgroundToo('[Diary DIAG] Meta AI guard: userEls=' + metaUserEls.length + ' answerEls=' + metaAnswerEls.length + ' lastAnswerLen=' + metaLastAnswerLen + ' ready=' + metaAllReady);
             if (metaAllReady) {
               var metaThread = buildDomPairedThread({
