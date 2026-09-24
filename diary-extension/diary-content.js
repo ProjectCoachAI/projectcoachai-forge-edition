@@ -1813,46 +1813,42 @@ function queryAllDeep(selector) {
           // cumulative DOM snapshots: T1=A1, T2=A1+A2, T3=A1+A2+A3.
           // Extract the incremental new answer from each turn (diff from prev)
           // then pair with prompts[ci] exactly like Claude does.
-          if (PROVIDER === 'meta' && captureTurns.length) {
-            captureTurns.sort(function(a, b) { return a.ts - b.ts; });
-            var metaPrompts = getAllCapturedPrompts();
-            var metaParts = [];
-            for (var mi = 0; mi < captureTurns.length; mi++) {
-              var currText = captureTurns[mi].text.replace(/\n{3,}/g, '\n\n').trim();
-              var prevText = mi > 0 ? captureTurns[mi - 1].text.replace(/\n{3,}/g, '\n\n').trim() : '';
-              var newText = '';
-              if (!prevText) {
-                // First turn — the whole text is new (like Claude's T1)
-                newText = currText;
-              } else if (currText.length > prevText.length) {
-                // Cumulative snapshot: T2 = T1 + A2. Find A2 by locating
-                // the first clean paragraph break after prevText.length.
-                // More robust than paragraph-level matching because Turndown
-                // may produce slightly different output for the same element
-                // on different captures (different instance state), causing
-                // exact paragraph matching to mis-identify A1 content as
-                // "new" in T2. Length-based extraction confirmed correct:
-                // Meta AI always appends new answers at the END of the DOM,
-                // so A2 always starts after T1's content in T2's text.
-                var approxStart = prevText.length;
-                // Search for paragraph break AT prevText.length — that's where
-                // T2's new content starts (T2 = T1 + '\n\n' + A2).
-                // Small tolerance for slight Turndown variation between captures.
-                var breakIdx = currText.indexOf('\n\n', approxStart);
-                if (breakIdx !== -1 && breakIdx < approxStart + 300) {
-                  newText = currText.slice(breakIdx + 2).trim();
-                } else {
-                  newText = currText.slice(approxStart).trim();
-                }
+          if (PROVIDER === 'meta') {
+            // Gemini-matching approach: buildDomPairedThread reads DOM at
+            // save time with confirmed selectors, same as buildGeminiPairedThread.
+            // Previous captureTurns-based approaches failed because:
+            // 1. Turns are not reliably cumulative (virtual scrolling)
+            // 2. Prompt listener misses Q2 when page loads mid-conversation
+            // 3. Length-based diff is fragile when Turndown output varies
+            //
+            // Guard: only run when .ur-markdown element count matches
+            // prompt count AND all elements have content. This ensures:
+            // - Every question has a settled, populated answer in the DOM
+            // - Early auto-saves from graphql (before rendering) are blocked
+            // - The DOM read produces correct Q+A pairs for all questions
+            //
+            // Confirmed selectors from real DOM inspection:
+            // [data-message-type="user"] — user message container
+            // .text-response — inner question text span
+            // .ur-markdown — answer content div
+            var metaPromptsForDom = getAllCapturedPrompts();
+            var metaAnswerEls = document.querySelectorAll('.ur-markdown');
+            var metaAllReady = metaAnswerEls.length > 0 &&
+              metaAnswerEls.length === metaPromptsForDom.length &&
+              Array.from(metaAnswerEls).every(function(el) {
+                return (el.textContent || '').trim().length > 50;
+              });
+            if (metaAllReady) {
+              var metaThread = buildDomPairedThread({
+                combinedSelector: '[data-message-type="user"], .ur-markdown',
+                isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
+                questionInnerSelector: '.text-response',
+                answerInnerSelector: null
+              });
+              if (metaThread && metaThread.length > 50) {
+                fullThread = metaThread;
+                console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
               }
-              if (newText && newText.length >= 10) {
-                if (metaPrompts[mi]) metaParts.push(boldQuestion(metaPrompts[mi].slice(0, 2000)));
-                metaParts.push(newText);
-              }
-            }
-            if (metaParts.length) {
-              fullThread = metaParts.join('\n\n');
-              console.log('[Diary] Meta AI length-based pairing, turns:', captureTurns.length, 'prompts:', metaPrompts.length, fullThread.slice(0, 80));
             }
           }
           // Sort by capture timestamp — confirmed live as a real, necessary
