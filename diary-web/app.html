@@ -238,6 +238,16 @@
     .entry-snippet mark { background: rgba(193,125,60,0.22); color: inherit; border-radius: 2px; padding: 0 1px; }
     .entry-sub { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; font-size: 11px; color: #9E9890; overflow: hidden; margin-left: auto; }
     .entry-category { background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); padding: 1px 7px; border-radius: 20px; font-size: 10px; display: inline-block; width: 145px; text-align: center; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Category Audit Phase 2: persistent, low-intensity, dismissible
+       badge shown when an entry's category was changed automatically
+       (not by the user) after growing via Continue Conversation — see
+       category_audit.md Phase 2. Deliberately muted grey, not the
+       orange used for the category pill itself or any alert/warning
+       color, since this is routine background housekeeping the user
+       should be able to notice at their own pace, not urgent news. */
+    .entry-auto-cat-badge { background: rgba(158,152,144,0.12); color: #9E9890; border: 0.5px solid rgba(158,152,144,0.3); padding: 1px 7px; border-radius: 20px; font-size: 10px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .entry-auto-cat-badge button { background: none; border: none; color: #9E9890; cursor: pointer; padding: 0; margin: 0; line-height: 1; font-size: 12px; display: flex; align-items: center; }
+    .entry-auto-cat-badge button:hover { color: #6B6660; }
     .entry-source { display: inline-block; width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .entry-date { font-size: 11px; color: #9E9890; }
     .diary-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 1.5rem; }
@@ -1828,6 +1838,44 @@ function relativeTime(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
 }
 
+// Category Audit Phase 2: dismiss-state for the auto-recategorization
+// badge, keyed by "entryId:timestamp" so dismissing one auto-update
+// doesn't suppress a later, separate one on the same entry. Follows
+// this file's existing localStorage pattern (see e.g. diarySidebarCollapsed,
+// diaryFontScale) rather than introducing a new persistence mechanism.
+// Wrapped in try/catch throughout since localStorage can throw in some
+// browser privacy modes — a failure here should never break rendering,
+// just mean the badge doesn't stay dismissed across reloads.
+function getDismissedAutoCategoryBadges() {
+  try {
+    return JSON.parse(localStorage.getItem('dismissedAutoCategoryBadges') || '[]');
+  } catch (_e) { return []; }
+}
+function isAutoCategoryBadgeDismissed(entryId, timestamp) {
+  var key = entryId + ':' + timestamp;
+  return getDismissedAutoCategoryBadges().indexOf(key) !== -1;
+}
+function dismissAutoCategoryBadge(entryId, timestamp) {
+  var key = entryId + ':' + timestamp;
+  var list = getDismissedAutoCategoryBadges();
+  if (list.indexOf(key) === -1) list.push(key);
+  try { localStorage.setItem('dismissedAutoCategoryBadges', JSON.stringify(list)); } catch (_e) {}
+  // Re-render just this entry so the badge disappears immediately
+  // without a full list refresh — matches how other per-entry state
+  // changes (e.g. toggleSelect) already avoid a full re-render elsewhere
+  // in this file.
+  var cardEl = document.getElementById('entry-' + entryId);
+  var entryData = (allEntries || []).find(function(x) { return x.id === entryId; });
+  if (cardEl && entryData) {
+    var wasExpanded = cardEl.classList.contains('expanded');
+    cardEl.outerHTML = renderEntryCard(entryData);
+    if (wasExpanded) {
+      var newEl = document.getElementById('entry-' + entryId);
+      if (newEl) newEl.classList.add('expanded');
+    }
+  }
+}
+
 function renderEntryCard(e) {
   var icon = SOURCE_ICONS[e.source] || '📔';
   var _emeta = null;
@@ -1903,6 +1951,20 @@ function renderEntryCard(e) {
         '</div>' +
         '<div class="entry-sub">' +
           '<span class="entry-category">' + (e.category || 'General') + '</span>' +
+          // Category Audit Phase 2: shown only when metadata carries the
+          // fields Phase 2's backend sets (categoryAutoUpdatedAt,
+          // categoryPreviousValue) AND the user hasn't already dismissed
+          // it for this entry. Dismissal is per-entry, keyed by id plus
+          // the specific timestamp, so a LATER auto-update on the same
+          // entry (a second growth-triggered recategorization) shows its
+          // own fresh badge rather than staying permanently dismissed
+          // from the first one.
+          (_emeta && _emeta.categoryAutoUpdatedAt && _emeta.categoryPreviousValue && !isAutoCategoryBadgeDismissed(e.id, _emeta.categoryAutoUpdatedAt) ?
+            '<span class="entry-auto-cat-badge" title="Automatically updated from ' + escHtml(_emeta.categoryPreviousValue) + ' as this conversation grew">' +
+              'Category updated · was ' + escHtml(_emeta.categoryPreviousValue) +
+              '<button onclick="event.stopPropagation();dismissAutoCategoryBadge(' + e.id + ',\'' + _emeta.categoryAutoUpdatedAt + '\')" title="Dismiss">&times;</button>' +
+            '</span>'
+          : '') +
           '<span class="entry-source">' + sourceLabel + '</span>' +
           '<span class="entry-date">' + new Date(e.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ' · ' + date + '</span>' +
         '</div>' +
