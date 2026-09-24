@@ -1807,6 +1807,35 @@ function queryAllDeep(selector) {
             var curUrl = canonicalUrl();
             return t.url === curUrl || /\/new(\?|$)/.test(t.url);
           });
+          // Meta AI dedicated block — mirrors Claude's simple index pairing.
+          // Claude: each turn = ONE answer from streaming interceptor, paired
+          // directly with prompts[ci]. Meta AI has no interceptor so turns are
+          // cumulative DOM snapshots: T1=A1, T2=A1+A2, T3=A1+A2+A3.
+          // Extract the incremental new answer from each turn (diff from prev)
+          // then pair with prompts[ci] exactly like Claude does.
+          if (PROVIDER === 'meta' && captureTurns.length) {
+            captureTurns.sort(function(a, b) { return a.ts - b.ts; });
+            var metaPrompts = getAllCapturedPrompts();
+            var metaParts = [];
+            for (var mi = 0; mi < captureTurns.length; mi++) {
+              var currText = captureTurns[mi].text.replace(/\n{3,}/g, '\n\n').trim();
+              var prevText = mi > 0 ? captureTurns[mi - 1].text.replace(/\n{3,}/g, '\n\n').trim() : '';
+              // Extract only the new portion: paragraphs in currText not in prevText
+              var currParas = currText.split(/\n{2,}/).map(function(p) { return p.trim(); }).filter(function(p) { return p.length >= 10; });
+              var prevParas = prevText ? prevText.split(/\n{2,}/).map(function(p) { return p.trim(); }) : [];
+              var newParas = currParas.filter(function(p) { return prevParas.indexOf(p) === -1; });
+              var newText = newParas.join('\n\n').trim();
+              if (!newText && mi === 0) newText = currText; // first turn has no prev
+              if (newText.length >= 10) {
+                if (metaPrompts[mi]) metaParts.push(boldQuestion(metaPrompts[mi].slice(0, 2000)));
+                metaParts.push(newText);
+              }
+            }
+            if (metaParts.length) {
+              fullThread = metaParts.join('\n\n');
+              console.log('[Diary] Meta AI incremental pairing, turns:', captureTurns.length, 'prompts:', metaPrompts.length, fullThread.slice(0, 80));
+            }
+          }
           // Sort by capture timestamp — confirmed live as a real, necessary
           // fix, not a defensive-only safeguard: when a tab is reused
           // across multiple, SEPARATE Sync attempts (rather than freshly
@@ -3257,6 +3286,14 @@ function queryAllDeep(selector) {
       try {
         var md = '';
         if (typeof TurndownService !== 'undefined') {
+          // NOTE: always recreate the instance — the singleton cache
+          // (window.__diaryTurndownInstance) may have been created by
+          // buildDomPairedThread for Grok or another provider before the
+          // SVG-stripping and blockquote-simplification rules were added,
+          // meaning those rules would never be applied to Meta AI's content.
+          // Recreating ensures all rules including stripSvg and
+          // simplifyBlockquote are always present regardless of call order.
+          window.__diaryTurndownInstance = null;
           if (!window.__diaryTurndownInstance) {
             var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
             if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
@@ -3467,6 +3504,22 @@ function queryAllDeep(selector) {
                 if (!url || !label) return content;
                 return '[' + label + '](' + url + ')';
               }
+            });
+            // Strip SVG elements entirely — Turndown's default falls through
+            // to textContent for unknown SVG elements, which for Meta AI's
+            // citation pill icons produces garbage characters (SVG path data,
+            // clip-path ids, etc.) including the > > > > > chain confirmed
+            // live in Meta AI's converted answers.
+            svc.addRule('stripSvg', {
+              filter: 'svg',
+              replacement: function() { return ''; }
+            });
+            // Simplify blockquotes to plain content — Turndown's default
+            // adds '> ' prefix to every line, creating long > > > > > chains
+            // when Meta AI wraps callout/summary boxes in <blockquote>.
+            svc.addRule('simplifyBlockquote', {
+              filter: 'blockquote',
+              replacement: function(content) { return '\n\n' + content + '\n\n'; }
             });
             window.__diaryTurndownInstance = svc;
           }
