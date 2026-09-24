@@ -2061,9 +2061,9 @@ function queryAllDeep(selector) {
         // re-applied here unchanged from its original, verified form.
         if (PROVIDER === 'mistral') {
           var mistralThread = buildDomPairedThread({
-            combinedSelector: '[data-message-author-role="user"] span.whitespace-pre-wrap, [data-message-part-type="answer"]',
-            isQuestion: function(el) { return el.tagName === 'SPAN' && !el.hasAttribute('data-message-part-type'); },
-            questionInnerSelector: null,
+            combinedSelector: '[data-message-author-role="user"], [data-message-part-type="answer"]',
+            isQuestion: function(el) { return el.getAttribute('data-message-author-role') === 'user'; },
+            questionInnerSelector: 'span.whitespace-pre-wrap',
             answerInnerSelector: '.markdown-container-style'
           });
           if (mistralThread && mistralThread.length > 50) {
