@@ -813,40 +813,40 @@
           }
         }
       }
-      // Confirmed live via a real, reported case: the ENTIRE captured
-      // sequence (every question and answer) repeated back to back,
-      // producing a Diary entry with the full Q/A exchange duplicated
-      // twice — not just one repeated turn, which the consecutive-
-      // question dedup above already guards against. This is a
-      // genuinely different failure mode: the existing dedup only ever
-      // catches the SAME question immediately repeated with nothing in
-      // between (lastQuestionText resets the moment a real answer is
-      // seen), so it cannot catch a full thread appearing twice with
-      // real content between the two copies. A real conversation never
-      // legitimately repeats its entire Q/A sequence identically, so
-      // this is safe to detect and truncate. Deliberately placed in
-      // this shared function (not Mistral-specific) since Perplexity,
-      // Meta AI, and Grok all call this same function and could
-      // plausibly hit the same underlying DOM-level cause (most likely
-      // the page genuinely rendering two copies of the conversation
-      // elements — e.g. a hidden/visible duplicate for animation,
-      // or a responsive-layout duplicate tree). Verified via direct
-      // simulation against four cases before applying here: the exact
-      // reported repeated-whole-thread case, a normal non-repeated
-      // conversation (confirmed untouched), an odd-length result
-      // (left untouched — can't cleanly halve), and a genuine,
-      // deliberate repeat of the same question with a DIFFERENT real
-      // answer the second time (confirmed NOT treated as a duplicate,
-      // since the two halves aren't actually identical).
-      if (parts.length >= 4 && parts.length % 2 === 0) {
-        var half = parts.length / 2;
-        var firstHalf = parts.slice(0, half);
-        var secondHalf = parts.slice(half);
-        if (firstHalf.every(function(p, i) { return p === secondHalf[i]; })) {
-          console.log('[Diary] buildDomPairedThread: whole captured thread was duplicated end-to-end — truncated to the first copy.');
-          parts = firstHalf;
+      // Confirmed (via the DOM audit that led to Grok, Perplexity, and
+      // Meta AI originally sharing one function): these providers' pages
+      // can genuinely render duplicate DOM nodes for the same real
+      // content — a hidden/visible duplicate for animation, or a
+      // responsive-layout duplicate tree — something Gemini's page does
+      // not do, which is why Gemini's own function (buildGeminiPairedThread)
+      // needs no such handling at all.
+      //
+      // REPLACED the previous all-or-nothing "does the whole parts array
+      // split cleanly into two identical halves" check with a simple,
+      // general exact-string dedup instead, on direct instruction to get
+      // as close to Gemini's plain, unconditional join as possible. The
+      // previous check only ever caught one exact shape of duplication
+      // (the ENTIRE thread doubled end-to-end, with an even total part
+      // count) — a scattered or partial duplication (e.g. only some
+      // middle turns duplicated, not the whole thread as one clean
+      // block) would never trigger it, silently letting real duplicate
+      // content through. A plain dedup-by-exact-match, keeping only the
+      // first occurrence of any exact string and preserving original
+      // order otherwise, catches both the old clean-whole-thread case
+      // AND any partial/scattered duplication, with less special-case
+      // logic than before — a real question legitimately asked twice
+      // with a DIFFERENT real answer the second time is untouched,
+      // since the two occurrences are not exact-string duplicates of
+      // each other.
+      var seenParts = {};
+      var dedupedParts = [];
+      for (var pi = 0; pi < parts.length; pi++) {
+        if (!seenParts[parts[pi]]) {
+          seenParts[parts[pi]] = true;
+          dedupedParts.push(parts[pi]);
         }
       }
+      parts = dedupedParts;
       return parts.length ? parts.join('\n\n') : null;
     } catch (e) {
       console.error('[Diary] buildGrokPairedThread failed, falling back:', e);
