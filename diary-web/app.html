@@ -599,7 +599,7 @@
     </div>
     <div class="sidebar-divider"></div>
     <div class="cat-item" onclick="toggleFavoriteFilter()" id="favorite-toggle"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"/></svg>Favorites</span><span class="cat-count" id="favorite-count">0</span></div>
-    <div class="cat-item" onclick="toggleArchivedFilter()" id="archived-toggle"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.375 4.5A1.125 1.125 0 0 0 2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125h17.25a1.125 1.125 0 0 0 1.125-1.125v-1.5A1.125 1.125 0 0 0 20.625 4.5H3.375ZM3.75 9.75v9a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-9h-16.5Zm6 1.5h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5Z"/></svg>Archived</span></div>
+    <div class="cat-item" onclick="toggleArchivedFilter()" id="archived-toggle"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.375 4.5A1.125 1.125 0 0 0 2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125h17.25a1.125 1.125 0 0 0 1.125-1.125v-1.5A1.125 1.125 0 0 0 20.625 4.5H3.375ZM3.75 9.75v9a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-9h-16.5Zm6 1.5h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5Z"/></svg>Archived</span><span class="cat-count" id="archived-count">0</span></div>
     <div class="sidebar-divider"></div>
     <div class="sidebar-title">Source</div>
     <div id="sourceList">
@@ -1436,6 +1436,7 @@ async function loadCategories() {
     var total = cats.reduce(function(s, c) { return s + parseInt(c.count); }, 0);
     document.getElementById('cat-all-count').textContent = total;
     loadFavoriteCount(total);
+    loadArchivedCount();
     var countText = total + ' saved insight' + (total !== 1 ? 's' : '');
     if (activeSource !== 'all' || activeCategory !== 'all' || activeDateFrom || activeDateTo) {
       var filters = [];
@@ -1501,6 +1502,20 @@ async function loadFavoriteCount(grandTotal) {
       var diff = Math.max(0, (grandTotal || 0) - favCount);
       diffEl.textContent = favCount + ' favorited · ' + diff + ' not yet favorited';
     }
+  } catch(_) {}
+}
+
+// Archiving: mirrors loadFavoriteCount's core pattern (fetch with
+// limit=1, read the server-computed total, not the returned rows).
+// No diff-counter equivalent needed here — there's no
+// "archivedDiffCounter" element in the UI the way favorites has one.
+async function loadArchivedCount() {
+  try {
+    var r = await Forge.request('GET', '/api/diary?archived=true&limit=1');
+    if (!r.ok) return;
+    var archCount = (r.data.pagination && r.data.pagination.total) || 0;
+    var archEl = document.getElementById('archived-count');
+    if (archEl) archEl.textContent = archCount;
   } catch(_) {}
 }
 
