@@ -571,7 +571,7 @@ router.get('/usage', requireAuth, async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { category, source, date_from, date_to, tz, favorite, limit = 25, offset = 0 } = req.query;
+    const { category, source, date_from, date_to, tz, favorite, archived, limit = 25, offset = 0 } = req.query;
     const pageLimit = Math.min(parseInt(limit) || 25, 100);
     const pageOffset = Math.max(parseInt(offset) || 0, 0);
 
@@ -588,6 +588,17 @@ router.get('/', requireAuth, async (req, res) => {
     if (category && category !== 'all') { params.push(category); whereSql += ` AND category = $${params.length}`; }
     if (source && source !== 'all')     { params.push(source);   whereSql += ` AND source = $${params.length}`; }
     if (favorite === 'true') { whereSql += ` AND is_favorite = true`; }
+    // Archiving: default behavior EXCLUDES archived entries — mirrors how
+    // archiving works in mail/note apps generally (archived = out of the
+    // way by default, not deleted). ?archived=true shows ONLY archived
+    // entries (the "Archived" view). ?archived=all disables this filter
+    // entirely, showing everything regardless of archived state — useful
+    // for search, which should probably still find archived content.
+    if (archived === 'true') {
+      whereSql += ` AND is_archived = true`;
+    } else if (archived !== 'all') {
+      whereSql += ` AND (is_archived = false OR is_archived IS NULL)`;
+    }
     // NOTE: date range added — the plain browse endpoint (this one, used
     // by loadDiary()) previously had no date filtering at all, even
     // though the search endpoint does — meaning the date-range sidebar
@@ -620,7 +631,7 @@ router.get('/', requireAuth, async (req, res) => {
     // recently-updated ones now correctly float to the top, without
     // touching the displayed original date anywhere.
     const sql = `SELECT id, source, title, prompt, content, document_text,
-                        conversation, decision_note, category, tags, metadata, rating, is_favorite, conversation_count, open_count, created_at, updated_at, artifacts
+                        conversation, decision_note, category, tags, metadata, rating, is_favorite, is_archived, archived_at, conversation_count, open_count, created_at, updated_at, artifacts
                  FROM diary_entries${whereSql}
                  ORDER BY COALESCE(updated_at, created_at) DESC
                  LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
@@ -1565,7 +1576,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // real scenarios (category-only, decision_note-only, a full content
     // re-save, and an empty body correctly signaling 400) before
     // implementing here.
-    const { content, metadata, prompt, category, decision_note, rating, is_favorite, turnCount } = req.body;
+    const { content, metadata, prompt, category, decision_note, rating, is_favorite, is_archived, turnCount } = req.body;
 
     const sets = [];
     const params = [];
@@ -1752,6 +1763,15 @@ router.patch('/:id', requireAuth, async (req, res) => {
     if (decision_note !== undefined) { sets.push(`decision_note=$${i++}`); params.push(decision_note); }
     if (rating !== undefined) { sets.push(`rating=$${i++}`); params.push(rating); }
     if (is_favorite !== undefined) { sets.push(`is_favorite=$${i++}`); params.push(is_favorite); }
+    if (is_archived !== undefined) {
+      sets.push(`is_archived=$${i++}`); params.push(is_archived);
+      // archived_at set on archive, cleared on unarchive — so the
+      // timestamp always reflects the most recent archive action, and
+      // is NULL for anything that isn't currently archived, avoiding a
+      // stale "archived_at" surviving an unarchive/re-archive cycle
+      // with a misleadingly old date.
+      sets.push(`archived_at=$${i++}`); params.push(is_archived ? new Date().toISOString() : null);
+    }
 
     if (!sets.length) return res.status(400).json({ success: false, error: 'No fields to update' });
     sets.push('updated_at=NOW()');

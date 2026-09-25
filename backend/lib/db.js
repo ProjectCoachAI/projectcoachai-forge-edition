@@ -1726,9 +1726,19 @@ async function migrateDiary() {
     "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}'",
     "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS search_text TEXT",
     "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT false",
+    // Archiving — mirrors is_favorite exactly: simple boolean, default
+    // false (nothing is archived until a user explicitly archives it),
+    // with an archived_at timestamp alongside it so the UI can show
+    // "archived 3 days ago" if wanted later, without needing a separate
+    // migration for that later. Excluded from the default entry list
+    // via the existing WHERE-clause pattern (see the /api/diary GET
+    // handler), included only when explicitly requested via ?archived=true.
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false",
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ",
     "CREATE INDEX IF NOT EXISTS idx_diary_category ON diary_entries(user_email, category)",
     "CREATE INDEX IF NOT EXISTS idx_diary_source ON diary_entries(user_email, source)",
     "CREATE INDEX IF NOT EXISTS idx_diary_favorite ON diary_entries(user_email, is_favorite)",
+    "CREATE INDEX IF NOT EXISTS idx_diary_archived ON diary_entries(user_email, is_archived)",
     // Circle-back item #4 — chat_sessions previously had no way at all
     // to distinguish a session created via Diary's own Continue
     // Conversation flow from one created via Forge's own, separate
