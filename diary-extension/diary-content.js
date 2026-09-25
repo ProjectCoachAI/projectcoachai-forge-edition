@@ -2082,23 +2082,33 @@ function queryAllDeep(selector) {
         // shared else-branch mergeSeen logic that caused real pairing
         // bugs for both Grok and Mistral before they got dedicated blocks.
         if (PROVIDER === 'deepseek') {
-          // DIAG: checking hypothesis that DeepSeek's ds-virtual-list
-          // unmounts older messages from the DOM as the conversation
-          // grows (same class of issue as Gemini's virtual scrolling),
-          // which would mean buildDomPairedThread only ever sees whatever
-          // is currently mounted, not the full history.
+          // DIAG: checking two hypotheses together —
+          // (1) DeepSeek's ds-virtual-list unmounts older messages as
+          //     the conversation grows (same class of issue as Gemini's
+          //     virtual scrolling)
+          // (2) fullThread is ALREADY populated by the else-branch
+          //     mergeSeen logic above (using the separate, possibly-stale
+          //     window.__diaryCapture.turns cache) before this block
+          //     even runs — and if buildDomPairedThread's fresh DOM read
+          //     comes back short (e.g. because of #1), the length>50
+          //     check silently keeps that stale prior value instead,
+          //     which would exactly explain "reclicking with no new
+          //     content fixes it" (DOM settles/more mounts by then).
           var deepseekUserCount = document.querySelectorAll('.fbb737a4').length;
           var deepseekAnswerCount = document.querySelectorAll('.ds-markdown').length;
-          logToBackgroundToo('[Diary DIAG] DeepSeek DOM counts at save time: userEls(.fbb737a4)=' + deepseekUserCount + ' answerEls(.ds-markdown)=' + deepseekAnswerCount);
+          logToBackgroundToo('[Diary DIAG] DeepSeek DOM counts at save time: userEls(.fbb737a4)=' + deepseekUserCount + ' answerEls(.ds-markdown)=' + deepseekAnswerCount + ' | fullThread BEFORE this block, length=' + (fullThread ? fullThread.length : 0) + ' preview=' + (fullThread || '').slice(0,80));
           var deepseekThread = buildDomPairedThread({
             combinedSelector: '.fbb737a4, .ds-markdown',
             isQuestion: function(el) { return el.classList.contains('fbb737a4'); },
             questionInnerSelector: null,
             answerInnerSelector: null
           });
+          logToBackgroundToo('[Diary DIAG] DeepSeek buildDomPairedThread result: length=' + (deepseekThread ? deepseekThread.length : 'null/empty') + ' preview=' + (deepseekThread || '').slice(0,80));
           if (deepseekThread && deepseekThread.length > 50) {
             fullThread = deepseekThread;
             console.log('[Diary] DeepSeek DOM-paired thread used, length:', fullThread.length);
+          } else {
+            logToBackgroundToo('[Diary DIAG] DeepSeek buildDomPairedThread REJECTED (too short/empty) — keeping whatever fullThread already was from the else-branch above');
           }
         }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
