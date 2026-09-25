@@ -2432,7 +2432,40 @@ function queryAllDeep(selector) {
     // (Mistral, DeepSeek) — both reliable, but neither instantaneous.
     window.__diaryPerformSave = performSaveToDiary;
 
-    btn.onclick = () => performSaveToDiary(btn);
+    btn.onclick = () => {
+      // Confirmed as a real, direct gap: TRIGGER_SYNC_SAVE (the automatic
+      // background Sync retry path) already checks and sets
+      // window.__diarySyncAttemptInProgress before calling
+      // performSaveToDiary(), specifically to prevent "real, fast,
+      // overlapping concurrent calls" (see that handler's own comment —
+      // already identified once before as the cause of confirmed data
+      // corruption). This manual click handler had NO such check at all,
+      // meaning a manual click landing while an automatic retry was still
+      // in-flight could run performSaveToDiary() concurrently with it —
+      // both reading/writing the same shared page-level state
+      // (fullThread, live DOM reads) at once. This is the actual root
+      // cause of "the more I save, the more bizarre it gets" on
+      // DeepSeek: each manual click carried a real chance of colliding
+      // with an in-flight automatic sync attempt, and DeepSeek's slower,
+      // virtualized-list DOM widened that collision window compared to
+      // other providers. Fixed by reusing the EXACT SAME lock and
+      // staleness window as TRIGGER_SYNC_SAVE, rather than introducing a
+      // second, parallel locking mechanism.
+      var LOCK_STALE_MS_CLICK = 12000;
+      if (window.__diarySyncAttemptInProgress && (Date.now() - (window.__diarySyncAttemptStartedAt || 0)) < LOCK_STALE_MS_CLICK) {
+        console.log('[Diary Sync DIAG] manual click ignored — a sync attempt is already in progress on this tab (age:', Date.now() - window.__diarySyncAttemptStartedAt, 'ms)');
+        return;
+      }
+      var myClickToken = Date.now() + '_' + Math.random();
+      window.__diarySyncAttemptInProgress = true;
+      window.__diarySyncAttemptStartedAt = Date.now();
+      window.__diarySyncAttemptToken = myClickToken;
+      performSaveToDiary(btn).finally(function() {
+        if (window.__diarySyncAttemptToken === myClickToken) {
+          window.__diarySyncAttemptInProgress = false;
+        }
+      });
+    };
 
     document.body.appendChild(btn);
     // NOTE: no auto-removal timeout here. injectSaveDiaryButton() already
