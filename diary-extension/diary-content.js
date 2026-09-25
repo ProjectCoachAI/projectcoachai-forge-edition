@@ -1568,12 +1568,30 @@ function queryAllDeep(selector) {
       // proceeding, with a hard cap so a stuck/never-clearing flag
       // (e.g. from a code path that doesn't reach its own clear point)
       // can never block a save indefinitely.
+      //
+      // FIXED: the hard cap was a single fixed 6000ms applied to every
+      // provider — but confirmed via direct comparison against
+      // DOM_POLL_CEILING (the actual poll's own governing limit,
+      // defined further below): hasThinkingPhase providers (grok,
+      // mistral) can legitimately poll for up to 45 attempts at ~1s
+      // each, up to 45 seconds — meaning this wait gave up and
+      // proceeded to read captureTurns mid-write on almost every Grok
+      // save, since the vast majority of real saves take longer than
+      // 6 seconds. This made the entire protection this wait was built
+      // to provide essentially inactive for exactly the providers most
+      // likely to need it — Gemini (hasThinkingPhase false, ceiling 8,
+      // ~8s max) was always safely inside the old 6s-ish window and
+      // never showed this problem, which is the direct comparison
+      // signal that led here. Computed the same way DOM_POLL_CEILING
+      // itself is, with a fixed buffer beyond the poll's own maximum
+      // possible duration, so the two can never drift apart again.
+      var _pollWaitCapMs = (PROVIDER === 'grok' || PROVIDER === 'mistral') ? 50000 : 8000;
       var _pollWaitStart = Date.now();
-      while (window.__diaryDomPollActive && (Date.now() - _pollWaitStart) < 6000) {
+      while (window.__diaryDomPollActive && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
         await new Promise(function(r) { setTimeout(r, 150); });
       }
       if (window.__diaryDomPollActive) {
-        console.log('[Diary Sync DIAG] performSaveToDiary: proceeding despite still-active poll flag after 6000ms wait — treating as stuck rather than blocking indefinitely');
+        console.log('[Diary Sync DIAG] performSaveToDiary: proceeding despite still-active poll flag after', _pollWaitCapMs, 'ms wait — treating as stuck rather than blocking indefinitely');
       }
       // Real timing data — see the matching instrumentation added in
       // background.js's own SAVE_TO_DIARY handler for the full
@@ -2471,7 +2489,26 @@ function queryAllDeep(selector) {
       // other providers. Fixed by reusing the EXACT SAME lock and
       // staleness window as TRIGGER_SYNC_SAVE, rather than introducing a
       // second, parallel locking mechanism.
-      var LOCK_STALE_MS_CLICK = 12000;
+      // FIXED: the staleness window was a single fixed 12000ms applied
+      // to every provider — but the underlying DOM settle-poll this
+      // lock is meant to cover can legitimately run far longer than
+      // that for some providers. Confirmed via direct comparison:
+      // hasThinkingPhase (grok, mistral) sets DOM_POLL_CEILING to 45
+      // attempts at ~1s each — up to 45 seconds — while the lock
+      // considered itself stale and released after only 12. This meant
+      // a second click landing between 12s and 45s after a genuinely
+      // still-in-progress Grok save would incorrectly bypass the lock
+      // entirely and start a SECOND concurrent save, racing the first
+      // one that was still legitimately running — reintroducing the
+      // exact race condition this lock was built to prevent, but only
+      // for providers whose poll cycle exceeds the old fixed window.
+      // Gemini (hasThinkingPhase false, ceiling 8, ~8s max) was always
+      // safely inside the old 12s window, which is why this symptom
+      // never appeared there. Now computed the same way
+      // DOM_POLL_CEILING itself is, so the two can never drift apart
+      // again — plus a fixed buffer for the network round-trip and
+      // internal work that happens after the poll itself completes.
+      var LOCK_STALE_MS_CLICK = (PROVIDER === 'grok' || PROVIDER === 'mistral') ? 50000 : 12000;
       if (window.__diarySyncAttemptInProgress && (Date.now() - (window.__diarySyncAttemptStartedAt || 0)) < LOCK_STALE_MS_CLICK) {
         console.log('[Diary Sync DIAG] manual click ignored — a sync attempt is already in progress on this tab (age:', Date.now() - window.__diarySyncAttemptStartedAt, 'ms)');
         return;
