@@ -2045,11 +2045,27 @@ function queryAllDeep(selector) {
         // clean text). Verified via direct simulation of a two-question
         // conversation before wiring in here.
         if (PROVIDER === 'grok') {
+          // REVERTED to the confirmed-stable Aug 28 configuration
+          // (commit bba9c35), found via direct git-history comparison
+          // after live symptoms persisted through multiple other fix
+          // attempts tonight. The specific inner selectors added during
+          // this session's DOM audit ('.response-content-markdown' for
+          // both question and answer) looked like a precision
+          // improvement, but are structurally more fragile than the
+          // original null/null configuration: if that specific inner
+          // element doesn't match at the exact moment of a read (any
+          // transient render state), aEls comes back completely empty
+          // and the turn silently produces nothing. The original
+          // configuration always reads the full '.message-bubble' as a
+          // single unit — it can never come back empty — and relies on
+          // the existing, already-proven regex below to strip the
+          // "Worked for Xs" / "N sources" widget-text leak afterward,
+          // rather than trying to exclude it via selector narrowing.
           var grokThread = buildDomPairedThread({
             combinedSelector: '.message-bubble',
             isQuestion: function(el) { return el.getAttribute('data-testid') === 'user-message'; },
-            questionInnerSelector: '.response-content-markdown',
-            answerInnerSelector: '.response-content-markdown'
+            questionInnerSelector: null,
+            answerInnerSelector: null
           });
           logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: Grok DOM-paired thread built after', Date.now() - _saveStartedAt, 'ms (length:', grokThread ? grokThread.length : 0, ')');
           if (grokThread && grokThread.length > 50) {
