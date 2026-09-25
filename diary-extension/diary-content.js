@@ -2071,47 +2071,25 @@ function queryAllDeep(selector) {
             console.log('[Diary] Mistral DOM-paired thread used, length:', fullThread.length);
           }
         }
-        // DeepSeek-specific: confirmed from real DOM inspection.
-        // User message: .fbb737a4 (obfuscated CSS-module class) — this
-        // is the ONLY confirmed user-message selector; DeepSeek's DOM
-        // has no data-testid attribute on user messages (unlike Grok/
-        // Mistral). Answer: .ds-markdown, also confirmed correct — this
-        // matches the existing DOM_SELECTORS['chat.deepseek.com'].response
-        // value, which was already right; only buildDomPairedThread was
-        // missing for this provider, meaning it fell through to the
-        // shared else-branch mergeSeen logic that caused real pairing
-        // bugs for both Grok and Mistral before they got dedicated blocks.
-        if (PROVIDER === 'deepseek') {
-          // FIX (was diagnostic-only): buildDomPairedThread does a fresh,
-          // live DOM read. fullThread may already be populated at this
-          // point by the else-branch above, which uses a SEPARATE,
-          // possibly-stale cache (window.__diaryCapture.turns, built
-          // earlier by captureDomTurn on page load / SPA nav). The old
-          // `length > 50` threshold meant a short-but-genuinely-current
-          // fresh read could lose to a longer-but-stale cached one —
-          // confirmed live as the actual cause of "works on save 1,
-          // wipes the label on save 2, reclicking fixes it" (DOM had
-          // more mounted by the time of the reclick, producing a longer
-          // fresh read that then passed the old threshold and finally
-          // overwrote the stale value).
-          //
-          // Fix: the fresh read wins whenever it produces ANY real
-          // content (not just >50 chars) — a live DOM read, however
-          // short, is definitionally more current than a separately-
-          // cached snapshot from a different capture system. Only an
-          // empty/failed fresh read (selector matched nothing at all)
-          // falls through to the else-branch's value.
-          var deepseekThread = buildDomPairedThread({
-            combinedSelector: '.fbb737a4, .ds-markdown',
-            isQuestion: function(el) { return el.classList.contains('fbb737a4'); },
-            questionInnerSelector: null,
-            answerInnerSelector: null
-          });
-          if (deepseekThread && deepseekThread.trim().length > 0) {
-            fullThread = deepseekThread;
-            console.log('[Diary] DeepSeek DOM-paired thread used, length:', fullThread.length);
-          }
-        }
+        // DeepSeek intentionally has NO buildDomPairedThread block.
+        // Confirmed via git history (commit 216e88c, 2026-08-11): DeepSeek's
+        // DOM recycles nodes rather than appending new ones — a real,
+        // specifically-tested finding (element count confirmed constant
+        // before/after scrolling, ruling out simple virtualization;
+        // individual per-turn captures confirmed correct AT THE TIME they
+        // were taken, but a later single-snapshot read lost earlier
+        // content). The else-branch's mergeSeen logic below was built
+        // specifically to survive this: it merges every STORED historical
+        // snapshot (each one correct at its own capture time), deduped by
+        // paragraph, rather than trusting any single fresh DOM read taken
+        // at save time — which a node-recycling DOM cannot reliably
+        // provide. A buildDomPairedThread block was added here earlier
+        // today and made to unconditionally override this proven logic
+        // whenever it returned any content at all — which defeated the
+        // exact protection this design already had, and was the real
+        // cause of "works once, breaks/wipes on the next save, reclicking
+        // sometimes fixes it, gets worse over time" reported live.
+        // Removed rather than patched further.
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
         // per turn, then read the clipboard — this has been 100% clean in
         // every manual test tonight (no PUA-artifact stripping needed, no
