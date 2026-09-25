@@ -1043,9 +1043,15 @@ router.get('/search', requireAuth, async (req, res) => {
 // ── GET /api/diary/categories — get category counts for sidebar ───────────────
 router.get('/categories', requireAuth, async (req, res) => {
   try {
+    // Archiving fix: exclude archived entries from sidebar category
+    // counts, matching the main list endpoint's default behavior.
+    // Without this, an archived entry still inflated its category's
+    // count even though it's hidden from the default list view —
+    // confirmed as a real, introduced side effect when archiving
+    // shipped, not a pre-existing issue.
     const r = await db.query(
       `SELECT category, COUNT(*) as count FROM diary_entries
-       WHERE user_email = $1 GROUP BY category ORDER BY count DESC`,
+       WHERE user_email = $1 AND (is_archived = false OR is_archived IS NULL) GROUP BY category ORDER BY count DESC`,
       [req.userEmail]
     );
     res.json({ success: true, categories: r.rows });
