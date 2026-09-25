@@ -2082,6 +2082,14 @@ function queryAllDeep(selector) {
         // shared else-branch mergeSeen logic that caused real pairing
         // bugs for both Grok and Mistral before they got dedicated blocks.
         if (PROVIDER === 'deepseek') {
+          // DIAG: checking hypothesis that DeepSeek's ds-virtual-list
+          // unmounts older messages from the DOM as the conversation
+          // grows (same class of issue as Gemini's virtual scrolling),
+          // which would mean buildDomPairedThread only ever sees whatever
+          // is currently mounted, not the full history.
+          var deepseekUserCount = document.querySelectorAll('.fbb737a4').length;
+          var deepseekAnswerCount = document.querySelectorAll('.ds-markdown').length;
+          logToBackgroundToo('[Diary DIAG] DeepSeek DOM counts at save time: userEls(.fbb737a4)=' + deepseekUserCount + ' answerEls(.ds-markdown)=' + deepseekAnswerCount);
           var deepseekThread = buildDomPairedThread({
             combinedSelector: '.fbb737a4, .ds-markdown',
             isQuestion: function(el) { return el.classList.contains('fbb737a4'); },
