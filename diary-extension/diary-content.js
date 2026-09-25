@@ -2071,6 +2071,28 @@ function queryAllDeep(selector) {
             console.log('[Diary] Mistral DOM-paired thread used, length:', fullThread.length);
           }
         }
+        // DeepSeek-specific: confirmed from real DOM inspection.
+        // User message: .fbb737a4 (obfuscated CSS-module class) — this
+        // is the ONLY confirmed user-message selector; DeepSeek's DOM
+        // has no data-testid attribute on user messages (unlike Grok/
+        // Mistral). Answer: .ds-markdown, also confirmed correct — this
+        // matches the existing DOM_SELECTORS['chat.deepseek.com'].response
+        // value, which was already right; only buildDomPairedThread was
+        // missing for this provider, meaning it fell through to the
+        // shared else-branch mergeSeen logic that caused real pairing
+        // bugs for both Grok and Mistral before they got dedicated blocks.
+        if (PROVIDER === 'deepseek') {
+          var deepseekThread = buildDomPairedThread({
+            combinedSelector: '.fbb737a4, .ds-markdown',
+            isQuestion: function(el) { return el.classList.contains('fbb737a4'); },
+            questionInnerSelector: null,
+            answerInnerSelector: null
+          });
+          if (deepseekThread && deepseekThread.length > 50) {
+            fullThread = deepseekThread;
+            console.log('[Diary] DeepSeek DOM-paired thread used, length:', fullThread.length);
+          }
+        }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
         // per turn, then read the clipboard — this has been 100% clean in
         // every manual test tonight (no PUA-artifact stripping needed, no
