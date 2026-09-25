@@ -466,32 +466,22 @@
       var els = document.querySelectorAll(opts.combinedSelector);
       if (!els.length) return null;
       var parts = [];
-      // Tracks the most recently pushed QUESTION text specifically (not
-      // just "the last thing pushed") — confirmed live as a real,
-      // reproduced bug on Meta AI: the same first question appeared
-      // twice, back to back, in an otherwise clean capture. A
-      // transient DOM state (e.g. React briefly rendering both an
-      // optimistic and a settled copy of the same message during a
-      // re-render) can make querySelectorAll genuinely return two
-      // separate nodes for what's really one question. A real
-      // conversation never legitimately asks the exact same question
-      // twice in a row with nothing in between, so skipping an
-      // immediate repeat is safe and can't drop genuine content.
-      var lastQuestionText = null;
+      // Simplified to match buildGeminiPairedThread's exact shape, on
+      // direct instruction, after the previous dedup layers (consecutive-
+      // question tracking, then whole-thread duplicate detection, then
+      // exact-string dedup) each addressed a real, confirmed symptom in
+      // isolation but the underlying problem persisted regardless — no
+      // amount of dedup logic added here has fully resolved it. Gemini's
+      // function has never needed any dedup at all and has never shown
+      // these symptoms; trusting the same plain, unconditional approach
+      // here instead of continuing to add protective logic on this side.
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (opts.isQuestion(el)) {
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText && qText === lastQuestionText) continue;
-          if (qText) { parts.push(window.boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
+          if (qText) parts.push(window.boldQuestion(qText.slice(0, 2000)));
         } else {
-          // Reset the consecutive-question tracker the moment a real
-          // answer is seen — the dedup above must only ever catch a
-          // question immediately repeated with NOTHING in between, not
-          // a genuine, deliberate repeat where the user asked the same
-          // thing twice with a real answer given in between.
-          lastQuestionText = null;
           // NOTE: querySelectorAll instead of querySelector — confirmed
           // live via diagnostic logging that a single Meta AI answer
           // turn can contain MULTIPLE separate .ur-markdown blocks (2 in
@@ -813,40 +803,15 @@
           }
         }
       }
-      // Confirmed (via the DOM audit that led to Grok, Perplexity, and
-      // Meta AI originally sharing one function): these providers' pages
-      // can genuinely render duplicate DOM nodes for the same real
-      // content — a hidden/visible duplicate for animation, or a
-      // responsive-layout duplicate tree — something Gemini's page does
-      // not do, which is why Gemini's own function (buildGeminiPairedThread)
-      // needs no such handling at all.
-      //
-      // REPLACED the previous all-or-nothing "does the whole parts array
-      // split cleanly into two identical halves" check with a simple,
-      // general exact-string dedup instead, on direct instruction to get
-      // as close to Gemini's plain, unconditional join as possible. The
-      // previous check only ever caught one exact shape of duplication
-      // (the ENTIRE thread doubled end-to-end, with an even total part
-      // count) — a scattered or partial duplication (e.g. only some
-      // middle turns duplicated, not the whole thread as one clean
-      // block) would never trigger it, silently letting real duplicate
-      // content through. A plain dedup-by-exact-match, keeping only the
-      // first occurrence of any exact string and preserving original
-      // order otherwise, catches both the old clean-whole-thread case
-      // AND any partial/scattered duplication, with less special-case
-      // logic than before — a real question legitimately asked twice
-      // with a DIFFERENT real answer the second time is untouched,
-      // since the two occurrences are not exact-string duplicates of
-      // each other.
-      var seenParts = {};
-      var dedupedParts = [];
-      for (var pi = 0; pi < parts.length; pi++) {
-        if (!seenParts[parts[pi]]) {
-          seenParts[parts[pi]] = true;
-          dedupedParts.push(parts[pi]);
-        }
-      }
-      parts = dedupedParts;
+      // No dedup step here at all — matching buildGeminiPairedThread's
+      // exact shape, on direct instruction, after multiple prior dedup
+      // approaches (consecutive-question tracking, whole-thread
+      // duplicate detection, exact-string dedup) each addressed a real,
+      // confirmed symptom in isolation without fully resolving the
+      // underlying problem. Gemini's function has never needed any
+      // dedup and has never shown these symptoms — trusting confirmed
+      // selectors and a plain, unconditional walk-and-join instead of
+      // continuing to add protective logic on this side.
       return parts.length ? parts.join('\n\n') : null;
     } catch (e) {
       console.error('[Diary] buildGrokPairedThread failed, falling back:', e);
