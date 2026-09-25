@@ -648,6 +648,7 @@
     <div class="bulk-bar" id="bulkBar">
       <span class="bulk-bar-count" id="bulkCount">0 selected</span>
       <button class="bulk-btn bulk-btn-favorite" id="bulkFavoriteBtn" onclick="bulkFavorite()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"/></svg>Add to favorites</button>
+      <button class="bulk-btn bulk-btn-favorite" id="bulkArchiveBtn" onclick="bulkArchive()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>Archive</button>
       <button class="bulk-btn bulk-btn-delete" onclick="bulkDelete()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>Delete selected</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear selection</button>
     </div>
@@ -3775,6 +3776,20 @@ function updateBulkBar() {
     favBtn.textContent = allFavorited ? '\u2605 Remove from favorites' : '\u2b50 Add to favorites';
     favBtn._removeMode = allFavorited;
   }
+  // Archiving: mirrors the favorite bulk-toggle logic exactly — a mixed
+  // selection defaults to "Archive" (not ambiguous partial-unarchive),
+  // only switches to "Unarchive" when every selected entry is already
+  // archived.
+  var archBulkBtn = document.getElementById('bulkArchiveBtn');
+  if (archBulkBtn) {
+    var allEntries2 = window._diaryEntries || [];
+    var selectedEntries2 = Array.from(selectedIds).map(function(id) {
+      return allEntries2.find(function(x) { return x.id === id; });
+    }).filter(Boolean);
+    var allArchived = n > 0 && selectedEntries2.length === n && selectedEntries2.every(function(e) { return e.is_archived; });
+    archBulkBtn.textContent = allArchived ? 'Unarchive' : 'Archive';
+    archBulkBtn._removeMode = allArchived;
+  }
 }
 window.updateBulkBar = updateBulkBar;
 
@@ -3813,6 +3828,36 @@ async function bulkFavorite() {
   await loadDiary();
   showTopToast(failed ? (n - failed) + ' ' + verbPast + ', ' + failed + ' failed' : n + ' entr' + (n === 1 ? 'y' : 'ies') + ' ' + verbPast + ' ' + prep + ' favorites', failed > 0);
 }
+
+// Archiving: mirrors bulkFavorite exactly, including its toggle behavior
+// via _removeMode set by updateBulkBar(). One difference: since
+// archiving (unlike favoriting) can remove entries from the currently
+// active view, this also clears the selection AND reloads via loadDiary()
+// same as favorite does — no extra handling needed here since loadDiary()
+// already re-fetches against whatever filter is currently active,
+// which will naturally no longer include newly-archived entries if the
+// default (non-archived) view is showing.
+async function bulkArchive() {
+  var n = selectedIds.size;
+  if (!n) return;
+  var ids = Array.from(selectedIds);
+  var failed = 0;
+  var archBtn = document.getElementById('bulkArchiveBtn');
+  var removing = archBtn && archBtn._removeMode;
+  var verb = removing ? 'Unarchiving' : 'Archiving';
+  var verbPast = removing ? 'unarchived' : 'archived';
+  showTopToast(verb + ' ' + n + ' entr' + (n === 1 ? 'y' : 'ies') + '...', false, true);
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var r = await Forge.request('PATCH', '/api/diary/' + ids[i], { is_archived: !removing });
+      if (!r.ok) failed++;
+    } catch(_) { failed++; }
+  }
+  clearSelection();
+  await loadDiary();
+  showTopToast(failed ? (n - failed) + ' ' + verbPast + ', ' + failed + ' failed' : n + ' entr' + (n === 1 ? 'y' : 'ies') + ' ' + verbPast, failed > 0);
+}
+window.bulkArchive = bulkArchive;
 window.bulkFavorite = bulkFavorite;
 
 async function bulkDelete() {
