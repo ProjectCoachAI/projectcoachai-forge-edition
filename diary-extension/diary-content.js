@@ -1549,6 +1549,32 @@ function queryAllDeep(selector) {
     // all), every btn.* reference below is now guarded so it's simply
     // skipped rather than throwing on a missing element.
     async function performSaveToDiary(btn) {
+      // Confirmed real race condition, reported live and reproduced:
+      // two separate background mechanisms (_domPollCheck's repeating
+      // 1s-interval poll, and a separate one-shot 3s-delayed capture)
+      // both write directly into window.__diaryCapture.turns — the same
+      // array this function reads from below — with NO coordination
+      // between either of them and a user's Save click. If a click
+      // landed while one of those was mid-cycle, this function could
+      // read captureTurns either just before a legitimate new turn was
+      // pushed (producing a bare title with no answer yet) or genuinely
+      // interleaved with a partial/mid-recycling DOM read (producing
+      // reordered or corrupted output) — matching exactly the "two
+      // questions positioned at the end, one with no text" symptom
+      // reported live on DeepSeek even after waiting a reasonable time
+      // between the answer appearing and clicking Save.
+      //
+      // Fix: wait for window.__diaryDomPollActive to clear before
+      // proceeding, with a hard cap so a stuck/never-clearing flag
+      // (e.g. from a code path that doesn't reach its own clear point)
+      // can never block a save indefinitely.
+      var _pollWaitStart = Date.now();
+      while (window.__diaryDomPollActive && (Date.now() - _pollWaitStart) < 6000) {
+        await new Promise(function(r) { setTimeout(r, 150); });
+      }
+      if (window.__diaryDomPollActive) {
+        console.log('[Diary Sync DIAG] performSaveToDiary: proceeding despite still-active poll flag after 6000ms wait — treating as stuck rather than blocking indefinitely');
+      }
       // Real timing data — see the matching instrumentation added in
       // background.js's own SAVE_TO_DIARY handler for the full
       // rationale: a real, live Grok sync log showed 9593ms for a
@@ -3884,6 +3910,13 @@ function queryAllDeep(selector) {
     // Replaced with position-based tagging at the actual push site below
     // (turns.length + 1), which is immune to timing entirely.
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
+    // This is a genuinely SEPARATE, one-shot capture path from the main
+    // _domPollCheck loop below — both write into the same
+    // window.__diaryCapture.turns array with no coordination between
+    // them at all, confirmed as a real race condition (see
+    // window.__diaryDomPollActive's introduction below for the full
+    // rationale). Marking this one active too, for the same reason.
+    window.__diaryDomPollActive = true;
     _domSettleTimer = setTimeout(function() {
       var text = readDomResponse();
       if (text && text.length > 50) {
@@ -3911,6 +3944,7 @@ function queryAllDeep(selector) {
           detail: { url: canonicalUrl() }
         }));
       }
+      window.__diaryDomPollActive = false;
     }, 3000);
   }, 500);
   window.addEventListener('message', function(event) {
@@ -3984,6 +4018,15 @@ function queryAllDeep(selector) {
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
     var _domPollAttempts = 0;
     var _domLastRead = null;
+    // Confirmed real, provable race condition: this poll runs on its own
+    // 1-second timer, entirely independent of when the user clicks Save,
+    // and pushes directly into the same window.__diaryCapture.turns array
+    // performSaveToDiary reads from — with no coordination between them
+    // at all. window.__diaryDomPollActive lets performSaveToDiary detect
+    // and wait for an in-progress poll cycle before reading, rather than
+    // risk reading mid-push or racing a push that lands between its own
+    // read and its use of that data.
+    window.__diaryDomPollActive = true;
     function _domPollCheck() {
       _domPollAttempts++;
       var text = readDomResponse();
@@ -4021,6 +4064,11 @@ function queryAllDeep(selector) {
           detail: { url: canonicalUrl() }
         }));
       }
+      // Poll cycle genuinely finished (settled, or hit the ceiling without
+      // settling) — clear the in-progress flag so a waiting save can
+      // proceed. This is the ONLY place besides the early-return above
+      // where the poll cycle truly ends; both must clear the flag.
+      window.__diaryDomPollActive = false;
     }
     _domSettleTimer = setTimeout(_domPollCheck, 1000);
   });
