@@ -1973,7 +1973,7 @@ function queryAllDeep(selector) {
         // the same way. Only replaces fullThread if it actually finds
         // the expected structure.
         if (PROVIDER === 'perplexity') {
-          var pplxThread = buildDomPairedThread({
+          var pplxThread = buildPerplexityPairedThread({
             combinedSelector: '.max-h-\\[144px\\].overflow-hidden, [data-renderer="lm"]',
             isQuestion: function(el) { return el.classList && el.classList.contains('overflow-hidden') && el.className.indexOf('max-h-[144px]') !== -1; },
             questionInnerSelector: null,
@@ -2014,7 +2014,7 @@ function queryAllDeep(selector) {
         // simulation of a two-question conversation before wiring in
         // here.
         if (PROVIDER === 'meta') {
-          var metaThread = buildDomPairedThread({
+          var metaThread = buildMetaAIPairedThread({
             combinedSelector: '[data-message-type="user"], .ur-markdown',
             isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
             questionInnerSelector: '.text-response',
@@ -2061,7 +2061,7 @@ function queryAllDeep(selector) {
           // the existing, already-proven regex below to strip the
           // "Worked for Xs" / "N sources" widget-text leak afterward,
           // rather than trying to exclude it via selector narrowing.
-          var grokThread = buildDomPairedThread({
+          var grokThread = buildGrokPairedThread({
             combinedSelector: '.message-bubble',
             isQuestion: function(el) { return el.getAttribute('data-testid') === 'user-message'; },
             questionInnerSelector: null,
@@ -2102,7 +2102,7 @@ function queryAllDeep(selector) {
         // transient server-side delay, not caused by this code at all —
         // re-applied here unchanged from its original, verified form.
         if (PROVIDER === 'mistral') {
-          var mistralThread = buildDomPairedThread({
+          var mistralThread = buildMistralPairedThread({
             combinedSelector: '[data-message-author-role="user"], [data-message-part-type="answer"]',
             isQuestion: function(el) { return el.getAttribute('data-message-author-role') === 'user'; },
             questionInnerSelector: 'span.whitespace-pre-wrap',
