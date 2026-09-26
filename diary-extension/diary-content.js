@@ -2348,6 +2348,35 @@ function queryAllDeep(selector) {
           }
           return { success: false, error: 'incomplete_response' };
         }
+        // Separate, more general completeness check — confirmed live via
+        // direct comparison against Perplexity's own real failure case:
+        // the check above only catches a question whose ANSWER hasn't
+        // rendered yet (content ends with a bare, unanswered marker). It
+        // cannot catch the newest question being MISSING ENTIRELY —
+        // which looks completely valid on its own (the content ends
+        // with the PREVIOUS question's fully-answered content), yet is
+        // still an incomplete capture relative to what's actually on the
+        // page. Confirmed live: a fresh, backgrounded Sync tab's
+        // buildPerplexityPairedThread call returned real, valid content
+        // for questions 1–6 while question 7 hadn't finished rendering
+        // yet in that reloaded tab — a result indistinguishable from
+        // genuine completeness under the check above, since nothing
+        // compared it against how many questions actually exist.
+        // getAllCapturedPrompts() queries the LIVE DOM fresh (for the
+        // promptSelector-based providers this matters most for — Gemini,
+        // Perplexity, Mistral), so a direct count comparison, within
+        // this same attempt, needs no cross-tab caching or extra state.
+        var _capturedQuestionCount = (contentToSave.match(new RegExp(TITLE_MARK_CHECK + '\\*\\*[^*]+\\*\\*' + TITLE_MARK_CHECK, 'g')) || []).length;
+        var _livePromptCount = getAllCapturedPrompts().length;
+        if (_livePromptCount > 0 && _capturedQuestionCount < _livePromptCount) {
+          console.log('[Diary Sync DIAG] refusing to save — captured only', _capturedQuestionCount, 'question(s) but', _livePromptCount, 'exist live on the page (likely the newest one hasn\'t rendered yet)');
+          if (btn) {
+            btn.textContent = 'Still loading…';
+            btn.style.background = '#6B6B88';
+            setTimeout(function() { btn.remove(); }, 3000);
+          }
+          return { success: false, error: 'incomplete_response' };
+        }
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // saveUrl: use most specific URL available
         //
