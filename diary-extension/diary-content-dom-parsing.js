@@ -48,32 +48,20 @@
       var els = document.querySelectorAll(opts.combinedSelector);
       if (!els.length) return null;
       var parts = [];
-      // Tracks the most recently pushed QUESTION text specifically (not
-      // just "the last thing pushed") — confirmed live as a real,
-      // reproduced bug on Meta AI: the same first question appeared
-      // twice, back to back, in an otherwise clean capture. A
-      // transient DOM state (e.g. React briefly rendering both an
-      // optimistic and a settled copy of the same message during a
-      // re-render) can make querySelectorAll genuinely return two
-      // separate nodes for what's really one question. A real
-      // conversation never legitimately asks the exact same question
-      // twice in a row with nothing in between, so skipping an
-      // immediate repeat is safe and can't drop genuine content.
-      var lastQuestionText = null;
+      // No consecutive-question dedup here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction, after this and other dedup layers each addressed a
+      // real symptom in isolation without fully resolving the
+      // underlying problem for Grok (same architecture, already
+      // simplified the same way). Applying the same simplification
+      // here rather than another isolated fix.
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (opts.isQuestion(el)) {
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText && qText === lastQuestionText) continue;
-          if (qText) { parts.push(window.boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
+          if (qText) parts.push(window.boldQuestion(qText.slice(0, 2000)));
         } else {
-          // Reset the consecutive-question tracker the moment a real
-          // answer is seen — the dedup above must only ever catch a
-          // question immediately repeated with NOTHING in between, not
-          // a genuine, deliberate repeat where the user asked the same
-          // thing twice with a real answer given in between.
-          lastQuestionText = null;
           // NOTE: querySelectorAll instead of querySelector — confirmed
           // live via diagnostic logging that a single Meta AI answer
           // turn can contain MULTIPLE separate .ur-markdown blocks (2 in
@@ -395,40 +383,11 @@
           }
         }
       }
-      // Confirmed live via a real, reported case: the ENTIRE captured
-      // sequence (every question and answer) repeated back to back,
-      // producing a Diary entry with the full Q/A exchange duplicated
-      // twice — not just one repeated turn, which the consecutive-
-      // question dedup above already guards against. This is a
-      // genuinely different failure mode: the existing dedup only ever
-      // catches the SAME question immediately repeated with nothing in
-      // between (lastQuestionText resets the moment a real answer is
-      // seen), so it cannot catch a full thread appearing twice with
-      // real content between the two copies. A real conversation never
-      // legitimately repeats its entire Q/A sequence identically, so
-      // this is safe to detect and truncate. Deliberately placed in
-      // this shared function (not Mistral-specific) since Perplexity,
-      // Meta AI, and Grok all call this same function and could
-      // plausibly hit the same underlying DOM-level cause (most likely
-      // the page genuinely rendering two copies of the conversation
-      // elements — e.g. a hidden/visible duplicate for animation,
-      // or a responsive-layout duplicate tree). Verified via direct
-      // simulation against four cases before applying here: the exact
-      // reported repeated-whole-thread case, a normal non-repeated
-      // conversation (confirmed untouched), an odd-length result
-      // (left untouched — can't cleanly halve), and a genuine,
-      // deliberate repeat of the same question with a DIFFERENT real
-      // answer the second time (confirmed NOT treated as a duplicate,
-      // since the two halves aren't actually identical).
-      if (parts.length >= 4 && parts.length % 2 === 0) {
-        var half = parts.length / 2;
-        var firstHalf = parts.slice(0, half);
-        var secondHalf = parts.slice(half);
-        if (firstHalf.every(function(p, i) { return p === secondHalf[i]; })) {
-          console.log('[Diary] buildDomPairedThread: whole captured thread was duplicated end-to-end — truncated to the first copy.');
-          parts = firstHalf;
-        }
-      }
+      // No whole-thread duplicate detection here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction. Applying the same simplification already done for
+      // Grok (identical architecture, same prior symptom) rather than
+      // another isolated fix per provider.
       return parts.length ? parts.join('\n\n') : null;
     } catch (e) {
       console.error('[Diary] buildDomPairedThread failed, falling back:', e);
@@ -823,32 +782,20 @@
       var els = document.querySelectorAll(opts.combinedSelector);
       if (!els.length) return null;
       var parts = [];
-      // Tracks the most recently pushed QUESTION text specifically (not
-      // just "the last thing pushed") — confirmed live as a real,
-      // reproduced bug on Meta AI: the same first question appeared
-      // twice, back to back, in an otherwise clean capture. A
-      // transient DOM state (e.g. React briefly rendering both an
-      // optimistic and a settled copy of the same message during a
-      // re-render) can make querySelectorAll genuinely return two
-      // separate nodes for what's really one question. A real
-      // conversation never legitimately asks the exact same question
-      // twice in a row with nothing in between, so skipping an
-      // immediate repeat is safe and can't drop genuine content.
-      var lastQuestionText = null;
+      // No consecutive-question dedup here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction, after this and other dedup layers each addressed a
+      // real symptom in isolation without fully resolving the
+      // underlying problem for Grok (same architecture, already
+      // simplified the same way). Applying the same simplification
+      // here rather than another isolated fix.
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (opts.isQuestion(el)) {
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText && qText === lastQuestionText) continue;
-          if (qText) { parts.push(window.boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
+          if (qText) parts.push(window.boldQuestion(qText.slice(0, 2000)));
         } else {
-          // Reset the consecutive-question tracker the moment a real
-          // answer is seen — the dedup above must only ever catch a
-          // question immediately repeated with NOTHING in between, not
-          // a genuine, deliberate repeat where the user asked the same
-          // thing twice with a real answer given in between.
-          lastQuestionText = null;
           // NOTE: querySelectorAll instead of querySelector — confirmed
           // live via diagnostic logging that a single Meta AI answer
           // turn can contain MULTIPLE separate .ur-markdown blocks (2 in
@@ -1170,40 +1117,11 @@
           }
         }
       }
-      // Confirmed live via a real, reported case: the ENTIRE captured
-      // sequence (every question and answer) repeated back to back,
-      // producing a Diary entry with the full Q/A exchange duplicated
-      // twice — not just one repeated turn, which the consecutive-
-      // question dedup above already guards against. This is a
-      // genuinely different failure mode: the existing dedup only ever
-      // catches the SAME question immediately repeated with nothing in
-      // between (lastQuestionText resets the moment a real answer is
-      // seen), so it cannot catch a full thread appearing twice with
-      // real content between the two copies. A real conversation never
-      // legitimately repeats its entire Q/A sequence identically, so
-      // this is safe to detect and truncate. Deliberately placed in
-      // this shared function (not Mistral-specific) since Perplexity,
-      // Meta AI, and Grok all call this same function and could
-      // plausibly hit the same underlying DOM-level cause (most likely
-      // the page genuinely rendering two copies of the conversation
-      // elements — e.g. a hidden/visible duplicate for animation,
-      // or a responsive-layout duplicate tree). Verified via direct
-      // simulation against four cases before applying here: the exact
-      // reported repeated-whole-thread case, a normal non-repeated
-      // conversation (confirmed untouched), an odd-length result
-      // (left untouched — can't cleanly halve), and a genuine,
-      // deliberate repeat of the same question with a DIFFERENT real
-      // answer the second time (confirmed NOT treated as a duplicate,
-      // since the two halves aren't actually identical).
-      if (parts.length >= 4 && parts.length % 2 === 0) {
-        var half = parts.length / 2;
-        var firstHalf = parts.slice(0, half);
-        var secondHalf = parts.slice(half);
-        if (firstHalf.every(function(p, i) { return p === secondHalf[i]; })) {
-          console.log('[Diary] buildDomPairedThread: whole captured thread was duplicated end-to-end — truncated to the first copy.');
-          parts = firstHalf;
-        }
-      }
+      // No whole-thread duplicate detection here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction. Applying the same simplification already done for
+      // Grok (identical architecture, same prior symptom) rather than
+      // another isolated fix per provider.
       return parts.length ? parts.join('\n\n') : null;
     } catch (e) {
       console.error('[Diary] buildPerplexityPairedThread failed, falling back:', e);
@@ -1215,32 +1133,20 @@
       var els = document.querySelectorAll(opts.combinedSelector);
       if (!els.length) return null;
       var parts = [];
-      // Tracks the most recently pushed QUESTION text specifically (not
-      // just "the last thing pushed") — confirmed live as a real,
-      // reproduced bug on Meta AI: the same first question appeared
-      // twice, back to back, in an otherwise clean capture. A
-      // transient DOM state (e.g. React briefly rendering both an
-      // optimistic and a settled copy of the same message during a
-      // re-render) can make querySelectorAll genuinely return two
-      // separate nodes for what's really one question. A real
-      // conversation never legitimately asks the exact same question
-      // twice in a row with nothing in between, so skipping an
-      // immediate repeat is safe and can't drop genuine content.
-      var lastQuestionText = null;
+      // No consecutive-question dedup here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction, after this and other dedup layers each addressed a
+      // real symptom in isolation without fully resolving the
+      // underlying problem for Grok (same architecture, already
+      // simplified the same way). Applying the same simplification
+      // here rather than another isolated fix.
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (opts.isQuestion(el)) {
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText && qText === lastQuestionText) continue;
-          if (qText) { parts.push(window.boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
+          if (qText) parts.push(window.boldQuestion(qText.slice(0, 2000)));
         } else {
-          // Reset the consecutive-question tracker the moment a real
-          // answer is seen — the dedup above must only ever catch a
-          // question immediately repeated with NOTHING in between, not
-          // a genuine, deliberate repeat where the user asked the same
-          // thing twice with a real answer given in between.
-          lastQuestionText = null;
           // NOTE: querySelectorAll instead of querySelector — confirmed
           // live via diagnostic logging that a single Meta AI answer
           // turn can contain MULTIPLE separate .ur-markdown blocks (2 in
@@ -1562,40 +1468,11 @@
           }
         }
       }
-      // Confirmed live via a real, reported case: the ENTIRE captured
-      // sequence (every question and answer) repeated back to back,
-      // producing a Diary entry with the full Q/A exchange duplicated
-      // twice — not just one repeated turn, which the consecutive-
-      // question dedup above already guards against. This is a
-      // genuinely different failure mode: the existing dedup only ever
-      // catches the SAME question immediately repeated with nothing in
-      // between (lastQuestionText resets the moment a real answer is
-      // seen), so it cannot catch a full thread appearing twice with
-      // real content between the two copies. A real conversation never
-      // legitimately repeats its entire Q/A sequence identically, so
-      // this is safe to detect and truncate. Deliberately placed in
-      // this shared function (not Mistral-specific) since Perplexity,
-      // Meta AI, and Grok all call this same function and could
-      // plausibly hit the same underlying DOM-level cause (most likely
-      // the page genuinely rendering two copies of the conversation
-      // elements — e.g. a hidden/visible duplicate for animation,
-      // or a responsive-layout duplicate tree). Verified via direct
-      // simulation against four cases before applying here: the exact
-      // reported repeated-whole-thread case, a normal non-repeated
-      // conversation (confirmed untouched), an odd-length result
-      // (left untouched — can't cleanly halve), and a genuine,
-      // deliberate repeat of the same question with a DIFFERENT real
-      // answer the second time (confirmed NOT treated as a duplicate,
-      // since the two halves aren't actually identical).
-      if (parts.length >= 4 && parts.length % 2 === 0) {
-        var half = parts.length / 2;
-        var firstHalf = parts.slice(0, half);
-        var secondHalf = parts.slice(half);
-        if (firstHalf.every(function(p, i) { return p === secondHalf[i]; })) {
-          console.log('[Diary] buildDomPairedThread: whole captured thread was duplicated end-to-end — truncated to the first copy.');
-          parts = firstHalf;
-        }
-      }
+      // No whole-thread duplicate detection here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction. Applying the same simplification already done for
+      // Grok (identical architecture, same prior symptom) rather than
+      // another isolated fix per provider.
       return parts.length ? parts.join('\n\n') : null;
     } catch (e) {
       console.error('[Diary] buildMetaAIPairedThread failed, falling back:', e);
@@ -1607,32 +1484,20 @@
       var els = document.querySelectorAll(opts.combinedSelector);
       if (!els.length) return null;
       var parts = [];
-      // Tracks the most recently pushed QUESTION text specifically (not
-      // just "the last thing pushed") — confirmed live as a real,
-      // reproduced bug on Meta AI: the same first question appeared
-      // twice, back to back, in an otherwise clean capture. A
-      // transient DOM state (e.g. React briefly rendering both an
-      // optimistic and a settled copy of the same message during a
-      // re-render) can make querySelectorAll genuinely return two
-      // separate nodes for what's really one question. A real
-      // conversation never legitimately asks the exact same question
-      // twice in a row with nothing in between, so skipping an
-      // immediate repeat is safe and can't drop genuine content.
-      var lastQuestionText = null;
+      // No consecutive-question dedup here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction, after this and other dedup layers each addressed a
+      // real symptom in isolation without fully resolving the
+      // underlying problem for Grok (same architecture, already
+      // simplified the same way). Applying the same simplification
+      // here rather than another isolated fix.
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (opts.isQuestion(el)) {
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText && qText === lastQuestionText) continue;
-          if (qText) { parts.push(window.boldQuestion(qText.slice(0, 2000))); lastQuestionText = qText; }
+          if (qText) parts.push(window.boldQuestion(qText.slice(0, 2000)));
         } else {
-          // Reset the consecutive-question tracker the moment a real
-          // answer is seen — the dedup above must only ever catch a
-          // question immediately repeated with NOTHING in between, not
-          // a genuine, deliberate repeat where the user asked the same
-          // thing twice with a real answer given in between.
-          lastQuestionText = null;
           // NOTE: querySelectorAll instead of querySelector — confirmed
           // live via diagnostic logging that a single Meta AI answer
           // turn can contain MULTIPLE separate .ur-markdown blocks (2 in
@@ -1954,40 +1819,11 @@
           }
         }
       }
-      // Confirmed live via a real, reported case: the ENTIRE captured
-      // sequence (every question and answer) repeated back to back,
-      // producing a Diary entry with the full Q/A exchange duplicated
-      // twice — not just one repeated turn, which the consecutive-
-      // question dedup above already guards against. This is a
-      // genuinely different failure mode: the existing dedup only ever
-      // catches the SAME question immediately repeated with nothing in
-      // between (lastQuestionText resets the moment a real answer is
-      // seen), so it cannot catch a full thread appearing twice with
-      // real content between the two copies. A real conversation never
-      // legitimately repeats its entire Q/A sequence identically, so
-      // this is safe to detect and truncate. Deliberately placed in
-      // this shared function (not Mistral-specific) since Perplexity,
-      // Meta AI, and Grok all call this same function and could
-      // plausibly hit the same underlying DOM-level cause (most likely
-      // the page genuinely rendering two copies of the conversation
-      // elements — e.g. a hidden/visible duplicate for animation,
-      // or a responsive-layout duplicate tree). Verified via direct
-      // simulation against four cases before applying here: the exact
-      // reported repeated-whole-thread case, a normal non-repeated
-      // conversation (confirmed untouched), an odd-length result
-      // (left untouched — can't cleanly halve), and a genuine,
-      // deliberate repeat of the same question with a DIFFERENT real
-      // answer the second time (confirmed NOT treated as a duplicate,
-      // since the two halves aren't actually identical).
-      if (parts.length >= 4 && parts.length % 2 === 0) {
-        var half = parts.length / 2;
-        var firstHalf = parts.slice(0, half);
-        var secondHalf = parts.slice(half);
-        if (firstHalf.every(function(p, i) { return p === secondHalf[i]; })) {
-          console.log('[Diary] buildDomPairedThread: whole captured thread was duplicated end-to-end — truncated to the first copy.');
-          parts = firstHalf;
-        }
-      }
+      // No whole-thread duplicate detection here — matching
+      // buildGeminiPairedThread's plain, unconditional shape, on direct
+      // instruction. Applying the same simplification already done for
+      // Grok (identical architecture, same prior symptom) rather than
+      // another isolated fix per provider.
       return parts.length ? parts.join('\n\n') : null;
     } catch (e) {
       console.error('[Diary] buildMistralPairedThread failed, falling back:', e);
