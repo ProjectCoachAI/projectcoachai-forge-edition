@@ -947,6 +947,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
       // Step 1: look up existing entry by URL
       let existingId = null;
       let existingContent = '';
+      let existingPrompt = '';
       try {
         const lookupStartedAt = Date.now();
         const lR = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(msg.url), { headers: { 'Authorization': 'Bearer ' + token } });
@@ -955,6 +956,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
         if (lD.success && lD.entry) {
           existingId = lD.entry.id;
           existingContent = lD.entry.content || '';
+          existingPrompt = lD.entry.prompt || '';
         }
       } catch(e) {}
 
@@ -1089,10 +1091,22 @@ let data;
           }
         }
         const patchStartedAt = Date.now();
+        // NOTE: prompt (title) guard added — mirrors the existing
+        // partial-content protection above, which never applied to the
+        // title at all. msg.prompt is re-derived on every save; for the
+        // 6 providers whose title comes from a live DOM query (not a
+        // stable, cached network source like Claude's historySeed), a
+        // single bad read on any later save silently overwrote an
+        // already-correct stored title with blank text, with no
+        // recovery. Falls back to the existing stored title only when
+        // the new one is genuinely blank — never overrides a real,
+        // non-blank title with a different one, since we can't safely
+        // tell "genuinely changed" apart from "wrong" from here.
+        const patchPrompt = (msg.prompt && msg.prompt.trim()) ? msg.prompt : existingPrompt;
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ content: patchContent, prompt: msg.prompt, turnCount: msg.turnCount, metadata: { url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
+          body: JSON.stringify({ content: patchContent, prompt: patchPrompt, turnCount: msg.turnCount, metadata: { url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
         });
         data = await pR.json();
         data.updated = true;
