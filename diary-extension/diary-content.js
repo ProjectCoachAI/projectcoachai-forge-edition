@@ -1980,28 +1980,33 @@ function queryAllDeep(selector) {
             console.log('[Diary] Gemini DOM-paired thread used, length:', fullThread.length);
           }
         }
-        // Perplexity-specific override: same principle as Gemini above,
-        // using the generic buildDomPairedThread helper. Confirmed live:
-        // questions (.max-h-[144px].overflow-hidden — see the registry
-        // entry above for why '.line-clamp-6' was replaced a second
-        // time) and answers ([data-renderer="lm"]) alternate correctly
-        // in true document order, with no per-exchange wrapper container
-        // (unlike Gemini) — Perplexity's DOM just has them as a flat,
-        // correctly-ordered sequence, which the generic walker handles
-        // the same way. Only replaces fullThread if it actually finds
-        // the expected structure.
-        if (PROVIDER === 'perplexity') {
-          var pplxThread = buildPerplexityPairedThread({
-            combinedSelector: '.max-h-\\[144px\\].overflow-hidden, [data-renderer="lm"]',
-            isQuestion: function(el) { return el.classList && el.classList.contains('overflow-hidden') && el.className.indexOf('max-h-[144px]') !== -1; },
-            questionInnerSelector: null,
-            answerInnerSelector: null
-          });
-          if (pplxThread && pplxThread.length > 50) {
-            fullThread = pplxThread;
-            console.log('[Diary] Perplexity DOM-paired thread used, length:', fullThread.length);
-          }
-        }
+        // Perplexity DOM override REMOVED — confirmed live as the actual
+        // root cause of both the title-mismatch and the "capture stops
+        // after ~7 exchanges" bugs, not a fix. Live DOM check on a real
+        // 7-exchange conversation: document.querySelectorAll('.max-h-
+        // \\[144px\\].overflow-hidden').length returned 2 at the bottom
+        // of the page and 6 scrolled to the top — Perplexity virtualizes
+        // this wrapper class, so buildPerplexityPairedThread() here was
+        // reading a partial, recycled DOM. Because its only gate was
+        // `pplxThread.length > 50`, a truncated 1-2-exchange read cleared
+        // that bar easily and silently overwrote the already-correct
+        // `fullThread`, which is built above from window.__diaryCapture
+        // .turns — the network-captured, interceptor-sourced turns. That
+        // generic merge path is explicitly virtualization-resistant by
+        // design (it merges every snapshot ever captured, deduped by
+        // paragraph, for exactly this class of DOM-recycling bug — see
+        // its own comment above, confirmed live against a real DeepSeek
+        // conversation). This override existed only because Perplexity's
+        // interceptor-side extraction (diary-interceptor.js) used to
+        // misread its SSE format and produce garbled content, making a
+        // DOM-scrape the least-bad option at the time. Now that the
+        // interceptor correctly reads Perplexity's own text_payload/text
+        // full-snapshot signal, the network-sourced fullThread is clean
+        // on its own and no longer needs a DOM fallback that actively
+        // destroys good, complete data whenever Perplexity's virtual list
+        // has trimmed older turns from the DOM (i.e. almost always, past
+        // a handful of exchanges). No such override remains for
+        // Perplexity; Claude and Gemini are untouched.
         // Meta AI-specific override: same principle as Gemini/Perplexity
         // above, using the generic buildDomPairedThread helper — replaces
         // the earlier _prompts-seeding fix as the actual solution to
