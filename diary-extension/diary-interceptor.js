@@ -102,41 +102,81 @@
         } catch(_e) { return ''; }
       }
       if (host.includes('perplexity.ai')) {
-        // Rewritten — confirmed as a real, direct bug via live, pasted
-        // SSE stream data: the old parser tried _o.text || _o.answer at
-        // the top level of each SSE message's JSON payload, neither of
-        // which exist in Perplexity's actual format. The real answer
-        // text arrives as incremental chunks inside:
-        //   blocks[N].diff_block.patches[M].value
-        // ...but ONLY when blocks[N].intended_usage === 'workflow_root'
-        // and patches[M].path contains 'text_payload/chunks/' (other
-        // blocks in the same message — 'web_results',
-        // 'sources_answer_mode', etc. — carry search metadata and must
-        // be ignored entirely, not treated as answer text). Each SSE
-        // message carries exactly one text chunk; the existing
-        // processLines() accumulation already joins them correctly into
-        // the full answer over the course of the stream.
-        // Verified directly against three real pasted SSE events: old
-        // parser returned '' for all three; new parser returns the
-        // correct chunk text for each, accumulated result matches the
-        // real, visible answer text. The old fallback (_o.text ||
-        // _o.answer) is kept at the bottom in case format ever changes.
+        // Rewritten a second time — confirmed via real, pasted SSE stream
+        // data that the previous "chunks/N add" approach (see git history)
+        // was reading the wrong signal. Perplexity sends TWO parallel
+        // signals for the same answer text:
+        //   1. "op":"add" on ".../text_payload/chunks/N" — small,
+        //      per-token deltas, meant for smooth on-screen typing.
+        //   2. "op":"replace" on ".../text_payload/text" — the FULL,
+        //      cumulative, already-correctly-formatted markdown for that
+        //      step so far (real "## " headings, real "| a | b |" pipe
+        //      tables with a proper "|---|---|" separator row, in
+        //      correct visual order), re-sent as it grows.
+        // The old code only read signal 1, and returned on the FIRST
+        // matching patch per event — silently dropping any other
+        // matching patch in the same event, and never reading signal 2
+        // at all. Confirmed live (real saved entry) this produced
+        // malformed table rows (tab-separated, no separator row) and a
+        // heading displaced to sit before the wrong table — reconstructing
+        // token-by-token across multiple concurrent workflow steps isn't
+        // guaranteed to preserve final visual order or table structure.
+        // Switched entirely to signal 2: it's Perplexity's own complete,
+        // pre-formatted markdown, so no reconstruction is needed — just
+        // correct accumulation. Tracks the latest full text PER STEP
+        // (keyed by its own JSON path, via the state object threaded
+        // through from processLines — same per-stream-state pattern
+        // Mistral's parser already uses above), rebuilds the total answer
+        // by joining each known step's latest text in STEP-INDEX order
+        // (not raw event-arrival order, which multiple in-flight steps
+        // are not guaranteed to respect), and returns only the newly-
+        // added portion versus what was already returned last time — so
+        // processLines()'s existing `accumulated +=` pattern stays
+        // correct without re-adding an already-emitted prefix. Verified
+        // directly against real pasted SSE events covering workflow
+        // status labels, sources-found patches, and the real answer-text
+        // replace, before wiring in.
         try {
           var _o = JSON.parse(chunk.replace(/^data:\s*/, ''));
           if (_o.blocks && Array.isArray(_o.blocks)) {
+            if (!state.perplexityStepTexts) state.perplexityStepTexts = {};
+            if (typeof state.perplexityLastEmitted !== 'string') state.perplexityLastEmitted = '';
             for (var bi = 0; bi < _o.blocks.length; bi++) {
               var block = _o.blocks[bi];
               if (block.intended_usage === 'workflow_root' &&
                   block.diff_block && Array.isArray(block.diff_block.patches)) {
                 for (var pi = 0; pi < block.diff_block.patches.length; pi++) {
                   var patch = block.diff_block.patches[pi];
-                  if (patch.op === 'add' &&
-                      patch.path && patch.path.indexOf('text_payload/chunks/') !== -1 &&
+                  if (patch.op === 'replace' &&
+                      patch.path && /\/text_payload\/text$/.test(patch.path) &&
                       typeof patch.value === 'string') {
-                    return patch.value;
+                    state.perplexityStepTexts[patch.path] = patch.value;
                   }
                 }
               }
+            }
+            var stepKeys = Object.keys(state.perplexityStepTexts);
+            if (stepKeys.length) {
+              // Sort by the numeric step index embedded in the path
+              // (".../steps/N/...") — this is what determines correct
+              // visual order, not the order events happened to arrive in.
+              stepKeys.sort(function(a, b) {
+                var am = /\/steps\/(\d+)\//.exec(a);
+                var bm = /\/steps\/(\d+)\//.exec(b);
+                var ai = am ? parseInt(am[1], 10) : 0;
+                var bi2 = bm ? parseInt(bm[1], 10) : 0;
+                return ai - bi2;
+              });
+              var newTotal = stepKeys.map(function(k) { return state.perplexityStepTexts[k]; }).join('\n\n');
+              var prev = state.perplexityLastEmitted;
+              var delta = (newTotal.indexOf(prev) === 0)
+                ? newTotal.slice(prev.length)
+                // Safety fallback — a step's text should only ever grow,
+                // but never silently lose content if that assumption
+                // somehow doesn't hold for a given response.
+                : newTotal;
+              state.perplexityLastEmitted = newTotal;
+              if (delta) return delta;
             }
           }
           return _o.text || _o.answer || '';
