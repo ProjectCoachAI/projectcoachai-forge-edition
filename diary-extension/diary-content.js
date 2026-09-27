@@ -1980,27 +1980,28 @@ function queryAllDeep(selector) {
             console.log('[Diary] Gemini DOM-paired thread used, length:', fullThread.length);
           }
         }
-        // Perplexity: NO DOM-based override — removed entirely after a
-        // direct, side-by-side architecture comparison against Claude
-        // (which has never shown any of the symptoms Perplexity has
-        // shown across this entire session). Confirmed: Perplexity
-        // already has a genuine, proven, network-sourced capture path —
-        // diary-interceptor.js's own SSE parser (verified against real
-        // pasted stream data) correctly extracts the actual answer text
-        // as it streams and pushes it into window.__diaryCapture.turns
-        // via storeTurn(), the exact same mechanism Claude's own
-        // historySeed/captureTurns relies on completely, with no
-        // competing DOM read at all.
-        //
-        // This override was discarding that reliable, network-sourced
-        // data every single time it ran, replacing it with a DOM read
-        // instead — DOM rendering timing is inherently less reliable
-        // than data that already arrived over the network, which is
-        // exactly why Claude's own architecture never re-reads the DOM
-        // to second-guess its network-sourced content at all. Trusting
-        // the else-branch's captureTurns-based interleaving above (built
-        // from this same reliable network data) instead, the same way
-        // Claude trusts its own.
+        // Perplexity-specific override: same principle as Gemini above,
+        // using the generic buildDomPairedThread helper. Confirmed live:
+        // questions (.max-h-[144px].overflow-hidden — see the registry
+        // entry above for why '.line-clamp-6' was replaced a second
+        // time) and answers ([data-renderer="lm"]) alternate correctly
+        // in true document order, with no per-exchange wrapper container
+        // (unlike Gemini) — Perplexity's DOM just has them as a flat,
+        // correctly-ordered sequence, which the generic walker handles
+        // the same way. Only replaces fullThread if it actually finds
+        // the expected structure.
+        if (PROVIDER === 'perplexity') {
+          var pplxThread = buildPerplexityPairedThread({
+            combinedSelector: '.max-h-\\[144px\\].overflow-hidden, [data-renderer="lm"]',
+            isQuestion: function(el) { return el.classList && el.classList.contains('overflow-hidden') && el.className.indexOf('max-h-[144px]') !== -1; },
+            questionInnerSelector: null,
+            answerInnerSelector: null
+          });
+          if (pplxThread && pplxThread.length > 50) {
+            fullThread = pplxThread;
+            console.log('[Diary] Perplexity DOM-paired thread used, length:', fullThread.length);
+          }
+        }
         // Meta AI-specific override: same principle as Gemini/Perplexity
         // above, using the generic buildDomPairedThread helper — replaces
         // the earlier _prompts-seeding fix as the actual solution to
