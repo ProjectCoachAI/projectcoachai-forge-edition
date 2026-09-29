@@ -690,8 +690,19 @@
         return response;
       }
 
-      if (host.includes('perplexity.ai') && PERPLEXITY_THREAD_HISTORY_URL_RE.test(url) && ct.includes('json')) {
-        console.log('[Diary interceptor] Perplexity thread history endpoint matched, url:', url);
+      // Perplexity's own code may call fetch() with a URL object (which
+      // has .href but no .url) or a Request; the shared `url` above only
+      // handles a string or an object with .url, so it can come out as ''
+      // for a URL object. Console-confirmed: the identical request made
+      // with a plain string URL is caught and parsed correctly, while the
+      // page's own load-time call never matched. Computed separately here
+      // so the shared url logic used by every other provider is untouched.
+      var pplxUrl = url || (input && typeof input === 'object' ? (input.href || String(input)) : '') || '';
+      if (host.includes('perplexity.ai') && pplxUrl.indexOf('/rest/thread/') !== -1 && typeof input !== 'string') {
+        console.log('[Diary interceptor] Perplexity thread fetch with non-string input, type:', Object.prototype.toString.call(input), '| resolved url:', pplxUrl.slice(0, 100));
+      }
+      if (host.includes('perplexity.ai') && PERPLEXITY_THREAD_HISTORY_URL_RE.test(pplxUrl) && ct.includes('json')) {
+        console.log('[Diary interceptor] Perplexity thread history endpoint matched, url:', pplxUrl);
         var pplxHistClone = response.clone();
         (async function() {
           try {
@@ -712,7 +723,7 @@
               // to already be in that exact form at the moment this
               // response arrives, avoids any mismatch from redirects or
               // an in-flight URL transition.
-              var uuidMatch = /\/rest\/thread\/([0-9a-f-]{20,})/i.exec(url);
+              var uuidMatch = /\/rest\/thread\/([0-9a-f-]{20,})/i.exec(pplxUrl);
               var seedUrl = uuidMatch ? (window.location.origin + '/search/' + uuidMatch[1]) : pageUrl;
               window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now() };
               console.log('[Diary interceptor] Perplexity history seed captured:', seedText.slice(0, 80));
