@@ -1699,6 +1699,35 @@ function queryAllDeep(selector) {
             }
           } catch(_) {}
         }
+        // Perplexity-specific: same principle as Claude above, now that
+        // diary-interceptor.js also builds a network-sourced historySeed
+        // for Perplexity (from its /rest/thread/<uuid> endpoint \u2014 see
+        // parsePerplexityHistorySeed()). Confirmed live as the actual
+        // fix for a real, reproduced title bug: Perplexity's DOM-based
+        // getPrompt() (.max-h-[144px].overflow-hidden) reads whatever
+        // question wrappers are CURRENTLY mounted, and Perplexity
+        // virtualizes that wrapper class \u2014 confirmed live on a real
+        // 7-exchange thread, that selector returned only 2 of 7 elements
+        // at the bottom of the page and 6 scrolled to the top. Once
+        // older questions get recycled out, getPrompt() silently returns
+        // a LATER question instead of the conversation's real first one,
+        // overwriting the correct title on subsequent saves. The network
+        // seed carries every question from the real, complete thread
+        // record regardless of what's currently mounted in the DOM, so
+        // extracting the FIRST bolded question from it (same marker,
+        // same extraction method as Claude) gives the true, stable
+        // title. Gated on the seed's own url matching this page's
+        // canonicalUrl() so a stale seed from a previously-open thread
+        // in the same tab is never used for the wrong conversation.
+        if (PROVIDER === 'perplexity') {
+          try {
+            var pplxSeedForPrompt = window.__diaryCapture && window.__diaryCapture.historySeed;
+            if (pplxSeedForPrompt && pplxSeedForPrompt.text && pplxSeedForPrompt.url === canonicalUrl()) {
+              var pqMatch = /\u2063\*\*([\s\S]*?)\*\*\u2063/.exec(pplxSeedForPrompt.text);
+              if (pqMatch && pqMatch[1]) prompt = pqMatch[1].trim().slice(0, 500);
+            }
+          } catch(_) {}
+        }
         // Use provider getPrompt override if available — for Claude,
         // this now only fires when no historySeed existed at all (a
         // genuinely brand-new conversation), where _prompts[0] IS
@@ -1851,6 +1880,29 @@ function queryAllDeep(selector) {
             var curUrl = canonicalUrl();
             return t.url === curUrl || /\/new(\?|$)/.test(t.url);
           });
+          // Perplexity-specific: prefix with the network-sourced
+          // historySeed (see parsePerplexityHistorySeed() in
+          // diary-interceptor.js, built from Perplexity's own
+          // /rest/thread/<uuid> endpoint) covering every exchange in the
+          // real, complete thread record, regardless of what's currently
+          // mounted in a virtualized DOM. Mirrors the Claude branch's
+          // identical historySeed pattern above — confirmed live as the
+          // actual fix for content silently stopping after a handful of
+          // exchanges: window.__diaryCapture.turns only ever contains
+          // whatever streamed over the network during THIS tab's current
+          // lifetime, with nothing to recover anything from before a
+          // reload, since Perplexity (unlike Claude) has no other
+          // network-sourced full-history signal. Only used when the
+          // seed's own url matches this page's canonicalUrl(), so a
+          // stale seed from switching threads in the same tab is never
+          // applied to the wrong conversation.
+          var pplxSeed = null;
+          if (PROVIDER === 'perplexity') {
+            var pplxSeedCandidate = window.__diaryCapture && window.__diaryCapture.historySeed;
+            if (pplxSeedCandidate && pplxSeedCandidate.text && pplxSeedCandidate.url === canonicalUrl()) {
+              pplxSeed = pplxSeedCandidate;
+            }
+          }
           // Sort by capture timestamp — confirmed live as a real, necessary
           // fix, not a defensive-only safeguard: when a tab is reused
           // across multiple, SEPARATE Sync attempts (rather than freshly
@@ -1868,7 +1920,7 @@ function queryAllDeep(selector) {
           // captured. Sorting first makes the array's own push order
           // irrelevant to the final result.
           captureTurns.sort(function(a, b) { return a.ts - b.ts; });
-          if (captureTurns.length) {
+          if (captureTurns.length || pplxSeed) {
             // DOM providers: merge ALL captured snapshots into one growing
             // thread per conversation (reverted from a brief "one entry
             // per exchange" experiment, explicitly ruled out — the product
@@ -1901,6 +1953,18 @@ function queryAllDeep(selector) {
             // Verified via mechanical simulation of the exact race before
             // being wired in here.
             var mergeSeen = {};
+            // Pre-seed the paragraph-dedup map with the historySeed's own
+            // paragraphs, so anything already covered by the seed is
+            // never duplicated if it also happens to still be present in
+            // a live-captured turn (e.g. the seed's endpoint refetching
+            // mid-session and picking up an answer that was also
+            // captured live).
+            if (pplxSeed && pplxSeed.text) {
+              pplxSeed.text.split(/\n{2,}/).forEach(function(p) {
+                var trimmed = p.trim();
+                if (trimmed) mergeSeen[trimmed.slice(0, 80)] = true;
+              });
+            }
             var promptsShownCount = 0;
             var allPromptsFinal = getAllCapturedPrompts();
             var interleavedParts = [];
@@ -1952,7 +2016,13 @@ function queryAllDeep(selector) {
             if (promptsShownCount < allPromptsFinal.length) {
               allPromptsFinal.slice(promptsShownCount).forEach(function(p) { interleavedParts.push(boldQuestion(p.slice(0, 2000))); });
             }
-            fullThread = interleavedParts.join('\n\n');
+            // Prefix with the Perplexity historySeed when present (null
+            // for every other provider in this branch, so this is a
+            // no-op for them — see pplxSeed's own comment above).
+            var pplxFinalParts = [];
+            if (pplxSeed && pplxSeed.text) pplxFinalParts.push(pplxSeed.text);
+            if (interleavedParts.length) pplxFinalParts.push(interleavedParts.join('\n\n'));
+            fullThread = pplxFinalParts.join('\n\n');
             // Safety fallback: if interleaving somehow produced nothing
             // (e.g. every paragraph got filtered out for being too short),
             // fall back to the single already-proven `prompt` prepended to

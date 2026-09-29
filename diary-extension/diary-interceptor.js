@@ -520,6 +520,72 @@
     } catch(e) { return ''; }
   }
 
+  // Perplexity thread-history endpoint. Confirmed live via real, pasted
+  // Network-tab data: GET /rest/thread/<thread-uuid>?...&limit=20&offset=0
+  // fires on page load and returns EVERY exchange in the thread (verified
+  // live on a real 7-exchange conversation: entries.length === 7, one
+  // entry per question, in the same chronological order they were asked
+  // — not just a truncated/paginated preview), unlike anything readable
+  // from the DOM, which Perplexity virtualizes (confirmed live: the DOM
+  // question-wrapper selector this project already relies on elsewhere
+  // dropped to 2 of 7 elements at the bottom of the page, 6 scrolled to
+  // the top). This is Perplexity's real equivalent of Claude's own
+  // chat_conversations history endpoint above — see HISTORY_URL_RE.
+  var PERPLEXITY_THREAD_HISTORY_URL_RE = /\/rest\/thread\/[0-9a-f-]{20,}(\?|$)/i;
+
+  function parsePerplexityHistorySeed(json) {
+    try {
+      var entries = json && json.entries;
+      if (!Array.isArray(entries) || !entries.length) return '';
+      var parts = [];
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        var question = entry && entry.query_str;
+        if (!question) continue;
+        // Extract the final, complete answer text the same way the live
+        // SSE stream is parsed in extractText() above (same
+        // text_payload.text field, confirmed to carry Perplexity's own
+        // complete, correctly-formatted markdown — real headings, real
+        // pipe tables with a proper separator row). This historical
+        // record structure nests it identically to the live stream: one
+        // workflow_root block per entry, with one or more completed
+        // steps, each potentially containing its own WORKFLOW_ITEM_TEXT
+        // item. Collects every such item across every step, in step
+        // order (the array's own order, since these are already-
+        // completed, non-streaming records with no diff-patches to
+        // reassemble), rather than assuming a single step — a long
+        // answer can genuinely span more than one, exactly as the live
+        // multi-step accumulation in extractText() already accounts for.
+        var answerParts = [];
+        var blocks = entry && entry.blocks;
+        if (Array.isArray(blocks)) {
+          for (var bi = 0; bi < blocks.length; bi++) {
+            var block = blocks[bi];
+            if (block && block.intended_usage === 'workflow_root' &&
+                block.workflow_block && Array.isArray(block.workflow_block.steps)) {
+              var steps = block.workflow_block.steps;
+              for (var si = 0; si < steps.length; si++) {
+                var items = steps[si] && steps[si].items;
+                if (!Array.isArray(items)) continue;
+                for (var ii = 0; ii < items.length; ii++) {
+                  var item = items[ii];
+                  var tp = item && item.payload && item.payload.text_payload;
+                  if (tp && tp.variant === 'answer' && !tp.is_streaming && typeof tp.text === 'string' && tp.text) {
+                    answerParts.push(tp.text);
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (!answerParts.length) continue;
+        parts.push(boldQuestion(question.slice(0, 2000)));
+        parts.push(answerParts.join('\n\n'));
+      }
+      return parts.join('\n\n');
+    } catch(e) { return ''; }
+  }
+
   function processLines(lines, host, state) {
     var accumulated = '';
     for (var i = 0; i < lines.length; i++) {
@@ -619,6 +685,41 @@
             }
           } catch(e) {
             console.error('[Diary interceptor] History parse FAILED:', e);
+          }
+        })();
+        return response;
+      }
+
+      if (host.includes('perplexity.ai') && PERPLEXITY_THREAD_HISTORY_URL_RE.test(url) && ct.includes('json')) {
+        console.log('[Diary interceptor] Perplexity thread history endpoint matched, url:', url);
+        var pplxHistClone = response.clone();
+        (async function() {
+          try {
+            var json = await pplxHistClone.json();
+            console.log('[Diary interceptor] Perplexity thread JSON parsed, entries length:', json && json.entries && json.entries.length);
+            var seedText = parsePerplexityHistorySeed(json);
+            console.log('[Diary interceptor] Perplexity history seed text length:', seedText.length);
+            if (seedText && seedText.length > 50) {
+              // seedUrl is built from the thread's own UUID (taken from
+              // this REST endpoint's own path), rather than pageUrl,
+              // because canonicalUrl() in diary-content.js — the exact
+              // check this seed is matched against at save time — strips
+              // to origin+pathname, and confirmed live via a real,
+              // pasted example that Perplexity's own address-bar URL for
+              // a thread (https://www.perplexity.ai/search/<uuid>) embeds
+              // that identical UUID as its final path segment. Building
+              // it directly from the UUID, rather than trusting pageUrl
+              // to already be in that exact form at the moment this
+              // response arrives, avoids any mismatch from redirects or
+              // an in-flight URL transition.
+              var uuidMatch = /\/rest\/thread\/([0-9a-f-]{20,})/i.exec(url);
+              var seedUrl = uuidMatch ? (window.location.origin + '/search/' + uuidMatch[1]) : pageUrl;
+              window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now() };
+              console.log('[Diary interceptor] Perplexity history seed captured:', seedText.slice(0, 80));
+              window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: seedUrl } }));
+            }
+          } catch(e) {
+            console.error('[Diary interceptor] Perplexity history parse FAILED:', e);
           }
         })();
         return response;
