@@ -1433,6 +1433,16 @@
                       return (/^\s/.test(content) ? ' ' : '') + '**' + t + '**' + (/\s$/.test(content) ? ' ' : '');
                     }
                   });
+                  // Meta AI wraps table cell text in block elements (div/p), which Turndown turns
+                  // into blank lines inside each cell and breaks the pipe table. Flatten cell text.
+                  window.__diaryTurndownInstance.addRule('metaTableCell', {
+                    filter: ['th', 'td'],
+                    replacement: function(content, node) {
+                      var t = content.replace(/\s*\n+\s*/g, ' ').replace(/\|/g, '\\|').replace(/^\s+|\s+$/g, '');
+                      var i = Array.prototype.indexOf.call(node.parentNode.childNodes, node);
+                      return (i === 0 ? '| ' : ' ') + t + ' |';
+                    }
+                  });
                   window.__diaryTurndownInstance.__metaBoldRule = true;
                 }
                 text = aEls.map(function(e) { return window.__diaryTurndownInstance.turndown(e).trim(); }).filter(Boolean).join('\n\n');
