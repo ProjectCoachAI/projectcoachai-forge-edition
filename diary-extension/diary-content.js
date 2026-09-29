@@ -1708,6 +1708,134 @@ function queryAllDeep(selector) {
       return none;
     }
 
+    // DeepSeek: read the whole thread from DeepSeek's own history request.
+    // Confirmed live: DeepSeek's page recycles its message elements (only
+    // 3 answers mounted for a 6-exchange thread), so page-based capture
+    // can't be made reliable. GET /api/v0/chat/history_messages
+    // ?chat_session_id=<id> — WITHOUT the cache_version/cache_reset_at
+    // parameters the page itself adds, which make it return only a partial
+    // update (cache_control "MERGE", 4 of 12 messages) — returns the full
+    // thread (cache_control "REPLACE", 12 of 12). It needs the login token
+    // the page keeps in localStorage ("userToken"; a plain cookie request
+    // gets code 40003 INVALID_TOKEN). Each message has fragments: REQUEST
+    // is the question, RESPONSE the answer text; SEARCH/THINK fragments
+    // (status labels, reasoning) are left out. Used only if it passes
+    // checks against the page; otherwise returns { success:false } and
+    // the existing capture runs unchanged.
+    async function tryDeepSeekHistoryCapture() {
+      var none = { success: false, fullThread: null, prompt: null };
+      try {
+        var idm = window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+        if (!idm) return none;
+        var tok = null;
+        try {
+          var rawTok = window.localStorage.getItem('userToken');
+          if (rawTok) { try { tok = JSON.parse(rawTok).value; } catch(_) { tok = rawTok; } }
+        } catch(_) {}
+        if (!tok || typeof tok !== 'string') {
+          console.log('[Diary] DeepSeek history capture skipped — no login token found in localStorage');
+          return none;
+        }
+        var norm = function(s) { return String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase(); };
+        var sampleFound = function(domText, hay) {
+          var t = norm(domText);
+          if (t.length < 8) return true;
+          if (t.length <= 60) return hay.indexOf(t) !== -1;
+          var pts = [0.15, 0.3, 0.5, 0.7, 0.85];
+          for (var i = 0; i < pts.length; i++) {
+            var s = Math.floor(t.length * pts[i]);
+            if (hay.indexOf(t.slice(s, s + 30)) !== -1) return true;
+          }
+          return false;
+        };
+        var fragText = function(msg, type) {
+          return (msg.fragments || []).filter(function(f) { return f && f.type === type && typeof f.content === 'string'; })
+            .map(function(f) { return f.content; }).join('\n\n').trim();
+        };
+        for (var attempt = 0; attempt < 3; attempt++) {
+          var t0 = Date.now();
+          var reason = '';
+          var res = null;
+          var j = null;
+          var ctrl = new AbortController();
+          var to = setTimeout(function() { ctrl.abort(); }, 8000);
+          try {
+            var r = await fetch('/api/v0/chat/history_messages?chat_session_id=' + idm[0], {
+              credentials: 'include', headers: { authorization: 'Bearer ' + tok }, signal: ctrl.signal
+            });
+            j = await r.json();
+          } catch(e) {
+            reason = 'request failed: ' + (e && e.message);
+          } finally { clearTimeout(to); }
+          var bd = j && j.data && j.data.biz_data;
+          var msgs = bd && bd.chat_messages;
+          if (!reason && (!j || j.code !== 0)) reason = 'API code ' + (j && j.code) + ' ' + (j && j.msg);
+          if (!reason && (!Array.isArray(msgs) || !msgs.length)) reason = 'no messages returned';
+          if (!reason) {
+            var byId = {};
+            msgs.forEach(function(m) { byId[m.message_id] = m; });
+            var tip = bd.chat_session && byId[bd.chat_session.current_message_id] ? bd.chat_session.current_message_id
+              : Math.max.apply(null, msgs.map(function(m) { return m.message_id; }));
+            var chain = [];
+            var seenIds = {};
+            var cur = tip;
+            while (cur != null && byId[cur] && !seenIds[cur]) { seenIds[cur] = true; chain.push(byId[cur]); cur = byId[cur].parent_id; }
+            chain.reverse();
+            if (chain.length < Math.ceil(msgs.length / 2)) {
+              chain = msgs.slice().sort(function(a, b) { return a.message_id - b.message_id; });
+            }
+            var parts = [];
+            var userCount = 0;
+            var firstQ = null;
+            var lastRole = null;
+            var unfinished = false;
+            chain.forEach(function(m) {
+              if (m.status && m.status !== 'FINISHED') unfinished = true;
+              if (m.role === 'USER') {
+                var q = fragText(m, 'REQUEST');
+                if (!q) return;
+                parts.push(boldQuestion(q.slice(0, 2000)));
+                userCount++;
+                if (firstQ === null) firstQ = q;
+                lastRole = 'USER';
+              } else if (m.role === 'ASSISTANT') {
+                // Drop DeepSeek's own citation markers like "[citation:3]".
+                var a = fragText(m, 'RESPONSE').replace(/\s*\[(?:citation|reference)[:：]\s*[\d,\s]+\]/gi, '').trim();
+                if (!a) return;
+                parts.push(a);
+                lastRole = 'ASSISTANT';
+              }
+            });
+            if (unfinished) reason = 'a message is not finished yet';
+            else if (lastRole !== 'ASSISTANT') reason = 'newest answer not available yet';
+            else {
+              var full = parts.join('\n\n');
+              var hay = norm(full);
+              // The page's last two answer blocks: the newest may be a
+              // reasoning block, which is deliberately not in the thread.
+              var mdEls = document.querySelectorAll('.ds-markdown');
+              var ok = !mdEls.length;
+              for (var k = mdEls.length - 1; k >= Math.max(0, mdEls.length - 2) && !ok; k--) {
+                if (sampleFound(mdEls[k].textContent, hay)) ok = true;
+              }
+              if (!ok) reason = 'newest answer on the page not in fetched thread';
+              else {
+                res = { success: true, fullThread: full, prompt: firstQ ? firstQ.slice(0, 500) : null };
+                console.log('[Diary] DeepSeek history capture OK on attempt', attempt + 1, '| questions:', userCount, '| length:', full.length, '| took', Date.now() - t0, 'ms');
+              }
+            }
+          }
+          if (res) return res;
+          console.log('[Diary] DeepSeek history capture attempt', attempt + 1, 'rejected:', reason);
+          if (attempt < 2) await new Promise(function(r2) { setTimeout(r2, 1500); });
+        }
+      } catch(e) {
+        console.error('[Diary] DeepSeek history capture threw:', e);
+      }
+      console.log('[Diary] DeepSeek history capture unavailable — using page-based capture');
+      return none;
+    }
+
     async function performSaveToDiary(btn) {
       // Confirmed real race condition, reported live and reproduced:
       // two separate background mechanisms (_domPollCheck's repeating
@@ -1752,9 +1880,14 @@ function queryAllDeep(selector) {
       if (PROVIDER === 'grok') {
         try { grokHistoryResult = await tryGrokHistoryCapture(); } catch(_) {}
       }
+      // DeepSeek: same idea (see tryDeepSeekHistoryCapture).
+      var deepseekHistoryResult = null;
+      if (PROVIDER === 'deepseek') {
+        try { deepseekHistoryResult = await tryDeepSeekHistoryCapture(); } catch(_) {}
+      }
       var _pollWaitCapMs = (PROVIDER === 'grok' || PROVIDER === 'mistral') ? 50000 : 8000;
       var _pollWaitStart = Date.now();
-      while (window.__diaryDomPollActive && !(grokHistoryResult && grokHistoryResult.success) && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
+      while (window.__diaryDomPollActive && !(grokHistoryResult && grokHistoryResult.success) && !(deepseekHistoryResult && deepseekHistoryResult.success) && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
         await new Promise(function(r) { setTimeout(r, 150); });
       }
       if (window.__diaryDomPollActive) {
@@ -2466,6 +2599,13 @@ function queryAllDeep(selector) {
             fullThread = mistralThread;
             console.log('[Diary] Mistral DOM-paired thread used, length:', fullThread.length);
           }
+        }
+        if (PROVIDER === 'deepseek' && deepseekHistoryResult && deepseekHistoryResult.success) {
+          // History-based capture succeeded (see tryDeepSeekHistoryCapture):
+          // use it, with the title taken from its first question.
+          fullThread = deepseekHistoryResult.fullThread;
+          if (deepseekHistoryResult.prompt) prompt = deepseekHistoryResult.prompt;
+          console.log('[Diary] DeepSeek history thread used, length:', fullThread.length);
         }
         // DeepSeek intentionally has NO buildDomPairedThread block.
         // Confirmed via git history (commit 216e88c, 2026-08-11): DeepSeek's
