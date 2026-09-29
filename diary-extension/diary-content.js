@@ -1836,6 +1836,184 @@ function queryAllDeep(selector) {
       return none;
     }
 
+    // Mistral: read the whole thread from the page's own server data.
+    // Mistral (Next.js) has no separate message-list request: the messages
+    // arrive inside the "RSC" data for /chat/<id> (confirmed live: 12
+    // message objects for a 6-exchange thread, from a plain cookie request
+    // with header RSC: 1; the tRPC chat.byId request is metadata only).
+    // Each message has role, turn, id, parentId, generationStatus. A
+    // user's text is inline in `content`; an answer's text is a reference
+    // like "$91" to a separate text row ("91:T<hex byte length>,<text>") in
+    // the same response, which is why the response is parsed by byte length
+    // rather than by line. Any unexpected structure aborts (returning
+    // { success:false }), and the existing capture then runs unchanged.
+    async function tryMistralHistoryCapture() {
+      var none = { success: false, fullThread: null, prompt: null };
+      try {
+        var idm = window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+        if (!idm) return none;
+        var norm = function(s) { return String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase(); };
+        var sampleFound = function(domText, hay) {
+          var t = norm(domText);
+          if (t.length < 8) return true;
+          if (t.length <= 60) return hay.indexOf(t) !== -1;
+          var pts = [0.15, 0.3, 0.5, 0.7, 0.85];
+          for (var i = 0; i < pts.length; i++) {
+            var s = Math.floor(t.length * pts[i]);
+            if (hay.indexOf(t.slice(s, s + 30)) !== -1) return true;
+          }
+          return false;
+        };
+        // Parse the flight response into { id: {line} | {t} } rows.
+        var parseRows = function(buf) {
+          var dec = new TextDecoder();
+          var rows = {};
+          var pos = 0;
+          var n = buf.length;
+          while (pos < n) {
+            while (pos < n && buf[pos] === 10) pos++;
+            if (pos >= n) break;
+            var idStart = pos;
+            while (pos < n && buf[pos] !== 58) pos++;
+            if (pos >= n) return null;
+            var id = dec.decode(buf.subarray(idStart, pos));
+            if (id && !/^[0-9a-f]{1,8}$/i.test(id)) return null;
+            pos++;
+            if (buf[pos] === 84) { // 'T': text row with a hex byte length
+              pos++;
+              var hs = pos;
+              while (pos < n && buf[pos] !== 44) pos++;
+              var len = parseInt(dec.decode(buf.subarray(hs, pos)), 16);
+              pos++;
+              if (isNaN(len) || pos + len > n) return null;
+              if (id) rows[id] = { t: dec.decode(buf.subarray(pos, pos + len)) };
+              pos += len;
+            } else {
+              var ls = pos;
+              while (pos < n && buf[pos] !== 10) pos++;
+              if (id) rows[id] = { line: dec.decode(buf.subarray(ls, pos)) };
+              pos++;
+            }
+          }
+          return rows;
+        };
+        var resolveText = function(rows, v) {
+          if (typeof v !== 'string') return '';
+          var m = /^\$([0-9a-f]+)$/i.exec(v);
+          if (m) return rows[m[1]] && typeof rows[m[1]].t === 'string' ? rows[m[1]].t : null;
+          return v;
+        };
+        for (var attempt = 0; attempt < 3; attempt++) {
+          var t0 = Date.now();
+          var reason = '';
+          var res = null;
+          var rows = null;
+          var ctrl = new AbortController();
+          var to = setTimeout(function() { ctrl.abort(); }, 10000);
+          try {
+            var r = await fetch('/chat/' + idm[0], { credentials: 'include', headers: { RSC: '1' }, signal: ctrl.signal });
+            if (!r.ok) reason = 'HTTP ' + r.status;
+            else rows = parseRows(new Uint8Array(await r.arrayBuffer()));
+          } catch(e) {
+            reason = 'request failed: ' + (e && e.message);
+          } finally { clearTimeout(to); }
+          if (!reason && !rows) reason = 'could not parse the page data';
+          if (!reason) {
+            var msgs = [];
+            var walk = function(v) {
+              if (Array.isArray(v)) v.forEach(walk);
+              else if (v && typeof v === 'object') {
+                if ('contentChunks' in v && v.role) msgs.push(v);
+                else Object.keys(v).forEach(function(k) { walk(v[k]); });
+              }
+            };
+            Object.keys(rows).forEach(function(k) {
+              var row = rows[k];
+              if (row.line && row.line.indexOf('contentChunks') !== -1) {
+                try { walk(JSON.parse(row.line)); } catch(_) {}
+              }
+            });
+            var seenMsg = {};
+            msgs = msgs.filter(function(m) { if (!m.id || seenMsg[m.id]) return false; seenMsg[m.id] = true; return true; });
+            if (!msgs.length) reason = 'no messages found in page data';
+            else {
+              var byId = {};
+              msgs.forEach(function(m) { byId[m.id] = m; });
+              var tip = msgs.slice().sort(function(a, b) { return (b.turn - a.turn) || (a.role === 'assistant' ? -1 : 1); })[0];
+              var chain = [];
+              var seenIds = {};
+              var cur = tip;
+              while (cur && !seenIds[cur.id]) { seenIds[cur.id] = true; chain.push(cur); cur = cur.parentId ? byId[cur.parentId] : null; }
+              chain.reverse();
+              if (chain.length < Math.ceil(msgs.length / 2)) {
+                chain = msgs.slice().sort(function(a, b) { return (a.turn - b.turn) || (a.role === 'user' ? -1 : 1); });
+              }
+              var parts = [];
+              var userCount = 0;
+              var firstQ = null;
+              var lastRole = null;
+              var bad = '';
+              chain.forEach(function(m) {
+                if (m.generationStatus && m.generationStatus !== 'success') bad = 'a message is not finished yet';
+                if (m.role === 'user') {
+                  var q = resolveText(rows, m.content);
+                  if (q === null) { bad = 'unresolved question text'; return; }
+                  q = q.trim();
+                  if (!q) return;
+                  parts.push(boldQuestion(q.slice(0, 2000)));
+                  userCount++;
+                  if (firstQ === null) firstQ = q;
+                  lastRole = 'user';
+                } else if (m.role === 'assistant') {
+                  var chunks = Array.isArray(m.contentChunks) ? m.contentChunks : [];
+                  var a = '';
+                  var unresolved = false;
+                  chunks.forEach(function(c) {
+                    if (!c || c.type !== 'text' || (c._context && c._context.type === 'reasoning')) return;
+                    var tx = resolveText(rows, c.text);
+                    if (tx === null) { unresolved = true; return; }
+                    a += tx;
+                  });
+                  if (!a && !unresolved) {
+                    var cx = resolveText(rows, m.content);
+                    if (cx === null) unresolved = true; else a = cx;
+                  }
+                  if (unresolved) { bad = 'unresolved answer text'; return; }
+                  a = a.trim();
+                  if (!a) return;
+                  parts.push(a);
+                  lastRole = 'assistant';
+                }
+              });
+              if (bad) reason = bad;
+              else if (lastRole !== 'assistant') reason = 'newest answer not available yet';
+              else {
+                var full = parts.join('\n\n');
+                var hay = norm(full);
+                var userEls = document.querySelectorAll('[data-message-author-role="user"]');
+                var ansEls = document.querySelectorAll('[data-message-part-type="answer"]');
+                if (userCount < userEls.length) {
+                  reason = 'thread has ' + userCount + ' questions, page shows ' + userEls.length;
+                } else if (ansEls.length && !sampleFound(ansEls[ansEls.length - 1].textContent, hay)) {
+                  reason = 'newest answer on the page not in fetched thread';
+                } else {
+                  res = { success: true, fullThread: full, prompt: firstQ ? firstQ.slice(0, 500) : null };
+                  console.log('[Diary] Mistral history capture OK on attempt', attempt + 1, '| questions:', userCount, '| length:', full.length, '| took', Date.now() - t0, 'ms');
+                }
+              }
+            }
+          }
+          if (res) return res;
+          console.log('[Diary] Mistral history capture attempt', attempt + 1, 'rejected:', reason);
+          if (attempt < 2) await new Promise(function(r2) { setTimeout(r2, 1500); });
+        }
+      } catch(e) {
+        console.error('[Diary] Mistral history capture threw:', e);
+      }
+      console.log('[Diary] Mistral history capture unavailable — using page-based capture');
+      return none;
+    }
+
     async function performSaveToDiary(btn) {
       // Confirmed real race condition, reported live and reproduced:
       // two separate background mechanisms (_domPollCheck's repeating
@@ -1885,9 +2063,14 @@ function queryAllDeep(selector) {
       if (PROVIDER === 'deepseek') {
         try { deepseekHistoryResult = await tryDeepSeekHistoryCapture(); } catch(_) {}
       }
+      // Mistral: same idea (see tryMistralHistoryCapture).
+      var mistralHistoryResult = null;
+      if (PROVIDER === 'mistral') {
+        try { mistralHistoryResult = await tryMistralHistoryCapture(); } catch(_) {}
+      }
       var _pollWaitCapMs = (PROVIDER === 'grok' || PROVIDER === 'mistral') ? 50000 : 8000;
       var _pollWaitStart = Date.now();
-      while (window.__diaryDomPollActive && !(grokHistoryResult && grokHistoryResult.success) && !(deepseekHistoryResult && deepseekHistoryResult.success) && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
+      while (window.__diaryDomPollActive && !(grokHistoryResult && grokHistoryResult.success) && !(deepseekHistoryResult && deepseekHistoryResult.success) && !(mistralHistoryResult && mistralHistoryResult.success) && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
         await new Promise(function(r) { setTimeout(r, 150); });
       }
       if (window.__diaryDomPollActive) {
@@ -2588,7 +2771,13 @@ function queryAllDeep(selector) {
         // confirmed afterward that this was Mistral's own, unrelated
         // transient server-side delay, not caused by this code at all —
         // re-applied here unchanged from its original, verified form.
-        if (PROVIDER === 'mistral') {
+        if (PROVIDER === 'mistral' && mistralHistoryResult && mistralHistoryResult.success) {
+          // History-based capture succeeded (see tryMistralHistoryCapture):
+          // use it, with the title taken from its first question.
+          fullThread = mistralHistoryResult.fullThread;
+          if (mistralHistoryResult.prompt) prompt = mistralHistoryResult.prompt;
+          console.log('[Diary] Mistral history thread used, length:', fullThread.length);
+        } else if (PROVIDER === 'mistral') {
           var mistralThread = buildMistralPairedThread({
             combinedSelector: '[data-message-author-role="user"], [data-message-part-type="answer"]',
             isQuestion: function(el) { return el.getAttribute('data-message-author-role') === 'user'; },
