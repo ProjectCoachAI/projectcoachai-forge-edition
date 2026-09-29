@@ -1959,10 +1959,35 @@ function queryAllDeep(selector) {
             // a live-captured turn (e.g. the seed's endpoint refetching
             // mid-session and picking up an answer that was also
             // captured live).
+            //
+            // The literal first-80-chars key above is not enough on its
+            // own: confirmed live, Perplexity's DOM-read snapshots (its
+            // last few mounted answers) carry the same text as the
+            // network seed but formatted differently — markdown links
+            // instead of [n] markers, "*" bullets or numbered lists
+            // instead of the seed's markup — so the literal keys never
+            // matched and answers 5-7 were appended again, incomplete.
+            // pplxNormKey() strips links, [n] markers, the invisible
+            // question marker, punctuation and case before comparing, so
+            // the same content matches regardless of formatting. Used
+            // only when a Perplexity seed exists (seedNormKeys stays
+            // empty and every check below is skipped otherwise).
+            var seedNormKeys = {};
+            function pplxNormKey(s) {
+              return String(s || '')
+                .replace(/⁣/g, '')
+                .replace(/\[[^\]]*\]\([^)]*\)/g, '')
+                .replace(/\[\d+\]/g, '')
+                .replace(/[^a-z0-9]/gi, '')
+                .toLowerCase()
+                .slice(0, 60);
+            }
             if (pplxSeed && pplxSeed.text) {
               pplxSeed.text.split(/\n{2,}/).forEach(function(p) {
                 var trimmed = p.trim();
                 if (trimmed) mergeSeen[trimmed.slice(0, 80)] = true;
+                var nk = pplxNormKey(trimmed);
+                if (nk) seedNormKeys[nk] = true;
               });
             }
             var promptsShownCount = 0;
@@ -1973,7 +1998,11 @@ function queryAllDeep(selector) {
               var newPrompts = allPromptsFinal.slice(promptsShownCount, countAtCapture);
               var turnText = turn.text;
               if (newPrompts.length) {
-                newPrompts.forEach(function(p) { interleavedParts.push(boldQuestion(p.slice(0, 2000))); });
+                newPrompts.forEach(function(p) {
+                  // A question the seed already contains is not repeated.
+                  if (pplxSeed && seedNormKeys[pplxNormKey(p)]) return;
+                  interleavedParts.push(boldQuestion(p.slice(0, 2000)));
+                });
                 promptsShownCount = countAtCapture;
               }
               // Strip a leading echo of the most recently bolded question
@@ -2000,6 +2029,8 @@ function queryAllDeep(selector) {
                 if (!trimmed || trimmed.length < 10) return;
                 var key = trimmed.slice(0, 80);
                 if (mergeSeen[key]) return;
+                // Same content as a seed paragraph, differently formatted.
+                if (pplxSeed && seedNormKeys[pplxNormKey(trimmed)]) return;
                 mergeSeen[key] = true;
                 if (lastQuestionForTurn && !checkedFirstNewParagraph) {
                   trimmed = stripLeadingEcho(lastQuestionForTurn, trimmed);
@@ -2014,7 +2045,12 @@ function queryAllDeep(selector) {
             // gets shown — better to display an unanswered question than
             // silently drop it.
             if (promptsShownCount < allPromptsFinal.length) {
-              allPromptsFinal.slice(promptsShownCount).forEach(function(p) { interleavedParts.push(boldQuestion(p.slice(0, 2000))); });
+              allPromptsFinal.slice(promptsShownCount).forEach(function(p) {
+                // Questions the seed already contains are not repeated at
+                // the end as if unanswered.
+                if (pplxSeed && seedNormKeys[pplxNormKey(p)]) return;
+                interleavedParts.push(boldQuestion(p.slice(0, 2000)));
+              });
             }
             // Prefix with the Perplexity historySeed when present (null
             // for every other provider in this branch, so this is a
