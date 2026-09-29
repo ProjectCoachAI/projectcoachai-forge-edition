@@ -1573,6 +1573,141 @@ function queryAllDeep(selector) {
       }, delayMs);
     }
 
+    // Grok: read the whole thread from Grok's own history requests instead
+    // of the page. Confirmed live: Grok's page only keeps a small window of
+    // messages mounted (3 of 7 questions, the same at the top and the bottom
+    // of the scroll), so page-based capture can miss exchanges. Two plain
+    // same-site requests (cookies only, HTTP 200 confirmed) give the full
+    // thread: GET .../response-node lists every response id in order (and
+    // any still streaming), POST .../load-responses returns each response's
+    // text in `message` (clean markdown for answers). The result is only
+    // used if it passes checks against the page; otherwise this returns
+    // { success:false } and the existing page-based capture runs unchanged.
+    async function tryGrokHistoryCapture() {
+      var none = { success: false, fullThread: null, prompt: null };
+      try {
+        var idm = window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+        if (!idm) return none;
+        var base = '/rest/app-chat/conversations/' + idm[0];
+        var grokJson = async function(url, body) {
+          var ctrl = new AbortController();
+          var to = setTimeout(function() { ctrl.abort(); }, 8000);
+          try {
+            var opts = { credentials: 'include', signal: ctrl.signal };
+            if (body) {
+              opts.method = 'POST';
+              opts.headers = { 'content-type': 'application/json' };
+              opts.body = JSON.stringify(body);
+            }
+            var r = await fetch(url, opts);
+            if (!r.ok) { console.log('[Diary] Grok history request HTTP', r.status, url.slice(-30)); return null; }
+            return await r.json();
+          } catch(e) {
+            console.log('[Diary] Grok history request failed:', e && e.message);
+            return null;
+          } finally { clearTimeout(to); }
+        };
+        var norm = function(s) { return String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase(); };
+        // True if any of five 30-character samples from the middle of the
+        // page text appears in the fetched thread (citation numbers or
+        // widget text on the page can break any single sample).
+        var sampleFound = function(domText, hay) {
+          var t = norm(domText);
+          if (t.length < 8) return true;
+          if (t.length <= 60) return hay.indexOf(t) !== -1;
+          var pts = [0.15, 0.3, 0.5, 0.7, 0.85];
+          for (var i = 0; i < pts.length; i++) {
+            var s = Math.floor(t.length * pts[i]);
+            if (hay.indexOf(t.slice(s, s + 30)) !== -1) return true;
+          }
+          return false;
+        };
+        for (var attempt = 0; attempt < 3; attempt++) {
+          var t0 = Date.now();
+          var reason = '';
+          var res = null;
+          var nodesJson = await grokJson(base + '/response-node');
+          var nodes = nodesJson && nodesJson.responseNodes;
+          if (!Array.isArray(nodes) || !nodes.length) {
+            reason = 'no response nodes';
+          } else if (nodesJson.inflightResponses && nodesJson.inflightResponses.length) {
+            reason = 'a response is still streaming';
+          } else {
+            // Active branch: walk parent links back from the newest node.
+            var byId = {};
+            nodes.forEach(function(n) { byId[n.responseId] = n; });
+            var chain = [];
+            var seenIds = {};
+            var cur = nodes[nodes.length - 1].responseId;
+            while (cur && byId[cur] && !seenIds[cur]) { seenIds[cur] = true; chain.push(cur); cur = byId[cur].parentResponseId; }
+            chain.reverse();
+            var orderIds = chain.length >= Math.ceil(nodes.length / 2) ? chain : nodes.map(function(n) { return n.responseId; });
+            var batches = [];
+            for (var bi = 0; bi < orderIds.length; bi += 6) batches.push(orderIds.slice(bi, bi + 6));
+            var loaded = await Promise.all(batches.map(function(ids) { return grokJson(base + '/load-responses', { responseIds: ids }); }));
+            var byResp = {};
+            var loadFailed = false;
+            loaded.forEach(function(j) {
+              if (!j || !Array.isArray(j.responses)) { loadFailed = true; return; }
+              j.responses.forEach(function(r) { byResp[r.responseId] = r; });
+            });
+            var parts = [];
+            var userCount = 0;
+            var firstQ = null;
+            var lastRole = null;
+            var anyPartial = false;
+            var missing = 0;
+            orderIds.forEach(function(id) {
+              var r = byResp[id];
+              if (!r) { missing++; return; }
+              if (r.isControl) return;
+              var text = String(r.message || '').trim();
+              if (!text) return;
+              if (r.sender === 'human') {
+                parts.push(boldQuestion(text.slice(0, 2000)));
+                userCount++;
+                if (firstQ === null) firstQ = text;
+                lastRole = 'human';
+              } else if (r.sender === 'assistant') {
+                if (r.partial) anyPartial = true;
+                parts.push(text);
+                lastRole = 'assistant';
+              }
+            });
+            if (loadFailed || missing) reason = 'could not load ' + (missing || 'some') + ' response(s)';
+            else if (anyPartial) reason = 'an answer is still partial';
+            else if (lastRole !== 'assistant') reason = 'newest answer not available yet';
+            else {
+              var full = parts.join('\n\n');
+              var hay = norm(full);
+              var userEls = document.querySelectorAll('[data-testid="user-message"]');
+              var asstEls = document.querySelectorAll('[data-testid="assistant-message"]');
+              if (userCount < userEls.length) {
+                reason = 'thread has ' + userCount + ' questions, page shows ' + userEls.length;
+              } else if (userEls.length && !sampleFound(userEls[userEls.length - 1].textContent, hay)) {
+                reason = 'newest question on the page not in fetched thread';
+              } else if (asstEls.length) {
+                var lastA = asstEls[asstEls.length - 1];
+                var aBody = lastA.querySelector('.response-content-markdown') || lastA;
+                if (!sampleFound(aBody.textContent, hay)) reason = 'newest answer on the page not in fetched thread';
+              }
+              if (!reason) {
+                res = { success: true, fullThread: full, prompt: firstQ ? firstQ.slice(0, 500) : null };
+                console.log('[Diary] Grok history capture OK on attempt', attempt + 1, '| questions:', userCount, '| length:', full.length, '| took', Date.now() - t0, 'ms');
+              }
+            }
+          }
+          if (res) return res;
+          console.log('[Diary] Grok history capture attempt', attempt + 1, 'rejected:', reason);
+          if (attempt < 2) await new Promise(function(r) { setTimeout(r, 1500); });
+        }
+      } catch(e) {
+        console.error('[Diary] Grok history capture threw:', e);
+      }
+      console.log('[Diary] Grok history capture unavailable — using page-based capture');
+      return none;
+    }
+
     async function performSaveToDiary(btn) {
       // Confirmed real race condition, reported live and reproduced:
       // two separate background mechanisms (_domPollCheck's repeating
@@ -1610,9 +1745,16 @@ function queryAllDeep(selector) {
       // signal that led here. Computed the same way DOM_POLL_CEILING
       // itself is, with a fixed buffer beyond the poll's own maximum
       // possible duration, so the two can never drift apart again.
+      // Grok: try the history-based capture first. When it succeeds, the
+      // page-reading timer's result isn't needed, so the long wait below
+      // (up to 50s for Grok) is skipped entirely.
+      var grokHistoryResult = null;
+      if (PROVIDER === 'grok') {
+        try { grokHistoryResult = await tryGrokHistoryCapture(); } catch(_) {}
+      }
       var _pollWaitCapMs = (PROVIDER === 'grok' || PROVIDER === 'mistral') ? 50000 : 8000;
       var _pollWaitStart = Date.now();
-      while (window.__diaryDomPollActive && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
+      while (window.__diaryDomPollActive && !(grokHistoryResult && grokHistoryResult.success) && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
         await new Promise(function(r) { setTimeout(r, 150); });
       }
       if (window.__diaryDomPollActive) {
@@ -2249,7 +2391,14 @@ function queryAllDeep(selector) {
         // for both (same one getPrompt() already uses directly for
         // clean text). Verified via direct simulation of a two-question
         // conversation before wiring in here.
-        if (PROVIDER === 'grok') {
+        if (PROVIDER === 'grok' && grokHistoryResult && grokHistoryResult.success) {
+          // History-based capture already succeeded (see
+          // tryGrokHistoryCapture): use it, and take the title from its
+          // first question, since the page may not have the first one.
+          fullThread = grokHistoryResult.fullThread;
+          if (grokHistoryResult.prompt) prompt = grokHistoryResult.prompt;
+          console.log('[Diary] Grok history thread used, length:', fullThread.length);
+        } else if (PROVIDER === 'grok') {
           // REVERTED to the confirmed-stable Aug 28 configuration
           // (commit bba9c35), found via direct git-history comparison
           // after live symptoms persisted through multiple other fix
