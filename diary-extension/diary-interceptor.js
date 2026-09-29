@@ -586,6 +586,58 @@
     } catch(e) { return ''; }
   }
 
+  // After a Perplexity answer finishes streaming, re-fetch the thread
+  // history so the historySeed includes the new exchange, with its
+  // question in the right place and its answer complete. Confirmed live
+  // why this is needed: answers asked AFTER page load only exist as live
+  // captures, whose question labels come from an unreliable DOM read
+  // (misplaced at the end of the entry) and which can include a
+  // cut-off snapshot of the answer as a duplicate paragraph. The
+  // history endpoint has neither problem. Two attempts (the newest entry
+  // can still be finalizing on the first); the seed assignment above
+  // never lets a shorter result replace a fuller one.
+  function schedulePerplexityThreadRefresh() {
+    try {
+      var base = window.__diaryCapture && window.__diaryCapture.pplxThreadUrl;
+      if (!base) return;
+      [2500, 7000].forEach(function(ms) {
+        setTimeout(function() {
+          try {
+            var m = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(window.location.pathname);
+            var u = m ? base.replace(/\/rest\/thread\/[0-9a-f-]{20,}/i, '/rest/thread/' + m[1]) : base;
+            window.fetch(u, { credentials: 'include' }).catch(function() {});
+          } catch(e) {}
+        }, ms);
+      });
+    } catch(e) {}
+  }
+
+  // Called by diary-content.js right before a Perplexity save builds its
+  // content: confirmed live that clicking Save shortly after an answer
+  // finishes can beat the scheduled re-fetch above, so the newest exchange
+  // is missing from the seed and falls back to a cut-off live capture with
+  // its question misplaced at the end. This fetches the thread NOW and
+  // resolves once the response has been parsed (or after timeoutMs, so a
+  // slow or failed request never blocks a save for long).
+  window.__diaryRefreshPplxSeed = function(timeoutMs) {
+    return new Promise(function(resolve) {
+      try {
+        var base = window.__diaryCapture && window.__diaryCapture.pplxThreadUrl;
+        if (!base) return resolve(false);
+        var m = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(window.location.pathname);
+        var u = m ? base.replace(/\/rest\/thread\/[0-9a-f-]{20,}/i, '/rest/thread/' + m[1]) : base;
+        var t0 = Date.now();
+        window.fetch(u, { credentials: 'include' }).then(function() {
+          (function poll() {
+            if ((window.__diaryCapture.pplxSeedFetchTs || 0) >= t0) return resolve(true);
+            if (Date.now() - t0 > timeoutMs) return resolve(false);
+            setTimeout(poll, 100);
+          })();
+        }).catch(function() { resolve(false); });
+      } catch(e) { resolve(false); }
+    });
+  };
+
   function processLines(lines, host, state) {
     var accumulated = '';
     for (var i = 0; i < lines.length; i++) {
@@ -724,8 +776,27 @@
               // response arrives, avoids any mismatch from redirects or
               // an in-flight URL transition.
               var uuidMatch = /\/rest\/thread\/([0-9a-f-]{20,})/i.exec(pplxUrl);
-              var seedUrl = uuidMatch ? (window.location.origin + '/search/' + uuidMatch[1]) : pageUrl;
-              window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now() };
+              var pplxUuid = uuidMatch ? uuidMatch[1] : '';
+              // Use the page's own canonical URL when it contains this
+              // thread's UUID (covers both /search/<uuid> and a
+              // /search/<title-slug>-<uuid> shape); fall back to the
+              // /search/<uuid> form otherwise.
+              var seedUrl = pplxUuid
+                ? (window.location.pathname.indexOf(pplxUuid) !== -1
+                    ? (window.location.origin + window.location.pathname)
+                    : (window.location.origin + '/search/' + pplxUuid))
+                : pageUrl;
+              // Never replace a fuller seed for this same thread with a
+              // shorter one (a re-fetch that lands while the newest entry
+              // is still being finalized can come back incomplete).
+              var prevPplxSeed = window.__diaryCapture.historySeed;
+              if (!(prevPplxSeed && prevPplxSeed.url === seedUrl && prevPplxSeed.text && prevPplxSeed.text.length > seedText.length)) {
+                window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now() };
+              }
+              // Remembered so a fresh answer can trigger a re-fetch of
+              // this same thread (see schedulePerplexityThreadRefresh).
+              window.__diaryCapture.pplxThreadUrl = pplxUrl;
+              window.__diaryCapture.pplxSeedFetchTs = Date.now();
               console.log('[Diary interceptor] Perplexity history seed captured:', seedText.slice(0, 80));
               window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: seedUrl } }));
             }
@@ -817,6 +888,7 @@
             accumulated += processLines(lines, host, state);
           }
           storeTurn(accumulated, pageUrl);
+          if (host.includes('perplexity.ai')) schedulePerplexityThreadRefresh();
         } catch(e) {}
       })();
 

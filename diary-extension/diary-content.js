@@ -1548,6 +1548,31 @@ function queryAllDeep(selector) {
     // real click; for a remote trigger (no button was ever clicked at
     // all), every btn.* reference below is now guarded so it's simply
     // skipped rather than throwing on a missing element.
+    // Button-state helpers. Confirmed live as a real usability bug: a
+    // Save click could seem to do nothing — the button kept its idle
+    // label while a background poll was awaited (up to ~8s), extra clicks
+    // were silently ignored by the in-progress lock, and several
+    // non-success outcomes ("Still loading…", "Failed — try again", ...)
+    // deleted the button entirely a few seconds later, leaving nothing to
+    // click. These give immediate feedback and put the button back into a
+    // clickable state after any non-success result.
+    function markSaving(b) {
+      if (!b) return;
+      if (b.__origText === undefined) { b.__origText = b.textContent; b.__origBg = b.style.background; }
+      b.textContent = 'Saving...';
+      b.disabled = true;
+    }
+    function restoreSaveButton(b, delayMs) {
+      setTimeout(function() {
+        try {
+          if (!b || !document.body.contains(b)) return;
+          if (b.__origText !== undefined) b.textContent = b.__origText;
+          b.style.background = (typeof b.__origBg === 'string') ? b.__origBg : '';
+          b.disabled = false;
+        } catch(_) {}
+      }, delayMs);
+    }
+
     async function performSaveToDiary(btn) {
       // Confirmed real race condition, reported live and reproduced:
       // two separate background mechanisms (_domPollCheck's repeating
@@ -1628,7 +1653,7 @@ function queryAllDeep(selector) {
         console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
         try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
       }
-      if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+      markSaving(btn);
       try {
         var token = null;
         // Timestamp captured at the exact moment GET_AUTH_TOKEN is
@@ -1656,7 +1681,7 @@ function queryAllDeep(selector) {
           if (btn) {
             btn.textContent = 'Sign in to Diary first';
             btn.style.background = '#6B6B88';
-            setTimeout(function() { btn.remove(); }, 3000);
+            restoreSaveButton(btn, 3000);
           }
           return { success: false, error: 'not_authenticated' };
         }
@@ -1897,6 +1922,13 @@ function queryAllDeep(selector) {
           // stale seed from switching threads in the same tab is never
           // applied to the wrong conversation.
           var pplxSeed = null;
+          // Get a fresh thread history first, so a Save clicked right
+          // after an answer finishes (before the interceptor's own
+          // scheduled re-fetch has run) still includes that newest
+          // exchange from the seed rather than a cut-off live capture.
+          if (PROVIDER === 'perplexity' && typeof window.__diaryRefreshPplxSeed === 'function') {
+            try { await window.__diaryRefreshPplxSeed(5000); } catch(_) {}
+          }
           if (PROVIDER === 'perplexity') {
             var pplxSeedCandidate = window.__diaryCapture && window.__diaryCapture.historySeed;
             if (pplxSeedCandidate && pplxSeedCandidate.text && pplxSeedCandidate.url === canonicalUrl()) {
@@ -1982,12 +2014,30 @@ function queryAllDeep(selector) {
                 .toLowerCase()
                 .slice(0, 60);
             }
+            // Full (uncut) normalized form, used to recognise a cut-off
+            // snapshot of a paragraph: confirmed live, an answer captured
+            // mid-stream left a fragment ("The practical lesson is to")
+            // ahead of the finished paragraph, because the fragment's key
+            // differs from the full paragraph's. A paragraph whose
+            // normalized text is a strict prefix of a longer one is the
+            // same content, not a new paragraph.
+            var seedNormFull = [];
+            function pplxNormFull(s) {
+              return String(s || '')
+                .replace(/⁣/g, '')
+                .replace(/\[[^\]]*\]\([^)]*\)/g, '')
+                .replace(/\[\d+\]/g, '')
+                .replace(/[^a-z0-9]/gi, '')
+                .toLowerCase();
+            }
             if (pplxSeed && pplxSeed.text) {
               pplxSeed.text.split(/\n{2,}/).forEach(function(p) {
                 var trimmed = p.trim();
                 if (trimmed) mergeSeen[trimmed.slice(0, 80)] = true;
                 var nk = pplxNormKey(trimmed);
                 if (nk) seedNormKeys[nk] = true;
+                var nf = pplxNormFull(trimmed);
+                if (nf) seedNormFull.push(nf);
               });
             }
             var promptsShownCount = 0;
@@ -2031,6 +2081,15 @@ function queryAllDeep(selector) {
                 if (mergeSeen[key]) return;
                 // Same content as a seed paragraph, differently formatted.
                 if (pplxSeed && seedNormKeys[pplxNormKey(trimmed)]) return;
+                // A cut-off fragment of a seed paragraph.
+                if (pplxSeed) {
+                  var fragNorm = pplxNormFull(trimmed);
+                  if (fragNorm.length >= 15) {
+                    for (var sf = 0; sf < seedNormFull.length; sf++) {
+                      if (seedNormFull[sf].length > fragNorm.length && seedNormFull[sf].indexOf(fragNorm) === 0) return;
+                    }
+                  }
+                }
                 mergeSeen[key] = true;
                 if (lastQuestionForTurn && !checkedFirstNewParagraph) {
                   trimmed = stripLeadingEcho(lastQuestionForTurn, trimmed);
@@ -2055,6 +2114,23 @@ function queryAllDeep(selector) {
             // Prefix with the Perplexity historySeed when present (null
             // for every other provider in this branch, so this is a
             // no-op for them — see pplxSeed's own comment above).
+            // Perplexity only: drop a live paragraph that is just a
+            // cut-off fragment of a longer one in the same result (both
+            // came from live snapshots taken at different moments while
+            // the answer was still streaming). Question lines (marked
+            // with U+2063) are never dropped.
+            if (PROVIDER === 'perplexity') {
+              var normParts = interleavedParts.map(pplxNormFull);
+              interleavedParts = interleavedParts.filter(function(part, pi) {
+                if (part.indexOf('⁣') === 0) return true;
+                var n = normParts[pi];
+                if (n.length < 15) return true;
+                for (var pj = 0; pj < normParts.length; pj++) {
+                  if (pj !== pi && normParts[pj].length > n.length && normParts[pj].indexOf(n) === 0) return false;
+                }
+                return true;
+              });
+            }
             var pplxFinalParts = [];
             if (pplxSeed && pplxSeed.text) pplxFinalParts.push(pplxSeed.text);
             if (interleavedParts.length) pplxFinalParts.push(interleavedParts.join('\n\n'));
@@ -2427,7 +2503,7 @@ function queryAllDeep(selector) {
           if (btn) {
             btn.textContent = 'Nothing to save';
             btn.style.background = '#6B6B88';
-            setTimeout(function() { btn.remove(); }, 3000);
+            restoreSaveButton(btn, 3000);
           }
           return { success: false, error: 'no_content_found' };
         }
@@ -2455,7 +2531,7 @@ function queryAllDeep(selector) {
           if (btn) {
             btn.textContent = 'Still loading…';
             btn.style.background = '#6B6B88';
-            setTimeout(function() { btn.remove(); }, 3000);
+            restoreSaveButton(btn, 3000);
           }
           return { success: false, error: 'incomplete_response' };
         }
@@ -2484,7 +2560,7 @@ function queryAllDeep(selector) {
           if (btn) {
             btn.textContent = 'Still loading…';
             btn.style.background = '#6B6B88';
-            setTimeout(function() { btn.remove(); }, 3000);
+            restoreSaveButton(btn, 3000);
           }
           return { success: false, error: 'incomplete_response' };
         }
@@ -2593,7 +2669,7 @@ function queryAllDeep(selector) {
           btn.textContent = 'Failed — try again';
           btn.style.background = '#ef4444';
           btn.disabled = false;
-          setTimeout(function() { btn.remove(); }, 4000);
+          restoreSaveButton(btn, 4000);
         }
         return { success: false, error: e.message };
       }
@@ -2651,12 +2727,22 @@ function queryAllDeep(selector) {
       var LOCK_STALE_MS_CLICK = (PROVIDER === 'grok' || PROVIDER === 'mistral') ? 50000 : 12000;
       if (window.__diarySyncAttemptInProgress && (Date.now() - (window.__diarySyncAttemptStartedAt || 0)) < LOCK_STALE_MS_CLICK) {
         console.log('[Diary Sync DIAG] manual click ignored — a sync attempt is already in progress on this tab (age:', Date.now() - window.__diarySyncAttemptStartedAt, 'ms)');
+        // Say so, instead of silently doing nothing — otherwise the
+        // click looks broken and gets repeated.
+        if (btn.__origText === undefined) { btn.__origText = btn.textContent; btn.__origBg = btn.style.background; }
+        btn.textContent = 'Save in progress…';
+        setTimeout(function() {
+          try { if (document.body.contains(btn) && !btn.disabled && btn.__origText !== undefined) btn.textContent = btn.__origText; } catch(_) {}
+        }, 2500);
         return;
       }
       var myClickToken = Date.now() + '_' + Math.random();
       window.__diarySyncAttemptInProgress = true;
       window.__diarySyncAttemptStartedAt = Date.now();
       window.__diarySyncAttemptToken = myClickToken;
+      // Immediate feedback and protection from repeat clicks, before any
+      // of the waiting inside performSaveToDiary() begins.
+      markSaving(btn);
       performSaveToDiary(btn).finally(function() {
         if (window.__diarySyncAttemptToken === myClickToken) {
           window.__diarySyncAttemptInProgress = false;
