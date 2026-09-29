@@ -2677,6 +2677,29 @@ function queryAllDeep(selector) {
         // simulation of a two-question conversation before wiring in
         // here.
         if (PROVIDER === 'meta') {
+          // Meta AI loads a long thread lazily: a fresh tab (e.g. Sync) renders only the
+          // newest ~5 exchanges and loads older ones when scrolled to the top (confirmed
+          // live: 5 questions on load, 8 after scrolling up). Load them before reading the
+          // DOM, then put every scroll position back. Meta-only.
+          try {
+            var metaCount = function() { return document.querySelectorAll('[data-message-type="user"]').length; };
+            var metaScrollers = Array.prototype.filter.call(document.querySelectorAll('*'), function(e) {
+              return e.scrollHeight > e.clientHeight + 200 && /auto|scroll/.test(getComputedStyle(e).overflowY);
+            });
+            var metaSavedPos = metaScrollers.map(function(e) { return e.scrollTop; });
+            var metaPrev = metaCount();
+            for (var metaRound = 0; metaRound < 8; metaRound++) {
+              metaScrollers.forEach(function(e) { e.scrollTop = 0; });
+              await new Promise(function(r) { setTimeout(r, 1200); });
+              var metaNow = metaCount();
+              if (metaNow === metaPrev) break;
+              metaPrev = metaNow;
+            }
+            metaScrollers.forEach(function(e, idx) { e.scrollTop = metaSavedPos[idx]; });
+            console.log('[Diary] Meta AI lazy-load pass done, questions in DOM:', metaPrev);
+          } catch (metaScrollErr) {
+            console.log('[Diary] Meta AI lazy-load pass skipped:', metaScrollErr && metaScrollErr.message);
+          }
           var metaThread = buildMetaAIPairedThread({
             // Also picks up real <table> elements that sit OUTSIDE the
             // .ur-markdown text blocks (confirmed live: Meta AI renders a
