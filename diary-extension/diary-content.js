@@ -4366,6 +4366,17 @@ function queryAllDeep(selector) {
 
   // Listen for interceptor capture — show save button when response captured
     window.addEventListener('__diaryInterceptorCapture', function() {
+      // Don't replace the button while a save is running: injecting
+      // removes the existing button and creates a new one, so the
+      // in-flight save would report "Saved" on a detached element and
+      // the visible button would stay stuck on "Saving...". Confirmed
+      // cause on Perplexity, where the save-time history refresh fires
+      // this same event mid-save.
+      if (window.__diarySyncAttemptInProgress &&
+          (Date.now() - (window.__diarySyncAttemptStartedAt || 0)) < 60000 &&
+          document.getElementById('diary-save-btn')) {
+        return;
+      }
       injectSaveDiaryButton('intercepted');
     });
 
