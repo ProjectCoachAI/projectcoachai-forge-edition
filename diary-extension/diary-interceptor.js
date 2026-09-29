@@ -886,6 +886,35 @@
           } catch(e) {}
         }
 
+        // Perplexity's /rest/thread/<uuid> history endpoint — confirmed
+        // live this fires as an XHR request, NOT a fetch() call (the
+        // matching branch added to the fetch patch above never fired for
+        // it in practice; window.__diaryCapture.historySeed stayed
+        // undefined after a real page reload, console-confirmed). Left
+        // in both places since only one will ever actually match a given
+        // real request, matching the existing pattern here of Gemini/
+        // DeepSeek needing the XHR patch while Claude/ChatGPT/Perplexity's
+        // own live stream use fetch.
+        if (xhr.__host && xhr.__host.includes('perplexity.ai') && PERPLEXITY_THREAD_HISTORY_URL_RE.test(xhr.__url) && ct.includes('json')) {
+          try {
+            console.log('[Diary interceptor] Perplexity thread history endpoint matched (XHR), url:', xhr.__url);
+            var pplxJson = JSON.parse(text);
+            console.log('[Diary interceptor] Perplexity thread JSON parsed (XHR), entries length:', pplxJson && pplxJson.entries && pplxJson.entries.length);
+            var pplxSeedText = parsePerplexityHistorySeed(pplxJson);
+            console.log('[Diary interceptor] Perplexity history seed text length (XHR):', pplxSeedText.length);
+            if (pplxSeedText && pplxSeedText.length > 50) {
+              var pplxUuidMatch = /\/rest\/thread\/([0-9a-f-]{20,})/i.exec(xhr.__url);
+              var pplxSeedUrl = pplxUuidMatch ? (window.location.origin + '/search/' + pplxUuidMatch[1]) : xhr.__pageUrl;
+              window.__diaryCapture.historySeed = { text: pplxSeedText, url: pplxSeedUrl, ts: Date.now() };
+              console.log('[Diary interceptor] Perplexity history seed captured (XHR):', pplxSeedText.slice(0, 80));
+              window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pplxSeedUrl } }));
+            }
+          } catch(e) {
+            console.error('[Diary interceptor] Perplexity history parse FAILED (XHR):', e);
+          }
+          return;
+        }
+
         if (!isAIStream(xhr.__url, ct)) return;
         // Same DeepSeek-specific tightening as the fetch-patch path above —
         // see the detailed comment there for the full rationale.
