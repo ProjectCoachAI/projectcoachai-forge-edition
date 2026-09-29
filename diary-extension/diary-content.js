@@ -2375,7 +2375,13 @@ function queryAllDeep(selector) {
           // architectural simplification pass, splitting ChatGPT's own
           // capture logic (by far the largest self-contained block for
           // any single provider) out of this shared file.
-          var chatgptCaptureResult = await runChatGPTCaptureWithStability();
+          // History-based capture first (no scrolling or clipboard, and
+          // includes exchanges asked after page load); the clipboard
+          // method below only runs if it reports unavailable.
+          var chatgptCaptureResult = await tryChatGPTHistoryCapture();
+          if (!chatgptCaptureResult || !chatgptCaptureResult.success) {
+            chatgptCaptureResult = await runChatGPTCaptureWithStability();
+          }
           if (chatgptCaptureResult && chatgptCaptureResult.success) {
             chatgptClipboardWorked = true;
             fullThread = chatgptCaptureResult.fullThread;

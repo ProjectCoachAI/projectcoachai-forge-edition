@@ -281,3 +281,84 @@ async function runChatGPTCaptureWithStability() {
   }
   return captureAttempt || { success: false, fullThread: null, turnCount: null, prompt: null };
 }
+
+// ── History-based capture (tried first, clipboard method is the fallback) ──
+// Re-fetches the conversation from ChatGPT's backend at Save time (via the
+// interceptor's __diaryRefreshChatGPTSeed, which reuses ChatGPT's own
+// request headers) and uses that as the thread. Unlike the clipboard
+// method it never scrolls the page, never touches the clipboard, and is
+// not limited by ChatGPT's virtualized DOM, so it includes exchanges
+// asked after page load. Because the backend can lag behind what the page
+// shows right after an answer finishes, the fetched thread is only used
+// if it passes checks against the page itself:
+//   - it has at least as many user turns as the page currently shows, and
+//   - text from the page's newest question AND newest answer is in it.
+// Otherwise it retries (up to 3 times, 1.5s apart) and finally returns
+// { success:false }, leaving the caller to run the clipboard method
+// exactly as before.
+async function tryChatGPTHistoryCapture() {
+  var none = { success: false, fullThread: null, turnCount: null, prompt: null };
+  try {
+    if (typeof window.__diaryRefreshChatGPTSeed !== 'function') return none;
+    var m = /\/c\/([0-9a-f-]{20,})/i.exec(window.location.pathname);
+    if (!m) return none;
+    var convId = m[1];
+    var norm = function(s) {
+      return String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase().replace(/^(yousaid|chatgptsaid)/, '');
+    };
+    // True if any of a few 40-character samples taken from the middle of
+    // `domText` appear in `haystack` (avoids the start/end, where UI text
+    // such as "Thought for 5s" or action labels can appear).
+    var sampleFound = function(domText, haystack) {
+      var t = norm(domText);
+      if (t.length < 8) return true; // nothing meaningful to compare
+      if (t.length <= 60) return haystack.indexOf(t) !== -1;
+      var points = [0.25, 0.5, 0.75];
+      for (var i = 0; i < points.length; i++) {
+        var s = Math.floor(t.length * points[i]);
+        if (haystack.indexOf(t.slice(s, s + 40)) !== -1) return true;
+      }
+      return false;
+    };
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var t0 = Date.now();
+      var ok = await window.__diaryRefreshChatGPTSeed(6000);
+      var seed = window.__diaryCapture && window.__diaryCapture.historySeed;
+      var reason = '';
+      if (!ok) reason = 'refresh failed';
+      else if (!seed || seed.convId !== convId || !seed.text) reason = 'seed missing or for another conversation';
+      else {
+        var userEls = document.querySelectorAll('section[data-turn="user"]');
+        var asstEls = document.querySelectorAll('section[data-turn="assistant"]');
+        var hay = norm(seed.text);
+        if ((seed.userCount || 0) < userEls.length) {
+          reason = 'seed has ' + seed.userCount + ' user turns, page shows ' + userEls.length;
+        } else if (userEls.length && !sampleFound(userEls[userEls.length - 1].textContent, hay)) {
+          reason = 'newest question not in fetched thread yet';
+        } else if (asstEls.length) {
+          var lastAsst = asstEls[asstEls.length - 1];
+          var body = lastAsst.querySelector('.text-base') || lastAsst;
+          if (!sampleFound(body.textContent, hay)) reason = 'newest answer not in fetched thread yet';
+        }
+      }
+      if (!reason) {
+        var first = /⁣\*\*([\s\S]*?)\*\*⁣/.exec(seed.text);
+        var res = {
+          success: true,
+          fullThread: seed.text,
+          // Same meaning as the clipboard method's count: user + assistant turns.
+          turnCount: (seed.userCount || 0) * 2,
+          prompt: first ? first[1].slice(0, 500) : null
+        };
+        console.log('[Diary] ChatGPT history capture OK on attempt', attempt + 1, '| user turns:', seed.userCount, '| length:', seed.text.length, '| took', Date.now() - t0, 'ms');
+        return res;
+      }
+      console.log('[Diary] ChatGPT history capture attempt', attempt + 1, 'rejected:', reason);
+      if (attempt < 2) await new Promise(function(r) { setTimeout(r, 1500); });
+    }
+  } catch(e) {
+    console.error('[Diary] ChatGPT history capture threw:', e);
+  }
+  console.log('[Diary] ChatGPT history capture unavailable — using clipboard method');
+  return none;
+}

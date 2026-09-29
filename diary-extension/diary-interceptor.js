@@ -638,6 +638,65 @@
     });
   };
 
+  // ChatGPT: remember the auth-related request headers ChatGPT's OWN
+  // client attaches to its /backend-api/ calls, so the thread history can
+  // be re-fetched on demand at Save time. The earlier comments in this
+  // project record that a plain fetch() of the conversation endpoint got
+  // HTTP 404 — most likely because it carried none of these headers
+  // (Authorization etc.), which is unverified; the refresh below logs the
+  // HTTP status so the first real save confirms or refutes that. Only
+  // Authorization, oai-* and the account id are kept (never the one-time
+  // openai-sentinel tokens), and only from same-site /backend-api/ calls.
+  function captureChatGPTHeaders(input, init) {
+    try {
+      var src = (init && init.headers) || (input && typeof input === 'object' && input.headers) || null;
+      if (!src) return;
+      var out = {};
+      var take = function(k, v) {
+        k = String(k).toLowerCase();
+        if (typeof v === 'string' && v && (k === 'authorization' || k === 'chatgpt-account-id' || /^oai-[a-z0-9-]+$/.test(k))) out[k] = v;
+      };
+      if (Array.isArray(src)) {
+        src.forEach(function(p) { if (p && p.length >= 2) take(p[0], p[1]); });
+      } else if (typeof src.forEach === 'function') {
+        src.forEach(function(v, k) { take(k, v); });
+      } else {
+        Object.keys(src).forEach(function(k) { take(k, src[k]); });
+      }
+      if (out.authorization) window.__diaryCapture.cgHeaders = out;
+    } catch(e) {}
+  }
+
+  // Called by diary-content-chatgpt.js at Save time: re-fetch the current
+  // conversation with the remembered headers. The response goes through
+  // the fetch patch below like any other, which parses it and refreshes
+  // window.__diaryCapture.historySeed (tagged with convId). Resolves true
+  // once that fresh seed has landed, false on any failure or timeout.
+  window.__diaryRefreshChatGPTSeed = function(timeoutMs) {
+    return new Promise(function(resolve) {
+      try {
+        var hdrs = window.__diaryCapture && window.__diaryCapture.cgHeaders;
+        var m = /\/c\/([0-9a-f-]{20,})/i.exec(window.location.pathname);
+        if (!hdrs || !hdrs.authorization || !m) {
+          console.log('[Diary interceptor] ChatGPT refresh skipped — headers captured:', !!(hdrs && hdrs.authorization), '| conversation id in URL:', !!m);
+          return resolve(false);
+        }
+        var convId = m[1];
+        var t0 = Date.now();
+        window.fetch('/backend-api/conversation/' + convId, { credentials: 'include', headers: hdrs }).then(function(r) {
+          console.log('[Diary interceptor] ChatGPT refresh fetch HTTP', r.status);
+          if (!r.ok) return resolve(false);
+          (function poll() {
+            var hs = window.__diaryCapture.historySeed;
+            if (hs && hs.convId === convId && hs.ts >= t0) return resolve(true);
+            if (Date.now() - t0 > timeoutMs) return resolve(false);
+            setTimeout(poll, 100);
+          })();
+        }).catch(function() { resolve(false); });
+      } catch(e) { resolve(false); }
+    });
+  };
+
   function processLines(lines, host, state) {
     var accumulated = '';
     for (var i = 0; i < lines.length; i++) {
@@ -713,6 +772,8 @@
     var url = typeof input === 'string' ? input : (input && input.url) || '';
     var host = window.location.hostname;
     var pageUrl = window.location.href;
+
+    if (host.includes('chatgpt.com') && url.indexOf('/backend-api/') !== -1) captureChatGPTHeaders(input, init);
 
     _fetchActive = true;
     var promise = _fetch.apply(this, arguments);
@@ -807,8 +868,11 @@
         return response;
       }
 
-      if (host.includes('chatgpt.com') && CHATGPT_HISTORY_URL_RE.test(url)) {
-        console.log('[Diary interceptor] ChatGPT history endpoint matched, url:', url);
+      // Same URL-object/Request handling as Perplexity above; the shared
+      // `url` is '' when ChatGPT calls fetch() with a URL object.
+      var cgUrl = url || (input && typeof input === 'object' ? (input.href || String(input)) : '') || '';
+      if (host.includes('chatgpt.com') && CHATGPT_HISTORY_URL_RE.test(cgUrl)) {
+        console.log('[Diary interceptor] ChatGPT history endpoint matched, url:', cgUrl);
         var cgHistClone = response.clone();
         (async function() {
           try {
@@ -835,7 +899,12 @@
                   }
                 }
               }
-              window.__diaryCapture.historySeed = { text: seedText, url: pageUrl, ts: Date.now(), rawJson: json, turnCount: turnCount };
+              // convId and userCount are used by the Save-time refresh
+              // (diary-content-chatgpt.js) to make sure a seed belongs to
+              // the conversation being saved and to sanity-check it.
+              var cgConvMatch = /\/backend-api\/conversation\/([0-9a-f-]{20,})/i.exec(cgUrl);
+              var cgUserCount = seedText.split('⁣**').length - 1;
+              window.__diaryCapture.historySeed = { text: seedText, url: pageUrl, ts: Date.now(), rawJson: json, turnCount: turnCount, convId: cgConvMatch ? cgConvMatch[1] : '', userCount: cgUserCount };
               console.log('[Diary interceptor] ChatGPT history seed captured:', seedText.slice(0, 80), '| cached turnCount:', turnCount);
               window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
             }
