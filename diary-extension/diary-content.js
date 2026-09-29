@@ -2678,7 +2678,14 @@ function queryAllDeep(selector) {
         // here.
         if (PROVIDER === 'meta') {
           var metaThread = buildMetaAIPairedThread({
-            combinedSelector: '[data-message-type="user"], .ur-markdown',
+            // Also picks up real <table> elements that sit OUTSIDE the
+            // .ur-markdown text blocks (confirmed live: Meta AI renders a
+            // table in its own wrapper inside div.markdown-content, a
+            // sibling of the text blocks, so reading only .ur-markdown
+            // dropped the table entirely). Document order keeps it between
+            // the text before and after it; a table already inside a
+            // .ur-markdown block is excluded so it isn't captured twice.
+            combinedSelector: '[data-message-type="user"], .ur-markdown, .markdown-content table:not(.ur-markdown table)',
             isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
             questionInnerSelector: '.text-response',
             answerInnerSelector: null

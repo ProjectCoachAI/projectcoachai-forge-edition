@@ -1415,6 +1415,26 @@
                   });
                   window.__diaryTurndownInstance = svc;
                 }
+                // Meta AI only: its bold text is a <span> styled with a
+                // font-bold / font-semibold class, not a real <strong>/<b>
+                // (confirmed live: a block with 0 strong/b tags and 4
+                // bold-styled spans), so Turndown drops the bold. Added to
+                // the shared converter only on meta.ai, and only once, so
+                // it can't affect any other provider.
+                if (window.location.hostname.includes('meta.ai') && !window.__diaryTurndownInstance.__metaBoldRule) {
+                  window.__diaryTurndownInstance.addRule('metaStyledBold', {
+                    filter: function(node) {
+                      return node.nodeName === 'SPAN' && typeof node.className === 'string' &&
+                        /(^|\s|:)font-(bold|semibold|extrabold)(\s|$)/.test(node.className);
+                    },
+                    replacement: function(content) {
+                      var t = content.replace(/^\s+|\s+$/g, '');
+                      if (!t || t.indexOf('**') !== -1) return content;
+                      return (/^\s/.test(content) ? ' ' : '') + '**' + t + '**' + (/\s$/.test(content) ? ' ' : '');
+                    }
+                  });
+                  window.__diaryTurndownInstance.__metaBoldRule = true;
+                }
                 text = aEls.map(function(e) { return window.__diaryTurndownInstance.turndown(e).trim(); }).filter(Boolean).join('\n\n');
               }
             } catch (e) {}
