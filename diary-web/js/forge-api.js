@@ -1,4 +1,4 @@
-﻿/**
+/**
  * forge-api.js -- Shared client-side API module for Forge Web
  * Include via: <script src="/js/forge-api.js"></script>
  * All pages share this single source of truth for auth state and API calls.
@@ -304,6 +304,22 @@
     return getUser();
   }
 
+  // -- Underscore italics (_text_) ----------------------------------------------
+  // The extension saves italics from every provider as standard Markdown
+  // "_text_" (Turndown's default), but this renderer only knew "*text*", so
+  // italics showed up as literal underscores (confirmed live: Gemini table
+  // cells, "_Daimler Reitwagen_"). Applied to plain text only — never inside
+  // an HTML tag (an href/src/alt can contain "_"), <pre> or <code>. The
+  // underscores must sit at word edges (not preceded/followed by a letter,
+  // digit or underscore), so snake_case_words and file_names_v2 are left
+  // alone, and a backslash-escaped "\_" is never treated as an opener.
+  function underscoreItalics(html) {
+    return html.split(/(<pre[\s\S]*?<\/pre>|<code>[\s\S]*?<\/code>|<[^>]+>)/).map(function (part, i) {
+      if (i % 2 === 1) return part;
+      return part.replace(/(^|[^\w\\])_(?=[^\s_])([^\n_]*?[^\s_])_(?!\w)/g, '$1<em>$2</em>');
+    }).join('');
+  }
+
   // -- Markdown renderer (lightweight, no deps) ---------------------------------
   function renderMarkdown(text) {
     if (!text) return '';
@@ -558,6 +574,7 @@
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^\n*]+?)\*/g, '<em>$1</em>')
+      .replace(/[\s\S]+/, function (t) { return underscoreItalics(t); })
       // NOTE: strikethrough support added — confirmed live this renderer
       // had no handling for ~~text~~ at all, same class of gap as the
       // earlier missing-link/missing-image fixes: it fell through
