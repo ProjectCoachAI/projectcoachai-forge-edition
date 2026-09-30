@@ -1819,7 +1819,24 @@ function queryAllDeep(selector) {
                 lastRole = 'USER';
               } else if (m.role === 'ASSISTANT') {
                 // Drop DeepSeek's own citation markers like "[citation:3]".
-                var a = fragText(m, 'RESPONSE').replace(/\s*\[(?:citation|reference)[:：]\s*[\d,\s]+\]/gi, '').trim();
+                // Each marker becomes a numbered link to the source with that
+                // cite_index (from the message's SEARCH fragments); a number with
+                // no known source is dropped.
+                var citeUrls = {};
+                (m.fragments || []).forEach(function(f) {
+                  if (f && f.type === 'SEARCH' && Array.isArray(f.results)) {
+                    f.results.forEach(function(sr) {
+                      if (sr && sr.cite_index != null && sr.url && !citeUrls[sr.cite_index]) citeUrls[sr.cite_index] = sr.url;
+                    });
+                  }
+                });
+                var a = fragText(m, 'RESPONSE').replace(/(\s*)\[(?:citation|reference)[:：]\s*([\d,\s]+)\]/gi, function(_m, ws, nums) {
+                  var links = nums.split(/[,\s]+/).filter(Boolean).map(function(n) {
+                    var u = citeUrls[n];
+                    return u ? '[' + n + '](' + u.replace(/\(/g, '%28').replace(/\)/g, '%29').replace(/\s/g, '%20') + ')' : '';
+                  }).filter(Boolean);
+                  return links.length ? (ws ? ' ' : '') + links.join(' ') : '';
+                }).trim();
                 if (!a) return;
                 parts.push(a);
                 lastRole = 'ASSISTANT';
