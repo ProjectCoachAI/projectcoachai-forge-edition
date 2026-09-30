@@ -1670,6 +1670,25 @@ function queryAllDeep(selector) {
                 lastRole = 'human';
               } else if (r.sender === 'assistant') {
                 if (r.partial) anyPartial = true;
+                // Grok's own history text carries citations as raw
+                // <grok:render card_id="..."> tags; the real link for each is in the
+                // response's cardAttachmentsJson (matched by card id). Turn each tag into
+                // a numbered link ([1], [2]... per answer, same source = same number).
+                if (text.indexOf('<grok:render') !== -1) {
+                  var cardUrls = {};
+                  (Array.isArray(r.cardAttachmentsJson) ? r.cardAttachmentsJson : []).forEach(function(cj) {
+                    try { var c = JSON.parse(cj); if (c && c.id && c.url) cardUrls[c.id] = c.url; } catch(_) {}
+                  });
+                  var citeNums = {};
+                  var citeNext = 1;
+                  text = text.replace(/<grok:render\b[^>]*?card_id="([^"]+)"[^>]*>[\s\S]*?<\/grok:render>/g, function(_m, cid) {
+                    var u = cardUrls[cid];
+                    if (!u) return '';
+                    if (!citeNums[u]) citeNums[u] = citeNext++;
+                    return '[' + citeNums[u] + '](' + u.replace(/\(/g, '%28').replace(/\)/g, '%29').replace(/\s/g, '%20') + ')';
+                  });
+                  text = text.replace(/<\/?grok:[^>]*>/g, '').trim();
+                }
                 parts.push(text);
                 lastRole = 'assistant';
               }
