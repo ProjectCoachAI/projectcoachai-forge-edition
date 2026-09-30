@@ -2109,7 +2109,9 @@ function queryAllDeep(selector) {
       while (window.__diaryDomPollActive && !(grokHistoryResult && grokHistoryResult.success) && !(deepseekHistoryResult && deepseekHistoryResult.success) && !(mistralHistoryResult && mistralHistoryResult.success) && (Date.now() - _pollWaitStart) < _pollWaitCapMs) {
         await new Promise(function(r) { setTimeout(r, 150); });
       }
-      if (window.__diaryDomPollActive) {
+      if (window.__diaryDomPollActive &&
+          !(grokHistoryResult && grokHistoryResult.success) && !(deepseekHistoryResult && deepseekHistoryResult.success) && !(mistralHistoryResult && mistralHistoryResult.success) &&
+          (Date.now() - _pollWaitStart) >= _pollWaitCapMs) {
         console.log('[Diary Sync DIAG] performSaveToDiary: proceeding despite still-active poll flag after', _pollWaitCapMs, 'ms wait — treating as stuck rather than blocking indefinitely');
       }
       // Real timing data — see the matching instrumentation added in
