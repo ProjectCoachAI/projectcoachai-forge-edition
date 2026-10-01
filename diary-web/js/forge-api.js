@@ -23,6 +23,19 @@
   function clearUser()      { try { localStorage.removeItem(USER_KEY); }            catch(_){} }
   function isAuthenticated(){ return Boolean(getToken() && getUser()); }
 
+  // Forge Diary extension IDs: the locally loaded copy and the Chrome Web Store
+  // listing. The login token is sent to each; an ID that isn't installed in this
+  // browser simply doesn't answer (the lastError is read so nothing is logged).
+  const DIARY_EXTENSION_IDS = ['momenmcgdmceejapigodolpekonmaedd', 'lkpnmbpcemiejokgobcodchlhcljkhic'];
+  function sendDiaryToken(token) {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) return;
+      DIARY_EXTENSION_IDS.forEach(function (id) {
+        try { chrome.runtime.sendMessage(id, { type: 'SET_TOKEN_BG', token: token }, function () { void chrome.runtime.lastError; }); } catch (_) {}
+      });
+    } catch (_) {}
+  }
+
   // -- Core request -------------------------------------------------------------
   async function request(method, path, body, opts = {}) {
     const token = getToken();
@@ -70,13 +83,13 @@
         try {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: token } }, '*');
           if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage('momenmcgdmceejapigodolpekonmaedd', { type: 'SET_TOKEN_BG', token: token }, function(){});
+            sendDiaryToken(token);
           }
         } catch(_) {}
         // Send token to Diary extension
         try {
           if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage('momenmcgdmceejapigodolpekonmaedd', { type: 'SET_TOKEN_BG', token: token }, function(){});
+            sendDiaryToken(token);
           }
         } catch(_) {}
       }
@@ -91,13 +104,13 @@
         try {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: token } }, '*');
           if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage('momenmcgdmceejapigodolpekonmaedd', { type: 'SET_TOKEN_BG', token: token }, function(){});
+            sendDiaryToken(token);
           }
         } catch(_) {}
         // Send token to Diary extension
         try {
           if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage('momenmcgdmceejapigodolpekonmaedd', { type: 'SET_TOKEN_BG', token: token }, function(){});
+            sendDiaryToken(token);
           }
         } catch(_) {}
       }
@@ -112,7 +125,7 @@
         try {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: token } }, '*');
           if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage('momenmcgdmceejapigodolpekonmaedd', { type: 'SET_TOKEN_BG', token: token }, function(){});
+            sendDiaryToken(token);
           }
         } catch(_) {}
       }
