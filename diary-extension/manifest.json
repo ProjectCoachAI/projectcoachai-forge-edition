@@ -9,7 +9,6 @@
     "storage",
     "scripting",
     "alarms",
-    "management",
     "webNavigation",
     "webRequest",
     "downloads"
