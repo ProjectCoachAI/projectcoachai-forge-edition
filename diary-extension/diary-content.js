@@ -1369,31 +1369,62 @@ function queryAllDeep(selector) {
   // manifest.json) -- see that file's own opening comment for why.
   // Behavior is UNCHANGED; only the packaging moved.
 
-  function stripEntityArtifacts(s) {
+  // Removes ChatGPT's inline UI directives — "entity[...]" (a named thing
+  // shown as a link/card) and "image_group{...}" (an image carousel) —
+  // from text. In ChatGPT's own history JSON these arrive wrapped in
+  // private-use characters, with a separator between the name and its
+  // payload: U+E200 name U+E202 payload U+E201. The page text and the
+  // clipboard drop those characters, which is the only shape the older
+  // matching here ever handled ("entity[" / "image_group{" written
+  // back-to-back), so history-sourced text kept the whole directive.
+  // Handles both shapes. Brace/bracket matching skips over quoted
+  // strings, so a "}" inside a query can't end the directive early. A
+  // directive must open with {" / [" to count, so ordinary prose or code
+  // (entity[0], "the entity named...") is left alone, and an
+  // unterminated one is left exactly as it was.
+  function stripChatGPTDirectives(s) {
+    if (!s || (s.indexOf('image_group') === -1 && s.indexOf('entity') === -1)) return s;
+    var OPEN = '', CLOSE = '', SEP = '';
+    function matchEnd(str, start, openCh, closeCh) {
+      var depth = 0, inStr = false;
+      for (var j = start; j < str.length; j++) {
+        var c = str[j];
+        if (inStr) { if (c === '\\') j++; else if (c === '"') inStr = false; continue; }
+        if (c === '"') inStr = true;
+        else if (c === openCh) depth++;
+        else if (c === closeCh) { depth--; if (depth === 0) return j + 1; }
+      }
+      return -1;
+    }
     var out = ''; var i = 0;
     while (i < s.length) {
-      if (s.slice(i, i+7) === 'entity[') {
-        var depth = 0; var j = i + 7;
-        while (j < s.length) {
-          if (s[j] === '[') depth++;
-          else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
-          j++;
+      var isImg = s.startsWith('image_group', i);
+      var isEnt = !isImg && s.startsWith('entity', i);
+      if (isImg || isEnt) {
+        var k = i + (isImg ? 11 : 6);
+        if (s[k] === SEP) k++;
+        var openCh = isImg ? '{' : '[', closeCh = isImg ? '}' : ']';
+        if (s[k] === openCh && s[k + 1] === '"') {
+          var end = matchEnd(s, k, openCh, closeCh);
+          if (end !== -1) {
+            if (isEnt) {
+              var parts = s.slice(k, end).match(/"((?:[^"\\]|\\.)*)"/g) || [];
+              if (parts.length >= 2) out += parts[1].slice(1, -1);
+            }
+            if (out.length && out[out.length - 1] === OPEN) out = out.slice(0, -1);
+            i = end;
+            if (s[i] === CLOSE) i++;
+            continue;
+          }
         }
-        var inner = s.slice(i + 7, j - 1);
-        var parts = inner.match(/"([^"]*)"/g) || [];
-        out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
-        i = j;
-      } else if (s.slice(i, i+12) === 'image_group{') {
-        var depth = 0; var j = i + 12;
-        while (j < s.length) {
-          if (s[j] === '{') depth++;
-          else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
-          j++;
-        }
-        i = j;
-      } else { out += s[i]; i++; }
+      }
+      out += s[i]; i++;
     }
     return out;
+  }
+
+  function stripEntityArtifacts(s) {
+    return stripChatGPTDirectives(s);
   }
 
   function cleanDomText(text) {
