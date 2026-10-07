@@ -833,22 +833,35 @@ var activeArchived = false; // Archiving: mirrors activeFavorite exactly — fal
 // in behavior (not literally shared code, since these two pages don't
 // share a JS module at all) so a fork synced from either surface behaves
 // the same way.
-const DIARY_SYNC_EXT_ID = 'momenmcgdmceejapigodolpekonmaedd';
+// Both builds of the Diary extension: the Chrome Web Store release and the
+// unpacked/developer copy. Only the one installed in this browser answers,
+// so each message is tried against both, store ID first.
+const DIARY_SYNC_EXT_IDS = ['lkpnmbpcemiejokgobcodchlhcljkhic', 'momenmcgdmceejapigodolpekonmaedd'];
 
 function isDiaryExtAvailable() {
   return typeof chrome !== 'undefined' && !!chrome.runtime;
 }
 
-function extSyncSendMessage(payload) {
+function extSyncSendMessageTo(extId, payload) {
   return new Promise(function(resolve) {
-    if (!isDiaryExtAvailable()) { resolve(null); return; }
     try {
-      chrome.runtime.sendMessage(DIARY_SYNC_EXT_ID, payload, function(response) {
+      chrome.runtime.sendMessage(extId, payload, function(response) {
         if (chrome.runtime.lastError) { resolve(null); return; }
         resolve(response);
       });
     } catch (e) { resolve(null); }
   });
+}
+
+// Returns the first real answer from any known extension ID; an ID that
+// isn't installed here returns nothing, so the next one is tried.
+async function extSyncSendMessage(payload) {
+  if (!isDiaryExtAvailable()) return null;
+  for (var i = 0; i < DIARY_SYNC_EXT_IDS.length; i++) {
+    var response = await extSyncSendMessageTo(DIARY_SYNC_EXT_IDS[i], payload);
+    if (response !== null && response !== undefined) return response;
+  }
+  return null;
 }
 
 function formatSyncRelativeTime(isoString) {
@@ -6203,9 +6216,14 @@ document.addEventListener('keydown', function(e) {
   try {
     var _token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
     if (_token && typeof chrome !== 'undefined' && chrome.runtime) {
-      var _extId = 'momenmcgdmceejapigodolpekonmaedd'; // Diary extension ID
-      chrome.runtime.sendMessage(_extId, { type: 'SET_TOKEN_BG', token: _token }, function() {
-        if (chrome.runtime.lastError) {} // Extension may not be installed — ignore
+      // Both the Web Store and the unpacked build; whichever isn't installed
+      // simply doesn't answer.
+      ['lkpnmbpcemiejokgobcodchlhcljkhic', 'momenmcgdmceejapigodolpekonmaedd'].forEach(function(_extId) {
+        try {
+          chrome.runtime.sendMessage(_extId, { type: 'SET_TOKEN_BG', token: _token }, function() {
+            if (chrome.runtime.lastError) {} // Extension may not be installed — ignore
+          });
+        } catch(_) {}
       });
     }
   } catch(_) {}
