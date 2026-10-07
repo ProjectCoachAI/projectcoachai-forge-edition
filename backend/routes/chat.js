@@ -64,6 +64,64 @@ function genSessionId() {
     return 'chat_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
 }
 
+// ── Carrying a Diary entry's original images into Continue-in-Forge ─────────
+// A Diary entry's own metadata.images (already re-hosted in our own storage
+// by diary.js's rehostImagesAndPatch, status 'hosted') are what the original
+// AI conversation showed. Chat history here is text-only, so without this
+// the model has no idea those images ever existed. Loaded fresh from
+// storage and handed to the model as ordinary attachments on the FIRST
+// message of a Forge continuation only (see the call site below for why).
+//
+// Never throws and never blocks the chat: any failure (missing storage
+// config, a deleted object, an oversized or unsupported file) just means
+// that image is skipped, and the conversation proceeds exactly as it did
+// before this existed. Only 'hosted' images are used — 'pending' and
+// 'failed' ones have no stored copy to read. Takes the MOST RECENT images
+// when there are more than maxCount, since a follow-up question is most
+// likely about the latest part of the conversation; returned in their
+// original order. Only the four image types all three vision providers
+// accept, and a per-image and total byte ceiling, so one large image can't
+// make the whole provider request fail (Claude rejects images over ~5MB).
+const ENTRY_IMAGE_MIME_OK = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const ENTRY_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+const ENTRY_IMAGES_TOTAL_MAX_BYTES = 12 * 1024 * 1024;
+async function loadEntryImageAttachments(diaryEntryId, userEmail, maxCount) {
+    if (!diaryEntryId || !userEmail || !(maxCount > 0)) return [];
+    try {
+        const publicBase = process.env.R2_PUBLIC_URL;
+        if (!publicBase) return [];
+        const prefix = publicBase + '/'; // exactly how attachmentStorage.store() builds every url
+        const r = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [diaryEntryId, userEmail]);
+        if (!r.rows.length) return [];
+        let meta = r.rows[0].metadata;
+        if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch (_) { meta = null; } }
+        const images = meta && Array.isArray(meta.images) ? meta.images : [];
+        const candidates = images.filter(function(img) {
+            return img && img.status === 'hosted' && typeof img.url === 'string' && img.url.indexOf(prefix) === 0;
+        });
+        const picked = [];
+        let totalBytes = 0;
+        for (let i = candidates.length - 1; i >= 0 && picked.length < maxCount; i--) {
+            try {
+                const stored = await attachmentStorage.get(candidates[i].url.slice(prefix.length));
+                if (!stored || !stored.buffer) continue;
+                const mime = (stored.contentType || '').split(';')[0].trim().toLowerCase();
+                if (!ENTRY_IMAGE_MIME_OK.has(mime)) continue;
+                if (stored.buffer.length > ENTRY_IMAGE_MAX_BYTES) continue;
+                if (totalBytes + stored.buffer.length > ENTRY_IMAGES_TOTAL_MAX_BYTES) continue;
+                totalBytes += stored.buffer.length;
+                picked.unshift({ type: 'image', base64: 'data:' + mime + ';base64,' + stored.buffer.toString('base64'), mimeType: mime });
+            } catch (e) {
+                console.warn('[Chat] could not load one entry image (skipped):', e.message);
+            }
+        }
+        return picked;
+    } catch (e) {
+        console.warn('[Chat] loading entry images failed (continuing without them):', e.message);
+        return [];
+    }
+}
+
 // ── Conversation bridging (Option B: automatic session-bridging at the
 // oversized-conversation ceiling) ───────────────────────────────────────────
 // Confirmed launch-blocking: a real, month-long conversation (~1,835
@@ -299,6 +357,12 @@ router.post('/', requireAuth, async (req, res) => {
         return res.status(503).json({ success: false, error: `${model} is currently unavailable.` });
     }
 
+    // Captured NOW, before bridging below can replace sessionId: the very
+    // first message of a Diary continuation (no session yet) is the one
+    // that carries the entry's original images to the model — same
+    // "no session yet" test continue.html itself uses (wasFirstMessage).
+    const isFirstDiaryMessage = source === 'diary' && !!diaryEntryId && !sessionId;
+
     // Build message history: prior history (if any) + new user message
     let messages = Array.isArray(history) ? history.slice() : [];
     const newUserMessage = { role: 'user', content: message };
@@ -527,7 +591,39 @@ router.post('/', requireAuth, async (req, res) => {
             }
         }
 
-        const content = await callWithFallback(model, messagesForApi, attachments);
+        // Carry the Diary entry's original images to the model (see
+        // loadEntryImageAttachments). Only for the first message of a
+        // continuation and only for models that accept images. The user's
+        // own new attachments always keep their place; entry images only
+        // fill whatever room is left under MAX_ATTACHMENTS_PER_MESSAGE.
+        // Applied to messagesForApi only (a fresh object for the last
+        // message, never mutating the one that gets persisted), so the
+        // saved conversation never shows these as something the person
+        // uploaded themselves.
+        let attachmentsForApi = attachments;
+        if (isFirstDiaryMessage && IMAGE_CAPABLE_MODELS.has(model)) {
+            const userAtts = Array.isArray(attachments) ? attachments : [];
+            const entryAtts = await loadEntryImageAttachments(diaryEntryId, req.userEmail, MAX_ATTACHMENTS_PER_MESSAGE - userAtts.length);
+            if (entryAtts.length) {
+                attachmentsForApi = entryAtts.concat(userAtts);
+                const lastIdx = messagesForApi.length - 1;
+                const lastMsg = messagesForApi[lastIdx];
+                if (lastMsg && lastMsg.role === 'user' && typeof lastMsg.content === 'string') {
+                    messagesForApi = messagesForApi.slice();
+                    messagesForApi[lastIdx] = Object.assign({}, lastMsg, {
+                        content: '[Context: this chat continues a conversation that took place earlier with another AI assistant. ' +
+                            entryAtts.length + ' image' + (entryAtts.length === 1 ? '' : 's') +
+                            ' attached to this message ' + (entryAtts.length === 1 ? 'was' : 'were') +
+                            ' shown in that earlier conversation, in the order it showed them' +
+                            (userAtts.length ? ', followed by ' + userAtts.length + ' new file' + (userAtts.length === 1 ? '' : 's') + ' I am attaching now' : '') +
+                            '. Use ' + (entryAtts.length === 1 ? 'it' : 'them') + ' only where relevant to my message.]\n\n' + lastMsg.content
+                    });
+                }
+                console.log('[Chat] carried', entryAtts.length, 'entry image(s) into first Diary continue message for', model);
+            }
+        }
+
+        const content = await callWithFallback(model, messagesForApi, attachmentsForApi);
         messages.push({ role: 'assistant', content });
 
         // Persist session
