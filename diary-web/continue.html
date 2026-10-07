@@ -916,7 +916,10 @@ let chatSessionId = null;
 let chatIsSending = false;
 
 // ── Sync (Diary Priority 9) ─────────────────────────────────────────────────
-const DIARY_EXT_ID = 'momenmcgdmceejapigodolpekonmaedd';
+// Both builds of the Diary extension: the Chrome Web Store release and the
+// unpacked/developer copy. Only the one actually installed in this browser
+// answers, so each message is tried against both, store ID first.
+const DIARY_EXT_IDS = ['lkpnmbpcemiejokgobcodchlhcljkhic', 'momenmcgdmceejapigodolpekonmaedd'];
 let chatConversationUrl = null;
 let chatIsSyncing = false;
 
@@ -924,16 +927,26 @@ function isExtensionAvailable() {
   return typeof chrome !== 'undefined' && !!chrome.runtime;
 }
 
-function extSendMessage(payload) {
+function extSendMessageTo(extId, payload) {
   return new Promise(function(resolve) {
-    if (!isExtensionAvailable()) { resolve(null); return; }
     try {
-      chrome.runtime.sendMessage(DIARY_EXT_ID, payload, function(response) {
+      chrome.runtime.sendMessage(extId, payload, function(response) {
         if (chrome.runtime.lastError) { resolve(null); return; }
         resolve(response);
       });
     } catch (e) { resolve(null); }
   });
+}
+
+// Tries each known extension ID in turn and returns the first real answer.
+// An ID that isn't installed here simply returns nothing, so the next is tried.
+async function extSendMessage(payload) {
+  if (!isExtensionAvailable()) return null;
+  for (var i = 0; i < DIARY_EXT_IDS.length; i++) {
+    var response = await extSendMessageTo(DIARY_EXT_IDS[i], payload);
+    if (response !== null && response !== undefined) return response;
+  }
+  return null;
 }
 
 // Rough, human, non-precise phrasing — "synced as of [time]" is meant
