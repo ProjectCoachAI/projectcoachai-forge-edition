@@ -42,6 +42,23 @@
     .btn-import { font-size: 12px; background: #fff; color: #1B2A4A; padding: 6px 14px; border-radius: 5px; border: 0.5px solid #D6D2C8; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500; transition: all 0.15s; }
     .btn-import:hover { border-color: #1B2A4A; }
 
+    /* EXTENSION BANNER — shown once, only when the Forge Diary browser
+       extension isn't detected (see initExtensionBanner). Sits in normal
+       flow under the sticky nav, so it scrolls away rather than taking
+       permanent space. */
+    .ext-banner { background: #F8EDE0; border-bottom: 0.5px solid #D6D2C8; }
+    .ext-banner-inner { display: flex; align-items: center; gap: 0.9rem; max-width: 1200px; margin: 0 auto; padding: 0.6rem 2rem; font-size: 13px; line-height: 1.45; color: #4A4035; }
+    .ext-banner-text { flex: 1; min-width: 0; }
+    .ext-banner-text strong { color: #1B2A4A; font-weight: 500; }
+    .ext-banner-install { flex-shrink: 0; font-size: 12px; background: #C17D3C; color: #fff; padding: 6px 14px; border-radius: 5px; font-weight: 500; transition: background 0.2s; white-space: nowrap; }
+    .ext-banner-install:hover { background: #A5682F; }
+    .ext-banner-dismiss { flex-shrink: 0; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; color: #9E9890; padding: 4px 2px; }
+    .ext-banner-dismiss:hover { color: #1B2A4A; }
+    @media (max-width: 640px) {
+      .ext-banner-inner { flex-wrap: wrap; padding: 0.6rem 1rem; gap: 0.5rem 0.8rem; }
+      .ext-banner-text { flex-basis: 100%; }
+    }
+
     /* LAYOUT */
     .diary-layout { display: flex; max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 58px); }
 
@@ -581,6 +598,15 @@
   </nav>
 </div>
 
+<!-- Shown only when the Forge Diary extension isn't detected — see initExtensionBanner() -->
+<div class="ext-banner" id="extBanner" style="display:none;" role="region" aria-label="Browser extension">
+  <div class="ext-banner-inner">
+    <div class="ext-banner-text"><strong>Save any AI conversation in one click.</strong> Add the Forge Diary extension to Chrome to save from ChatGPT, Claude, Gemini and more, and to keep entries in sync.</div>
+    <a class="ext-banner-install" id="extBannerInstall" href="https://chromewebstore.google.com/detail/lkpnmbpcemiejokgobcodchlhcljkhic" target="_blank" rel="noopener">Add to Chrome</a>
+    <button type="button" class="ext-banner-dismiss" onclick="dismissExtensionBanner()">Not now</button>
+  </div>
+</div>
+
 <div class="diary-layout">
   <!-- Backdrop for the sidebar's mobile, slide-out overlay mode — only
        ever visible (via .sidebar-backdrop-visible below) on narrow
@@ -862,6 +888,50 @@ async function extSyncSendMessage(payload) {
     if (response !== null && response !== undefined) return response;
   }
   return null;
+}
+
+// ── Extension discovery banner ──────────────────────────────────────────────
+// A new user who never installed the extension otherwise has no hint that it
+// exists. The page asks the extension a harmless question (the same
+// CHECK_TAB_OPEN the Sync button already uses, with a probe address that
+// can't match a real tab); any reply at all means it's installed and
+// enabled. No reply from either known ID means it isn't, so the banner is
+// shown once, with a way to dismiss it.
+const DIARY_EXT_BANNER_KEY = 'diaryExtBannerDismissed';
+
+function diaryBrowserCanUseExtension() {
+  var ua = navigator.userAgent || '';
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return false;
+  // Chrome, Edge, Opera, Brave and other Chromium browsers all carry "Chrome/".
+  return /Chrome\//.test(ua);
+}
+
+async function diaryExtensionInstalled() {
+  if (!isDiaryExtAvailable()) return false;
+  var probe = { type: 'CHECK_TAB_OPEN', conversationUrl: 'https://diary.projectcoachai.com/__extension_probe__' };
+  var reply = await extSyncSendMessage(probe);
+  if (reply) return true;
+  // One retry: the extension's background worker can be asleep on the very
+  // first message after a browser start.
+  await new Promise(function(r) { setTimeout(r, 1200); });
+  reply = await extSyncSendMessage(probe);
+  return !!reply;
+}
+
+async function initExtensionBanner() {
+  try {
+    if (!diaryBrowserCanUseExtension()) return;
+    try { if (localStorage.getItem(DIARY_EXT_BANNER_KEY) === '1') return; } catch (_) {}
+    if (await diaryExtensionInstalled()) return;
+    var el = document.getElementById('extBanner');
+    if (el) el.style.display = 'block';
+  } catch (_) { /* discovery is a nicety — never break the page */ }
+}
+
+function dismissExtensionBanner() {
+  var el = document.getElementById('extBanner');
+  if (el) el.style.display = 'none';
+  try { localStorage.setItem(DIARY_EXT_BANNER_KEY, '1'); } catch (_) {}
 }
 
 function formatSyncRelativeTime(isoString) {
@@ -6232,6 +6302,7 @@ document.addEventListener('keydown', function(e) {
   var _greet = _hour < 12 ? 'Morning' : _hour < 17 ? 'Afternoon' : 'Evening';
   var _name = (user.name || user.email || '').split(' ')[0];
   document.getElementById('navUser').textContent = _greet + ', ' + _name;
+  initExtensionBanner(); // not awaited — never delays the page
   // Set nav avatar
   var navAv = document.getElementById('navAvatar');
   if (navAv) {
