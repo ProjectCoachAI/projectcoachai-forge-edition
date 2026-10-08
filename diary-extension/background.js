@@ -18,19 +18,13 @@ async function isForgeActive() {
   });
 }
 
-// On each tab navigation, inject forge flag directly into page MAIN world
-chrome.webNavigation.onCommitted.addListener(async (details) => {
-  if (details.frameId !== 0) return;
-  const forge = await isForgeActive();
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId: details.tabId },
-      world: 'MAIN',
-      func: (forgeActive) => { window.__diaryForgeActive = forgeActive; },
-      args: [forge],
-    });
-  } catch(_) {}
-});
+// The Forge-active answer used to be pushed into every page on navigation via
+// the "webNavigation" and "scripting" permissions (browsers describe the
+// first as "Read your browsing history"). It is now PULLED instead: the
+// diary-forge-flag.js content script asks with GET_FORGE_ACTIVE (handled in
+// the onMessage listener below), and the answer goes back to that tab as a
+// FORGE_ACTIVE_RESULT message. Same ping to Forge, same result, no extra
+// permissions.
 
 chrome.runtime.onInstalled.addListener(async () => {
   const forge = await isForgeActive();
@@ -1197,6 +1191,21 @@ let data;
       sendResponse({ ok: true });
     });
     return true;
+  }
+
+  // diary-forge-flag.js (document_start, provider pages): is the separate
+  // Forge extension active? The answer goes back to that tab as its own
+  // message rather than through sendResponse — the same pattern SAVE_TO_DIARY
+  // uses — since this listener is async and sendResponse is unreliable here.
+  if (msg.type === 'GET_FORGE_ACTIVE') {
+    var forgeAskTabId = sender && sender.tab ? sender.tab.id : null;
+    isForgeActive().then(function(active) {
+      if (forgeAskTabId === null) return;
+      chrome.tabs.sendMessage(forgeAskTabId, { type: 'FORGE_ACTIVE_RESULT', active: active === true }, { frameId: 0 })
+        .catch(function() {});
+    });
+    sendResponse({ ok: true });
+    return false;
   }
 
   if (msg.type === 'PING') {

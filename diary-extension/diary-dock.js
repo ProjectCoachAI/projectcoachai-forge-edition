@@ -1,7 +1,30 @@
 // Diary Extension — Dock UI
 (function() {
   if (document.getElementById('diary-dock')) return;
-  if (window.__diaryForgeActive === true) return;
+
+  // Stay out of the way when the separate Forge extension is active (it shows
+  // its own bar on these pages). diary-forge-flag.js, which runs earlier at
+  // document_start, writes the answer onto <html> as data-diary-forge-active
+  // ("1" active, "0" not). It normally arrives long before this script runs;
+  // if it hasn't yet, wait briefly, then build the dock regardless.
+  var FORGE_ATTR = 'data-diary-forge-active';
+  function forgeFlag() { return document.documentElement.getAttribute(FORGE_ATTR); }
+  var firstRead = forgeFlag();
+  if (firstRead === '1') return;
+  if (firstRead === '0') { buildDock(); return; }
+  var waitedMs = 0;
+  var flagTimer = setInterval(function() {
+    waitedMs += 50;
+    var f = forgeFlag();
+    if (f !== null || waitedMs >= 1600) {
+      clearInterval(flagTimer);
+      if (f !== '1') buildDock();
+    }
+  }, 50);
+  return;
+
+  function buildDock() {
+  if (document.getElementById('diary-dock')) return;
 
   var DIARY_URL = 'https://diary.projectcoachai.com';
 
@@ -313,4 +336,5 @@
     if (e.key === 'Enter') { e.stopPropagation(); runDockSearch(); }
   });
 
+  } // end buildDock
 })();
