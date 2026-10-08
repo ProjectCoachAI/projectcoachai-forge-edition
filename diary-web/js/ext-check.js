@@ -14,6 +14,8 @@
  *          resolves to { supported: boolean, installed: boolean }
  *          DiaryExt.showGate() re-opens the window (e.g. when a blocked
  *          link is clicked after the window was closed).
+ *          opts.onInstalled: function called once if the extension shows up
+ *          later (see watchForInstall) — no page refresh needed.
  *
  * Dismissal is remembered under the same key app.html uses, so "Not now" on
  * any Diary page hides the banner on all of them (same browser).
@@ -105,7 +107,7 @@
     if (document.getElementById('diaryExtBanner')) return;
     injectStyle();
     var name = browserName();
-    var headline = opts.headline || 'Add the Forge Diary extension to get the full Diary experience.';
+    var headline = opts.headline || 'Add the Forge Diary extension to save unlimited AI answers from Claude, ChatGPT, Gemini and more.';
     var message = opts.message || '';
 
     var wrap = document.createElement('div');
@@ -214,7 +216,7 @@
 
     var sub = document.createElement('div');
     sub.className = 'diary-gate-sub';
-    sub.textContent = 'Get the full Diary experience.';
+    sub.textContent = 'Save unlimited AI answers from Claude, ChatGPT, Gemini and more \u2014 then find any of them again, instantly, in one place.';
 
     var btn = document.createElement('a');
     btn.className = 'diary-gate-btn';
@@ -240,6 +242,37 @@
     try { btn.focus(); } catch (e) {}
   }
 
+  // While the extension is missing, quietly re-ask every few seconds (and
+  // right away when the tab regains focus). The moment it answers, the
+  // window and banner disappear and opts.onInstalled runs, so the person
+  // never has to refresh after installing. Gives up after 15 minutes.
+  function watchForInstall(opts) {
+    var stopped = false, busy = false, timer = null;
+    var deadline = Date.now() + 15 * 60 * 1000;
+    function stop() {
+      stopped = true;
+      if (timer) clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    }
+    async function tick() {
+      if (stopped || busy) return;
+      if (Date.now() > deadline) { stop(); return; }
+      busy = true;
+      var ok = false;
+      try { ok = await askAll(); } catch (e) {}
+      busy = false;
+      if (!ok || stopped) return;
+      stop();
+      closeGate();
+      var b = document.getElementById('diaryExtBanner');
+      if (b && b.parentNode) b.parentNode.removeChild(b);
+      try { if (typeof opts.onInstalled === 'function') opts.onInstalled(); } catch (e) {}
+    }
+    function onVisible() { if (!document.hidden) tick(); }
+    timer = setInterval(tick, 2500);
+    document.addEventListener('visibilitychange', onVisible);
+  }
+
   async function check(opts) {
     opts = opts || {};
     var result = { supported: browserCanUseExtension(), installed: false };
@@ -255,6 +288,7 @@
     if (!result.installed) {
       if (opts.gate) showGate();
       else if (opts.banner && !wasDismissed()) showBanner(opts);
+      if (opts.gate || opts.banner || opts.onInstalled) watchForInstall(opts);
     }
     return result;
   }

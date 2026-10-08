@@ -601,7 +601,7 @@
 <!-- Shown only when the Forge Diary extension isn't detected — see initExtensionBanner() -->
 <div class="ext-banner" id="extBanner" style="display:none;" role="region" aria-label="Browser extension">
   <div class="ext-banner-inner">
-    <div class="ext-banner-text"><strong>Save any AI conversation in one click.</strong> Add the Forge Diary extension to <span id="extBannerBrowser">Chrome</span> to save from ChatGPT, Claude, Gemini and more, and to keep entries in sync.</div>
+    <div class="ext-banner-text"><strong>Add the Forge Diary extension to save unlimited AI answers from Claude, ChatGPT, Gemini and more.</strong></div>
     <a class="ext-banner-install" id="extBannerInstall" href="https://chromewebstore.google.com/detail/lkpnmbpcemiejokgobcodchlhcljkhic" target="_blank" rel="noopener">Add to Chrome</a>
     <button type="button" class="ext-banner-dismiss" onclick="dismissExtensionBanner()">Not now</button>
   </div>
@@ -933,6 +933,15 @@ async function initExtensionBanner() {
     if (_inst) _inst.textContent = 'Add to ' + _browser;
     var el = document.getElementById('extBanner');
     if (el) el.style.display = 'block';
+    // Installed while this page is open: hide the banner, no refresh needed.
+    var _probe = { type: 'CHECK_TAB_OPEN', conversationUrl: 'https://diary.projectcoachai.com/__extension_probe__' };
+    var _until = Date.now() + 15 * 60 * 1000;
+    var _watch = setInterval(async function() {
+      try {
+        if (Date.now() > _until || !el || el.style.display === 'none') { clearInterval(_watch); return; }
+        if (await extSyncSendMessage(_probe)) { el.style.display = 'none'; clearInterval(_watch); }
+      } catch (_) {}
+    }, 2500);
   } catch (_) { /* discovery is a nicety — never break the page */ }
 }
 

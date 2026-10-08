@@ -180,7 +180,17 @@ async function init() {
   // A failed check never blocks: DiaryExt treats an unknown as installed.
   renderProviders();
   if (window.DiaryExt) {
-    DiaryExt.check({ gate: true }).then(function(r) {
+    DiaryExt.check({
+      gate: true,
+      // Installed while this page is open: unblock the list, no refresh.
+      onInstalled: function() {
+        extensionMissing = false;
+        document.querySelectorAll('.provider-status').forEach(function(el) {
+          el.innerHTML = '&#9679; Ready';
+          el.style.color = '';
+        });
+      }
+    }).then(function(r) {
       if (r && r.supported && !r.installed) {
         extensionMissing = true;
         document.querySelectorAll('.provider-status').forEach(function(el) {
