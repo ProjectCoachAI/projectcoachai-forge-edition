@@ -104,6 +104,7 @@ var DIARY_PROVIDERS = [
 ];
 
 var extensionActive = false;
+var extensionMissing = false;
 
 function detectExtension() {
   return new Promise(function(resolve) {
@@ -164,6 +165,7 @@ function renderExtWall() {
 }
 
 function goChat(id) {
+  if (extensionMissing && window.DiaryExt) { DiaryExt.showGate(); return; }
   var p = DIARY_PROVIDERS.find(function(x) { return x.id === id; });
   if (p) window.location.href = p.url;
 }
@@ -172,17 +174,15 @@ async function init() {
   if (typeof Forge === 'undefined') return;
   var user = await Forge.restoreSession();
   if (!user) { window.location.href = '/signin.html?return=/chat.html'; return; }
-  // Providers always show and always work — the extension prompt below is
-  // informational, never a gate. Detection runs after the list is on screen.
+  // The list renders first; the extension check then runs. If the extension
+  // is missing (and the browser can use it) a centered "Add the extension"
+  // window opens, and clicking an AI re-opens it until it is installed.
+  // A failed check never blocks: DiaryExt treats an unknown as installed.
   renderProviders();
   if (window.DiaryExt) {
-    DiaryExt.check({
-      banner: true,
-      headline: 'Add the Diary extension to get the most from Chat with AI.',
-      message: 'It puts a Save to Diary button on each AI’s page and brings you back here automatically.'
-    }).then(function(r) {
-      // "Ready" is only true when the extension is there to hand off to.
+    DiaryExt.check({ gate: true }).then(function(r) {
       if (r && r.supported && !r.installed) {
+        extensionMissing = true;
         document.querySelectorAll('.provider-status').forEach(function(el) {
           el.innerHTML = 'Open &#8599;';
           el.style.color = '#9E9890';

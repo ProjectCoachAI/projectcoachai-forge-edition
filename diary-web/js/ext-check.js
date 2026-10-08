@@ -8,8 +8,12 @@
  * enabled. No reply from either known ID means it isn't, and a dismissible
  * banner is shown.
  *
- * Usage:   DiaryExt.check({ banner: true, headline: '...', message: '...' })
+ * Usage:   DiaryExt.check({ banner: true })   // dismissible banner
+ *          DiaryExt.check({ gate: true })     // centered window, for pages
+ *                                             // that are useless without it
  *          resolves to { supported: boolean, installed: boolean }
+ *          DiaryExt.showGate() re-opens the window (e.g. when a blocked
+ *          link is clicked after the window was closed).
  *
  * Dismissal is remembered under the same key app.html uses, so "Not now" on
  * any Diary page hides the banner on all of them (same browser).
@@ -101,9 +105,8 @@
     if (document.getElementById('diaryExtBanner')) return;
     injectStyle();
     var name = browserName();
-    var headline = opts.headline || 'Save any AI conversation in one click.';
-    var message = opts.message ||
-      ('Add the Forge Diary extension to ' + name + ' to save from ChatGPT, Claude, Gemini and more, and to keep entries in sync.');
+    var headline = opts.headline || 'Add the Forge Diary extension to get the full Diary experience.';
+    var message = opts.message || '';
 
     var wrap = document.createElement('div');
     wrap.className = 'diary-ext-banner';
@@ -119,7 +122,7 @@
     var strong = document.createElement('strong');
     strong.textContent = headline;
     text.appendChild(strong);
-    text.appendChild(document.createTextNode(' ' + message));
+    if (message) text.appendChild(document.createTextNode(' ' + message));
     if (name === 'Opera') {
       var hint = document.createElement('span');
       hint.className = 'diary-ext-hint';
@@ -151,6 +154,92 @@
     else document.body.insertBefore(wrap, document.body.firstChild);
   }
 
+  function injectGateStyle() {
+    if (document.getElementById('diaryExtGateStyle')) return;
+    var css =
+      '.diary-gate-overlay{position:fixed;inset:0;z-index:9999;background:rgba(27,42,74,0.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:1.5rem;font-family:Inter,sans-serif;}' +
+      '.diary-gate-card{position:relative;background:#fff;border:0.5px solid #D6D2C8;border-radius:14px;width:100%;max-width:420px;padding:2.25rem 2rem 2rem;text-align:center;box-shadow:0 20px 60px rgba(27,42,74,0.25);}' +
+      '.diary-gate-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:7px;border:0.5px solid #D6D2C8;background:#fff;color:#9E9890;font-size:16px;line-height:1;cursor:pointer;font-family:Inter,sans-serif;}' +
+      '.diary-gate-close:hover{color:#1B2A4A;background:#F5F3EE;}' +
+      '.diary-gate-icon{font-size:34px;display:block;margin-bottom:0.9rem;}' +
+      '.diary-gate-title{font-family:Lora,serif;font-size:20px;font-weight:500;color:#1B2A4A;margin-bottom:0.4rem;}' +
+      '.diary-gate-sub{font-size:14px;color:#6B6559;line-height:1.6;margin-bottom:1.5rem;}' +
+      '.diary-gate-btn{display:inline-block;background:#C17D3C;color:#fff;padding:11px 26px;border-radius:7px;font-size:14px;font-weight:500;text-decoration:none;transition:background 0.2s;}' +
+      '.diary-gate-btn:hover{background:#A5682F;}' +
+      '.diary-gate-hint{font-size:12px;color:#9E9890;margin-top:1rem;line-height:1.5;}';
+    var style = document.createElement('style');
+    style.id = 'diaryExtGateStyle';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  function closeGate() {
+    var el = document.getElementById('diaryExtGate');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+    document.removeEventListener('keydown', onGateKey);
+  }
+
+  function onGateKey(e) { if (e.key === 'Escape') closeGate(); }
+
+  function showGate() {
+    if (document.getElementById('diaryExtGate')) return;
+    injectGateStyle();
+    var name = browserName();
+
+    var overlay = document.createElement('div');
+    overlay.className = 'diary-gate-overlay';
+    overlay.id = 'diaryExtGate';
+
+    var card = document.createElement('div');
+    card.className = 'diary-gate-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.setAttribute('aria-labelledby', 'diaryExtGateTitle');
+
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'diary-gate-close';
+    close.setAttribute('aria-label', 'Close');
+    close.textContent = '×';
+    close.addEventListener('click', closeGate);
+
+    var icon = document.createElement('span');
+    icon.className = 'diary-gate-icon';
+    icon.textContent = '📖';
+
+    var title = document.createElement('div');
+    title.className = 'diary-gate-title';
+    title.id = 'diaryExtGateTitle';
+    title.textContent = 'Add the Forge Diary extension';
+
+    var sub = document.createElement('div');
+    sub.className = 'diary-gate-sub';
+    sub.textContent = 'Get the full Diary experience.';
+
+    var btn = document.createElement('a');
+    btn.className = 'diary-gate-btn';
+    btn.href = STORE_URL;
+    btn.target = '_blank';
+    btn.rel = 'noopener';
+    btn.textContent = 'Add to ' + name;
+
+    card.appendChild(close);
+    card.appendChild(icon);
+    card.appendChild(title);
+    card.appendChild(sub);
+    card.appendChild(btn);
+    if (name === 'Opera') {
+      var hint = document.createElement('div');
+      hint.className = 'diary-gate-hint';
+      hint.textContent = 'Opera: if the page shows as unavailable, turn on Settings → Advanced → Allow installation of extensions from other stores, then try again.';
+      card.appendChild(hint);
+    }
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', onGateKey);
+    try { btn.focus(); } catch (e) {}
+  }
+
   async function check(opts) {
     opts = opts || {};
     var result = { supported: browserCanUseExtension(), installed: false };
@@ -163,9 +252,12 @@
       result.installed = true;
       return result;
     }
-    if (!result.installed && opts.banner && !wasDismissed()) showBanner(opts);
+    if (!result.installed) {
+      if (opts.gate) showGate();
+      else if (opts.banner && !wasDismissed()) showBanner(opts);
+    }
     return result;
   }
 
-  window.DiaryExt = { check: check, dismissBanner: dismissBanner };
+  window.DiaryExt = { check: check, dismissBanner: dismissBanner, showGate: showGate };
 })();
