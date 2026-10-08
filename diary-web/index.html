@@ -819,6 +819,7 @@
 
 
   <script src="/js/forge-api.js"></script>
+  <script src="/js/ext-check.js"></script>
   <script>
     (async function() {
       if (typeof Forge === 'undefined') return;
@@ -858,6 +859,12 @@
           if (freeBtn) { freeBtn.href = '/app.html'; freeBtn.textContent = 'Go to My Diary'; freeBtn.onclick = null; }
           var proBtn = document.querySelector('.card-cta.primary');
           if (proBtn) { proBtn.href = '#'; proBtn.textContent = 'Upgrade to Pro →'; proBtn.onclick = function(e){ e.preventDefault(); var isYearly = document.getElementById('billing-toggle') && document.getElementById('billing-toggle').classList.contains('yearly'); startCheckout(isYearly ? 'diary-pro-yearly' : 'diary-pro-monthly'); }; }
+          // Signed-in visitors no longer see the "Add to Chrome" buttons above
+          // (they now say "Back to your Diary"), so this is the one place a
+          // signed-in user without the extension learns it exists. Signed-out
+          // visitors already have the install buttons, so no banner for them.
+          // Not awaited — never delays the page.
+          if (window.DiaryExt) { DiaryExt.check({ banner: true }); }
         }
       } catch(e) {}
     })();

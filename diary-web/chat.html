@@ -90,6 +90,7 @@
 </div>
 
 <script src="/js/forge-api.js"></script>
+<script src="/js/ext-check.js"></script>
 <script>
 var DIARY_PROVIDERS = [
   { id: 'claude',      name: 'Claude',           color: '#C17D3C', url: 'https://claude.ai/new' },
@@ -171,8 +172,24 @@ async function init() {
   if (typeof Forge === 'undefined') return;
   var user = await Forge.restoreSession();
   if (!user) { window.location.href = '/signin.html?return=/chat.html'; return; }
-  // Always show providers — extension detection added after Web Store submission
+  // Providers always show and always work — the extension prompt below is
+  // informational, never a gate. Detection runs after the list is on screen.
   renderProviders();
+  if (window.DiaryExt) {
+    DiaryExt.check({
+      banner: true,
+      headline: 'Add the Diary extension to get the most from Chat with AI.',
+      message: 'It puts a Save to Diary button on each AI’s page and brings you back here automatically.'
+    }).then(function(r) {
+      // "Ready" is only true when the extension is there to hand off to.
+      if (r && r.supported && !r.installed) {
+        document.querySelectorAll('.provider-status').forEach(function(el) {
+          el.innerHTML = 'Open &#8599;';
+          el.style.color = '#9E9890';
+        });
+      }
+    }).catch(function() {});
+  }
 }
 
 init();

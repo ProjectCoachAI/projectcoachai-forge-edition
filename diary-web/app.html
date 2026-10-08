@@ -601,7 +601,7 @@
 <!-- Shown only when the Forge Diary extension isn't detected — see initExtensionBanner() -->
 <div class="ext-banner" id="extBanner" style="display:none;" role="region" aria-label="Browser extension">
   <div class="ext-banner-inner">
-    <div class="ext-banner-text"><strong>Save any AI conversation in one click.</strong> Add the Forge Diary extension to Chrome to save from ChatGPT, Claude, Gemini and more, and to keep entries in sync.</div>
+    <div class="ext-banner-text"><strong>Save any AI conversation in one click.</strong> Add the Forge Diary extension to <span id="extBannerBrowser">Chrome</span> to save from ChatGPT, Claude, Gemini and more, and to keep entries in sync.</div>
     <a class="ext-banner-install" id="extBannerInstall" href="https://chromewebstore.google.com/detail/lkpnmbpcemiejokgobcodchlhcljkhic" target="_blank" rel="noopener">Add to Chrome</a>
     <button type="button" class="ext-banner-dismiss" onclick="dismissExtensionBanner()">Not now</button>
   </div>
@@ -923,6 +923,14 @@ async function initExtensionBanner() {
     if (!diaryBrowserCanUseExtension()) return;
     try { if (localStorage.getItem(DIARY_EXT_BANNER_KEY) === '1') return; } catch (_) {}
     if (await diaryExtensionInstalled()) return;
+    // Name the button after the browser actually in use (Edge and Opera
+    // install from the same Chrome Web Store listing).
+    var _ua = navigator.userAgent || '';
+    var _browser = /Edg\//.test(_ua) ? 'Edge' : /OPR\//.test(_ua) ? 'Opera' : 'Chrome';
+    var _bn = document.getElementById('extBannerBrowser');
+    if (_bn) _bn.textContent = _browser;
+    var _inst = document.getElementById('extBannerInstall');
+    if (_inst) _inst.textContent = 'Add to ' + _browser;
     var el = document.getElementById('extBanner');
     if (el) el.style.display = 'block';
   } catch (_) { /* discovery is a nicety — never break the page */ }
