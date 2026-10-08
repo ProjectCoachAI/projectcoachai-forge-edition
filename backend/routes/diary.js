@@ -1676,13 +1676,26 @@ router.patch('/:id', requireAuth, async (req, res) => {
       // re-upload them all over again. New images (not seen in the
       // existing set) still go through the normal 'pending' flow below.
       const existingImages = existingMeta.images || [];
-      const preparedImages = prepareImagesForSave(newMetaRaw.images).map(function(img) {
+      // NOTE: fixed a confirmed data-loss bug — an update that carried
+      // NO images (e.g. continue.html's fork-link PATCH, which sends only
+      // { chatSessionId, forkedToForgeAt, ... }) used to be treated as
+      // "this entry now has zero images", overwriting the saved list
+      // with [] every time. The images themselves stayed in storage, but
+      // the entry forgot them until the next save from the AI provider
+      // re-sent them. Images are now only replaced when an update
+      // actually carries some: a missing or empty list (including a
+      // re-save from a page that happened to capture none) leaves the
+      // already-saved images untouched.
+      const incomingImages = Array.isArray(newMetaRaw.images) ? newMetaRaw.images : [];
+      const keepExistingImages = incomingImages.length === 0;
+      const preparedImages = keepExistingImages ? existingImages : prepareImagesForSave(incomingImages).map(function(img) {
         const reuse = existingImages.find(function(e) {
           return typeof e === 'object' && e !== null && e.status === 'hosted' && e.originalUrl === img.originalUrl;
         });
         return reuse || img;
       });
-      imagesToRehost = preparedImages;
+      // Nothing new to copy to storage when the saved images were kept.
+      imagesToRehost = keepExistingImages ? null : preparedImages;
       // NOTE: attachments merged specially, not just shallow-assigned like
       // the rest of metadata — confirmed live as a real, meaningful gap: a
       // file attachment only detectable while its card is still visible in
