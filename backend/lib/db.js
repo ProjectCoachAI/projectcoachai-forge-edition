@@ -1348,7 +1348,7 @@ function stripMarkdownForContext(s) {
     .replace(/\s+/g, ' ')
     .trim();
 }
-const FACT_TRAILING_FILLER = /\b(starts?|starting|costs?|costing|priced?|pricing|prices?|from|at|about|around|roughly|approximately|approx\.?|is|are|was|were|of|for|to|up|only|just|over|under|ranging|range|ranges|between|and|the|a|an|in|by|with|on|as|per|est\.?|estimated)$/i;
+const FACT_TRAILING_FILLER = /\b(starts?|starting|costs?|costing|priced?|pricing|prices?|from|at|about|around|roughly|approximately|approx\.?|is|are|was|were|of|for|to|up|only|just|over|under|ranging|range|ranges|between|and|the|a|an|in|by|with|on|as|per|est\.?|estimated|it|its|this|that|these|those|they|he|she|we|there|which|who|when|where|then|now|but|or)$/i;
 function factContext(text, index) {
   const lineStart = text.lastIndexOf('\n', index - 1) + 1;
   let lineEnd = text.indexOf('\n', index);
@@ -1357,16 +1357,38 @@ function factContext(text, index) {
   const pos = index - lineStart;
   let ctx = '';
   if (/^\s*\|/.test(line)) {
-    // Table row: first cell with real words that isn't the cell holding the value.
-    let offset = 0;
+    // Table row. Two common shapes: rows are the things (row label is the
+    // subject) or rows are attributes ("Starting price") and the COLUMNS are
+    // the things. When the row label is just an attribute word, the value's
+    // subject is its column header instead.
     const cells = line.split('|');
+    let offset = 0; let valueCol = -1; let rowLabel = '';
     for (let i = 0; i < cells.length; i++) {
       const cellStart = offset; const cellEnd = offset + cells[i].length;
       offset = cellEnd + 1;
-      if (pos >= cellStart && pos < cellEnd) continue;
-      const clean = stripMarkdownForContext(cells[i]);
-      if (/[A-Za-z]{2,}/.test(clean)) { ctx = clean; break; }
+      if (pos >= cellStart && pos < cellEnd) { valueCol = i; continue; }
+      if (!rowLabel) {
+        const clean = stripMarkdownForContext(cells[i]);
+        if (/[A-Za-z]{2,}/.test(clean)) rowLabel = clean;
+      }
     }
+    let headerCell = '';
+    if (valueCol >= 0) {
+      const textLines = lineStart > 0 ? text.slice(0, lineStart - 1).split('\n') : [];
+      // Walk up this table's rows to its separator line, then take the line above it.
+      for (let li = textLines.length - 1; li >= 1; li--) {
+        const tl = textLines[li];
+        if (!/^\s*\|/.test(tl)) break;
+        if (/^[\s|:\-]+$/.test(tl) && /-/.test(tl)) {
+          const hdr = textLines[li - 1] || '';
+          if (/^\s*\|/.test(hdr)) headerCell = stripMarkdownForContext(hdr.split('|')[valueCol] || '');
+          break;
+        }
+      }
+    }
+    const isAttr = (t) => !t || FACT_ATTRIBUTE_WORD.test(t);
+    if (!isAttr(rowLabel)) ctx = rowLabel;
+    else if (!isAttr(headerCell) && /[A-Za-z]{2,}/.test(headerCell)) ctx = headerCell;
   } else {
     const before = line.slice(0, pos);
     // Start of the current sentence within the line.
@@ -1394,6 +1416,7 @@ function factContext(text, index) {
   if (ctx.length > 40) ctx = ctx.slice(0, 39).replace(/\s+\S*$/, '') + '\u2026';
   return ctx;
 }
+const FACT_ATTRIBUTE_WORD = /\b(price|prices|cost|costs|msrp|starting|from|date|dates|launch|launched|release|released|year|range|fee|fees|rate|amount|value|total|annual|approx|estimated|share)\b/i;
 const STRUCTURED_FACTS_MAX = 8;
 function detectStructuredFactsArtifacts(text) {
   const facts = [];
