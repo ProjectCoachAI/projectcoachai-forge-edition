@@ -1313,13 +1313,13 @@ function detectPrices(text) {
   const occupiedRanges = [];
   function overlaps(start, end) { return occupiedRanges.some(r => start < r[1] && end > r[0]); }
   const numPattern = '\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?|\\d+(?:\\.\\d{1,2})?';
-  const symbolRe = new RegExp('([$€£¥])\\s?(' + numPattern + ')', 'g');
+  const symbolRe = new RegExp('([$€£¥])\\s?(' + numPattern + ')(\\s?(?:k|K|m|M|bn|million|billion|thousand)\\b)?', 'g');
   let m;
   while ((m = symbolRe.exec(text)) !== null) {
     const start = m.index, end = start + m[0].length;
     if (overlaps(start, end)) continue;
     occupiedRanges.push([start, end]);
-    const val = m[1] + m[2];
+    const val = m[1] + m[2] + (m[3] ? m[3].replace(/\s+/g, '') : '');
     if (!seenValues[val]) { seenValues[val] = true; results.push({ value: val, index: start }); }
   }
   const codeRe = new RegExp('\\b(' + numPattern + ')\\s?(USD|EUR|GBP|JPY|CHF|CAD|AUD)\\b', 'g');
@@ -1349,13 +1349,29 @@ function stripMarkdownForContext(s) {
     .trim();
 }
 const FACT_TRAILING_FILLER = /\b(starts?|starting|costs?|costing|priced?|pricing|prices?|from|at|about|around|roughly|approximately|approx\.?|is|are|was|were|of|for|to|up|only|just|over|under|ranging|range|ranges|between|and|the|a|an|in|by|with|on|as|per|est\.?|estimated|it|its|this|that|these|those|they|he|she|we|there|which|who|when|where|then|now|but|or)$/i;
+function nearestHeadingSubject(text, lineStart) {
+  const lines = (lineStart > 0 ? text.slice(0, lineStart - 1) : '').split('\n');
+  for (let i = lines.length - 1, steps = 0; i >= 0 && steps < 40; i--, steps++) {
+    const m = lines[i].match(/^\s*#{1,6}\s+(.*)$/);
+    if (!m) continue;
+    const raw = m[1];
+    const bold = raw.match(/\*\*([^*]{3,60})\*\*/);
+    let h = bold ? bold[1] : raw;
+    h = stripMarkdownForContext(h).replace(/^\d+[.)]\s*/, '').replace(/[\s:]+$/, '');
+    if (!/[A-Za-z]{2,}/.test(h)) return '';
+    // Generic section headings say nothing about what a value belongs to.
+    if (/^(summary|overview|conclusion|introduction|key (points|takeaways?|comparisons?.*)|takeaways?|notes?|buyer takeaway)$/i.test(h)) return '';
+    return h;
+  }
+  return '';
+}
 function factContext(text, index) {
   const lineStart = text.lastIndexOf('\n', index - 1) + 1;
   let lineEnd = text.indexOf('\n', index);
   if (lineEnd === -1) lineEnd = text.length;
   const line = text.slice(lineStart, lineEnd);
   const pos = index - lineStart;
-  let ctx = '';
+  let ctx = ''; let fromBold = false;
   if (/^\s*\|/.test(line)) {
     // Table row. Two common shapes: rows are the things (row label is the
     // subject) or rows are attributes ("Starting price") and the COLUMNS are
@@ -1399,7 +1415,7 @@ function factContext(text, index) {
     // Prefer a bold lead ("**Tesla Model 3** starts at ...").
     const bold = seg.match(/\*\*([^*]{3,60})\*\*/);
     if (bold) {
-      ctx = stripMarkdownForContext(bold[1]);
+      ctx = stripMarkdownForContext(bold[1]); fromBold = true;
     } else {
       seg = stripMarkdownForContext(seg).replace(/^(?:[-+>#]+|\d+[.)])\s*/, '');
       let words = seg.split(' ').filter(Boolean);
@@ -1410,6 +1426,13 @@ function factContext(text, index) {
     }
   }
   ctx = ctx.replace(/^[\s:,;\u2013\u2014-]+|[\s:,;\u2013\u2014-]+$/g, '');
+  // A bullet like "- **Starting Price:** ~$25,000" is labelled by an
+  // attribute, not by what it belongs to. Use the nearest heading above
+  // ("### 1. ...: **BYD Atto 3**") as the subject instead.
+  if (fromBold && FACT_ATTRIBUTE_WORD.test(ctx)) {
+    const heading = nearestHeadingSubject(text, lineStart);
+    ctx = heading || '';
+  }
   if (!/[A-Za-z]{2,}/.test(ctx)) return '';
   // A context that is just another date/price/number adds nothing.
   if (/^[\d\s.,%$€£¥:\/-]+$/.test(ctx)) return '';
@@ -1417,7 +1440,7 @@ function factContext(text, index) {
   return ctx;
 }
 const FACT_ATTRIBUTE_WORD = /\b(price|prices|cost|costs|msrp|starting|from|date|dates|launch|launched|release|released|year|range|fee|fees|rate|amount|value|total|annual|approx|estimated|share)\b/i;
-const STRUCTURED_FACTS_MAX = 8;
+const STRUCTURED_FACTS_MAX = 10;
 function detectStructuredFactsArtifacts(text) {
   const facts = [];
   detectDates(text).forEach(d => { const c = factContext(text, d.index); if (c) facts.push({ label: 'Date', value: d.value, context: c }); });
