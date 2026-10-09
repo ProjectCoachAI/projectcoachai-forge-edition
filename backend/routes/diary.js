@@ -571,7 +571,7 @@ router.get('/usage', requireAuth, async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { category, source, date_from, date_to, tz, favorite, archived, limit = 25, offset = 0 } = req.query;
+    const { category, source, tag, date_from, date_to, tz, favorite, archived, limit = 25, offset = 0 } = req.query;
     const pageLimit = Math.min(parseInt(limit) || 25, 100);
     const pageOffset = Math.max(parseInt(offset) || 0, 0);
 
@@ -587,6 +587,9 @@ router.get('/', requireAuth, async (req, res) => {
     const params = [req.userEmail];
     if (category && category !== 'all') { params.push(category); whereSql += ` AND category = $${params.length}`; }
     if (source && source !== 'all')     { params.push(source);   whereSql += ` AND source = $${params.length}`; }
+    // Tag filter (clicking a tag pill in the Diary): case-insensitive exact match
+    // against the entry's auto-generated tags.
+    if (tag) { params.push(String(tag).slice(0, 80)); whereSql += ` AND EXISTS (SELECT 1 FROM unnest(tags) AS t WHERE lower(t) = lower($${params.length}))`; }
     if (favorite === 'true') { whereSql += ` AND is_favorite = true`; }
     // Archiving: default behavior EXCLUDES archived entries — mirrors how
     // archiving works in mail/note apps generally (archived = out of the
@@ -868,8 +871,8 @@ router.get('/search', requireAuth, async (req, res) => {
     function addTextTerm(term, weight) {
       const p = `$${idx}`;
       params.push(`%${term}%`);
-      scoreTerms.push(`(CASE WHEN title ILIKE ${p} THEN ${weight*3} WHEN prompt ILIKE ${p} THEN ${weight*2} WHEN content ILIKE ${p} OR search_text ILIKE ${p} OR category ILIKE ${p} THEN ${weight} ELSE 0 END)`);
-      textWhereTerms.push(`(title ILIKE ${p} OR prompt ILIKE ${p} OR content ILIKE ${p} OR search_text ILIKE ${p} OR category ILIKE ${p})`);
+      scoreTerms.push(`(CASE WHEN title ILIKE ${p} THEN ${weight*3} WHEN prompt ILIKE ${p} THEN ${weight*2} WHEN content ILIKE ${p} OR search_text ILIKE ${p} OR category ILIKE ${p} OR decision_note ILIKE ${p} THEN ${weight} ELSE 0 END)`);
+      textWhereTerms.push(`(title ILIKE ${p} OR prompt ILIKE ${p} OR content ILIKE ${p} OR search_text ILIKE ${p} OR category ILIKE ${p} OR decision_note ILIKE ${p})`);
       idx++;
     }
     phrases.forEach(p => addTextTerm(p, 3));
@@ -967,7 +970,7 @@ router.get('/search', requireAuth, async (req, res) => {
     // correctly included metadata in its own SELECT, which is exactly
     // why this only showed up when using search specifically.
     const r = await db.query(
-      `SELECT id, source, title, prompt, content, category, tags, metadata, conversation_count, created_at,
+      `SELECT id, source, title, prompt, content, decision_note, rating, category, tags, metadata, conversation_count, created_at,
               (${scoreExpr}) AS match_score
        FROM diary_entries
        WHERE ${whereClauses.join(' AND ')}

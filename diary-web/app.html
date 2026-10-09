@@ -232,6 +232,11 @@
     .entry-content.md tr:nth-child(even) td, .entry-panel-content tr:nth-child(even) td { background: #FAFAF8; }
     .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .entry-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
+    .entry-tag.clickable { cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .entry-tag.clickable:hover { background: #1B2A4A; color: #fff; }
+    .tag-filter-bar { display: none; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; background: #EDEAE3; border-radius: 8px; font-size: 12px; color: #3D3830; }
+    .tag-filter-bar button { margin-left: auto; background: none; border: none; color: #6B6559; cursor: pointer; font-size: 12px; text-decoration: underline; }
+    .entry-note-preview { font-size: 12px; color: #6B6559; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; font-style: italic; }
     .entry-note textarea { width: 100%; background: #F5F3EE; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #1B2A4A; font-family: Inter,sans-serif; resize: vertical; outline: none; min-height: 60px; box-sizing: border-box; }
     .entry-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 0.5px solid #D6D2C8; }
     .entry-btn { font-size: 11px; padding: 4px 10px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: Inter,sans-serif; transition: all 0.15s; }
@@ -717,7 +722,7 @@
       </div>
     </div>
 
-    <div class="entries-wrapper"><div id="diaryEntries"><div class="diary-loading">Loading your diary...</div></div>
+    <div class="entries-wrapper"><div id="tagFilterBar" class="tag-filter-bar"></div><div id="diaryEntries"><div class="diary-loading">Loading your diary...</div></div>
     </div><!-- /entries-wrapper -->
     <div id="diaryPagination" class="diary-pagination" style="display:none"></div>
 
@@ -851,6 +856,7 @@ var allEntries = [];
 var filteredEntries = [];
 var activeCategory = 'all';
 var activeSource = 'all';
+var activeTag = ''; // tag pill filter; empty = off
 var activeFavorite = false;
 var activeArchived = false; // Archiving: mirrors activeFavorite exactly — false means "exclude archived" (the default backend behavior), true means "show only archived" (the Archived view)
 
@@ -1448,6 +1454,7 @@ async function loadDiary() {
     var params = ['limit=' + pageSize, 'offset=' + ((currentPage - 1) * pageSize)];
     if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
     if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
+    if (activeTag) params.push('tag=' + encodeURIComponent(activeTag));
     if (activeFavorite) params.push('favorite=true');
     if (activeArchived) params.push('archived=true');
     if (activeDateFrom) params.push('date_from=' + encodeURIComponent(activeDateFrom));
@@ -1644,6 +1651,35 @@ function filterCategory(cat) {
   refreshCurrentView();
 }
 
+function updateTagFilterBar() {
+  var bar = document.getElementById('tagFilterBar');
+  if (!bar) return;
+  if (!activeTag) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = 'Tagged <strong>' + escHtml(activeTag) + '</strong><button onclick="clearTagFilter()">Clear</button>';
+}
+function filterTagEl(el) { filterTag(el.getAttribute('data-tag') || ''); }
+function filterTag(tag) {
+  if (!tag) return;
+  activeTag = tag;
+  currentPage = 1;
+  // A tag click replaces any text search with a plain tag browse.
+  searchQuery = '';
+  var box = document.getElementById('diarySearch');
+  if (box) box.value = '';
+  updateSearchClearBtn();
+  updateTagFilterBar();
+  loadDiary();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function clearTagFilter() {
+  activeTag = '';
+  currentPage = 1;
+  updateTagFilterBar();
+  loadDiary();
+}
+window.filterTag = filterTag; window.filterTagEl = filterTagEl; window.clearTagFilter = clearTagFilter;
+
 function filterSource(src) {
   activeSource = src;
   currentPage = 1;
@@ -1695,6 +1731,7 @@ function handleSearchInput() {
 function runSearch() {
   searchQuery = document.getElementById('diarySearch').value.trim();
   updateSearchClearBtn();
+  if (searchQuery.length > 2 && activeTag) { activeTag = ''; updateTagFilterBar(); }
   if (searchQuery.length > 2) {
     document.getElementById('diaryPagination').style.display = 'none';
     searchDiary(searchQuery);
@@ -1850,7 +1887,7 @@ function renderEntries() {
     // Now checks for ANY active narrowing — search text or any filter —
     // and only shows the true empty-archive message when nothing at all
     // is filtered or searched.
-    var isFiltered = !!(searchQuery || activeSource !== 'all' || activeCategory !== 'all' || activeDateFrom || activeDateTo);
+    var isFiltered = !!(searchQuery || activeTag || activeSource !== 'all' || activeCategory !== 'all' || activeDateFrom || activeDateTo);
     container.innerHTML = '<div class="diary-empty">' +
       '<div class="diary-empty-icon">📭</div>' +
       '<h3>' + (isFiltered ? 'No results found' : 'No entries yet') + '</h3>' +
@@ -2041,7 +2078,7 @@ function renderEntryCard(e) {
   var date = new Date(e.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
   var title = e.title || (e.prompt ? e.prompt.slice(0, 60) + (e.prompt.length > 60 ? '...' : '') : 'Untitled entry');
   var isExpanded = expandedIds.has(e.id);
-  var tags = (e.tags || []).map(function(t) { return '<span class="entry-tag">' + t + '</span>'; }).join('');
+  var tags = (e.tags || []).map(function(t) { return '<span class="entry-tag clickable" data-tag="' + escHtml(t) + '" title="Show all entries tagged &quot;' + escHtml(t) + '&quot;" onclick="event.stopPropagation();filterTagEl(this)">' + escHtml(t) + '</span>'; }).join('');
   // Confirmed as a real, direct fix per an explicit, direct
   // recommendation: "Load earlier" genuinely, repeatedly caused real
   // trouble specifically because it lived inside the entry's own
@@ -2077,6 +2114,7 @@ function renderEntryCard(e) {
           // genuinely match on meaning with no literal query word in its
           // (often auto-generated) title at all.
           (e.snippet ? '<div class="entry-snippet">' + highlightSnippet(e.snippet, searchQuery) + '</div>' : '') +
+          (e.decision_note && e.decision_note.trim() ? '<div class="entry-note-preview" title="Your decision note">Note: ' + escHtml(e.decision_note.trim().replace(/\s+/g, ' ').slice(0, 140)) + '</div>' : '') +
         '</div>' +
         '<div class="entry-sub">' +
           '<span class="entry-category">' + (e.category || 'General') + '</span>' +
