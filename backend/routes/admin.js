@@ -232,6 +232,45 @@ router.get('/diary-ratings', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/diary-ratings/entries — the individual rated entries behind the
+// counts above, METADATA ONLY: date, provider, category, rating and a short
+// anonymous user code. Deliberately returns no title, question or content, so
+// admins can see where ratings come from without reading what users saved.
+// Filters: ?source= ?category= ?rating=up|down ?days= (all optional).
+router.get('/diary-ratings/entries', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const salt = process.env.ADMIN_ANON_SALT || process.env.JWT_SECRET || 'forge-diary';
+    const params = [];
+    const where = [`rating IN ('up','down')`];
+    const addEq = (col, val) => {
+      if (!val) return;
+      if (val === 'unknown') { where.push(`(${col} IS NULL OR ${col} = '')`); return; }
+      params.push(String(val).slice(0, 100)); where.push(`${col} = $${params.length}`);
+    };
+    addEq('source', req.query.source);
+    addEq('category', req.query.category);
+    if (req.query.rating === 'up' || req.query.rating === 'down') { params.push(req.query.rating); where.push(`rating = $${params.length}`); }
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 0, 0), 3650);
+    if (days > 0) { params.push(days); where.push(`created_at >= NOW() - ($${params.length}::int * INTERVAL '1 day')`); }
+    const r = await db.query(
+      `SELECT created_at, source, category, rating, user_email
+       FROM diary_entries WHERE ${where.join(' AND ')}
+       ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 100`, params
+    ).catch(() => ({ rows: [] }));
+    const entries = r.rows.map(row => ({
+      date: row.created_at,
+      source: row.source || 'unknown',
+      category: row.category || 'unknown',
+      rating: row.rating,
+      user: crypto.createHash('sha256').update(salt + String(row.user_email || '').toLowerCase()).digest('hex').slice(0, 8),
+    }));
+    res.json({ ok: true, entries });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // GET /api/admin/referral-stats — referral programme health
 router.get('/referral-stats', requireAuth, requireAdmin, async (req, res) => {
   try {

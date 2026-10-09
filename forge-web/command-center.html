@@ -2084,7 +2084,19 @@ function filterUsers(q) {
           </tr></thead>
           <tbody id="dr-category-body"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">Loading...</td></tr></tbody>
         </table>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Approval = thumbs up / (up + down), shown only once an item has at least one rating. Counts only; entry content is never shown here.</div>
+        <div id="dr-entries-head" style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin:18px 0 6px">Rated entries · newest first</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+            <th style="text-align:left;padding:6px 0">Saved</th>
+            <th style="text-align:left;padding:6px 0">Provider</th>
+            <th style="text-align:left;padding:6px 0">Category</th>
+            <th style="text-align:left;padding:6px 0">Rating</th>
+            <th style="text-align:left;padding:6px 0">User code</th>
+          </tr></thead>
+          <tbody id="dr-entries-body"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px">Loading...</td></tr></tbody>
+        </table>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Click a provider or category row above to filter this list. The user code is an anonymous fingerprint (same user, same code) so repeat raters can be spotted without identifying anyone.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Approval = thumbs up / (up + down), shown only once an item has at least one rating. Titles, questions and entry content are never shown here.</div>
       </div>
     </div>
     <div class="panel super-admin-only">
@@ -2949,17 +2961,52 @@ function applyRBAC(role) {
   }
 }
 
-const DR_PROVIDER_LABELS = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', perplexity:'Perplexity', grok:'Grok', deepseek:'DeepSeek', mistral:'Mistral', meta:'Meta AI', external:'Imported / other' };
+const DR_PROVIDER_LABELS = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', perplexity:'Perplexity', grok:'Grok', deepseek:'DeepSeek', mistral:'Mistral', meta:'Meta AI', external:'Imported / other', synthesis:'Forge synthesis', sweep:'Forge sweep' };
+var _drFilter = { source: '', category: '' };
+function drSetFilter(kind, value) {
+  _drFilter = { source: '', category: '' };
+  _drFilter[kind] = value;
+  loadDiaryRatedEntries();
+}
+function drClearFilter() { _drFilter = { source: '', category: '' }; loadDiaryRatedEntries(); }
+async function loadDiaryRatedEntries() {
+  const head = document.getElementById('dr-entries-head');
+  const body = document.getElementById('dr-entries-body');
+  if (!body) return;
+  const daysEl = document.getElementById('dr-days');
+  const q = ['days=' + encodeURIComponent(daysEl ? daysEl.value : '30')];
+  if (_drFilter.source) q.push('source=' + encodeURIComponent(_drFilter.source));
+  if (_drFilter.category) q.push('category=' + encodeURIComponent(_drFilter.category));
+  const active = _drFilter.source ? (DR_PROVIDER_LABELS[_drFilter.source] || _drFilter.source) : (_drFilter.category || '');
+  if (head) head.innerHTML = 'Rated entries' + (active ? ' · <strong>' + escHtml(active) + '</strong> <a href="#" onclick="drClearFilter();return false" style="color:var(--orange);margin-left:6px;text-transform:none;letter-spacing:0">clear filter</a>' : ' · newest first');
+  try {
+    const r = await Forge.request('GET', '/api/admin/diary-ratings/entries?' + q.join('&'));
+    if (!r.ok || !r.data || !r.data.ok) throw new Error('request failed');
+    const list = r.data.entries || [];
+    body.innerHTML = list.length ? list.map(function(e) {
+      return '<tr style="border-top:1px solid var(--border)">' +
+        '<td style="padding:8px 0">' + escHtml(new Date(e.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })) + '</td>' +
+        '<td style="padding:8px 0">' + escHtml(DR_PROVIDER_LABELS[e.source] || e.source) + '</td>' +
+        '<td style="padding:8px 0">' + escHtml(e.category) + '</td>' +
+        '<td style="padding:8px 0;font-weight:600;color:' + (e.rating === 'up' ? 'var(--green,#22c55e)' : 'var(--red,#ef4444)') + '">' + (e.rating === 'up' ? 'Thumbs up' : 'Thumbs down') + '</td>' +
+        '<td style="padding:8px 0;color:var(--text-muted);font-family:monospace">' + escHtml(e.user) + '</td></tr>';
+    }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px">No rated entries match.</td></tr>';
+  } catch (err) {
+    console.error('[CC] loadDiaryRatedEntries:', err.message);
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px">Could not load rated entries.</td></tr>';
+  }
+}
+
 async function loadDiaryRatings() {
   const daysEl = document.getElementById('dr-days');
   const days = daysEl ? daysEl.value : '30';
-  const rows = function(list, label) {
+  const rows = function(list, label, kind) {
     if (!list.length) return '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">No entries in this period.</td></tr>';
     return list.map(function(r) {
       const rated = r.up + r.down;
       const ratedPct = r.total ? Math.round(rated / r.total * 100) + '%' : '—';
       const approval = rated ? Math.round(r.up / rated * 100) + '%' : '—';
-      return '<tr style="border-top:1px solid var(--border)">' +
+      return '<tr style="border-top:1px solid var(--border);cursor:pointer" title="Show the rated entries behind this row" onclick="drSetFilter(\'' + kind + '\',decodeURIComponent(\'' + encodeURIComponent(r.key) + '\'))">' +
         '<td style="padding:8px 0;font-weight:600">' + escHtml(label(r.key)) + '</td>' +
         '<td style="text-align:right;padding:8px 0">' + r.total.toLocaleString() + '</td>' +
         '<td style="text-align:right;padding:8px 0">' + r.up.toLocaleString() + '</td>' +
@@ -2979,9 +3026,10 @@ async function loadDiaryRatings() {
         (d.totals.total ? Math.round(rated / d.totals.total * 100) : 0) + '%) · ' + d.totals.withNotes.toLocaleString() + ' with a decision note';
     }
     const sb = document.getElementById('dr-source-body');
-    if (sb) sb.innerHTML = rows(d.bySource, function(k) { return DR_PROVIDER_LABELS[k] || k; });
+    if (sb) sb.innerHTML = rows(d.bySource, function(k) { return DR_PROVIDER_LABELS[k] || k; }, 'source');
     const cb = document.getElementById('dr-category-body');
-    if (cb) cb.innerHTML = rows(d.byCategory, function(k) { return k; });
+    if (cb) cb.innerHTML = rows(d.byCategory, function(k) { return k; }, 'category');
+    loadDiaryRatedEntries();
   } catch (e) {
     console.error('[CC] loadDiaryRatings:', e.message);
     const sum = document.getElementById('dr-summary');
