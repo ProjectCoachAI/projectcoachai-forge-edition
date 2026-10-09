@@ -2233,9 +2233,10 @@
                     replacement: function(content, node) {
                       try {
                         var jslog = node.getAttribute('jslog') || '';
-                        var b64Match = jslog.match(/[A-Za-z0-9+/]{40,}={0,2}/);
-                        if (b64Match) {
-                          var decodedPayload = atob(b64Match[0]);
+                        var b64All = jslog.match(/[A-Za-z0-9+/]{40,}={0,2}/g) || [];
+                        for (var bi = 0; bi < b64All.length; bi++) {
+                          var decodedPayload = '';
+                          try { decodedPayload = atob(b64All[bi]); } catch (e2) { continue; }
                           var urlMatch = decodedPayload.match(/https?:\/\/[^"\\]+/);
                           if (urlMatch) {
                             var label = (node.querySelector('.source-title') || node).textContent.trim();
@@ -2243,7 +2244,29 @@
                           }
                         }
                       } catch(e) {}
-                      return content;
+                      // NOTE: no recoverable URL -> drop the chip. Returning the
+                      // raw text leaked bare source labels ("Boatsetter",
+                      // "Holidify") into saved entries as stray lines.
+                      return '';
+                    }
+                  });
+                  svc.addRule('geminiSourceChip', {
+                    // NOTE: added — Gemini wraps each inline source in a
+                    // <source-inline-chip> (inside <sources-carousel-inline>)
+                    // holding the citation button plus extra UI text such as
+                    // the "+ 1" more-sources count. Keep only the resolved
+                    // [label](url) link; everything else in the chip is UI
+                    // chrome and must never be saved as plain text lines.
+                    filter: function(node) {
+                      return node.nodeName === 'SOURCE-INLINE-CHIP' ||
+                             node.nodeName === 'SOURCES-CAROUSEL-INLINE';
+                    },
+                    replacement: function(content, node) {
+                      var links = (content || '').match(/\[[^\]]+\]\([^)\s]+\)/g);
+                      if (!links || !links.length) return '';
+                      // a chip holds one citation; the carousel wrapper holds several
+                      if (node.nodeName === 'SOURCE-INLINE-CHIP') links = [links[0]];
+                      return ' ' + links.join(' ') + ' ';
                     }
                   });
                   svc.addRule('geminiSequenceMarkerContainer', {
