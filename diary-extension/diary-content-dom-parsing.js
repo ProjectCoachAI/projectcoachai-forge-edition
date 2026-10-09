@@ -1861,6 +1861,170 @@
     }
   }
 
+  function addGeminiTurndownRules(svc) {
+    if (!svc || svc.__geminiRulesAdded) return;
+    svc.__geminiRulesAdded = true;
+    svc.addRule('geminiCitationButton', {
+      // NOTE: added — confirmed as a real, direct gap via live
+      // user report ("sources not being recognized / not
+      // clickable in the diary entry") after buildGeminiPairedThread
+      // was confirmed working via the ReferenceError fixes. Root
+      // cause traced precisely: this function uses Turndown for
+      // HTML-to-markdown conversion, NOT the custom htmlToMarkdown()
+      // function in diary-content.js where the case 'button': handler
+      // was added. Turndown's own default handling of <button> elements
+      // extracts only plain text content ("Wikipedia") and discards the
+      // URL entirely. Gemini's citations are <button aria-haspopup=
+      // "dialog"> elements (not real <a href> links — confirmed via live
+      // DOM inspection) whose actual destination URL is encoded inside
+      // the button's own jslog click-analytics attribute as a base64-
+      // encoded JSON array. URL extraction matches the already-verified
+      // case 'button': handler in diary-content.js exactly — atob()
+      // only (no decodeURIComponent on the whole payload, confirmed bug
+      // in the first attempt: decodes %20/%2C sequences into literal
+      // spaces, breaking the URL), first https?:// URL match wins.
+      // Verified against the real, live jslog value from the first
+      // confirmed Gemini citation before applying here.
+      filter: function(node) {
+        return node.nodeName === 'BUTTON' &&
+               node.getAttribute('aria-haspopup') === 'dialog' &&
+               !!node.getAttribute('jslog');
+      },
+      replacement: function(content, node) {
+        try {
+          var jslog = node.getAttribute('jslog') || '';
+          var b64All = jslog.match(/[A-Za-z0-9+/]{40,}={0,2}/g) || [];
+          for (var bi = 0; bi < b64All.length; bi++) {
+            var decodedPayload = '';
+            try { decodedPayload = atob(b64All[bi]); } catch (e2) { continue; }
+            var urlMatch = decodedPayload.match(/https?:\/\/[^"\\]+/);
+            if (urlMatch) {
+              var label = (node.querySelector('.source-title') || node).textContent.trim();
+              if (label) return '[' + label + '](' + urlMatch[0] + ')';
+            }
+          }
+        } catch(e) {}
+        // NOTE: no recoverable URL -> drop the chip. Returning the
+        // raw text leaked bare source labels ("Boatsetter",
+        // "Holidify") into saved entries as stray lines.
+        return '';
+      }
+    });
+    svc.addRule('geminiSourceChip', {
+      // NOTE: added — Gemini wraps each inline source in a
+      // <source-inline-chip> (inside <sources-carousel-inline>)
+      // holding the citation button plus extra UI text such as
+      // the "+ 1" more-sources count. Keep only the resolved
+      // [label](url) link; everything else in the chip is UI
+      // chrome and must never be saved as plain text lines.
+      filter: function(node) {
+        return node.nodeName === 'SOURCE-INLINE-CHIP' ||
+               node.nodeName === 'SOURCES-CAROUSEL-INLINE';
+      },
+      replacement: function(content, node) {
+        var links = (content || '').match(/\[[^\]]+\]\([^)\s]+\)/g);
+        if (!links || !links.length) return '';
+        // a chip holds one citation; the carousel wrapper holds several
+        if (node.nodeName === 'SOURCE-INLINE-CHIP') links = [links[0]];
+        return ' ' + links.join(' ') + ' ';
+      }
+    });
+    svc.addRule('geminiSequenceMarkerContainer', {
+      // NOTE: safety-net suppression rule — confirmed as the
+      // direct source of bare-number lines ("1" on its own
+      // line before the step heading) via live DOM inspection
+      // of a second Gemini stepper component (tea fermentation
+      // process steps). The .sequence-event-marker-container
+      // holds a visual step-number badge and a vertical
+      // connecting line — both purely decorative UI chrome,
+      // not content. When geminiSequenceStep fires on the
+      // parent .sequence-event, it overrides content entirely
+      // (ignores Turndown's already-converted children) so the
+      // bare "1" is never visible. But if geminiSequenceStep
+      // doesn't fire (e.g., cached old Turndown instance from
+      // a previous page load before the extension was updated),
+      // Turndown's default processing extracts "1" from
+      // .sequence-event-marker and produces it as a standalone
+      // block. This rule suppresses the entire container
+      // regardless, so bare-number lines can't appear even in
+      // the fallback case.
+      filter: function(node) {
+        return node.classList &&
+               node.classList.contains('sequence-event-marker-container') &&
+               node.classList.contains('hide-from-message-actions');
+      },
+      replacement: function() { return ''; }
+    });
+    svc.addRule('geminiSequenceStep', {
+      // NOTE: added — confirmed via live DOM inspection of
+      // Gemini's sequence-step component (recipe/process
+      // steps). Each .sequence-event contains: a visible
+      // step number (.sequence-event-marker), a visible
+      // title (.sequence-event-title) and duration
+      // (.sequence-event-subtitle) inside a
+      // hide-from-message-actions container, and a NOW-
+      // STRIPPED display:none export span (removed above
+      // in the rClone preprocessing step). Without this
+      // rule, Turndown would walk all the remaining
+      // visible children and produce three bare
+      // unformatted lines (number, title, duration)
+      // before the instruction paragraph. This rule reads
+      // the semantic elements directly from the DOM node
+      // and produces a clean, properly-spaced heading:
+      //   **N. Title**
+      //   *duration*
+      //
+      //   Instruction paragraph.
+      // Verified against the real, pasted DOM for all
+      // five steps before applying here.
+      filter: function(node) {
+        return node.classList && node.classList.contains('sequence-event');
+      },
+      replacement: function(content, node) {
+        var numEl = node.querySelector('.sequence-event-marker');
+        var titleEl = node.querySelector('.sequence-event-title');
+        var subtitleEl = node.querySelector('.sequence-event-subtitle');
+        var num = numEl ? (numEl.textContent || '').trim() : '';
+        var title = titleEl ? (titleEl.textContent || '').trim() : '';
+        var subtitle = subtitleEl ? (subtitleEl.textContent || '').trim() : '';
+        var descEl = node.querySelector('.sequence-event-description');
+        var descText = '';
+        if (descEl) {
+          var pEls = descEl.querySelectorAll('p');
+          var texts = [];
+          pEls.forEach(function(p) {
+            var t = (p.textContent || '').trim();
+            if (t) texts.push(t);
+          });
+          descText = texts.join('\n\n');
+          // Fallback: if no <p> tags, use text content directly
+          if (!descText) descText = (descEl.textContent || '').trim();
+        }
+        var header = '';
+        // NOTE: double-number fix — confirmed via live DOM
+        // inspection of a second Gemini stepper (tea
+        // fermentation steps): the title text ALREADY
+        // contains the number ("1. Harvest & Wither"),
+        // unlike fig-jam steps ("Macerate the Fruit"). The
+        // original rule unconditionally prepended num +
+        // ". " + title, producing "**1. 1. Harvest &
+        // Wither**". Fixed by checking whether the title
+        // already starts with a number followed by a period
+        // — if so, use title directly without prepending.
+        var titleAlreadyNumbered = /^\d+\./.test(title);
+        if (num && title && !titleAlreadyNumbered) {
+          header = '**' + num + '. ' + title + '**';
+        } else if (title) {
+          header = '**' + title + '**';
+        }
+        if (subtitle) header += '\n*' + subtitle + '*';
+        if (header && descText) return '\n\n' + header + '\n\n' + descText;
+        if (header) return '\n\n' + header;
+        return descText ? '\n\n' + descText : '';
+      }
+    });
+  }
+
   // ── Gemini: DOM-based question/answer pairing ───────────────────────────────
   // Reads the ACTUAL live DOM structure at save time, instead of inferring
   // pairing from timing/counting. Confirmed via live DOM inspection
@@ -2204,167 +2368,16 @@
                       return '[' + label + '](' + url + ')';
                     }
                   });
-                  svc.addRule('geminiCitationButton', {
-                    // NOTE: added — confirmed as a real, direct gap via live
-                    // user report ("sources not being recognized / not
-                    // clickable in the diary entry") after buildGeminiPairedThread
-                    // was confirmed working via the ReferenceError fixes. Root
-                    // cause traced precisely: this function uses Turndown for
-                    // HTML-to-markdown conversion, NOT the custom htmlToMarkdown()
-                    // function in diary-content.js where the case 'button': handler
-                    // was added. Turndown's own default handling of <button> elements
-                    // extracts only plain text content ("Wikipedia") and discards the
-                    // URL entirely. Gemini's citations are <button aria-haspopup=
-                    // "dialog"> elements (not real <a href> links — confirmed via live
-                    // DOM inspection) whose actual destination URL is encoded inside
-                    // the button's own jslog click-analytics attribute as a base64-
-                    // encoded JSON array. URL extraction matches the already-verified
-                    // case 'button': handler in diary-content.js exactly — atob()
-                    // only (no decodeURIComponent on the whole payload, confirmed bug
-                    // in the first attempt: decodes %20/%2C sequences into literal
-                    // spaces, breaking the URL), first https?:// URL match wins.
-                    // Verified against the real, live jslog value from the first
-                    // confirmed Gemini citation before applying here.
-                    filter: function(node) {
-                      return node.nodeName === 'BUTTON' &&
-                             node.getAttribute('aria-haspopup') === 'dialog' &&
-                             !!node.getAttribute('jslog');
-                    },
-                    replacement: function(content, node) {
-                      try {
-                        var jslog = node.getAttribute('jslog') || '';
-                        var b64All = jslog.match(/[A-Za-z0-9+/]{40,}={0,2}/g) || [];
-                        for (var bi = 0; bi < b64All.length; bi++) {
-                          var decodedPayload = '';
-                          try { decodedPayload = atob(b64All[bi]); } catch (e2) { continue; }
-                          var urlMatch = decodedPayload.match(/https?:\/\/[^"\\]+/);
-                          if (urlMatch) {
-                            var label = (node.querySelector('.source-title') || node).textContent.trim();
-                            if (label) return '[' + label + '](' + urlMatch[0] + ')';
-                          }
-                        }
-                      } catch(e) {}
-                      // NOTE: no recoverable URL -> drop the chip. Returning the
-                      // raw text leaked bare source labels ("Boatsetter",
-                      // "Holidify") into saved entries as stray lines.
-                      return '';
-                    }
-                  });
-                  svc.addRule('geminiSourceChip', {
-                    // NOTE: added — Gemini wraps each inline source in a
-                    // <source-inline-chip> (inside <sources-carousel-inline>)
-                    // holding the citation button plus extra UI text such as
-                    // the "+ 1" more-sources count. Keep only the resolved
-                    // [label](url) link; everything else in the chip is UI
-                    // chrome and must never be saved as plain text lines.
-                    filter: function(node) {
-                      return node.nodeName === 'SOURCE-INLINE-CHIP' ||
-                             node.nodeName === 'SOURCES-CAROUSEL-INLINE';
-                    },
-                    replacement: function(content, node) {
-                      var links = (content || '').match(/\[[^\]]+\]\([^)\s]+\)/g);
-                      if (!links || !links.length) return '';
-                      // a chip holds one citation; the carousel wrapper holds several
-                      if (node.nodeName === 'SOURCE-INLINE-CHIP') links = [links[0]];
-                      return ' ' + links.join(' ') + ' ';
-                    }
-                  });
-                  svc.addRule('geminiSequenceMarkerContainer', {
-                    // NOTE: safety-net suppression rule — confirmed as the
-                    // direct source of bare-number lines ("1" on its own
-                    // line before the step heading) via live DOM inspection
-                    // of a second Gemini stepper component (tea fermentation
-                    // process steps). The .sequence-event-marker-container
-                    // holds a visual step-number badge and a vertical
-                    // connecting line — both purely decorative UI chrome,
-                    // not content. When geminiSequenceStep fires on the
-                    // parent .sequence-event, it overrides content entirely
-                    // (ignores Turndown's already-converted children) so the
-                    // bare "1" is never visible. But if geminiSequenceStep
-                    // doesn't fire (e.g., cached old Turndown instance from
-                    // a previous page load before the extension was updated),
-                    // Turndown's default processing extracts "1" from
-                    // .sequence-event-marker and produces it as a standalone
-                    // block. This rule suppresses the entire container
-                    // regardless, so bare-number lines can't appear even in
-                    // the fallback case.
-                    filter: function(node) {
-                      return node.classList &&
-                             node.classList.contains('sequence-event-marker-container') &&
-                             node.classList.contains('hide-from-message-actions');
-                    },
-                    replacement: function() { return ''; }
-                  });
-                  svc.addRule('geminiSequenceStep', {
-                    // NOTE: added — confirmed via live DOM inspection of
-                    // Gemini's sequence-step component (recipe/process
-                    // steps). Each .sequence-event contains: a visible
-                    // step number (.sequence-event-marker), a visible
-                    // title (.sequence-event-title) and duration
-                    // (.sequence-event-subtitle) inside a
-                    // hide-from-message-actions container, and a NOW-
-                    // STRIPPED display:none export span (removed above
-                    // in the rClone preprocessing step). Without this
-                    // rule, Turndown would walk all the remaining
-                    // visible children and produce three bare
-                    // unformatted lines (number, title, duration)
-                    // before the instruction paragraph. This rule reads
-                    // the semantic elements directly from the DOM node
-                    // and produces a clean, properly-spaced heading:
-                    //   **N. Title**
-                    //   *duration*
-                    //
-                    //   Instruction paragraph.
-                    // Verified against the real, pasted DOM for all
-                    // five steps before applying here.
-                    filter: function(node) {
-                      return node.classList && node.classList.contains('sequence-event');
-                    },
-                    replacement: function(content, node) {
-                      var numEl = node.querySelector('.sequence-event-marker');
-                      var titleEl = node.querySelector('.sequence-event-title');
-                      var subtitleEl = node.querySelector('.sequence-event-subtitle');
-                      var num = numEl ? (numEl.textContent || '').trim() : '';
-                      var title = titleEl ? (titleEl.textContent || '').trim() : '';
-                      var subtitle = subtitleEl ? (subtitleEl.textContent || '').trim() : '';
-                      var descEl = node.querySelector('.sequence-event-description');
-                      var descText = '';
-                      if (descEl) {
-                        var pEls = descEl.querySelectorAll('p');
-                        var texts = [];
-                        pEls.forEach(function(p) {
-                          var t = (p.textContent || '').trim();
-                          if (t) texts.push(t);
-                        });
-                        descText = texts.join('\n\n');
-                        // Fallback: if no <p> tags, use text content directly
-                        if (!descText) descText = (descEl.textContent || '').trim();
-                      }
-                      var header = '';
-                      // NOTE: double-number fix — confirmed via live DOM
-                      // inspection of a second Gemini stepper (tea
-                      // fermentation steps): the title text ALREADY
-                      // contains the number ("1. Harvest & Wither"),
-                      // unlike fig-jam steps ("Macerate the Fruit"). The
-                      // original rule unconditionally prepended num +
-                      // ". " + title, producing "**1. 1. Harvest &
-                      // Wither**". Fixed by checking whether the title
-                      // already starts with a number followed by a period
-                      // — if so, use title directly without prepending.
-                      var titleAlreadyNumbered = /^\d+\./.test(title);
-                      if (num && title && !titleAlreadyNumbered) {
-                        header = '**' + num + '. ' + title + '**';
-                      } else if (title) {
-                        header = '**' + title + '**';
-                      }
-                      if (subtitle) header += '\n*' + subtitle + '*';
-                      if (header && descText) return '\n\n' + header + '\n\n' + descText;
-                      if (header) return '\n\n' + header;
-                      return descText ? '\n\n' + descText : '';
-                    }
-                  });
+                  addGeminiTurndownRules(svc);
                   window.__diaryTurndownInstance = svc;
                 }
+                // NOTE: the shared Turndown instance may already have been
+                // created by diary-content.js (readDomResponse) BEFORE this
+                // function ran, in which case the creation block above is
+                // skipped and the Gemini rules would never be registered —
+                // the real reason source chips leaked as plain lines.
+                // Register them on whichever instance exists, exactly once.
+                addGeminiTurndownRules(window.__diaryTurndownInstance);
                 text = window.__diaryTurndownInstance.turndown(rClone).trim();
               }
             } catch (e) {}
