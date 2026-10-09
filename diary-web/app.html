@@ -112,6 +112,13 @@
     .qa-answer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .qa-answer-source { font-size: 11px; color: #9E9890; }
     .qa-note-row { margin-top: 0.75rem; }
+    .qa-cite { color: #C17D3C; font-weight: 600; text-decoration: none; cursor: pointer; }
+    .qa-cite:hover { text-decoration: underline; }
+    .qa-sources { margin-top: 0.9rem; padding-top: 0.75rem; border-top: 0.5px solid #D6D2C8; }
+    .qa-sources-label { font-size: 11px; color: #9E9890; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .qa-src { display: block; width: 100%; text-align: left; background: #fff; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 7px 10px; margin-bottom: 5px; font-size: 12px; color: #1B2A4A; cursor: pointer; font-family: Inter,sans-serif; }
+    .qa-src:hover { border-color: #C17D3C; }
+    .qa-src span { color: #9E9890; }
     .qa-note { width: 100%; background: #fff; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #1B2A4A; font-family: Inter,sans-serif; outline: none; resize: none; min-height: 48px; box-sizing: border-box; }
     .qa-note:focus { border-color: #C17D3C; }
     .qa-save-btn { margin-top: 8px; background: #C17D3C; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: Inter,sans-serif; transition: background 0.2s; }
@@ -697,8 +704,9 @@
       </div>
       <div class="qa-row">
         <input type="text" id="qaInput" class="qa-input" placeholder="Ask anything — answer saves straight to your Diary..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){askQuick();event.preventDefault();}" />
-        <select id="qaModel" class="qa-select">
+        <select id="qaModel" class="qa-select" onchange="qaModeChanged()">
           <option value="auto" title="Auto picks the best AI for your question">Auto</option>
+          <option value="diary" title="Answers from your own saved entries, with sources">My diary</option>
           <option value="claude">Claude</option>
           <option value="chatgpt">ChatGPT</option>
           <option value="gemini">Gemini</option>
@@ -5194,6 +5202,9 @@ async function askQuick() {
   var prompt = document.getElementById('qaInput').value.trim();
   if (!prompt) return;
   var modelSel = document.getElementById('qaModel').value;
+  if (modelSel === 'diary') { return askMyDiary(prompt); }
+  var noteRow = document.querySelector('#qaSection .qa-note-row');
+  if (noteRow) noteRow.style.display = '';
   var model = modelSel === 'auto' ? qaAutoRoute(prompt) : modelSel;
   _qaPrompt = prompt;
   _qaModel = model;
@@ -5257,6 +5268,74 @@ async function askQuick() {
 
   btn.disabled = false; btn.textContent = 'Ask';
 }
+
+// ── Ask my diary: answer from the person's own saved entries ───────────────
+var _askSources = [];
+function qaModeChanged() {
+  var input = document.getElementById('qaInput');
+  var isDiary = document.getElementById('qaModel').value === 'diary';
+  if (input) input.placeholder = isDiary
+    ? 'Ask about something you saved — e.g. what did I find about EV resale value?'
+    : 'Ask anything — answer saves straight to your Diary...';
+}
+window.qaModeChanged = qaModeChanged;
+
+async function askMyDiary(question) {
+  _qaContent = ''; _qaPrompt = ''; _qaModel = '';
+  var btn = document.getElementById('qaBtn');
+  btn.disabled = true; btn.textContent = 'Searching...';
+  var box = document.getElementById('qaAnswer');
+  box.classList.remove('visible');
+  var noteRow = document.querySelector('#qaSection .qa-note-row');
+  if (noteRow) noteRow.style.display = 'none'; // nothing new to save: the answer comes from entries already in the Diary
+  try {
+    var r = await Forge.request('POST', '/api/diary/ask', { question: question, tz: Intl.DateTimeFormat().resolvedOptions().timeZone });
+    var d = r && r.data ? r.data : {};
+    if (r.status === 402) { showTopToast(d.message || 'Daily limit reached. Upgrade to Pro for unlimited.', true); }
+    else if (!r.ok || !d.success) { showTopToast(d.message || 'Could not answer right now. Please try again.', true); }
+    else {
+      document.getElementById('qaAnswerSource').textContent = d.found ? 'From your diary' : 'Your diary';
+      var html = Forge.renderMarkdown(d.answer || '').replace(/<p>\s*<\/p>/g, '');
+      html = html.replace(/\[(\d+)\]/g, function(m, n) {
+        var src = (d.sources || []).filter(function(x) { return String(x.n) === n; })[0];
+        return src ? '<a class="qa-cite" href="#" title="Open this entry" onclick="openAskSource(' + src.id + ');return false">[' + n + ']</a>' : m;
+      });
+      var cited = (d.sources || []).filter(function(x) { return x.cited; });
+      var shown = cited.length ? cited : (d.sources || []);
+      if (shown.length) {
+        html += '<div class="qa-sources"><div class="qa-sources-label">Sources from your diary</div>' + shown.map(function(x) {
+          var label = (SOURCE_LABELS[x.source] || x.source || '');
+          var when = new Date(x.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+          return '<button class="qa-src" onclick="openAskSource(' + x.id + ')">[' + x.n + '] ' + escHtml(x.title) + ' <span>· ' + escHtml(label) + ' · ' + escHtml(when) + '</span></button>';
+        }).join('') + '</div>';
+      }
+      document.getElementById('qaAnswerContent').innerHTML = html;
+      box.classList.add('visible');
+    }
+  } catch (e) {
+    showTopToast('Could not answer right now. Please try again.', true);
+  }
+  btn.disabled = false; btn.textContent = 'Ask';
+}
+
+// Opens a source entry in the list, loading it first if it is not on the current page.
+async function openAskSource(id) {
+  id = parseInt(id, 10);
+  if (!allEntries.some(function(e) { return e.id === id; })) {
+    try {
+      var r = await Forge.request('GET', '/api/diary/' + id);
+      if (!r.ok || !r.data || !r.data.entry) { showTopToast('That entry is no longer available.', true); return; }
+      allEntries = [r.data.entry].concat(allEntries);
+      filteredEntries = [r.data.entry].concat(filteredEntries);
+      window._diaryEntries = allEntries;
+      renderEntries();
+    } catch (_e) { showTopToast('Could not open that entry.', true); return; }
+  }
+  if (!expandedIds.has(id)) await toggleEntry(id);
+  var card = document.getElementById('entry-' + id);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.openAskSource = openAskSource;
 
 async function saveQuickAnswer() {
   if (!_qaContent) return;
