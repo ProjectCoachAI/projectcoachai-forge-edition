@@ -112,6 +112,11 @@
     .qa-answer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .qa-answer-source { font-size: 11px; color: #9E9890; }
     .qa-note-row { margin-top: 0.75rem; }
+    @keyframes entryFlash {
+      0%, 55% { box-shadow: 0 0 0 3px #C17D3C, 0 6px 22px rgba(193,125,60,0.28); background-color: #FFF4E0; }
+      100% { box-shadow: 0 0 0 0 rgba(193,125,60,0); }
+    }
+    .entry-card.entry-flash { animation: entryFlash 2.6s ease-out; }
     .qa-cite { color: #C17D3C; font-weight: 600; text-decoration: none; cursor: pointer; }
     .qa-cite:hover { text-decoration: underline; }
     .qa-sources { margin-top: 0.9rem; padding-top: 0.75rem; border-top: 0.5px solid #D6D2C8; }
@@ -5333,7 +5338,14 @@ async function openAskSource(id) {
   }
   if (!expandedIds.has(id)) await toggleEntry(id);
   var card = document.getElementById('entry-' + id);
-  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Flash the entry so it is obvious which one the answer came from.
+    card.classList.remove('entry-flash');
+    void card.offsetWidth; // restart the animation if the same source is clicked again
+    card.classList.add('entry-flash');
+    setTimeout(function() { card.classList.remove('entry-flash'); }, 2800);
+  }
 }
 window.openAskSource = openAskSource;
 
