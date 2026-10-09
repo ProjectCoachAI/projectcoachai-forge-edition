@@ -1416,6 +1416,17 @@ function factContext(text, index) {
     const bold = seg.match(/\*\*([^*]{3,60})\*\*/);
     if (bold) {
       ctx = stripMarkdownForContext(bold[1]); fromBold = true;
+      // A later bold phrase that leads into the value ("**United States:**
+      // the US uses a **federal Clean Vehicle Tax Credit (up to $7,500)**")
+      // says what the number is for better than the lead does.
+      const marks = seg.split('**').length - 1;
+      let desc = '';
+      if (marks % 2 === 1) desc = seg.slice(seg.lastIndexOf('**') + 2);
+      else if (marks >= 4) { const all = seg.match(/\*\*([^*]{3,60})\*\*/g); desc = all[all.length - 1].slice(2, -2); }
+      desc = stripMarkdownForContext(desc).replace(/[\s:,;(\u2013\u2014-]*(?:up to|under|over|above|below|around|about|from)?[\s:,;(\u2013\u2014-]*$/i, '');
+      if (desc && /[A-Za-z]{3,}/.test(desc) && !FACT_ATTRIBUTE_WORD.test(desc) && desc.split(' ').length >= 2) {
+        ctx = desc.charAt(0).toUpperCase() + desc.slice(1); fromBold = false;
+      }
     } else {
       seg = stripMarkdownForContext(seg).replace(/^(?:[-+>#]+|\d+[.)])\s*/, '');
       let words = seg.split(' ').filter(Boolean);
@@ -1444,7 +1455,13 @@ const STRUCTURED_FACTS_MAX = 10;
 function detectStructuredFactsArtifacts(text) {
   const facts = [];
   detectDates(text).forEach(d => { const c = factContext(text, d.index); if (c) facts.push({ label: 'Date', value: d.value, context: c }); });
-  detectPrices(text).forEach(p => { const c = factContext(text, p.index); if (c) facts.push({ label: 'Price', value: p.value, context: c }); });
+  detectPrices(text).forEach(p => {
+    const c = factContext(text, p.index);
+    if (!c) return;
+    // Keep a limiting word ("up to $7,500", "under $37k") so a cap is not read as a price.
+    const q = text.slice(Math.max(0, p.index - 12), p.index).match(/\b(up to|under|over|above|below|around|about|from)[\s(*]*$/i);
+    facts.push({ label: 'Price', value: (q ? q[1].toLowerCase() + ' ' : '') + p.value, context: c });
+  });
   return facts.length ? [{ type: 'structured_facts', facts: facts.slice(0, STRUCTURED_FACTS_MAX), position: 0 }] : [];
 }
 
