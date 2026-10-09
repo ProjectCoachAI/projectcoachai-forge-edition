@@ -1658,8 +1658,55 @@ function updateTagFilterBar() {
   bar.style.display = 'flex';
   bar.innerHTML = 'Tagged <strong>' + escHtml(activeTag) + '</strong><button onclick="clearTagFilter()">Clear</button>';
 }
-function filterTagEl(el) { filterTag(el.getAttribute('data-tag') || ''); }
-function filterTag(tag) {
+function filterTagEl(el) {
+  var card = el.closest ? el.closest('.entry-card') : null;
+  var fromId = card && /^entry-(\d+)$/.test(card.id) ? parseInt(card.id.slice(6), 10) : null;
+  filterTag(el.getAttribute('data-tag') || '', fromId);
+}
+// Picks the most telling word or phrase from a tag that actually occurs in
+// the entry text: the whole tag if present, otherwise its rarest word (a
+// rare word lands on the specific passage, a common one on the first of many).
+function pickTagTerm(tag, content) {
+  var plain = String(content || '').replace(/[*_`#>\[\]]/g, '').toLowerCase();
+  var t = String(tag || '').toLowerCase().trim();
+  if (!t || !plain) return '';
+  function count(term) {
+    var n = 0, i = 0;
+    var re = new RegExp('\\b' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
+    while (re.exec(plain)) { n++; if (n > 500) break; }
+    return n;
+  }
+  if (count(t) > 0) return t;
+  var STOP = { and: 1, the: 1, for: 1, with: 1, from: 1, into: 1, over: 1, about: 1 };
+  var best = '', bestCount = 0;
+  t.split(/[\s\-_\/]+/).forEach(function(w) {
+    if (w.length < 4 || STOP[w]) return;
+    var c = count(w);
+    if (c > 0 && (!best || c < bestCount || (c === bestCount && w.length > best.length))) { best = w; bestCount = c; }
+  });
+  return best;
+}
+// After a tag click: open the entry the tag was clicked on (or the first
+// match), highlight the passage the tag is about and scroll to it, using the
+// same in-entry search machinery as the magnifier icon.
+async function jumpToTagPassage(tag, fromId) {
+  var list = allEntries || [];
+  var entry = list.filter(function(x) { return x.id === fromId; })[0] || list[0];
+  if (!entry) return;
+  var term = pickTagTerm(tag, entry.content);
+  if (!term) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  if (!expandedIds.has(entry.id)) await toggleEntry(entry.id);
+  var bar = document.getElementById('entry-search-bar-' + entry.id);
+  var input = document.getElementById('entry-search-input-' + entry.id);
+  if (!bar || !input) return;
+  if (bar.style.display === 'none' || !bar.style.display) toggleEntrySearch(entry.id);
+  input.value = term;
+  runEntrySearch(entry.id);
+  var card = document.getElementById('entry-' + entry.id);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(function() { try { focusCurrentEntrySearchMatch(entry.id); } catch (_e) {} }, 450);
+}
+async function filterTag(tag, fromId) {
   if (!tag) return;
   activeTag = tag;
   currentPage = 1;
@@ -1669,8 +1716,8 @@ function filterTag(tag) {
   if (box) box.value = '';
   updateSearchClearBtn();
   updateTagFilterBar();
-  loadDiary();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  await loadDiary();
+  jumpToTagPassage(tag, fromId);
 }
 function clearTagFilter() {
   activeTag = '';

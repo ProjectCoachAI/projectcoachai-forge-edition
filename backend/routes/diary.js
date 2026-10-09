@@ -672,6 +672,11 @@ router.get('/', requireAuth, async (req, res) => {
 // short, plain-text excerpt with nothing else around them.
 function stripMarkdownForSnippet(text) {
   return (text || '')
+    // Citation markers (private-use delimiters \uE000..\uE004 wrapping a source's
+    // label, title, url and favicon) are rendered as pills on the entry itself;
+    // in a plain-text snippet they would show up as box glyphs plus raw URLs.
+    .replace(/\uE000[^\uE002]*\uE002/g, '')
+    .replace(/[\uE000-\uE004]/g, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')      // images
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')   // links -> just the label text
     .replace(/^#{1,6}\s+/gm, '')                // heading markers
