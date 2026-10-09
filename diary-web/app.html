@@ -2273,12 +2273,17 @@ function renderEntryCard(e) {
       // own comment in db.js for the full reasoning.
       ((function() {
         var factsArt = (_eartifacts || []).filter(function(a) { return a.type === 'structured_facts'; })[0];
-        if (!factsArt || !factsArt.facts || !factsArt.facts.length) return '';
+        // Only facts that carry a context label (what the date/price is
+        // about) are shown. A bare "Price: $7,500" with no subject is
+        // noise, so entries saved before context existed (no f.context)
+        // show nothing here until they are saved or synced again.
+        var shownFacts = (factsArt && factsArt.facts ? factsArt.facts : []).filter(function(f) { return f && f.context; });
+        if (!shownFacts.length) return '';
         return '<div style="margin-top:12px;padding:10px 12px;background:#F5F3EE;border-radius:8px;" onclick="event.stopPropagation();">' +
           '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Key facts</div>' +
           '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
-          factsArt.facts.map(function(f) {
-            return '<div style="font-size:12px;color:#4A4035;background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;padding:4px 10px;"><span style="color:#9E9890;">' + escHtml(f.label) + ':</span> ' + escHtml(f.value) + '</div>';
+          shownFacts.map(function(f) {
+            return '<div title="' + escHtml(f.label) + '" style="font-size:12px;color:#4A4035;background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;padding:4px 10px;"><span style="color:#9E9890;">' + escHtml(f.context) + '</span> ' + escHtml(f.value) + '</div>';
           }).join('') +
           '</div>' +
         '</div>';

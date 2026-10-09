@@ -1294,12 +1294,12 @@ function detectDates(text) {
   const results = []; const seen = {};
   const isoRe = /\b(\d{4}-\d{2}-\d{2})\b/g;
   let m;
-  while ((m = isoRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push(m[1]); } }
+  while ((m = isoRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push({ value: m[1], index: m.index }); } }
   const monthNames = 'January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec';
   const mdyRe = new RegExp('\\b((?:' + monthNames + ')\\.? \\d{1,2},? \\d{4})\\b', 'g');
-  while ((m = mdyRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push(m[1]); } }
+  while ((m = mdyRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push({ value: m[1], index: m.index }); } }
   const dmyRe = new RegExp('\\b(\\d{1,2} (?:' + monthNames + ') \\d{4})\\b', 'g');
-  while ((m = dmyRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push(m[1]); } }
+  while ((m = dmyRe.exec(text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = true; results.push({ value: m[1], index: m.index }); } }
   return results;
 }
 function detectPrices(text) {
@@ -1320,7 +1320,7 @@ function detectPrices(text) {
     if (overlaps(start, end)) continue;
     occupiedRanges.push([start, end]);
     const val = m[1] + m[2];
-    if (!seenValues[val]) { seenValues[val] = true; results.push(val); }
+    if (!seenValues[val]) { seenValues[val] = true; results.push({ value: val, index: start }); }
   }
   const codeRe = new RegExp('\\b(' + numPattern + ')\\s?(USD|EUR|GBP|JPY|CHF|CAD|AUD)\\b', 'g');
   while ((m = codeRe.exec(text)) !== null) {
@@ -1328,15 +1328,78 @@ function detectPrices(text) {
     if (overlaps(start, end)) continue;
     occupiedRanges.push([start, end]);
     const val = m[1] + ' ' + m[2];
-    if (!seenValues[val]) { seenValues[val] = true; results.push(val); }
+    if (!seenValues[val]) { seenValues[val] = true; results.push({ value: val, index: start }); }
   }
   return results;
 }
+// Short, human-readable context for a detected fact: what the date or
+// price is ABOUT. A bare "Price: $7,500" tells the reader nothing, so a
+// fact is only shown when a meaningful label can be found for it (see
+// detectStructuredFactsArtifacts). Deterministic, no LLM: for a table
+// row it is the row's first text cell (the row's subject); otherwise the
+// bold lead of the sentence, or the last few words before the value with
+// connecting words ("starts at", "costs", "from"...) trimmed off.
+function stripMarkdownForContext(s) {
+  return String(s || '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[\u241F\uE000-\uE004]/g, ' ')
+    .replace(/[*_`~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+const FACT_TRAILING_FILLER = /\b(starts?|starting|costs?|costing|priced?|pricing|prices?|from|at|about|around|roughly|approximately|approx\.?|is|are|was|were|of|for|to|up|only|just|over|under|ranging|range|ranges|between|and|the|a|an|in|by|with|on|as|per|est\.?|estimated)$/i;
+function factContext(text, index) {
+  const lineStart = text.lastIndexOf('\n', index - 1) + 1;
+  let lineEnd = text.indexOf('\n', index);
+  if (lineEnd === -1) lineEnd = text.length;
+  const line = text.slice(lineStart, lineEnd);
+  const pos = index - lineStart;
+  let ctx = '';
+  if (/^\s*\|/.test(line)) {
+    // Table row: first cell with real words that isn't the cell holding the value.
+    let offset = 0;
+    const cells = line.split('|');
+    for (let i = 0; i < cells.length; i++) {
+      const cellStart = offset; const cellEnd = offset + cells[i].length;
+      offset = cellEnd + 1;
+      if (pos >= cellStart && pos < cellEnd) continue;
+      const clean = stripMarkdownForContext(cells[i]);
+      if (/[A-Za-z]{2,}/.test(clean)) { ctx = clean; break; }
+    }
+  } else {
+    const before = line.slice(0, pos);
+    // Start of the current sentence within the line.
+    let sentStart = 0;
+    const boundary = /[.!?](?=\s)|[.!?]$/g; let b;
+    while ((b = boundary.exec(before)) !== null) sentStart = b.index + 1;
+    let seg = before.slice(sentStart);
+    // Prefer a bold lead ("**Tesla Model 3** starts at ...").
+    const bold = seg.match(/\*\*([^*]{3,60})\*\*/);
+    if (bold) {
+      ctx = stripMarkdownForContext(bold[1]);
+    } else {
+      seg = stripMarkdownForContext(seg).replace(/^(?:[-+>#]+|\d+[.)])\s*/, '');
+      let words = seg.split(' ').filter(Boolean);
+      // Drop trailing connectors and punctuation until a real word is last.
+      while (words.length && (FACT_TRAILING_FILLER.test(words[words.length - 1].replace(/[:,;(\u2013\u2014-]+$/g, '')) || /^[:,;(\u2013\u2014-]+$/.test(words[words.length - 1]))) words.pop();
+      if (words.length) words[words.length - 1] = words[words.length - 1].replace(/[:,;(\u2013\u2014-]+$/g, '');
+      ctx = words.slice(-5).join(' ');
+    }
+  }
+  ctx = ctx.replace(/^[\s:,;\u2013\u2014-]+|[\s:,;\u2013\u2014-]+$/g, '');
+  if (!/[A-Za-z]{2,}/.test(ctx)) return '';
+  // A context that is just another date/price/number adds nothing.
+  if (/^[\d\s.,%$€£¥:\/-]+$/.test(ctx)) return '';
+  if (ctx.length > 40) ctx = ctx.slice(0, 39).replace(/\s+\S*$/, '') + '\u2026';
+  return ctx;
+}
+const STRUCTURED_FACTS_MAX = 8;
 function detectStructuredFactsArtifacts(text) {
   const facts = [];
-  detectDates(text).forEach(d => facts.push({ label: 'Date', value: d }));
-  detectPrices(text).forEach(p => facts.push({ label: 'Price', value: p }));
-  return facts.length ? [{ type: 'structured_facts', facts, position: 0 }] : [];
+  detectDates(text).forEach(d => { const c = factContext(text, d.index); if (c) facts.push({ label: 'Date', value: d.value, context: c }); });
+  detectPrices(text).forEach(p => { const c = factContext(text, p.index); if (c) facts.push({ label: 'Price', value: p.value, context: c }); });
+  return facts.length ? [{ type: 'structured_facts', facts: facts.slice(0, STRUCTURED_FACTS_MAX), position: 0 }] : [];
 }
 
 // Code block artifact (seventh of the brief's own build order, the one
