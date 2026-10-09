@@ -2048,6 +2048,45 @@ function filterUsers(q) {
         </table>
       </div>
     </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot"></span>Diary ratings</div>
+        <select id="dr-days" onchange="loadDiaryRatings()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:4px 8px">
+          <option value="30" selected>Last 30 days</option>
+          <option value="7">Last 7 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="0">All time</option>
+        </select>
+      </div>
+      <div class="panel-body">
+        <div id="dr-summary" style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Loading...</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">By AI provider</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px">
+          <thead><tr style="color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+            <th style="text-align:left;padding:6px 0">Provider</th>
+            <th style="text-align:right;padding:6px 0">Entries</th>
+            <th style="text-align:right;padding:6px 0">Thumbs up</th>
+            <th style="text-align:right;padding:6px 0">Thumbs down</th>
+            <th style="text-align:right;padding:6px 0">Rated</th>
+            <th style="text-align:right;padding:6px 0">Approval</th>
+          </tr></thead>
+          <tbody id="dr-source-body"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">Loading...</td></tr></tbody>
+        </table>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">By category</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+            <th style="text-align:left;padding:6px 0">Category</th>
+            <th style="text-align:right;padding:6px 0">Entries</th>
+            <th style="text-align:right;padding:6px 0">Thumbs up</th>
+            <th style="text-align:right;padding:6px 0">Thumbs down</th>
+            <th style="text-align:right;padding:6px 0">Rated</th>
+            <th style="text-align:right;padding:6px 0">Approval</th>
+          </tr></thead>
+          <tbody id="dr-category-body"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">Loading...</td></tr></tbody>
+        </table>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Approval = thumbs up / (up + down), shown only once an item has at least one rating. Counts only; entry content is never shown here.</div>
+      </div>
+    </div>
     <div class="panel super-admin-only">
       <div class="panel-header"><div class="panel-title"><span class="panel-title-dot"></span>Provider Limits Active</div></div>
       <div class="panel-body">
@@ -2910,7 +2949,48 @@ function applyRBAC(role) {
   }
 }
 
+const DR_PROVIDER_LABELS = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', perplexity:'Perplexity', grok:'Grok', deepseek:'DeepSeek', mistral:'Mistral', meta:'Meta AI', external:'Imported / other' };
+async function loadDiaryRatings() {
+  const daysEl = document.getElementById('dr-days');
+  const days = daysEl ? daysEl.value : '30';
+  const rows = function(list, label) {
+    if (!list.length) return '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">No entries in this period.</td></tr>';
+    return list.map(function(r) {
+      const rated = r.up + r.down;
+      const ratedPct = r.total ? Math.round(rated / r.total * 100) + '%' : '—';
+      const approval = rated ? Math.round(r.up / rated * 100) + '%' : '—';
+      return '<tr style="border-top:1px solid var(--border)">' +
+        '<td style="padding:8px 0;font-weight:600">' + escHtml(label(r.key)) + '</td>' +
+        '<td style="text-align:right;padding:8px 0">' + r.total.toLocaleString() + '</td>' +
+        '<td style="text-align:right;padding:8px 0">' + r.up.toLocaleString() + '</td>' +
+        '<td style="text-align:right;padding:8px 0">' + r.down.toLocaleString() + '</td>' +
+        '<td style="text-align:right;padding:8px 0;color:var(--text-muted)">' + ratedPct + '</td>' +
+        '<td style="text-align:right;padding:8px 0">' + approval + '</td></tr>';
+    }).join('');
+  };
+  try {
+    const r = await Forge.request('GET', '/api/admin/diary-ratings?days=' + encodeURIComponent(days));
+    if (!r.ok || !r.data || !r.data.ok) throw new Error('request failed');
+    const d = r.data;
+    const sum = document.getElementById('dr-summary');
+    if (sum) {
+      const rated = d.totals.up + d.totals.down;
+      sum.textContent = d.totals.total.toLocaleString() + ' entries saved · ' + rated.toLocaleString() + ' rated (' +
+        (d.totals.total ? Math.round(rated / d.totals.total * 100) : 0) + '%) · ' + d.totals.withNotes.toLocaleString() + ' with a decision note';
+    }
+    const sb = document.getElementById('dr-source-body');
+    if (sb) sb.innerHTML = rows(d.bySource, function(k) { return DR_PROVIDER_LABELS[k] || k; });
+    const cb = document.getElementById('dr-category-body');
+    if (cb) cb.innerHTML = rows(d.byCategory, function(k) { return k; });
+  } catch (e) {
+    console.error('[CC] loadDiaryRatings:', e.message);
+    const sum = document.getElementById('dr-summary');
+    if (sum) sum.textContent = 'Could not load diary ratings.';
+  }
+}
+
 async function loadFeatureUsage() {
+  loadDiaryRatings();
   try {
     const r = await Forge.request('GET', '/api/admin/feature-usage');
     if (!r.ok) return;

@@ -182,6 +182,56 @@ router.get('/feature-usage', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/diary-ratings — thumbs up/down on Diary entries, per provider
+// and per category. Aggregate counts only: no titles, prompts or content are
+// returned, so admins can see how well each AI performs without reading what
+// users saved. ?days=7|30|90 limits by entry save date; 0 or omitted = all time.
+router.get('/diary-ratings', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 0, 0), 3650);
+    const where = days > 0 ? `WHERE created_at >= NOW() - ($1::int * INTERVAL '1 day')` : '';
+    const params = days > 0 ? [days] : [];
+    const agg = (col) => `
+      SELECT COALESCE(NULLIF(${col}, ''), 'unknown') AS key,
+             COUNT(*) AS total,
+             COUNT(*) FILTER (WHERE rating = 'up')   AS up,
+             COUNT(*) FILTER (WHERE rating = 'down') AS down
+      FROM diary_entries ${where}
+      GROUP BY 1 ORDER BY total DESC LIMIT 50`;
+    const [bySource, byCategory, totals] = await Promise.all([
+      db.query(agg('source'), params).catch(() => ({ rows: [] })),
+      db.query(agg('category'), params).catch(() => ({ rows: [] })),
+      db.query(`
+        SELECT COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE rating = 'up')   AS up,
+               COUNT(*) FILTER (WHERE rating = 'down') AS down,
+               COUNT(*) FILTER (WHERE decision_note IS NOT NULL AND btrim(decision_note) <> '') AS with_notes
+        FROM diary_entries ${where}`, params).catch(() => ({ rows: [{}] })),
+    ]);
+    const shape = (r) => ({
+      key: r.key,
+      total: parseInt(r.total, 10) || 0,
+      up: parseInt(r.up, 10) || 0,
+      down: parseInt(r.down, 10) || 0,
+    });
+    const t = totals.rows[0] || {};
+    res.json({
+      ok: true,
+      days,
+      totals: {
+        total: parseInt(t.total, 10) || 0,
+        up: parseInt(t.up, 10) || 0,
+        down: parseInt(t.down, 10) || 0,
+        withNotes: parseInt(t.with_notes, 10) || 0,
+      },
+      bySource: bySource.rows.map(shape),
+      byCategory: byCategory.rows.map(shape),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // GET /api/admin/referral-stats — referral programme health
 router.get('/referral-stats', requireAuth, requireAdmin, async (req, res) => {
   try {
