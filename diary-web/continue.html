@@ -2270,13 +2270,16 @@ window.sendChatMessage = sendChatMessage;
       if (usableImgs.length && (IMAGE_CAPABLE_MODELS.has(chatModel) || TEXT_BRIDGED_MODELS.has(chatModel))) {
         var strip = document.createElement('div');
         strip.style.cssText = 'display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;';
-        usableImgs.forEach(function(im) {
+        var galleryUrls = usableImgs.map(function(im) { return im.url; });
+        usableImgs.forEach(function(im, gi) {
           var t = document.createElement('img');
           t.src = im.url;
-          t.alt = '';
+          t.alt = 'Picture ' + (gi + 1) + ' of ' + galleryUrls.length;
           t.loading = 'lazy';
-          t.style.cssText = 'width:56px;height:56px;object-fit:cover;border-radius:6px;border:0.5px solid rgba(193,125,60,0.25);';
+          t.title = 'Click to enlarge';
+          t.style.cssText = 'width:56px;height:56px;object-fit:cover;border-radius:6px;border:0.5px solid rgba(193,125,60,0.25);cursor:zoom-in;';
           t.onerror = function() { t.style.display = 'none'; };
+          t.onclick = function() { openNoteGallery(galleryUrls, gi); };
           strip.appendChild(t);
         });
         imgNote.appendChild(strip);
@@ -2354,6 +2357,76 @@ function openImageZoom(url) {
   modal.style.display = 'flex';
 }
 window.openImageZoom = openImageZoom;
+
+// Full-screen gallery for the thumbnail strip in the images note: same
+// look and controls as the Diary entry's image viewer (N of M counter,
+// Download, close, prev/next, Esc and arrow keys).
+var noteGallery = { urls: [], idx: 0, el: null };
+function openNoteGallery(urls, idx) {
+  if (!urls || !urls.length) return;
+  noteGallery.urls = urls;
+  noteGallery.idx = Math.max(0, Math.min(idx || 0, urls.length - 1));
+  if (!noteGallery.el) {
+    var el = document.createElement('div');
+    el.id = 'noteGalleryModal';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(20,20,20,0.94);z-index:10002;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;';
+    var btn = 'background:rgba(255,255,255,0.14);border:none;color:#fff;cursor:pointer;';
+    var nav = btn + 'position:absolute;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;font-size:26px;line-height:1;';
+    el.innerHTML =
+      '<div id="noteGalleryCount" style="position:absolute;top:16px;left:24px;color:#fff;font-size:14px;"></div>' +
+      '<div style="position:absolute;top:12px;right:24px;display:flex;align-items:center;gap:16px;">' +
+        '<button id="noteGalleryDownload" style="' + btn + 'border-radius:6px;padding:8px 14px;font-size:14px;">Download</button>' +
+        '<button id="noteGalleryClose" aria-label="Close" style="background:none;border:none;color:#fff;cursor:pointer;font-size:32px;line-height:1;padding:0;">&times;</button>' +
+      '</div>' +
+      '<button id="noteGalleryPrev" aria-label="Previous picture" style="' + nav + 'left:18px;">&#8249;</button>' +
+      '<img id="noteGalleryImg" alt="" style="max-width:88vw;max-height:86vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.5);"/>' +
+      '<button id="noteGalleryNext" aria-label="Next picture" style="' + nav + 'right:18px;">&#8250;</button>';
+    document.body.appendChild(el);
+    noteGallery.el = el;
+    el.addEventListener('click', function(e) { if (e.target === el) closeNoteGallery(); });
+    document.getElementById('noteGalleryClose').onclick = closeNoteGallery;
+    document.getElementById('noteGalleryPrev').onclick = function(e) { e.stopPropagation(); stepNoteGallery(-1); };
+    document.getElementById('noteGalleryNext').onclick = function(e) { e.stopPropagation(); stepNoteGallery(1); };
+    document.getElementById('noteGalleryDownload').onclick = function(e) { e.stopPropagation(); downloadNoteGalleryImage(); };
+  }
+  noteGallery.el.style.display = 'flex';
+  showNoteGalleryImage();
+}
+function showNoteGalleryImage() {
+  var n = noteGallery.urls.length;
+  document.getElementById('noteGalleryImg').src = noteGallery.urls[noteGallery.idx];
+  document.getElementById('noteGalleryCount').textContent = (noteGallery.idx + 1) + ' of ' + n;
+  var multi = n > 1;
+  document.getElementById('noteGalleryPrev').style.display = multi ? '' : 'none';
+  document.getElementById('noteGalleryNext').style.display = multi ? '' : 'none';
+}
+function stepNoteGallery(d) {
+  var n = noteGallery.urls.length;
+  if (n < 2) return;
+  noteGallery.idx = (noteGallery.idx + d + n) % n;
+  showNoteGalleryImage();
+}
+function closeNoteGallery() {
+  if (noteGallery.el) noteGallery.el.style.display = 'none';
+}
+function downloadNoteGalleryImage() {
+  var url = noteGallery.urls[noteGallery.idx];
+  fetch(url).then(function(r) { return r.blob(); }).then(function(b) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'image-' + (noteGallery.idx + 1) + '.' + ((b.type.split('/')[1] || 'png').replace('jpeg', 'jpg'));
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }).catch(function() { window.open(url, '_blank', 'noopener'); });
+}
+document.addEventListener('keydown', function(e) {
+  if (!noteGallery.el || noteGallery.el.style.display === 'none') return;
+  if (e.key === 'Escape') { closeNoteGallery(); e.stopPropagation(); }
+  else if (e.key === 'ArrowLeft') stepNoteGallery(-1);
+  else if (e.key === 'ArrowRight') stepNoteGallery(1);
+}, true);
+window.openNoteGallery = openNoteGallery;
 
 function closeImageZoom() {
   var modal = document.getElementById('imageZoomModal');
