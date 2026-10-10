@@ -179,9 +179,12 @@
       // — see DOM_SELECTORS['chatgpt.com'] above). That mismatch meant
       // getPrompt() always returned '', which is why diary entry titles
       // were coming through blank.
-      promptSelectors: ['section[data-turn="user"] .text-base'],
+      promptSelectors: ['section[data-turn="user"] .text-base', '[data-chatgpt-search-unit-key$=":user"]'],
       getPrompt: function() {
         var els = document.querySelectorAll('section[data-turn="user"] .text-base');
+        // Second page layout (no <section data-turn>): see the
+        // promptFallback note in DOM_SELECTORS['chatgpt.com'].
+        if (!els.length) els = document.querySelectorAll('[data-chatgpt-search-unit-key$=":user"]');
         if (els.length > 0) {
           var t = (els[0].textContent||'').trim().slice(0,500); // first user message = conversation topic
           if (t.length > 2) return t;
@@ -3975,6 +3978,16 @@ function queryAllDeep(selector) {
       // DOM reading is the primary capture path here, not a fallback.
       response: 'section[data-turn="assistant"] .text-base',
       prompt: 'section[data-turn="user"] .text-base', // TODO: verify against live DOM — not yet directly confirmed
+      // Second page layout, confirmed live on an account whose ChatGPT
+      // page has NO <section data-turn> elements at all (so the two
+      // selectors above match 0 elements and the Save button never
+      // appeared). There, each message is a unit keyed
+      // data-chatgpt-search-unit-key="...:assistant" / "...:user", and the
+      // assistant text sits in [data-markdown-text-style="assistant-message"].
+      // Used ONLY when the primary selector matches nothing, so pages
+      // that have the original layout behave exactly as before.
+      responseFallback: '[data-markdown-text-style="assistant-message"]',
+      promptFallback: '[data-chatgpt-search-unit-key$=":user"]',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -4157,12 +4170,31 @@ function queryAllDeep(selector) {
     return result.replace(/\n{3,}/g, '\n\n').trim();
   }
 
+  // Returns the elements for config[key] ('response' or 'prompt'). If the
+  // primary selector matches nothing AND the provider declares a
+  // <key>Fallback selector (ChatGPT's second page layout), uses that
+  // instead, keeping only outermost matches so a nested match cannot
+  // be counted twice. With a primary match this is exactly
+  // document.querySelectorAll(config[key]), as before.
+  function queryTurnEls(config, key) {
+    var els = document.querySelectorAll(config[key]);
+    if (els.length || !config[key + 'Fallback']) return els;
+    var all;
+    try { all = Array.from(document.querySelectorAll(config[key + 'Fallback'])); } catch (e) { return els; }
+    return all.filter(function(el) {
+      for (var i = 0; i < all.length; i++) {
+        if (all[i] !== el && all[i].contains(el)) return false;
+      }
+      return true;
+    });
+  }
+
   function readDomResponse() {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
     if (!config) { console.log('[Diary Sync DIAG] readDomResponse: no DOM_SELECTORS config for host:', host); return null; }
 
-    var els = document.querySelectorAll(config.response);
+    var els = queryTurnEls(config, 'response');
     console.log('[Diary Sync DIAG] readDomResponse: host:', host, '| selector:', config.response, '| matched elements:', els.length);
     if (!els.length) return null;
 
@@ -4457,7 +4489,7 @@ function queryAllDeep(selector) {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
     if (!config || !config.prompt) return null;
-    var els = document.querySelectorAll(config.prompt);
+    var els = queryTurnEls(config, 'prompt');
     if (!els.length) return null;
     return (els[els.length - 1].innerText || els[els.length - 1].textContent || '').trim().slice(0, 500);
   }
@@ -4519,7 +4551,7 @@ function queryAllDeep(selector) {
   function getCurrentTurnImageUrls(config) {
     var imgUrls = [];
     if (config) {
-      var els = document.querySelectorAll(config.response);
+      var els = queryTurnEls(config, 'response');
       var el = els[els.length - 1];
       if (el) {
         imgUrls = Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; });
