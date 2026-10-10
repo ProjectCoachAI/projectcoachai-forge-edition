@@ -2255,7 +2255,6 @@ function queryAllDeep(selector) {
             var _cdSeed = window.__diaryCapture && window.__diaryCapture.historySeed;
             var _cdHasSeed = !!(_cdSeed && _cdSeed.text && (_cdSeed.url === canonicalUrl() || /\/new(\?|$)/.test(_cdSeed.url)));
             if (!_cdHasSeed && claudeDomLayoutPresent()) {
-              if (btn) { btn.textContent = 'Reading chat…'; }
               claudeDom = await buildClaudeDomThread();
               if (claudeDom && claudeDom.incomplete) {
                 console.log('[Diary Sync DIAG] Claude DOM thread incomplete — asking to retry');
@@ -4317,15 +4316,26 @@ function queryAllDeep(selector) {
     var role = row.getAttribute('data-perf-row');
     if (role !== 'human' && role !== 'assistant') return null;
     var root = row.querySelector(role === 'human' ? '[data-cds="UserMessage"]' : '[data-cds="AssistantMessage"]') || row;
+    // Pictures first, read from the LIVE page (before buttons are stripped
+    // from the copy below: image tiles are often wrapped in buttons/links).
+    // Tiny images (favicons, avatars, icons) are skipped by rendered size.
+    var images = [];
+    Array.from(root.querySelectorAll('img')).forEach(function(img) {
+      var src = img.currentSrc || img.src || '';
+      var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0, parseInt(img.getAttribute('width') || '0', 10));
+      if (src && /^https?:/.test(src) && size >= 100 && images.indexOf(src) === -1) images.push(src);
+    });
     var clone = root.cloneNode(true);
     // Visually-hidden labels ("You said:"), buttons/toolbars, icons, status regions.
     Array.from(clone.querySelectorAll('.sr-only, [data-find-omitted], button, svg, style, script, [role="status"]'))
       .forEach(function(n) { if (n.parentNode) n.parentNode.removeChild(n); });
-    var images = [];
+    // Relative-time labels ("just now", "1 minute ago") that the page
+    // renders inside messages are not part of the conversation.
+    var RELTIME = /^(just now|now|\d+\s*(s|sec|second|min|minute|hour|hr|h|day|week|month|year)s?\.?\s+ago|yesterday)$/i;
+    Array.from(clone.querySelectorAll('time, span, div, p, small')).forEach(function(n) {
+      if (n.children.length === 0 && RELTIME.test((n.textContent || '').trim()) && n.parentNode) n.parentNode.removeChild(n);
+    });
     Array.from(clone.querySelectorAll('img')).forEach(function(img) {
-      var src = img.src || '';
-      var w = parseInt(img.getAttribute('width') || '0', 10);
-      if (src && /^https?:/.test(src) && !(w && w < 40)) images.push(src);
       if (img.parentNode) img.parentNode.removeChild(img);
     });
     var text = '';
@@ -4337,6 +4347,8 @@ function queryAllDeep(selector) {
       if (!text) text = (clone.textContent || '').trim();
       text = text.replace(/\n{3,}/g, '\n\n').trim();
     }
+    // Safety net: a time label glued to the end of the text.
+    text = text.replace(/\s*(just now|\d+\s*(?:second|minute|hour|day|week|month|year)s?\s+ago)\s*$/i, '').trim();
     if (!text) return null;
     return { role: role, text: text, images: images, streaming: row.getAttribute('data-perf-row-streaming') === 'true' };
   }
