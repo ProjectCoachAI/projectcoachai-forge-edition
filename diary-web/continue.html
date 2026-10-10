@@ -314,17 +314,23 @@ let chatModel = 'claude';
 // ever added/removed there, this needs updating too (this duplication is
 // a real, accepted trade-off — not something automatically kept in sync).
 const IMAGE_CAPABLE_MODELS = new Set(['claude', 'chatgpt', 'gemini']);
+// The other five providers cannot take images directly; the server gives
+// them a written description of each image instead (see chat.js's own
+// TEXT_BRIDGED_MODELS). Same accepted duplication as IMAGE_CAPABLE_MODELS.
+const TEXT_BRIDGED_MODELS = new Set(['grok', 'deepseek', 'mistral', 'perplexity', 'meta']);
 const MAX_CHAT_ATTACHMENTS = 5; // matches backend's own MAX_ATTACHMENTS_PER_MESSAGE exactly — see chat.js for the researched provider-limit rationale
 let chatAttachedFiles = []; // [{ base64, mimeType, filename, type: 'image'|'pdf' }] while staged, before sending
 
 function updateChatImageAttachButtonState() {
   var btn = document.getElementById('chatImageAttachBtn');
   if (!btn) return;
-  var capable = IMAGE_CAPABLE_MODELS.has(chatModel);
+  var bridged = TEXT_BRIDGED_MODELS.has(chatModel);
+  var capable = IMAGE_CAPABLE_MODELS.has(chatModel) || bridged;
   btn.disabled = !capable;
   btn.style.opacity = capable ? '1' : '0.35';
   btn.style.cursor = capable ? 'pointer' : 'not-allowed';
-  btn.title = capable ? 'Attach images or PDFs' : 'File uploads aren\'t supported for ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet';
+  btn.title = bridged ? 'Attach images or documents \u2014 ' + (MODEL_LABELS[chatModel] || chatModel) + ' receives images as a written description'
+    : (capable ? 'Attach images or PDFs' : 'File uploads aren\'t supported for ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet');
   if (!capable) clearChatImageAttachment();
 }
 
@@ -763,6 +769,10 @@ function handleChatFilesSelected(fileList) {
     var isPptx = file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' || /\.pptx$/i.test(file.name);
     if (!isImage && !isPdf && !isTxt && !isDocx && !isXlsx && !isPptx) {
       Forge.showToast(file.name + ': only images, PDFs, .txt, .docx, .xlsx, and .pptx files are supported.', 'error');
+      return;
+    }
+    if (isPdf && TEXT_BRIDGED_MODELS.has(chatModel)) {
+      Forge.showToast(file.name + ': PDFs aren\'t supported for ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet \u2014 attach it as .txt or .docx, or use Claude, ChatGPT or Gemini.', 'error');
       return;
     }
     // 8MB is a conservative, round ceiling comfortably under every target
@@ -2239,7 +2249,9 @@ window.sendChatMessage = sendChatMessage;
         ? (meta.chatSessionId
             ? ' \u2014 Forge was shown up to ' + MAX_CHAT_ATTACHMENTS + ' of them (the most recent) with your first message here. Later messages don\u2019t include the pictures again.'
             : ' \u2014 Forge will be shown up to ' + MAX_CHAT_ATTACHMENTS + ' of them (the most recent) with your first message here. Later messages don\u2019t include the pictures again.')
-        : ' \u2014 images aren\u2019t carried over to ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet, so it won\u2019t know about anything shown only in a picture from the original conversation.');
+        : (TEXT_BRIDGED_MODELS.has(chatModel)
+          ? ' \u2014 ' + (MODEL_LABELS[chatModel] || chatModel) + ' can\u2019t see pictures directly, so ' + (meta.chatSessionId ? 'it was given' : 'it will be given') + ' a written description of up to ' + MAX_CHAT_ATTACHMENTS + ' of them (the most recent) with your first message here. Later messages don\u2019t include them again.'
+          : ' \u2014 images aren\u2019t carried over to ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet, so it won\u2019t know about anything shown only in a picture from the original conversation.'));
       var messagesEl = document.getElementById('chatMessages');
       messagesEl.parentNode.insertBefore(imgNote, messagesEl);
     }

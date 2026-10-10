@@ -122,6 +122,155 @@ async function loadEntryImageAttachments(diaryEntryId, userEmail, maxCount) {
     }
 }
 
+// ── Images for providers that cannot take them directly ─────────────────────
+// Grok, DeepSeek, Mistral, Perplexity and Meta AI run on text-only models
+// here (see compare.js), so an image can never be sent to them. Instead a
+// small vision model (Claude Haiku) writes a factual description of each
+// image once, and that text is handed to the provider with the message.
+//
+// - Entry images (from the original conversation): described once, then
+//   saved on the entry itself (metadata.images[n].description), so the
+//   vision model is never called twice for the same picture.
+// - Images the person uploads in the chat: described per message, not
+//   saved (the file itself is already stored with the message).
+//
+// Never throws and never blocks the chat: an image that cannot be loaded
+// or described is simply left out, and the conversation proceeds as it
+// did before this existed.
+const TEXT_BRIDGED_MODELS = new Set(['grok', 'deepseek', 'mistral', 'perplexity', 'meta']);
+const IMAGE_DESCRIBE_MODEL = 'claude-haiku-4-5-20251001';
+const IMAGE_DESCRIBE_PROMPT = 'Describe this image for someone who cannot see it, factually and completely. ' +
+    'Transcribe all visible text exactly. For a chart, table, form or screenshot, give its structure and the key labels and values. ' +
+    'For a photo or illustration, say what it shows. Do not guess beyond what is visible and do not add any introduction. Maximum 180 words.';
+
+async function describeImageBuffer(mime, base64Data, userEmail) {
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+    if (!apiKey) return null;
+    const controller = new AbortController();
+    const timer = setTimeout(function() { controller.abort(); }, 25000);
+    try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+            signal: controller.signal,
+            body: JSON.stringify({
+                model: IMAGE_DESCRIBE_MODEL,
+                max_tokens: 400,
+                messages: [{ role: 'user', content: [
+                    { type: 'image', source: { type: 'base64', media_type: mime, data: base64Data } },
+                    { type: 'text', text: IMAGE_DESCRIBE_PROMPT }
+                ] }]
+            })
+        });
+        const data = await resp.json();
+        const text = data && data.content && data.content[0] && data.content[0].text;
+        if (data && data.usage) {
+            db.logDiaryChatUsage(userEmail, 'claude', IMAGE_DESCRIBE_MODEL, data.usage.input_tokens, data.usage.output_tokens);
+        }
+        if (!text || !text.trim()) {
+            console.warn('[Chat] image description returned no text:', data && data.error ? data.error.message : '(no error given)');
+            return null;
+        }
+        return text.trim();
+    } catch (e) {
+        console.warn('[Chat] image description failed (skipped):', e.message);
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+// Descriptions of an entry's own images, most recent first picked, returned
+// in their original order. Saved descriptions are reused; new ones are
+// written back to the entry (matched by image url, not position, in case
+// the images array changed while the vision calls were running).
+async function describeEntryImages(diaryEntryId, userEmail, maxCount) {
+    if (!diaryEntryId || !userEmail || !(maxCount > 0)) return [];
+    try {
+        const publicBase = process.env.R2_PUBLIC_URL;
+        if (!publicBase) return [];
+        const prefix = publicBase + '/';
+        const r = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [diaryEntryId, userEmail]);
+        if (!r.rows.length) return [];
+        let meta = r.rows[0].metadata;
+        if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch (_) { meta = null; } }
+        const images = meta && Array.isArray(meta.images) ? meta.images : [];
+        const idxs = [];
+        images.forEach(function(img, i) {
+            if (img && img.status === 'hosted' && typeof img.url === 'string' && img.url.indexOf(prefix) === 0) idxs.push(i);
+        });
+        const chosen = idxs.slice(-maxCount);
+        const results = await Promise.all(chosen.map(async function(i) {
+            const img = images[i];
+            if (typeof img.description === 'string' && img.description.trim()) return { i: i, text: img.description.trim(), fresh: false };
+            try {
+                const stored = await attachmentStorage.get(img.url.slice(prefix.length));
+                if (!stored || !stored.buffer) return null;
+                const mime = (stored.contentType || '').split(';')[0].trim().toLowerCase();
+                if (!ENTRY_IMAGE_MIME_OK.has(mime)) return null;
+                if (stored.buffer.length > ENTRY_IMAGE_MAX_BYTES) return null;
+                const text = await describeImageBuffer(mime, stored.buffer.toString('base64'), userEmail);
+                return text ? { i: i, text: text, fresh: true } : null;
+            } catch (e) {
+                console.warn('[Chat] could not describe one entry image (skipped):', e.message);
+                return null;
+            }
+        }));
+        const ok = results.filter(Boolean);
+        const fresh = ok.filter(function(x) { return x.fresh; });
+        if (fresh.length) {
+            try {
+                const cur = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [diaryEntryId, userEmail]);
+                let curMeta = cur.rows.length ? cur.rows[0].metadata : null;
+                if (typeof curMeta === 'string') { try { curMeta = JSON.parse(curMeta); } catch (_) { curMeta = null; } }
+                const curImages = curMeta && Array.isArray(curMeta.images) ? curMeta.images : null;
+                if (curImages) {
+                    let changed = false;
+                    fresh.forEach(function(f) {
+                        const url = images[f.i].url;
+                        const target = curImages.find(function(c) { return c && c.url === url; });
+                        if (target) { target.description = f.text; changed = true; }
+                    });
+                    if (changed) {
+                        await db.query(
+                            `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{images}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+                            [JSON.stringify(curImages), diaryEntryId, userEmail]
+                        );
+                    }
+                }
+            } catch (e) {
+                console.warn('[Chat] saving image descriptions failed (non-fatal):', e.message);
+            }
+        }
+        return ok.map(function(x) { return x.text; });
+    } catch (e) {
+        console.warn('[Chat] describing entry images failed (continuing without them):', e.message);
+        return [];
+    }
+}
+
+// Descriptions of images the person uploaded with this message. Only images
+// (PDFs are rejected earlier for these providers). One entry per image, in
+// order; an image that could not be described gets a plain placeholder so
+// the model at least knows a picture was attached.
+async function describeUploadedImages(attachments, userEmail) {
+    const imgs = (Array.isArray(attachments) ? attachments : []).filter(function(a) { return a && a.base64 && (a.type || 'image') === 'image'; });
+    return Promise.all(imgs.map(async function(a) {
+        try {
+            const comma = a.base64.indexOf(',');
+            const raw = comma !== -1 ? a.base64.slice(comma + 1) : a.base64;
+            let mime = (a.mimeType || '').toLowerCase();
+            if (!mime && comma !== -1) { const m = /^data:([^;]+);/.exec(a.base64); if (m) mime = m[1].toLowerCase(); }
+            if (!ENTRY_IMAGE_MIME_OK.has(mime)) return '(an image in a format that could not be described)';
+            if (Buffer.byteLength(raw, 'base64') > ENTRY_IMAGE_MAX_BYTES) return '(an image too large to describe)';
+            const text = await describeImageBuffer(mime, raw, userEmail);
+            return text || '(an image that could not be described)';
+        } catch (e) {
+            return '(an image that could not be described)';
+        }
+    }));
+}
+
 // ── Conversation bridging (Option B: automatic session-bridging at the
 // oversized-conversation ceiling) ───────────────────────────────────────────
 // Confirmed launch-blocking: a real, month-long conversation (~1,835
@@ -279,8 +428,13 @@ router.post('/', requireAuth, async (req, res) => {
     // silently ignoring the attachment or letting an unsupported
     // provider's own caller throw an unrelated-looking error.
     if (Array.isArray(attachments) && attachments.length) {
-        if (!IMAGE_CAPABLE_MODELS.has(model)) {
+        if (!IMAGE_CAPABLE_MODELS.has(model) && !TEXT_BRIDGED_MODELS.has(model)) {
             return res.status(400).json({ success: false, error: `File uploads aren't supported for ${model} yet — try Claude, ChatGPT, or Gemini.` });
+        }
+        // The other five take images only as a written description (see
+        // describeUploadedImages); a PDF has no such path.
+        if (TEXT_BRIDGED_MODELS.has(model) && attachments.some(function(a) { return a && a.type === 'pdf'; })) {
+            return res.status(400).json({ success: false, error: `PDF uploads aren't supported for ${model} yet — try Claude, ChatGPT, or Gemini, or attach it as a .txt or .docx file.` });
         }
         if (attachments.length > MAX_ATTACHMENTS_PER_MESSAGE) {
             return res.status(400).json({ success: false, error: `Please attach at most ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.` });
@@ -621,6 +775,43 @@ router.post('/', requireAuth, async (req, res) => {
                 }
                 console.log('[Chat] carried', entryAtts.length, 'entry image(s) into first Diary continue message for', model);
             }
+        }
+
+        // Providers that cannot take images directly (see TEXT_BRIDGED_MODELS)
+        // get written descriptions instead — of the entry's own images on the
+        // first message of a continuation, and of anything uploaded with this
+        // message. Applied to messagesForApi only, like the block above, so
+        // the saved conversation never shows this added text.
+        if (TEXT_BRIDGED_MODELS.has(model)) {
+            const parts = [];
+            if (isFirstDiaryMessage) {
+                const entryDescs = await describeEntryImages(diaryEntryId, req.userEmail, MAX_ATTACHMENTS_PER_MESSAGE);
+                if (entryDescs.length) {
+                    parts.push('[Context: this chat continues a conversation that took place earlier with another AI assistant. ' +
+                        'That conversation showed ' + entryDescs.length + ' image' + (entryDescs.length === 1 ? '' : 's') +
+                        ', which you cannot see directly; written ' + (entryDescs.length === 1 ? 'description' : 'descriptions') +
+                        ' follow, in the order it showed them. Use ' + (entryDescs.length === 1 ? 'it' : 'them') + ' only where relevant to my message.]\n' +
+                        entryDescs.map(function(d, i) { return 'Image ' + (i + 1) + ': ' + d; }).join('\n'));
+                }
+            }
+            if (Array.isArray(attachments) && attachments.length) {
+                const upDescs = await describeUploadedImages(attachments, req.userEmail);
+                if (upDescs.length) {
+                    parts.push('[I am attaching ' + upDescs.length + ' image' + (upDescs.length === 1 ? '' : 's') +
+                        ' to this message, which you cannot see directly; written ' + (upDescs.length === 1 ? 'description' : 'descriptions') + ' follow.]\n' +
+                        upDescs.map(function(d, i) { return 'Attached image ' + (i + 1) + ': ' + d; }).join('\n'));
+                }
+            }
+            if (parts.length) {
+                const lastIdx = messagesForApi.length - 1;
+                const lastMsg = messagesForApi[lastIdx];
+                if (lastMsg && lastMsg.role === 'user' && typeof lastMsg.content === 'string') {
+                    messagesForApi = messagesForApi.slice();
+                    messagesForApi[lastIdx] = Object.assign({}, lastMsg, { content: parts.join('\n\n') + '\n\n' + lastMsg.content });
+                }
+                console.log('[Chat] passed image descriptions as text to', model);
+            }
+            attachmentsForApi = null; // these providers never receive image data itself
         }
 
         const content = await callWithFallback(model, messagesForApi, attachmentsForApi);
