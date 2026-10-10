@@ -364,6 +364,18 @@ async function fetchImageWithLegacyTls(url) {
   throw lastError;
 }
 
+// Some providers show their images through a Cloudflare image-resizing
+// address — Mistral's, confirmed live, looks like
+//   https://chat.mistral.ai/cdn-cgi/image/width=800,fit=scale-down/https://<storage-host>/<path>
+// Cloudflare refuses automated server requests to that wrapper, though a
+// browser opens it fine, so every such image ended up 'failed'. The real
+// image address sits inside it, after the resize options; returns that
+// address, or null when the URL is not wrapped like this.
+function unwrapImageProxyUrl(url) {
+  const m = /^https?:\/\/[^\/]+\/cdn-cgi\/image\/[^\/]+\/(https?:\/\/.+)$/i.exec(String(url || ''));
+  return m ? m[1] : null;
+}
+
 async function rehostImagesAndPatch(entryId, allImages, userEmail) {
   if (!allImages || !allImages.length) return;
   let pendingBudget = 10;
@@ -376,9 +388,22 @@ async function rehostImagesAndPatch(entryId, allImages, userEmail) {
     pendingBudget--;
     const url = img.originalUrl || img.url;
     try {
-      const resp = await fetchImageWithLegacyTls(url);
-      if (resp.status < 200 || resp.status >= 300) {
-        console.warn('[Diary] Image re-host: non-OK response for', url, '— status:', resp.status);
+      // Try the real image address first when the URL is wrapped by an
+      // image-resizing proxy (see unwrapImageProxyUrl), then the URL as
+      // saved; the first one that answers OK is used.
+      const inner = unwrapImageProxyUrl(url);
+      const candidates = inner ? [inner, url] : [url];
+      let resp = null;
+      for (const candidate of candidates) {
+        try {
+          const r = await fetchImageWithLegacyTls(candidate);
+          if (r.status >= 200 && r.status < 300) { resp = r; break; }
+          console.warn('[Diary] Image re-host: non-OK response for', candidate, '— status:', r.status);
+        } catch (candErr) {
+          console.warn('[Diary] Image re-host: fetch error for', candidate, '—', candErr.message);
+        }
+      }
+      if (!resp) {
         results.push({ url, originalUrl: url, status: 'failed' });
         continue;
       }
