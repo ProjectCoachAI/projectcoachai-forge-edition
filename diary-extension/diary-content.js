@@ -2405,6 +2405,15 @@ function queryAllDeep(selector) {
             }
           } catch (e) {}
         }
+        // Mistral / Meta AI: pictures live outside the answer element, so
+        // read them from the page at save time (they may also have
+        // finished loading after the text was first captured).
+        try {
+          var _imgCfg = DOM_SELECTORS[window.location.hostname];
+          if (_imgCfg && _imgCfg.imageSelector) {
+            images = images.concat(getCurrentTurnImageUrls(_imgCfg));
+          }
+        } catch (e) {}
         if (images.length === 0 && ['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
           images = await captureResponseImages(token);
         }
@@ -4018,6 +4027,12 @@ function queryAllDeep(selector) {
       // actually meant to encode the role, rather than fixing an active
       // break.
       prompt: '[data-message-author-role="user"] span.whitespace-pre-wrap',
+      // Pictures sit OUTSIDE the answer element (confirmed live: every
+      // image reported inAnswer:false), as span.image-block inside a
+      // flex row above the answer text. Only the assistant's own copies
+      // (stored under /chat-images/assistant/) are wanted.
+      imageSelector: 'span.image-block img',
+      imageSrcContains: '/chat-images/assistant/',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -4040,6 +4055,10 @@ function queryAllDeep(selector) {
       // is [data-message-type="user"], question text in .text-response.
       response: '.ur-markdown',
       prompt: '[data-message-type="user"] .text-response',
+      // Generated pictures render in horizontal galleries between the
+      // text sections, outside .ur-markdown (confirmed live: every image
+      // reported inAnswer:false, each inside a gen-image-card).
+      imageSelector: '[class*="gen-image-card"] img',
       clean: function(text) {
         return text.replace(/Here\'s the map.*$/m, '')
                    .replace(/\n{3,}/g, '\n\n')
@@ -4814,6 +4833,18 @@ function queryAllDeep(selector) {
         imgUrls = Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; });
       }
     }
+    // Providers whose pictures live outside the answer element (Mistral,
+    // Meta AI) declare imageSelector in DOM_SELECTORS; read it page-wide,
+    // since the saved text is the whole conversation too.
+    if (config && config.imageSelector) {
+      try {
+        Array.from(document.querySelectorAll(config.imageSelector)).forEach(function(img) {
+          var u = img.currentSrc || img.src || '';
+          if (config.imageSrcContains && u.indexOf(config.imageSrcContains) === -1) return;
+          imgUrls.push(u);
+        });
+      } catch (e) {}
+    }
     if (PROVIDER === 'perplexity') {
       var carouselImgs = document.querySelectorAll('[data-testid="image-carousel-img"] img');
       imgUrls = imgUrls.concat(Array.from(carouselImgs).map(function(img) { return img.src || ''; }));
@@ -4930,7 +4961,7 @@ function queryAllDeep(selector) {
     // text first looks complete, so pick up any that are newly present.
     try {
       var _cfgRefresh = DOM_SELECTORS[window.location.hostname];
-      if (usingFallbackLayout(_cfgRefresh)) {
+      if (usingFallbackLayout(_cfgRefresh) || (_cfgRefresh && _cfgRefresh.imageSelector)) {
         var _freshImgs = getCurrentTurnImageUrls(_cfgRefresh);
         var _oldImgs = turns[lastIdx].images || [];
         if (_freshImgs.length > _oldImgs.length) turns[lastIdx].images = _freshImgs;
