@@ -2245,13 +2245,42 @@ window.sendChatMessage = sendChatMessage;
     if (meta && meta.images && meta.images.length) {
       var imgNote = document.createElement('div');
       imgNote.style.cssText = 'font-size:12px;color:#6B6559;margin:0 20px 12px;padding:8px 12px;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.25);border-radius:8px;line-height:1.5;';
-      imgNote.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>' + 'This conversation included ' + meta.images.length + ' image' + (meta.images.length === 1 ? '' : 's') + (IMAGE_CAPABLE_MODELS.has(chatModel)
-        ? (meta.chatSessionId
-            ? ' \u2014 Forge was shown up to ' + MAX_CHAT_ATTACHMENTS + ' of them (the most recent) with your first message here. Later messages don\u2019t include the pictures again.'
-            : ' \u2014 Forge will be shown up to ' + MAX_CHAT_ATTACHMENTS + ' of them (the most recent) with your first message here. Later messages don\u2019t include the pictures again.')
-        : (TEXT_BRIDGED_MODELS.has(chatModel)
-          ? ' \u2014 ' + (MODEL_LABELS[chatModel] || chatModel) + ' can\u2019t see pictures directly, so ' + (meta.chatSessionId ? 'it was given' : 'it will be given') + ' a written description of up to ' + MAX_CHAT_ATTACHMENTS + ' of them (the most recent) with your first message here. Later messages don\u2019t include them again.'
-          : ' \u2014 images aren\u2019t carried over to ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet, so it won\u2019t know about anything shown only in a picture from the original conversation.'));
+      // The pictures Forge actually receives: the most recent hosted ones,
+      // up to MAX_CHAT_ATTACHMENTS (same rule the backend applies). Shown
+      // as small thumbnails so the note is concrete, not just a count.
+      var usableImgs = meta.images.filter(function(im) { return im && im.status === 'hosted' && typeof im.url === 'string' && /^https?:\/\//.test(im.url); }).slice(-MAX_CHAT_ATTACHMENTS);
+      var totalImgs = meta.images.length;
+      var countText = 'This conversation included ' + totalImgs + ' image' + (totalImgs === 1 ? '' : 's');
+      var shownText = usableImgs.length === totalImgs ? (totalImgs === 1 ? 'the picture' : 'all of the pictures') : ('the ' + usableImgs.length + ' most recent pictures');
+      var noteText;
+      if (IMAGE_CAPABLE_MODELS.has(chatModel)) {
+        noteText = usableImgs.length
+          ? (meta.chatSessionId
+              ? ' — Forge was shown ' + shownText + ' (below) with your first message here. Later messages don’t include the pictures again.'
+              : ' — Forge will see ' + shownText + ' (below) when you send your first message here. Later messages don’t include the pictures again.')
+          : ' — they couldn’t be carried over, so Forge won’t know about anything shown only in a picture from the original conversation.';
+      } else if (TEXT_BRIDGED_MODELS.has(chatModel)) {
+        noteText = usableImgs.length
+          ? ' — ' + (MODEL_LABELS[chatModel] || chatModel) + ' can’t see pictures directly, so ' + (meta.chatSessionId ? 'it was given' : 'it will be given') + ' a written description of ' + shownText + ' (below) with your first message here. Later messages don’t include them again.'
+          : ' — they couldn’t be carried over, so ' + (MODEL_LABELS[chatModel] || chatModel) + ' won’t know about anything shown only in a picture from the original conversation.';
+      } else {
+        noteText = ' — images aren’t carried over to ' + (MODEL_LABELS[chatModel] || chatModel) + ' yet, so it won’t know about anything shown only in a picture from the original conversation.';
+      }
+      imgNote.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>' + countText + noteText;
+      if (usableImgs.length && (IMAGE_CAPABLE_MODELS.has(chatModel) || TEXT_BRIDGED_MODELS.has(chatModel))) {
+        var strip = document.createElement('div');
+        strip.style.cssText = 'display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;';
+        usableImgs.forEach(function(im) {
+          var t = document.createElement('img');
+          t.src = im.url;
+          t.alt = '';
+          t.loading = 'lazy';
+          t.style.cssText = 'width:56px;height:56px;object-fit:cover;border-radius:6px;border:0.5px solid rgba(193,125,60,0.25);';
+          t.onerror = function() { t.style.display = 'none'; };
+          strip.appendChild(t);
+        });
+        imgNote.appendChild(strip);
+      }
       var messagesEl = document.getElementById('chatMessages');
       messagesEl.parentNode.insertBefore(imgNote, messagesEl);
     }
