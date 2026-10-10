@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Forge Diary",
   "short_name": "Diary",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Save any AI response in one click. One place, organised automatically, stored for life.",
   "permissions": [
     "activeTab",
