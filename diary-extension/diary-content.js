@@ -179,7 +179,13 @@
       // — see DOM_SELECTORS['chatgpt.com'] above). That mismatch meant
       // getPrompt() always returned '', which is why diary entry titles
       // were coming through blank.
-      promptSelectors: ['section[data-turn="user"] .text-base', '[data-chatgpt-search-unit-key$=":user"]'],
+      // NOTE: deliberately NOT given the second-layout selector here. These
+      // selectors feed getAllCapturedPrompts(), whose live question count
+      // is compared against the saved thread to refuse "incomplete"
+      // saves; with the second layout's unverified unit selector that
+      // check engaged and wrongly answered "Still loading…". Titles
+      // still use the fallback via getPrompt() below.
+      promptSelectors: ['section[data-turn="user"] .text-base'],
       getPrompt: function() {
         var els = document.querySelectorAll('section[data-turn="user"] .text-base');
         // Second page layout (no <section data-turn>): see the
@@ -1191,8 +1197,30 @@ function queryAllDeep(selector) {
   // direct test — including a same-source-cited-twice deduplication
   // case — against real content shape from actual Claude/ChatGPT saves
   // before being wired in here.
+  // Removes ChatGPT's internal layout/widget tags that appear as raw text
+  // when a thread is rebuilt from its history JSON (the clipboard "Copy"
+  // path turns them into clean markdown, but is not available on every
+  // page layout): <box>, <row>, <divider/>, <AsyncImage .../> (the image
+  // itself is already saved in the entry's IMAGES strip), <Cite .../>
+  // and <Entity ... value="X"/> (kept as its plain text X). Text inside
+  // fenced code blocks is left untouched.
+  function stripChatGPTWidgetTags(text) {
+    if (!text || text.indexOf('<') === -1) return text;
+    return text.split(/(```[\s\S]*?```)/).map(function(seg, i) {
+      if (i % 2 === 1) return seg; // fenced code block, leave as is
+      return seg
+        .replace(/^[ \t]*<AsyncImage\b[^>]*\/>[ \t]*\n?/gm, '')
+        .replace(/[ \t]*<Cite\b[^>]*\/>/g, '')
+        .replace(/<Entity\b[^>]*\bvalue="([^"]*)"[^>]*\/>/g, '$1')
+        .replace(/^[ \t]*<\/?(?:box|row|column|stack|spacer)\b[^>]*>[ \t]*\n?/gim, '')
+        .replace(/^[ \t]*<divider\b[^>]*\/?>[ \t]*\n?/gim, '')
+        .replace(/\n{3,}/g, '\n\n');
+    }).join('');
+  }
+
   function stripCitations(text) {
     if (!text) return text;
+    text = stripChatGPTWidgetTags(text);
     // NOTE: strips inline, favicon-only images — confirmed live via a
     // real Grok entry that Google's favicon-proxy pattern
     // (google.com/s2/favicons?domain=...) shows up as genuine inline
@@ -2217,6 +2245,31 @@ function queryAllDeep(selector) {
         }
         logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: got auth token after', Date.now() - _saveStartedAt, 'ms');
 
+        // Claude, newer page layout: no history seed exists for this chat
+        // (the conversation was not delivered through the request the
+        // interceptor watches), but the page has message rows we can read.
+        // Never runs when a seed exists, so working pages are unchanged.
+        var claudeDom = null;
+        if (PROVIDER === 'claude') {
+          try {
+            var _cdSeed = window.__diaryCapture && window.__diaryCapture.historySeed;
+            var _cdHasSeed = !!(_cdSeed && _cdSeed.text && (_cdSeed.url === canonicalUrl() || /\/new(\?|$)/.test(_cdSeed.url)));
+            if (!_cdHasSeed && claudeDomLayoutPresent()) {
+              if (btn) { btn.textContent = 'Reading chat…'; }
+              claudeDom = await buildClaudeDomThread();
+              if (claudeDom && claudeDom.incomplete) {
+                console.log('[Diary Sync DIAG] Claude DOM thread incomplete — asking to retry');
+                if (btn) {
+                  btn.textContent = 'Still loading…';
+                  btn.style.background = '#6B6B88';
+                  restoreSaveButton(btn, 3000);
+                }
+                return { success: false, error: 'incomplete_response' };
+              }
+            }
+          } catch (e) { console.log('[Diary Claude DOM] failed:', e && e.message); claudeDom = null; }
+        }
+
         var prompt = '';
         // Claude-specific: try historySeed's own, true first question
         // BEFORE the generic getPrompt() override below — confirmed,
@@ -2253,6 +2306,9 @@ function queryAllDeep(selector) {
               if (qMatch && qMatch[1]) prompt = qMatch[1].trim().slice(0, 500);
             }
           } catch(_) {}
+        }
+        if (PROVIDER === 'claude' && claudeDom && claudeDom.firstQuestion && !prompt) {
+          prompt = claudeDom.firstQuestion;
         }
         // Perplexity-specific: same principle as Claude above, now that
         // diary-interceptor.js also builds a network-sourced historySeed
@@ -2330,6 +2386,20 @@ function queryAllDeep(selector) {
           if (seedForImages && Array.isArray(seedForImages.images)) {
             images = images.concat(seedForImages.images);
           }
+        }
+        if (PROVIDER === 'claude' && claudeDom && claudeDom.images && claudeDom.images.length) {
+          images = images.concat(claudeDom.images);
+        }
+        // ChatGPT second layout: read pictures straight from the page at
+        // save time (a turn may not have been captured yet, or was
+        // captured before its pictures finished loading).
+        if (PROVIDER === 'chatgpt') {
+          try {
+            var _cgCfg = DOM_SELECTORS['chatgpt.com'];
+            if (usingFallbackLayout(_cgCfg)) {
+              images = images.concat(getCurrentTurnImageUrls(_cgCfg));
+            }
+          } catch (e) {}
         }
         if (images.length === 0 && ['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
           images = await captureResponseImages(token);
@@ -2427,6 +2497,12 @@ function queryAllDeep(selector) {
           if (threadParts.length) {
             fullThread = threadParts.join('\n\n');
             console.log('[Diary] thread parts:', threadParts.length, '(history seed:', !!seed, ') ', fullThread.slice(0,80));
+          }
+          // Newer Claude page layout: the thread read from the page replaces
+          // whatever partial live capture exists (no seed => no history).
+          if (claudeDom && claudeDom.text) {
+            fullThread = claudeDom.text;
+            console.log('[Diary] using thread read from the Claude page, length:', fullThread.length);
           }
         } else if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
           // Same cross-conversation contamination fix as the Claude branch
@@ -4189,6 +4265,163 @@ function queryAllDeep(selector) {
     });
   }
 
+  // ── Claude, newer page layout: build the thread from the page itself ──────
+  // Some Claude accounts get a page build where the conversation is NOT
+  // delivered through the /chat_conversations/<id> request the interceptor
+  // listens for, so no history seed ever exists. Those pages render each
+  // message as <div data-testid="transcript-row" data-perf-row="human" |
+  // "assistant" data-rs-index="N">, and only keep rows near the viewport
+  // mounted. This reads those rows (scrolling through the chat so every
+  // row gets mounted once, collecting by row index) and returns the same
+  // kind of thread text the seed path produces. It is only ever called
+  // when no seed exists for the current chat AND such rows are present,
+  // so accounts/pages that already work are untouched.
+  var CLAUDE_ROW_SEL = '[data-testid="transcript-row"][data-perf-row]';
+
+  function claudeDomLayoutPresent() {
+    try { return !!document.querySelector(CLAUDE_ROW_SEL); } catch (e) { return false; }
+  }
+
+  function getClaudeTurndown() {
+    if (window.__diaryClaudeTurndown) return window.__diaryClaudeTurndown;
+    if (typeof TurndownService === 'undefined') return null;
+    var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+    try {
+      if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) svc.use(turndownPluginGfm.gfm);
+    } catch (e) {}
+    svc.escape = function(string) {
+      return string
+        .replace(/\\/g, '\\\\')
+        .replace(/\*/g, '\\*')
+        .replace(/^\+ /g, '\\+ ')
+        .replace(/^(=+)/g, '\\$1')
+        .replace(/^(#{1,6}) /g, '\\$1 ')
+        .replace(/`/g, '\\`')
+        .replace(/\[/g, '\\[')
+        .replace(/\]/g, '\\]')
+        .replace(/_/g, '\\_');
+    };
+    svc.addRule('listItemParagraph', {
+      filter: function(node) {
+        return node.nodeName === 'P' && node.parentNode && node.parentNode.nodeName === 'LI' &&
+               node.parentNode.children.length === 1;
+      },
+      replacement: function(content) { return content; }
+    });
+    window.__diaryClaudeTurndown = svc;
+    return svc;
+  }
+
+  // One row -> { role, text, images }. Null if the row has no usable text.
+  function readClaudeRow(row) {
+    var role = row.getAttribute('data-perf-row');
+    if (role !== 'human' && role !== 'assistant') return null;
+    var root = row.querySelector(role === 'human' ? '[data-cds="UserMessage"]' : '[data-cds="AssistantMessage"]') || row;
+    var clone = root.cloneNode(true);
+    // Visually-hidden labels ("You said:"), buttons/toolbars, icons, status regions.
+    Array.from(clone.querySelectorAll('.sr-only, [data-find-omitted], button, svg, style, script, [role="status"]'))
+      .forEach(function(n) { if (n.parentNode) n.parentNode.removeChild(n); });
+    var images = [];
+    Array.from(clone.querySelectorAll('img')).forEach(function(img) {
+      var src = img.src || '';
+      var w = parseInt(img.getAttribute('width') || '0', 10);
+      if (src && /^https?:/.test(src) && !(w && w < 40)) images.push(src);
+      if (img.parentNode) img.parentNode.removeChild(img);
+    });
+    var text = '';
+    if (role === 'human') {
+      text = (clone.textContent || '').replace(/\s+\n/g, '\n').trim();
+    } else {
+      var svc = getClaudeTurndown();
+      try { text = svc ? svc.turndown(clone) : ''; } catch (e) { text = ''; }
+      if (!text) text = (clone.textContent || '').trim();
+      text = text.replace(/\n{3,}/g, '\n\n').trim();
+    }
+    if (!text) return null;
+    return { role: role, text: text, images: images, streaming: row.getAttribute('data-perf-row-streaming') === 'true' };
+  }
+
+  function findClaudeScroller(row) {
+    for (var n = row.parentElement; n && n !== document.body; n = n.parentElement) {
+      var oy = '';
+      try { oy = getComputedStyle(n).overflowY; } catch (e) {}
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 10) return n;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+
+  // Returns { text, images, firstQuestion } on success, { incomplete: true }
+  // if the chat could not be read completely (still streaming, rows
+  // missing), or null if this page has no such rows at all.
+  async function buildClaudeDomThread() {
+    var firstRow = document.querySelector(CLAUDE_ROW_SEL);
+    if (!firstRow) return null;
+    var wait = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
+    var byIdx = {};
+    var anyStreaming = false;
+    function collect() {
+      Array.from(document.querySelectorAll(CLAUDE_ROW_SEL)).forEach(function(r) {
+        var idx = r.getAttribute('data-rs-index');
+        if (idx === null || idx === '') return;
+        var got = readClaudeRow(r);
+        if (!got) return;
+        if (got.streaming) anyStreaming = true;
+        var prev = byIdx[idx];
+        // Keep the fuller read if the same row is seen twice.
+        if (!prev || got.text.length >= prev.text.length) byIdx[idx] = got;
+      });
+    }
+    var scroller = findClaudeScroller(firstRow);
+    var savedTop = scroller.scrollTop;
+    try {
+      scroller.scrollTop = 0;
+      await wait(350);
+      collect();
+      for (var step = 0; step < 300; step++) {
+        var before = scroller.scrollTop;
+        scroller.scrollTop = before + Math.max(200, scroller.clientHeight * 0.7);
+        await wait(250);
+        collect();
+        if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4 || scroller.scrollTop === before) break;
+      }
+      await wait(200);
+      collect();
+    } finally {
+      try { scroller.scrollTop = savedTop; } catch (e) {}
+    }
+    var idxs = Object.keys(byIdx).map(Number).sort(function(a, b) { return a - b; });
+    if (!idxs.length) { console.log('[Diary Claude DOM] no usable rows (rows found:', document.querySelectorAll(CLAUDE_ROW_SEL).length, ', with data-rs-index:', document.querySelectorAll(CLAUDE_ROW_SEL + '[data-rs-index]').length, ')'); return { incomplete: true }; }
+    // Complete = unbroken run of rows that starts with a human message.
+    for (var i = 1; i < idxs.length; i++) {
+      if (idxs[i] !== idxs[i - 1] + 1) { console.log('[Diary Claude DOM] gap in rows at', idxs[i - 1], '->', idxs[i]); return { incomplete: true }; }
+    }
+    if (byIdx[idxs[0]].role !== 'human') { console.log('[Diary Claude DOM] first row is not a question — chat top not reached'); return { incomplete: true }; }
+    if (anyStreaming) { console.log('[Diary Claude DOM] a reply is still streaming'); return { incomplete: true }; }
+    var parts = [], images = [], firstQuestion = '';
+    idxs.forEach(function(k) {
+      var r = byIdx[k];
+      if (r.role === 'human') {
+        if (!firstQuestion) firstQuestion = r.text.slice(0, 500);
+        parts.push(boldQuestion(r.text.slice(0, 2000)));
+      } else {
+        parts.push(r.text);
+        images = images.concat(r.images);
+      }
+    });
+    console.log('[Diary Claude DOM] built thread from', idxs.length, 'rows, images:', images.length);
+    return { text: parts.join('\n\n'), images: filterCapturedImageUrls(images), firstQuestion: firstQuestion };
+  }
+
+  // True when this page uses a provider's second layout (primary
+  // response selector matches nothing but the fallback one does).
+  function usingFallbackLayout(config) {
+    if (!config || !config.responseFallback) return false;
+    try {
+      return !document.querySelectorAll(config.response).length &&
+             document.querySelectorAll(config.responseFallback).length > 0;
+    } catch (e) { return false; }
+  }
+
   function readDomResponse() {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
@@ -4553,7 +4786,14 @@ function queryAllDeep(selector) {
     if (config) {
       var els = queryTurnEls(config, 'response');
       var el = els[els.length - 1];
-      if (el) {
+      if (usingFallbackLayout(config)) {
+        // Second layout: the saved text is the WHOLE conversation, so
+        // gather pictures from every answer, not just the newest one.
+        imgUrls = [];
+        Array.from(els).forEach(function(a) {
+          Array.from(a.querySelectorAll('img')).forEach(function(img) { imgUrls.push(img.src || ''); });
+        });
+      } else if (el) {
         imgUrls = Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; });
       }
     }
@@ -4669,6 +4909,16 @@ function queryAllDeep(selector) {
       console.log('[Diary DOM] fresh retry capture (first for this conversation):', text.slice(0, 80));
       return;
     }
+    // Second ChatGPT layout only: pictures often finish loading after the
+    // text first looks complete, so pick up any that are newly present.
+    try {
+      var _cfgRefresh = DOM_SELECTORS[window.location.hostname];
+      if (usingFallbackLayout(_cfgRefresh)) {
+        var _freshImgs = getCurrentTurnImageUrls(_cfgRefresh);
+        var _oldImgs = turns[lastIdx].images || [];
+        if (_freshImgs.length > _oldImgs.length) turns[lastIdx].images = _freshImgs;
+      }
+    } catch (e) {}
     if (turns[lastIdx].text === text) return; // genuinely nothing new
     turns[lastIdx].text = text;
     turns[lastIdx].ts = Date.now();
@@ -4753,6 +5003,20 @@ function queryAllDeep(selector) {
     }
 
     var _chatgptObserver = new MutationObserver(function() {
+      // Second page layout only: show the Save button as soon as an answer
+      // is on screen instead of after the page has been quiet for several
+      // seconds (the save itself still waits for/validates the full text).
+      try {
+        if (!document.getElementById('diary-save-btn') &&
+            window.__diaryEarlyBtnUrl !== canonicalUrl() &&
+            usingFallbackLayout(DOM_SELECTORS['chatgpt.com'])) {
+          var _firstAns = queryTurnEls(DOM_SELECTORS['chatgpt.com'], 'response')[0];
+          if (_firstAns && (_firstAns.textContent || '').trim().length > 50) {
+            window.__diaryEarlyBtnUrl = canonicalUrl();
+            window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: canonicalUrl() } }));
+          }
+        }
+      } catch (e) {}
       if (_chatgptSettleTimer) clearTimeout(_chatgptSettleTimer);
       _chatgptResetPoll();
       _chatgptSettleTimer = setTimeout(_chatgptCheckStable, 2000);
@@ -4771,6 +5035,25 @@ function queryAllDeep(selector) {
     // attribute-driven rendering changes (e.g. aria/data-state toggles used
     // to reveal already-present-but-hidden content).
     _chatgptObserver.observe(_chatgptObserveTarget, { childList: true, subtree: true, characterData: true, attributes: true });
+  }
+
+  // Claude, newer page layout: no conversation request reaches the
+  // interceptor there, so nothing would ever show the Save button. Show it
+  // once an answer row is on screen (only when the button isn't there yet).
+  if (PROVIDER === 'claude') {
+    try {
+      new MutationObserver(function() {
+        try {
+          if (document.getElementById('diary-save-btn')) return;
+          if (window.__diaryEarlyBtnUrl === canonicalUrl()) return;
+          var a = document.querySelector('[data-testid="transcript-row"][data-perf-row="assistant"]');
+          if (a && (a.textContent || '').trim().length > 50) {
+            window.__diaryEarlyBtnUrl = canonicalUrl();
+            window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: canonicalUrl() } }));
+          }
+        } catch (e) {}
+      }).observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
   }
 
   // Poll window.__diaryAIComplete as fallback for when postMessage is blocked by module context
