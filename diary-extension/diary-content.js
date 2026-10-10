@@ -1202,14 +1202,19 @@ function queryAllDeep(selector) {
   // path turns them into clean markdown, but is not available on every
   // page layout): <box>, <row>, <divider/>, <AsyncImage .../> (the image
   // itself is already saved in the entry's IMAGES strip), <Cite .../>
-  // and <Entity ... value="X"/> (kept as its plain text X). Text inside
-  // fenced code blocks is left untouched.
+  // and <Entity ... value="X"/> (kept as its plain text X), <icon .../>
+  // (dropped) and <text ...>X</text> (kept as X). Text inside fenced code
+  // blocks and inline code is left untouched.
   function stripChatGPTWidgetTags(text) {
     if (!text || text.indexOf('<') === -1) return text;
-    return text.split(/(```[\s\S]*?```)/).map(function(seg, i) {
-      if (i % 2 === 1) return seg; // fenced code block, leave as is
+    return text.split(/(```[\s\S]*?```|`[^`\n]+`)/).map(function(seg, i) {
+      if (i % 2 === 1) return seg; // fenced code block / inline code, leave as is
       return seg
         .replace(/^[ \t]*<AsyncImage\b[^>]*\/>[ \t]*\n?/gm, '')
+        // <icon name="truck" size="xl"/> layout icons: decorative, drop the line
+        .replace(/^[ \t]*<icon\s+[a-z-]+="[^"]*"[^>]*\/>[ \t]*\n?/gm, '')
+        // <text color="secondary" size="sm">…</text>: keep the inner text
+        .replace(/<text\s+[a-z-]+="[^"]*"[^>]*>([\s\S]*?)<\/text>/g, '$1')
         .replace(/[ \t]*<Cite\b[^>]*\/>/g, '')
         .replace(/<Entity\b[^>]*\bvalue="([^"]*)"[^>]*\/>/g, '$1')
         .replace(/^[ \t]*<\/?(?:box|row|column|stack|spacer)\b[^>]*>[ \t]*\n?/gim, '')
