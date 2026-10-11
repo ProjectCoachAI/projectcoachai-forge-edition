@@ -610,8 +610,49 @@
           }
         }
         if (!answerParts.length) continue;
+        // Perplexity's answer text carries bare numeric markers ("[1][2]").
+        // The matching source URLs sit in the same entry's blocks, in
+        // citation order, so turn each marker into a real markdown link.
+        // Markers with no known URL, or already followed by "(", are left
+        // exactly as they were.
+        var srcUrls = [];
+        try {
+          if (Array.isArray(blocks)) {
+            for (var ci = 0; ci < blocks.length && !srcUrls.length; ci++) {
+              var cb = blocks[ci];
+              var cSteps = cb && cb.workflow_block && cb.workflow_block.steps;
+              if (!Array.isArray(cSteps)) continue;
+              for (var cs = 0; cs < cSteps.length && !srcUrls.length; cs++) {
+                var cItems = cSteps[cs] && cSteps[cs].items;
+                if (!Array.isArray(cItems)) continue;
+                for (var cj = 0; cj < cItems.length; cj++) {
+                  var sp = cItems[cj] && cItems[cj].payload && cItems[cj].payload.sources_payload;
+                  if (sp && Array.isArray(sp.sources) && sp.sources.length) {
+                    srcUrls = sp.sources.map(function(x) { return x && typeof x.url === 'string' ? x.url : ''; });
+                    break;
+                  }
+                }
+              }
+            }
+            if (!srcUrls.length) {
+              for (var wi = 0; wi < blocks.length && !srcUrls.length; wi++) {
+                var wr = blocks[wi] && blocks[wi].web_result_block && blocks[wi].web_result_block.web_results;
+                if (Array.isArray(wr) && wr.length) {
+                  srcUrls = wr.map(function(x) { return x && typeof x.url === 'string' ? x.url : ''; });
+                }
+              }
+            }
+          }
+        } catch(e) { srcUrls = []; }
+        var answerText = answerParts.join('\n\n');
+        if (srcUrls.length) {
+          answerText = answerText.replace(/\[(\d{1,3})\](?!\()/g, function(m, n) {
+            var u = srcUrls[parseInt(n, 10) - 1];
+            return (u && /^https?:\/\//i.test(u)) ? '[' + n + '](' + u.replace(/\)/g, '%29') + ')' : m;
+          });
+        }
         parts.push(boldQuestion(question.slice(0, 2000)));
-        parts.push(answerParts.join('\n\n'));
+        parts.push(answerText);
       }
       return parts.join('\n\n');
     } catch(e) { return ''; }
