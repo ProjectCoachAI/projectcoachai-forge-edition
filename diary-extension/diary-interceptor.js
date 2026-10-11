@@ -658,6 +658,40 @@
     } catch(e) { return ''; }
   }
 
+  // Pictures Perplexity attaches to answers (the "image group" chips such
+  // as "spicedblog+2"). They are in the same thread JSON as the text, at
+  // entries[].blocks[].workflow_block.steps[].items[].payload.text_payload
+  // .images[].original_image_url, so no popup needs to be opened.
+  function parsePerplexityHistoryImages(json) {
+    var out = [];
+    try {
+      var entries = json && json.entries;
+      if (!Array.isArray(entries)) return out;
+      entries.forEach(function(entry) {
+        var blocks = entry && entry.blocks;
+        if (!Array.isArray(blocks)) return;
+        blocks.forEach(function(block) {
+          var steps = block && block.workflow_block && block.workflow_block.steps;
+          if (!Array.isArray(steps)) return;
+          steps.forEach(function(step) {
+            var items = step && step.items;
+            if (!Array.isArray(items)) return;
+            items.forEach(function(item) {
+              var tp = item && item.payload && item.payload.text_payload;
+              var imgs = tp && tp.images;
+              if (!Array.isArray(imgs)) return;
+              imgs.forEach(function(im) {
+                var u = im && (im.original_image_url || im.image_url);
+                if (typeof u === 'string' && /^https?:\/\//i.test(u) && out.indexOf(u) === -1) out.push(u);
+              });
+            });
+          });
+        });
+      });
+    } catch(e) {}
+    return out;
+  }
+
   // After a Perplexity answer finishes streaming, re-fetch the thread
   // history so the historySeed includes the new exchange, with its
   // question in the right place and its answer complete. Confirmed live
@@ -924,7 +958,7 @@
               // is still being finalized can come back incomplete).
               var prevPplxSeed = window.__diaryCapture.historySeed;
               if (!(prevPplxSeed && prevPplxSeed.url === seedUrl && prevPplxSeed.text && prevPplxSeed.text.length > seedText.length)) {
-                window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now() };
+                window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now(), images: parsePerplexityHistoryImages(pplxJson) };
               }
               // Remembered so a fresh answer can trigger a re-fetch of
               // this same thread (see schedulePerplexityThreadRefresh).
@@ -1129,7 +1163,7 @@
             if (pplxSeedText && pplxSeedText.length > 50) {
               var pplxUuidMatch = /\/rest\/thread\/([0-9a-f-]{20,})/i.exec(xhr.__url);
               var pplxSeedUrl = pplxUuidMatch ? (window.location.origin + '/search/' + pplxUuidMatch[1]) : xhr.__pageUrl;
-              window.__diaryCapture.historySeed = { text: pplxSeedText, url: pplxSeedUrl, ts: Date.now() };
+              window.__diaryCapture.historySeed = { text: pplxSeedText, url: pplxSeedUrl, ts: Date.now(), images: parsePerplexityHistoryImages(pplxJson) };
               console.log('[Diary interceptor] Perplexity history seed captured (XHR):', pplxSeedText.slice(0, 80));
               window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pplxSeedUrl } }));
             }

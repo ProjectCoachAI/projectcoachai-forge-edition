@@ -2391,6 +2391,14 @@ function queryAllDeep(selector) {
             images = images.concat(seedForImages.images);
           }
         }
+        // Perplexity: the answer's picture groups are listed in the thread
+        // JSON the seed was built from.
+        if (PROVIDER === 'perplexity') {
+          var _pplxSeedImgs = window.__diaryCapture && window.__diaryCapture.historySeed;
+          if (_pplxSeedImgs && Array.isArray(_pplxSeedImgs.images)) {
+            images = images.concat(_pplxSeedImgs.images);
+          }
+        }
         if (PROVIDER === 'claude' && claudeDom && claudeDom.images && claudeDom.images.length) {
           images = images.concat(claudeDom.images);
         }
