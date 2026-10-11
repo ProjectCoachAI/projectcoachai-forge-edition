@@ -648,7 +648,14 @@
         if (srcUrls.length) {
           answerText = answerText.replace(/\[(\d{1,3})\](?!\()/g, function(m, n) {
             var u = srcUrls[parseInt(n, 10) - 1];
-            return (u && /^https?:\/\//i.test(u)) ? '[' + n + '](' + u.replace(/\)/g, '%29') + ')' : m;
+            if (!(u && /^https?:\/\//i.test(u))) return m;
+            // "pill \u241F footer": the inline marker stays the number, the
+            // Sources list shows the site name (same compound-label format
+            // the Claude seed uses; split in stripCitations).
+            var host = '';
+            try { host = new URL(u).hostname.replace(/^www\./i, ''); } catch(e) {}
+            var lbl = host ? (n + '\u241F' + host) : n;
+            return '[' + lbl + '](' + u.replace(/\)/g, '%29') + ')';
           });
         }
         parts.push(boldQuestion(question.slice(0, 2000)));
