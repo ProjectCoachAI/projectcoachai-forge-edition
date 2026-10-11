@@ -4364,7 +4364,10 @@ function queryAllDeep(selector) {
     // from the copy below: image tiles are often wrapped in buttons/links).
     // Tiny images (favicons, avatars, icons) are skipped by rendered size.
     var images = [];
-    Array.from(root.querySelectorAll('img')).forEach(function(img) {
+    // Your own messages: an uploaded picture sits in a card outside the
+    // message text, so read the whole row for those.
+    var imgScope = role === 'human' ? row : root;
+    Array.from(imgScope.querySelectorAll('img')).forEach(function(img) {
       var src = img.currentSrc || img.src || '';
       var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0, parseInt(img.getAttribute('width') || '0', 10));
       if (src && /^https?:/.test(src) && size >= 100 && images.indexOf(src) === -1) images.push(src);
@@ -4819,7 +4822,7 @@ function queryAllDeep(selector) {
   // function means any future fix here only ever needs to happen once.
   // Hosts whose image links only open while the user is signed in, so the
   // Diary server can't fetch them itself. Add a host here to cover it.
-  var SESSION_IMAGE_HOSTS = ['assets.grok.com'];
+  var SESSION_IMAGE_HOSTS = ['assets.grok.com', 'claude.ai'];
   var SESSION_IMAGE_MAX = 5;
   var SESSION_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
