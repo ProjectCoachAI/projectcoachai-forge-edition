@@ -1191,10 +1191,20 @@ function detectCitationArtifacts(text) {
 // already require compare.js themselves for other reasons.
 function findChecklistCandidates(text) {
   function isListLine(line) { return /^[ \t]*[-*•] (.+)/.test(line) || /^[ \t]*\d+\. (.+)/.test(line); }
+  // Shown as plain text in the checklist, so a markdown link becomes just
+  // its label (and an image is dropped) instead of raw "[label](url)".
+  function plainItem(t) {
+    return t.replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').trim();
+  }
+  // A list made only of links is a list of sources, not tasks.
+  function isLinkOnly(t) { return /^\[[^\]]*\]\([^)]+\)$/.test(t) || /^https?:\/\/\S+$/.test(t); }
   function itemText(line) {
     const m = line.match(/^[ \t]*[-*•] (.+)/) || line.match(/^[ \t]*\d+\. (.+)/);
     return m ? m[1].trim() : '';
   }
+  // The saved "Sources:" footer is a numbered list too, but never a
+  // checklist — leave it out before looking for lists.
+  text = (text || '').replace(/\*\*Sources:\*\*\n(?:\d+\. \[[^\]]*\]\([^)]+\)\n?)+/g, '');
   const candidates = [];
   const lines = (text || '').split('\n');
   let i = 0;
@@ -1202,10 +1212,16 @@ function findChecklistCandidates(text) {
     if (isListLine(lines[i])) {
       const items = [];
       const position = i;
-      while (i < lines.length && isListLine(lines[i])) { items.push(itemText(lines[i])); i++; }
+      let linkOnly = true;
+      while (i < lines.length && isListLine(lines[i])) {
+        const raw = itemText(lines[i]);
+        if (!isLinkOnly(raw)) linkOnly = false;
+        items.push(plainItem(raw));
+        i++;
+      }
       // A single bullet on its own isn't meaningfully a "checklist" —
       // not worth spending a classification call on.
-      if (items.length >= 2) candidates.push({ items, position });
+      if (items.length >= 2 && !linkOnly) candidates.push({ items, position });
     } else {
       i++;
     }
