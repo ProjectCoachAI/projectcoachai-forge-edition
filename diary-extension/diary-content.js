@@ -4719,6 +4719,7 @@ function queryAllDeep(selector) {
               // (data-pplx-citation-url, on itself or inside) is never
               // touched.
               filter: function(node) {
+                if (PROVIDER !== 'perplexity') return false;
                 if (node.nodeName !== 'SPAN') return false;
                 var cls = (node.getAttribute && node.getAttribute('class')) || '';
                 if (cls.indexOf('cursor-pointer') === -1 || cls.indexOf('rounded-md') === -1 || cls.indexOf('group') === -1) return false;
