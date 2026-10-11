@@ -4709,6 +4709,25 @@ function queryAllDeep(selector) {
                 return '[' + label + '](' + url + ')';
               }
             });
+            svc.addRule('perplexityImagePill', {
+              // Perplexity's "image group" chip (a source name plus "+N",
+              // e.g. "spicedblog+2") opens a popup of pictures. It carries no
+              // citation URL, so without this rule its label leaked into the
+              // saved text glued to the sentence ("...boils:spicedblog+2").
+              // Dropped here; the pictures themselves are not in the page
+              // until the popup is opened. Guarded so a real citation pill
+              // (data-pplx-citation-url, on itself or inside) is never
+              // touched.
+              filter: function(node) {
+                if (node.nodeName !== 'SPAN') return false;
+                var cls = (node.getAttribute && node.getAttribute('class')) || '';
+                if (cls.indexOf('cursor-pointer') === -1 || cls.indexOf('rounded-md') === -1 || cls.indexOf('group') === -1) return false;
+                if (node.getAttribute('data-pplx-citation-url')) return false;
+                if (node.querySelector && node.querySelector('[data-pplx-citation-url], a[href]')) return false;
+                return /\+\d+\s*$/.test((node.textContent || '').trim());
+              },
+              replacement: function() { return ''; }
+            });
             window.__diaryTurndownInstance = svc;
           }
           // Pass the actual DOM node, NOT el.innerHTML as a string.
