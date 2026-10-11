@@ -859,6 +859,44 @@ function waitForTabComplete(tabId) {
 }
 
 
+// Pictures that only open while the user is signed in to the AI site (for
+// example Grok's own generated images) can't be copied by the Diary
+// server, which fetches without that login. The page fetches such a
+// picture in the user's own browser and sends its bytes along as
+// { originalUrl, inlineData (base64), contentType }; here each one is
+// stored through the existing /upload-attachment route and handed to the
+// save as an already-hosted image. Anything that can't be stored falls
+// back to its plain URL, which is exactly what was sent before.
+async function hostInlineImages(images, existingImages, API, token) {
+  // In parallel (order preserved): the page waits only a short while for
+  // the save to answer, so several sequential uploads must not add up.
+  return Promise.all((images || []).map(async function(img) {
+    if (!(img && typeof img === 'object' && img.inlineData && img.originalUrl)) return img;
+    try {
+      // Already stored by an earlier save of this same conversation: send
+      // the plain URL; the server reuses the hosted copy.
+      const already = (existingImages || []).find(function(e) {
+        return e && typeof e === 'object' && e.status === 'hosted' && e.originalUrl === img.originalUrl;
+      });
+      if (already) return img.originalUrl;
+      const r = await fetch(API + '/api/diary/upload-attachment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ data: img.inlineData, contentType: img.contentType || 'image/jpeg', filename: 'image' })
+      });
+      const d = await r.json().catch(function() { return {}; });
+      if (d && d.success && d.url) {
+        return { url: d.url, originalUrl: img.originalUrl, status: 'hosted' };
+      }
+      console.warn('[Diary BG] Inline image upload failed:', d && d.error);
+      return img.originalUrl;
+    } catch (e) {
+      console.warn('[Diary BG] Inline image upload error:', e.message);
+      return img.originalUrl;
+    }
+  }));
+}
+
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'BLOB_DATA_RESPONSE' && msg.blobUrl) {
     const pending = pendingBlobRequests.get(msg.blobUrl);
@@ -942,6 +980,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
       let existingId = null;
       let existingContent = '';
       let existingPrompt = '';
+      let existingImages = [];
       try {
         const lookupStartedAt = Date.now();
         const lR = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(msg.url), { headers: { 'Authorization': 'Bearer ' + token } });
@@ -951,8 +990,12 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
           existingId = lD.entry.id;
           existingContent = lD.entry.content || '';
           existingPrompt = lD.entry.prompt || '';
+          existingImages = (lD.entry.metadata && lD.entry.metadata.images) || [];
         }
       } catch(e) {}
+
+      // Store any pictures the page sent as raw bytes (see hostInlineImages).
+      const imagesForSave = await hostInlineImages(msg.images || [], existingImages, API, token);
 
       // NOTE: images are sent here as plain, original provider URLs —
       // native re-hosting to our own storage (Priority 4) happens
@@ -1100,7 +1143,7 @@ let data;
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ content: patchContent, prompt: patchPrompt, turnCount: msg.turnCount, metadata: { url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
+          body: JSON.stringify({ content: patchContent, prompt: patchPrompt, turnCount: msg.turnCount, metadata: { url: msg.url, images: imagesForSave, attachments: msg.attachments || [] } })
         });
         data = await pR.json();
         data.updated = true;
@@ -1112,7 +1155,7 @@ let data;
         const pR = await fetch(API + '/api/diary', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url, images: msg.images || [], attachments: msg.attachments || [] } })
+          body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url, images: imagesForSave, attachments: msg.attachments || [] } })
         });
         data = await pR.json();
         data.updated = false;

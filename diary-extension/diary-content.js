@@ -2432,6 +2432,12 @@ function queryAllDeep(selector) {
           images = await captureResponseImages(token);
         }
         images = images.filter(function(s,i,a){ return a.indexOf(s)===i; }); // dedupe
+        // Pictures that only open while signed in to the AI site (Grok's own
+        // generated images): fetch them here, in the user's own browser,
+        // and send the bytes along so Diary can store them. See
+        // hostInlineImages() in background.js. Anything that can't be
+        // fetched stays a plain URL, exactly as before.
+        try { images = await inlineSessionImages(images); } catch (e) {}
         logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: images resolved after', Date.now() - _saveStartedAt, 'ms (', images.length, 'images)');
 
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
@@ -4811,6 +4817,42 @@ function queryAllDeep(selector) {
   // copies of the same logic, and Gemini's actual capture that day
   // happened to go through one of those. Extracting this into one shared
   // function means any future fix here only ever needs to happen once.
+  // Hosts whose image links only open while the user is signed in, so the
+  // Diary server can't fetch them itself. Add a host here to cover it.
+  var SESSION_IMAGE_HOSTS = ['assets.grok.com'];
+  var SESSION_IMAGE_MAX = 5;
+  var SESSION_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+  async function inlineSessionImages(images) {
+    var out = [];
+    var done = 0;
+    for (var i = 0; i < images.length; i++) {
+      var u = images[i];
+      var host = '';
+      try { host = typeof u === 'string' ? new URL(u).hostname : ''; } catch (e) {}
+      if (!host || SESSION_IMAGE_HOSTS.indexOf(host) === -1 || done >= SESSION_IMAGE_MAX) { out.push(u); continue; }
+      done++;
+      try {
+        var r = await fetch(u, { credentials: 'include' });
+        if (!r.ok) { out.push(u); continue; }
+        var b = await r.blob();
+        if (!b.size || b.size > SESSION_IMAGE_MAX_BYTES || !/^image\//.test(b.type)) { out.push(u); continue; }
+        var dataUrl = await new Promise(function(resolve, reject) {
+          var fr = new FileReader();
+          fr.onload = function() { resolve(fr.result); };
+          fr.onerror = function() { reject(fr.error); };
+          fr.readAsDataURL(b);
+        });
+        var comma = String(dataUrl).indexOf(',');
+        if (comma === -1) { out.push(u); continue; }
+        out.push({ originalUrl: u, inlineData: String(dataUrl).slice(comma + 1), contentType: b.type });
+      } catch (e) {
+        out.push(u);
+      }
+    }
+    return out;
+  }
+
   function filterCapturedImageUrls(rawImgUrls) {
     return rawImgUrls.filter(function(src) {
       if (!src || !src.startsWith('http') || src.includes('svg')) return false;
