@@ -1250,6 +1250,12 @@ function queryAllDeep(selector) {
     var sourceIndex = {};
     function getFootnoteNumber(label, url) {
       if (sourceIndex[url] !== undefined) return sourceIndex[url];
+      // A bare number (or nothing) as the label tells the reader nothing in
+      // the Sources list, so name the source by its site instead. Applies
+      // to every provider; real titles/names are left exactly as they are.
+      if (!label || /^\s*\[?\d{1,3}\]?\s*$/.test(label)) {
+        try { label = new URL(url).hostname.replace(/^www\./i, '') || label; } catch (e) {}
+      }
       sources.push({ label: label, url: url });
       var num = sources.length;
       sourceIndex[url] = num;
