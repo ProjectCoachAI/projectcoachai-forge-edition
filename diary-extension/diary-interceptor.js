@@ -958,7 +958,7 @@
               // is still being finalized can come back incomplete).
               var prevPplxSeed = window.__diaryCapture.historySeed;
               if (!(prevPplxSeed && prevPplxSeed.url === seedUrl && prevPplxSeed.text && prevPplxSeed.text.length > seedText.length)) {
-                window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now(), images: parsePerplexityHistoryImages(pplxJson) };
+                window.__diaryCapture.historySeed = { text: seedText, url: seedUrl, ts: Date.now(), images: parsePerplexityHistoryImages(json) };
               }
               // Remembered so a fresh answer can trigger a re-fetch of
               // this same thread (see schedulePerplexityThreadRefresh).
