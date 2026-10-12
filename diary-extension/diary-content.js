@@ -4370,7 +4370,10 @@ function queryAllDeep(selector) {
     Array.from(imgScope.querySelectorAll('img')).forEach(function(img) {
       var src = img.currentSrc || img.src || '';
       var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0, parseInt(img.getAttribute('width') || '0', 10));
-      if (src && /^https?:/.test(src) && size >= 100 && images.indexOf(src) === -1) images.push(src);
+      // An uploaded picture is real by definition, even if it has not
+      // finished loading (size 0) at the moment the page is read.
+      var isUpload = role === 'human' && /\/api\/[^/]+\/files\/[^/]+\/(preview|thumbnail)/.test(src);
+      if (src && /^https?:/.test(src) && (size >= 100 || isUpload) && images.indexOf(src) === -1) images.push(src);
     });
     var clone = root.cloneNode(true);
     // Visually-hidden labels ("You said:"), buttons/toolbars, icons, status regions.
@@ -4462,6 +4465,8 @@ function queryAllDeep(selector) {
       if (r.role === 'human') {
         if (!firstQuestion) firstQuestion = r.text.slice(0, 500);
         parts.push(boldQuestion(r.text.slice(0, 2000)));
+        // Pictures you uploaded in your own message.
+        images = images.concat(r.images);
       } else {
         parts.push(r.text);
         images = images.concat(r.images);
