@@ -2408,6 +2408,10 @@ function queryAllDeep(selector) {
         if (PROVIDER === 'claude' && claudeDom && claudeDom.images && claudeDom.images.length) {
           images = images.concat(claudeDom.images);
         }
+        // ChatGPT: pictures beside the answer text (yours and generated).
+        if (PROVIDER === 'chatgpt') {
+          try { images = getChatGPTPageImageUrls().concat(images); } catch (e) {}
+        }
         // ChatGPT second layout: read pictures straight from the page at
         // save time (a turn may not have been captured yet, or was
         // captured before its pictures finished loading).
@@ -4827,17 +4831,65 @@ function queryAllDeep(selector) {
   // function means any future fix here only ever needs to happen once.
   // Hosts whose image links only open while the user is signed in, so the
   // Diary server can't fetch them itself. Add a host here to cover it.
-  var SESSION_IMAGE_HOSTS = ['assets.grok.com', 'claude.ai'];
+  var SESSION_IMAGE_HOSTS = ['assets.grok.com', 'claude.ai', 'chatgpt.com'];
   var SESSION_IMAGE_MAX = 5;
   var SESSION_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+  // A blob: address exists only inside this open tab (ChatGPT shows your
+  // uploaded pictures and the ones it generates this way), so neither the
+  // Diary server nor the background script can ever fetch it. Read it here.
+  // First try reading the address directly; if the page does not allow
+  // that, copy the picture that is already on screen via a canvas (same
+  // origin, so the copy is allowed).
+  async function readBlobPicture(u) {
+    try {
+      var r = await fetch(u);
+      if (r.ok) {
+        var b = await r.blob();
+        if (b && b.size) return b;
+      }
+    } catch (e) {}
+    try {
+      var img = Array.from(document.querySelectorAll('img')).filter(function(i) { return (i.currentSrc || i.src) === u; })[0];
+      if (!img || !img.naturalWidth) return null;
+      var c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      var toBlob = function(type, q) { return new Promise(function(res) { c.toBlob(function(x) { res(x); }, type, q); }); };
+      var png = await toBlob('image/png');
+      if (png && png.size && png.size <= SESSION_IMAGE_MAX_BYTES) return png;
+      return await toBlob('image/jpeg', 0.9);
+    } catch (e) { return null; }
+  }
 
   async function inlineSessionImages(images) {
     var out = [];
     var done = 0;
     for (var i = 0; i < images.length; i++) {
       var u = images[i];
+      var isBlob = typeof u === 'string' && u.indexOf('blob:') === 0;
       var host = '';
-      try { host = typeof u === 'string' ? new URL(u).hostname : ''; } catch (e) {}
+      try { host = typeof u === 'string' && !isBlob ? new URL(u).hostname : ''; } catch (e) {}
+      if (isBlob) {
+        // A blob address is useless once this tab closes, so a picture that
+        // cannot be read here is left out rather than saved as a dead link.
+        if (done >= SESSION_IMAGE_MAX) continue;
+        done++;
+        try {
+          var bb = await readBlobPicture(u);
+          if (!bb || !bb.size || bb.size > SESSION_IMAGE_MAX_BYTES || !/^image\//.test(bb.type)) continue;
+          var bUrl = await new Promise(function(resolve, reject) {
+            var fr = new FileReader();
+            fr.onload = function() { resolve(fr.result); };
+            fr.onerror = function() { reject(fr.error); };
+            fr.readAsDataURL(bb);
+          });
+          var bc = String(bUrl).indexOf(',');
+          if (bc === -1) continue;
+          out.push({ originalUrl: u, inlineData: String(bUrl).slice(bc + 1), contentType: bb.type });
+        } catch (e) {}
+        continue;
+      }
       if (!host || SESSION_IMAGE_HOSTS.indexOf(host) === -1 || done >= SESSION_IMAGE_MAX) { out.push(u); continue; }
       done++;
       try {
@@ -4859,6 +4911,26 @@ function queryAllDeep(selector) {
       }
     }
     return out;
+  }
+
+  // ChatGPT: your uploaded pictures and the ones it generates sit beside
+  // the answer text rather than inside it (confirmed on a live page: both
+  // are blob: addresses outside the answer element), so the answer-only
+  // read misses them. Read every sizeable picture in the conversation area,
+  // in page order. The shared filter below is deliberately left untouched
+  // (it drops blob: for every provider); web pictures still go through it.
+  function getChatGPTPageImageUrls() {
+    var root = document.querySelector('main') || document.body;
+    var web = [], blobs = [], order = [];
+    Array.from(root.querySelectorAll('img')).forEach(function(img) {
+      var src = img.currentSrc || img.src || '';
+      var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0);
+      if (!src || size < 100) return;
+      if (src.indexOf('blob:') === 0) { order.push(src); blobs.push(src); }
+      else if (/^https?:/.test(src)) { order.push(src); web.push(src); }
+    });
+    var keepWeb = filterCapturedImageUrls(web);
+    return order.filter(function(u) { return u.indexOf('blob:') === 0 || keepWeb.indexOf(u) !== -1; });
   }
 
   function filterCapturedImageUrls(rawImgUrls) {
