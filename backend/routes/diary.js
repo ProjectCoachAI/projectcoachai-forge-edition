@@ -306,7 +306,7 @@ function isHandshakeError(e) {
   return e && (e.code === 'EPROTO' || /ssl|tls|handshake/i.test(e.message || ''));
 }
 
-function attemptImageFetch(url, tlsConfig) {
+function attemptImageFetch(url, tlsConfig, extraHeaders) {
   return new Promise((resolve, reject) => {
     let parsed;
     try { parsed = new URL(url); } catch (e) { reject(e); return; }
@@ -328,6 +328,7 @@ function attemptImageFetch(url, tlsConfig) {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        ...(extraHeaders || {}),
       },
     };
     if (tlsConfig.ciphers || tlsConfig.minVersion) {
@@ -340,7 +341,7 @@ function attemptImageFetch(url, tlsConfig) {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
-        resolve({ status: res.statusCode, contentType: res.headers['content-type'], buffer: Buffer.concat(chunks) });
+        resolve({ status: res.statusCode, contentType: res.headers['content-type'], location: res.headers['location'], buffer: Buffer.concat(chunks) });
       });
     });
     req.on('error', reject);
@@ -349,11 +350,11 @@ function attemptImageFetch(url, tlsConfig) {
   });
 }
 
-async function fetchImageWithLegacyTls(url) {
+async function fetchImageWithLegacyTls(url, extraHeaders) {
   let lastError;
   for (const tlsConfig of TLS_CONFIGS) {
     try {
-      const result = await attemptImageFetch(url, tlsConfig);
+      const result = await attemptImageFetch(url, tlsConfig, extraHeaders);
       return result;
     } catch (e) {
       lastError = e;
@@ -362,6 +363,44 @@ async function fetchImageWithLegacyTls(url) {
     }
   }
   throw lastError;
+}
+
+// Fetches an image the way a browser would: follows redirects (up to 5,
+// https only, never to a local/private address), upgrades a plain http
+// address to https, and — when a site answers 401/403, typically
+// hotlink protection — asks once more with the site's own address as
+// the referer. Previously a redirect, which is common for image links,
+// counted as a failure.
+function isPrivateImageHost(host) {
+  const h = String(host || '').toLowerCase();
+  return h === 'localhost' || h === '[::1]' || h.endsWith('.local') || h.endsWith('.internal') ||
+    /^(127|10|0)\./.test(h) || /^192\.168\./.test(h) || /^169\.254\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+}
+
+async function fetchImageFollowingRedirects(startUrl) {
+  let current = String(startUrl || '');
+  if (/^http:\/\//i.test(current)) current = 'https://' + current.slice(7);
+  let referer = null;
+  let last = null;
+  for (let hop = 0; hop < 6; hop++) {
+    const parsed = new URL(current);
+    if (parsed.protocol !== 'https:' || isPrivateImageHost(parsed.hostname)) {
+      throw new Error('Image address not allowed: ' + parsed.hostname);
+    }
+    const r = await fetchImageWithLegacyTls(current, referer ? { 'Referer': referer } : undefined);
+    last = r;
+    if ([301, 302, 303, 307, 308].includes(r.status) && r.location) {
+      current = new URL(r.location, current).toString();
+      if (/^http:\/\//i.test(current)) current = 'https://' + current.slice(7);
+      continue;
+    }
+    if ((r.status === 401 || r.status === 403) && !referer) {
+      referer = parsed.origin + '/';
+      continue;
+    }
+    return r;
+  }
+  return last;
 }
 
 // Some providers show their images through a Cloudflare image-resizing
@@ -396,7 +435,7 @@ async function rehostImagesAndPatch(entryId, allImages, userEmail) {
       let resp = null;
       for (const candidate of candidates) {
         try {
-          const r = await fetchImageWithLegacyTls(candidate);
+          const r = await fetchImageFollowingRedirects(candidate);
           if (r.status >= 200 && r.status < 300) { resp = r; break; }
           console.warn('[Diary] Image re-host: non-OK response for', candidate, '— status:', r.status);
         } catch (candErr) {
