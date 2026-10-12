@@ -434,6 +434,58 @@ function caIssuerUrlsOf(infoAccess) {
   return urls;
 }
 
+// Reads the certificates out of a downloaded file. Servers publish them in
+// three forms: a single DER certificate, a PEM text file, or a PKCS#7
+// bundle (.p7c, the form emSign uses — confirmed live). The bundle is a
+// short, fixed ASN.1 layout, read here directly (no extra library):
+//   ContentInfo { oid, [0] SignedData { version, digests, content,
+//   [0] certificates { Certificate, ... }, ... } }
+function derItem(buf, pos) {
+  if (pos + 2 > buf.length) throw new Error('Truncated certificate file');
+  const tag = buf[pos];
+  let len = buf[pos + 1], hdr = 2;
+  if (len & 0x80) {
+    const n = len & 0x7f;
+    if (n < 1 || n > 4 || pos + 2 + n > buf.length) throw new Error('Unsupported certificate file');
+    len = 0;
+    for (let i = 0; i < n; i++) len = (len * 256) + buf[pos + 2 + i];
+    hdr = 2 + n;
+  }
+  const end = pos + hdr + len;
+  if (end > buf.length) throw new Error('Truncated certificate file');
+  return { tag, start: pos + hdr, end, pos };
+}
+
+function certificatesFromDownload(raw) {
+  const text = raw.toString('latin1');
+  if (text.includes('BEGIN CERTIFICATE')) {
+    return (text.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || []).map((pem) => new crypto.X509Certificate(pem));
+  }
+  // A lone DER certificate parses directly.
+  try { return [new crypto.X509Certificate(raw)]; } catch (e) { /* maybe a PKCS#7 bundle */ }
+  const top = derItem(raw, 0);                       // ContentInfo
+  let it = derItem(raw, top.start);                  // contentType OID
+  it = derItem(raw, it.end);                         // [0] EXPLICIT
+  const signedData = derItem(raw, it.start);         // SignedData SEQUENCE
+  const out = [];
+  let pos = signedData.start;
+  while (pos < signedData.end) {
+    const child = derItem(raw, pos);
+    if (child.tag === 0xa0) {                        // [0] IMPLICIT certificates
+      let c = child.start;
+      while (c < child.end) {
+        const cert = derItem(raw, c);
+        out.push(new crypto.X509Certificate(raw.subarray(cert.pos, cert.end)));
+        c = cert.end;
+      }
+      break;
+    }
+    pos = child.end;
+  }
+  if (!out.length) throw new Error('No certificates found in download');
+  return out;
+}
+
 // Follows the chain upward, one download at a time (at most 4), until a
 // certificate whose issuer is one of the normal trusted roots is reached.
 // Some sites leave out more than one link. Returns the list of PEMs, or
@@ -456,22 +508,28 @@ async function fetchMissingIntermediatePems(hostname, port) {
     return null;
   }
   const pems = [];
+  const seen = new Set();
   for (let depth = 0; depth < 4 && urls.length; depth++) {
-    let x509 = null;
+    let certs = null;
     for (const certUrl of urls) {
       try {
-        const raw = await downloadSmallCertificate(certUrl);
-        const text = raw.toString('latin1');
-        x509 = text.includes('BEGIN CERTIFICATE') ? new crypto.X509Certificate(text) : new crypto.X509Certificate(raw);
+        certs = certificatesFromDownload(await downloadSmallCertificate(certUrl));
         break;
       } catch (e) {
         console.warn('[Diary] Image re-host: could not get intermediate certificate from', certUrl, '—', e.message);
       }
     }
-    if (!x509) break;
-    pems.push(x509.toString());
-    if (x509.subject === x509.issuer || trustedRootSubjects().has(x509.issuer)) return pems;
-    urls = caIssuerUrlsOf(x509.infoAccess);
+    if (!certs) break;
+    for (const c of certs) {
+      if (!seen.has(c.fingerprint256)) { seen.add(c.fingerprint256); pems.push(c.toString()); }
+    }
+    // Done once any certificate in the bundle is issued by a trusted root.
+    if (certs.some((c) => c.subject === c.issuer || trustedRootSubjects().has(c.issuer))) return pems;
+    // Otherwise continue from the top-most certificate: the one whose
+    // issuer is not itself in this bundle.
+    const subjects = new Set(certs.map((c) => c.subject));
+    const top = certs.find((c) => !subjects.has(c.issuer)) || certs[certs.length - 1];
+    urls = caIssuerUrlsOf(top.infoAccess);
   }
   return pems.length ? pems : null;
 }
