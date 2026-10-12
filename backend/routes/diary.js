@@ -391,7 +391,7 @@ function isPrivateImageHost(host) {
 // PEM so the request can be retried with the normal trusted roots PLUS that
 // one certificate. Verification stays on; nothing is skipped.
 function isMissingIntermediateError(e) {
-  return !!e && (e.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || /unable to verify the first certificate/i.test(e.message || ''));
+  return !!e && (e.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || e.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' || /unable to verify the first certificate|unable to get local issuer certificate/i.test(e.message || ''));
 }
 
 function downloadSmallCertificate(certUrl) {
@@ -413,7 +413,32 @@ function downloadSmallCertificate(certUrl) {
   });
 }
 
-async function fetchMissingIntermediatePem(hostname, port) {
+let _trustedRootSubjects = null;
+function trustedRootSubjects() {
+  if (!_trustedRootSubjects) {
+    _trustedRootSubjects = new Set();
+    for (const pem of tls.rootCertificates) {
+      try { _trustedRootSubjects.add(new crypto.X509Certificate(pem).subject); } catch (e) {}
+    }
+  }
+  return _trustedRootSubjects;
+}
+
+function caIssuerUrlsOf(infoAccess) {
+  const urls = [];
+  if (Array.isArray(infoAccess)) { urls.push(...infoAccess); }
+  else if (typeof infoAccess === 'string') {
+    const re = /CA Issuers - URI:(\S+)/g; let m;
+    while ((m = re.exec(infoAccess)) !== null) urls.push(m[1]);
+  }
+  return urls;
+}
+
+// Follows the chain upward, one download at a time (at most 4), until a
+// certificate whose issuer is one of the normal trusted roots is reached.
+// Some sites leave out more than one link. Returns the list of PEMs, or
+// null when no pointer could be followed.
+async function fetchMissingIntermediatePems(hostname, port) {
   // Read the site's own certificate WITHOUT trusting it for any data: this
   // connection only looks at the certificate, then closes. Nothing is sent.
   const leaf = await new Promise((resolve, reject) => {
@@ -425,19 +450,30 @@ async function fetchMissingIntermediatePem(hostname, port) {
     sock.on('error', reject);
     sock.setTimeout(8000, () => sock.destroy(new Error('Certificate lookup timed out')));
   });
-  const aia = leaf && leaf.infoAccess && leaf.infoAccess['CA Issuers - URI'];
-  const issuerUrls = Array.isArray(aia) ? aia : (aia ? [aia] : []);
-  for (const certUrl of issuerUrls) {
-    try {
-      const raw = await downloadSmallCertificate(certUrl);
-      const text = raw.toString('latin1');
-      const x509 = text.includes('BEGIN CERTIFICATE') ? new crypto.X509Certificate(text) : new crypto.X509Certificate(raw);
-      return x509.toString();
-    } catch (e) {
-      console.warn('[Diary] Image re-host: could not get intermediate certificate from', certUrl, '—', e.message);
-    }
+  let urls = caIssuerUrlsOf(leaf && leaf.infoAccess && leaf.infoAccess['CA Issuers - URI']);
+  if (!urls.length) {
+    console.warn('[Diary] Image re-host: certificate of', hostname, 'has no CA Issuers address to follow');
+    return null;
   }
-  return null;
+  const pems = [];
+  for (let depth = 0; depth < 4 && urls.length; depth++) {
+    let x509 = null;
+    for (const certUrl of urls) {
+      try {
+        const raw = await downloadSmallCertificate(certUrl);
+        const text = raw.toString('latin1');
+        x509 = text.includes('BEGIN CERTIFICATE') ? new crypto.X509Certificate(text) : new crypto.X509Certificate(raw);
+        break;
+      } catch (e) {
+        console.warn('[Diary] Image re-host: could not get intermediate certificate from', certUrl, '—', e.message);
+      }
+    }
+    if (!x509) break;
+    pems.push(x509.toString());
+    if (x509.subject === x509.issuer || trustedRootSubjects().has(x509.issuer)) return pems;
+    urls = caIssuerUrlsOf(x509.infoAccess);
+  }
+  return pems.length ? pems : null;
 }
 
 async function fetchImageHandlingMissingIntermediate(url, extraHeaders) {
@@ -446,9 +482,9 @@ async function fetchImageHandlingMissingIntermediate(url, extraHeaders) {
   } catch (e) {
     if (!isMissingIntermediateError(e)) throw e;
     const parsed = new URL(url);
-    const pem = await fetchMissingIntermediatePem(parsed.hostname, parsed.port);
-    if (!pem) throw e;
-    return await fetchImageWithLegacyTls(url, extraHeaders, { ca: [...tls.rootCertificates, pem] });
+    const pems = await fetchMissingIntermediatePems(parsed.hostname, parsed.port);
+    if (!pems) throw e;
+    return await fetchImageWithLegacyTls(url, extraHeaders, { ca: [...tls.rootCertificates, ...pems] });
   }
 }
 
