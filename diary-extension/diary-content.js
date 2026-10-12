@@ -4954,14 +4954,14 @@ function queryAllDeep(selector) {
     return order.filter(function(u) { return u.indexOf('blob:') === 0 || keepWeb.indexOf(u) !== -1; });
   }
 
-  // Gemini: your uploaded picture sits in the question (img[uploaded-img])
+  // Gemini: your uploaded picture sits in the question (img[data-test-id="uploaded-img"])
   // and a generated picture in <generated-image> beside the answer text,
   // as a blob: address (confirmed on a live page). Neither is inside the
   // answer element, so read both here, in page order. Web pictures from a
   // search keep going through the existing path.
   function getGeminiPageImageUrls() {
     var out = [];
-    Array.from(document.querySelectorAll('img[uploaded-img], generated-image img')).forEach(function(img) {
+    Array.from(document.querySelectorAll('img[data-test-id="uploaded-img"], generated-image img')).forEach(function(img) {
       var src = img.currentSrc || img.src || '';
       var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0);
       if (!src || size < 100) return;
