@@ -1042,7 +1042,7 @@ function queryAllDeep(selector) {
       const imgUrls = imgEls.map(function(img) {
         return img.src || '';
       }).filter(function(src) {
-        if (!src || src.startsWith('data:image/svg') || src.startsWith('data:image/gif') || src.startsWith('data:image/png;base64')) return false;
+        if (!src || src.startsWith('blob:') || src.startsWith('data:image/svg') || src.startsWith('data:image/gif') || src.startsWith('data:image/png;base64')) return false;
         if (src.includes('avatar') || src.includes('logo') || src.includes('icon')) return false;
         // NOTE: excludes Gemini's generic file-type icon graphics
         // specifically — confirmed live from real DOM captured during
@@ -2412,6 +2412,10 @@ function queryAllDeep(selector) {
         if (PROVIDER === 'chatgpt') {
           try { images = getChatGPTPageImageUrls().concat(images); } catch (e) {}
         }
+        // Gemini: your uploaded picture and the ones it generates.
+        if (PROVIDER === 'gemini') {
+          try { images = getGeminiPageImageUrls().concat(images); } catch (e) {}
+        }
         // ChatGPT second layout: read pictures straight from the page at
         // save time (a turn may not have been captured yet, or was
         // captured before its pictures finished loading).
@@ -2432,7 +2436,12 @@ function queryAllDeep(selector) {
             images = images.concat(getCurrentTurnImageUrls(_imgCfg));
           }
         } catch (e) {}
-        if (images.length === 0 && ['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
+        if (PROVIDER === 'gemini') {
+          // Gemini already has its own uploaded/generated pictures above;
+          // search pictures must still be added, not skipped.
+          var _gemSearchImgs = await captureResponseImages(token);
+          images = images.concat(_gemSearchImgs || []);
+        } else if (images.length === 0 && ['claude','chatgpt','perplexity'].includes(PROVIDER)) {
           images = await captureResponseImages(token);
         }
         images = images.filter(function(s,i,a){ return a.indexOf(s)===i; }); // dedupe
@@ -3183,6 +3192,12 @@ function queryAllDeep(selector) {
           }
         }
         var contentToSave = stripCitations(fullThread);
+        // A picture written into the text as ![..](blob:..) points at a
+        // temporary address that only exists in this open tab, so the Diary
+        // would show it as raw text. The picture itself is saved separately.
+        if (contentToSave) {
+          contentToSave = contentToSave.replace(/!\[[^\]]*\]\(blob:[^)]*\)/g, '').replace(/\n{3,}/g, '\n\n');
+        }
         // Guard MUST come before the diagnostic log below, not after —
         // confirmed live as the actual, root cause of a "Cannot read
         // properties of null (reading 'slice')" crash: this pre-
@@ -4832,6 +4847,10 @@ function queryAllDeep(selector) {
   // Hosts whose image links only open while the user is signed in, so the
   // Diary server can't fetch them itself. Add a host here to cover it.
   var SESSION_IMAGE_HOSTS = ['assets.grok.com', 'claude.ai', 'chatgpt.com'];
+  // Pictures whose address carries its own access token (Gemini's uploaded
+  // pictures). Read here without cookies; if Google does not allow that,
+  // the plain address is kept and the server tries it, as before.
+  var TOKEN_IMAGE_HOSTS = ['lh3.googleusercontent.com'];
   var SESSION_IMAGE_MAX = 5;
   var SESSION_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -4890,10 +4909,12 @@ function queryAllDeep(selector) {
         } catch (e) {}
         continue;
       }
-      if (!host || SESSION_IMAGE_HOSTS.indexOf(host) === -1 || done >= SESSION_IMAGE_MAX) { out.push(u); continue; }
+      var isSessionHost = SESSION_IMAGE_HOSTS.indexOf(host) !== -1;
+      var isTokenHost = TOKEN_IMAGE_HOSTS.indexOf(host) !== -1;
+      if (!host || (!isSessionHost && !isTokenHost) || done >= SESSION_IMAGE_MAX) { out.push(u); continue; }
       done++;
       try {
-        var r = await fetch(u, { credentials: 'include' });
+        var r = await fetch(u, { credentials: isSessionHost ? 'include' : 'omit' });
         if (!r.ok) { out.push(u); continue; }
         var b = await r.blob();
         if (!b.size || b.size > SESSION_IMAGE_MAX_BYTES || !/^image\//.test(b.type)) { out.push(u); continue; }
@@ -4931,6 +4952,22 @@ function queryAllDeep(selector) {
     });
     var keepWeb = filterCapturedImageUrls(web);
     return order.filter(function(u) { return u.indexOf('blob:') === 0 || keepWeb.indexOf(u) !== -1; });
+  }
+
+  // Gemini: your uploaded picture sits in the question (img[uploaded-img])
+  // and a generated picture in <generated-image> beside the answer text,
+  // as a blob: address (confirmed on a live page). Neither is inside the
+  // answer element, so read both here, in page order. Web pictures from a
+  // search keep going through the existing path.
+  function getGeminiPageImageUrls() {
+    var out = [];
+    Array.from(document.querySelectorAll('img[uploaded-img], generated-image img')).forEach(function(img) {
+      var src = img.currentSrc || img.src || '';
+      var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0);
+      if (!src || size < 100) return;
+      if (src.indexOf('blob:') === 0 || /^https?:/.test(src)) out.push(src);
+    });
+    return out;
   }
 
   function filterCapturedImageUrls(rawImgUrls) {
