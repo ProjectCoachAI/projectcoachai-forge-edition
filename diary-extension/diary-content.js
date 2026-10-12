@@ -4847,9 +4847,9 @@ function queryAllDeep(selector) {
   // Hosts whose image links only open while the user is signed in, so the
   // Diary server can't fetch them itself. Add a host here to cover it.
   var SESSION_IMAGE_HOSTS = ['assets.grok.com', 'claude.ai', 'chatgpt.com'];
-  // Pictures whose address carries its own access token (Gemini's uploaded
-  // pictures). Read here without cookies; if Google does not allow that,
-  // the plain address is kept and the server tries it, as before.
+  // Pictures that only open with the user's Google sign-in and that this page
+  // may not read itself (Gemini's uploaded pictures). The extension's
+  // background script reads them; see hostInlineImages() in background.js.
   var TOKEN_IMAGE_HOSTS = ['lh3.googleusercontent.com'];
   var SESSION_IMAGE_MAX = 5;
   var SESSION_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
@@ -4911,10 +4911,20 @@ function queryAllDeep(selector) {
       }
       var isSessionHost = SESSION_IMAGE_HOSTS.indexOf(host) !== -1;
       var isTokenHost = TOKEN_IMAGE_HOSTS.indexOf(host) !== -1;
-      if (!host || (!isSessionHost && !isTokenHost) || done >= SESSION_IMAGE_MAX) { out.push(u); continue; }
+      if (isTokenHost) {
+        // This page is not allowed to read these pictures (Google's cross-
+        // origin rules), so hand the address to the extension's background
+        // script, which reads it with the user's sign-in. A picture beyond
+        // the limit is left out rather than saved as a link that cannot open.
+        if (done >= SESSION_IMAGE_MAX) continue;
+        done++;
+        out.push({ originalUrl: u, viaBackground: true });
+        continue;
+      }
+      if (!host || !isSessionHost || done >= SESSION_IMAGE_MAX) { out.push(u); continue; }
       done++;
       try {
-        var r = await fetch(u, { credentials: isSessionHost ? 'include' : 'omit' });
+        var r = await fetch(u, { credentials: 'include' });
         if (!r.ok) { out.push(u); continue; }
         var b = await r.blob();
         if (!b.size || b.size > SESSION_IMAGE_MAX_BYTES || !/^image\//.test(b.type)) { out.push(u); continue; }

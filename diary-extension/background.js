@@ -867,10 +867,44 @@ function waitForTabComplete(tabId) {
 // stored through the existing /upload-attachment route and handed to the
 // save as an already-hosted image. Anything that can't be stored falls
 // back to its plain URL, which is exactly what was sent before.
+//
+// A third kind, { originalUrl, viaBackground: true }, is a picture that opens
+// only with the user's Google sign-in and that the page itself may not read
+// (Gemini's uploaded pictures). It is read here with that sign-in and then
+// stored the same way. If it cannot be read it is left out entirely (null),
+// never saved as a link that could not open later.
+async function readPictureWithSignIn(url) {
+  const MAX_BYTES = 5 * 1024 * 1024;
+  const r = await fetch(url, { credentials: 'include' });
+  if (!r.ok) throw new Error('status ' + r.status);
+  const type = (r.headers.get('content-type') || '').split(';')[0].trim();
+  if (!/^image\//.test(type)) throw new Error('not an image: ' + type);
+  const buf = new Uint8Array(await r.arrayBuffer());
+  if (!buf.length || buf.length > MAX_BYTES) throw new Error('size ' + buf.length);
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  }
+  return { inlineData: btoa(bin), contentType: type };
+}
+
 async function hostInlineImages(images, existingImages, API, token) {
   // In parallel (order preserved): the page waits only a short while for
   // the save to answer, so several sequential uploads must not add up.
-  return Promise.all((images || []).map(async function(img) {
+  const hosted = await Promise.all((images || []).map(async function(img) {
+    if (img && typeof img === 'object' && img.viaBackground && img.originalUrl && !img.inlineData) {
+      try {
+        const already = (existingImages || []).find(function(e) {
+          return e && typeof e === 'object' && e.status === 'hosted' && e.originalUrl === img.originalUrl;
+        });
+        if (already) return img.originalUrl;
+        const got = await readPictureWithSignIn(img.originalUrl);
+        img = { originalUrl: img.originalUrl, inlineData: got.inlineData, contentType: got.contentType, leaveOutOnFailure: true };
+      } catch (e) {
+        console.warn('[Diary BG] Could not read picture with sign-in:', e.message);
+        return null;
+      }
+    }
     if (!(img && typeof img === 'object' && img.inlineData && img.originalUrl)) return img;
     try {
       // Already stored by an earlier save of this same conversation: send
@@ -889,12 +923,23 @@ async function hostInlineImages(images, existingImages, API, token) {
         return { url: d.url, originalUrl: img.originalUrl, status: 'hosted' };
       }
       console.warn('[Diary BG] Inline image upload failed:', d && d.error);
-      return img.originalUrl;
+      return unsavedPicture(img);
     } catch (e) {
       console.warn('[Diary BG] Inline image upload error:', e.message);
-      return img.originalUrl;
+      return unsavedPicture(img);
     }
   }));
+  return hosted.filter(function(x) { return x !== null && x !== undefined; });
+}
+
+// A picture that could not be stored. Normally its plain address is kept (the
+// server may still be able to fetch it). A blob: address, or a picture that
+// only the background script could read, would be a dead link, so it is left
+// out instead.
+function unsavedPicture(img) {
+  if (img.leaveOutOnFailure) return null;
+  if (typeof img.originalUrl === 'string' && img.originalUrl.indexOf('blob:') === 0) return null;
+  return img.originalUrl;
 }
 
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {

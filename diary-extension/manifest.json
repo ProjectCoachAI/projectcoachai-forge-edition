@@ -23,6 +23,7 @@
     "https://api.projectcoachai.com/*",
     "https://diary.projectcoachai.com/*",
     "https://*.googleapis.com/*",
+    "https://lh3.googleusercontent.com/*",
     "https://*.google.com/*",
     "https://*.perplexity.ai/*",
     "https://*.mistral.ai/*",
