@@ -3,6 +3,8 @@ const express = require('express');
 const crypto  = require('crypto');
 const router  = express.Router();
 const https   = require('https');
+const http    = require('http');
+const tls     = require('tls');
 const { requireAuth } = require('../middleware/auth');
 const db = require('../lib/db');
 // Sync/merge logic, and the message-splitting helper it depends on,
@@ -306,7 +308,7 @@ function isHandshakeError(e) {
   return e && (e.code === 'EPROTO' || /ssl|tls|handshake/i.test(e.message || ''));
 }
 
-function attemptImageFetch(url, tlsConfig, extraHeaders) {
+function attemptImageFetch(url, tlsConfig, extraHeaders, extraAgentOpts) {
   return new Promise((resolve, reject) => {
     let parsed;
     try { parsed = new URL(url); } catch (e) { reject(e); return; }
@@ -323,6 +325,7 @@ function attemptImageFetch(url, tlsConfig, extraHeaders) {
     // entirely, exactly matching the proven-working call elsewhere.
     const requestOptions = {
       hostname: parsed.hostname,
+      port: parsed.port || undefined,
       path: parsed.pathname + parsed.search,
       method: 'GET',
       headers: {
@@ -331,8 +334,8 @@ function attemptImageFetch(url, tlsConfig, extraHeaders) {
         ...(extraHeaders || {}),
       },
     };
-    if (tlsConfig.ciphers || tlsConfig.minVersion) {
-      const agentOpts = { keepAlive: false };
+    if (tlsConfig.ciphers || tlsConfig.minVersion || extraAgentOpts) {
+      const agentOpts = { keepAlive: false, ...(extraAgentOpts || {}) };
       if (tlsConfig.ciphers) agentOpts.ciphers = tlsConfig.ciphers;
       if (tlsConfig.minVersion) agentOpts.minVersion = tlsConfig.minVersion;
       requestOptions.agent = new https.Agent(agentOpts);
@@ -350,11 +353,11 @@ function attemptImageFetch(url, tlsConfig, extraHeaders) {
   });
 }
 
-async function fetchImageWithLegacyTls(url, extraHeaders) {
+async function fetchImageWithLegacyTls(url, extraHeaders, extraAgentOpts) {
   let lastError;
   for (const tlsConfig of TLS_CONFIGS) {
     try {
-      const result = await attemptImageFetch(url, tlsConfig, extraHeaders);
+      const result = await attemptImageFetch(url, tlsConfig, extraHeaders, extraAgentOpts);
       return result;
     } catch (e) {
       lastError = e;
@@ -377,6 +380,78 @@ function isPrivateImageHost(host) {
     /^(127|10|0)\./.test(h) || /^192\.168\./.test(h) || /^169\.254\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
 }
 
+// Some sites send only their own certificate and leave out the
+// intermediate one that links it to a trusted authority. Browsers quietly
+// download the missing piece (the certificate names where, in its "CA
+// Issuers" entry); Node does not, and reports "unable to verify the first
+// certificate" — which made every picture from such a site fail to save
+// (confirmed live: lsuagcenter.com). This does what a browser does: read
+// the address from the certificate, download the intermediate (small, size
+// and time limited, never from a local/private address), and return it as
+// PEM so the request can be retried with the normal trusted roots PLUS that
+// one certificate. Verification stays on; nothing is skipped.
+function isMissingIntermediateError(e) {
+  return !!e && (e.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || /unable to verify the first certificate/i.test(e.message || ''));
+}
+
+function downloadSmallCertificate(certUrl) {
+  return new Promise((resolve, reject) => {
+    let u;
+    try { u = new URL(certUrl); } catch (e) { reject(e); return; }
+    if ((u.protocol !== 'http:' && u.protocol !== 'https:') || isPrivateImageHost(u.hostname)) {
+      reject(new Error('Certificate address not allowed')); return;
+    }
+    const mod = u.protocol === 'https:' ? https : http;
+    const req = mod.get(u, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+      if (res.statusCode !== 200) { res.resume(); reject(new Error('Certificate download status ' + res.statusCode)); return; }
+      const chunks = []; let size = 0;
+      res.on('data', (c) => { size += c.length; if (size > 100000) { req.destroy(new Error('Certificate too large')); return; } chunks.push(c); });
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => req.destroy(new Error('Certificate download timed out')));
+  });
+}
+
+async function fetchMissingIntermediatePem(hostname, port) {
+  // Read the site's own certificate WITHOUT trusting it for any data: this
+  // connection only looks at the certificate, then closes. Nothing is sent.
+  const leaf = await new Promise((resolve, reject) => {
+    const sock = tls.connect({ host: hostname, port: Number(port) || 443, servername: hostname, rejectUnauthorized: false }, () => {
+      const c = sock.getPeerCertificate(true);
+      sock.end();
+      resolve(c);
+    });
+    sock.on('error', reject);
+    sock.setTimeout(8000, () => sock.destroy(new Error('Certificate lookup timed out')));
+  });
+  const aia = leaf && leaf.infoAccess && leaf.infoAccess['CA Issuers - URI'];
+  const issuerUrls = Array.isArray(aia) ? aia : (aia ? [aia] : []);
+  for (const certUrl of issuerUrls) {
+    try {
+      const raw = await downloadSmallCertificate(certUrl);
+      const text = raw.toString('latin1');
+      const x509 = text.includes('BEGIN CERTIFICATE') ? new crypto.X509Certificate(text) : new crypto.X509Certificate(raw);
+      return x509.toString();
+    } catch (e) {
+      console.warn('[Diary] Image re-host: could not get intermediate certificate from', certUrl, '—', e.message);
+    }
+  }
+  return null;
+}
+
+async function fetchImageHandlingMissingIntermediate(url, extraHeaders) {
+  try {
+    return await fetchImageWithLegacyTls(url, extraHeaders);
+  } catch (e) {
+    if (!isMissingIntermediateError(e)) throw e;
+    const parsed = new URL(url);
+    const pem = await fetchMissingIntermediatePem(parsed.hostname, parsed.port);
+    if (!pem) throw e;
+    return await fetchImageWithLegacyTls(url, extraHeaders, { ca: [...tls.rootCertificates, pem] });
+  }
+}
+
 async function fetchImageFollowingRedirects(startUrl) {
   let current = String(startUrl || '');
   if (/^http:\/\//i.test(current)) current = 'https://' + current.slice(7);
@@ -387,7 +462,7 @@ async function fetchImageFollowingRedirects(startUrl) {
     if (parsed.protocol !== 'https:' || isPrivateImageHost(parsed.hostname)) {
       throw new Error('Image address not allowed: ' + parsed.hostname);
     }
-    const r = await fetchImageWithLegacyTls(current, referer ? { 'Referer': referer } : undefined);
+    const r = await fetchImageHandlingMissingIntermediate(current, referer ? { 'Referer': referer } : undefined);
     last = r;
     if ([301, 302, 303, 307, 308].includes(r.status) && r.location) {
       current = new URL(r.location, current).toString();
