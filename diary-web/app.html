@@ -2421,10 +2421,20 @@ function renderEntryCard(e) {
         var status = isObj ? img.status : 'hosted';
         if (status === 'failed') {
           var fallbackUrl = (isObj && img.originalUrl) || url;
-          return '<div style="width:150px;height:150px;border-radius:8px;background:#F5F3EE;border:1px dashed #D6D2C8;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:10px;color:#9E9890;padding:8px;gap:4px;">' +
+          var failTile = '<div style="width:150px;height:150px;border-radius:8px;background:#F5F3EE;border:1px dashed #D6D2C8;display:__DISP__;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:10px;color:#9E9890;padding:8px;gap:4px;">' +
             '<span>This image couldn\u2019t be saved for offline viewing</span>' +
             '<a href="' + escHtml(fallbackUrl) + '" target="_blank" onclick="event.stopPropagation();" style="color:#C17D3C;font-weight:500;">View original &#8599;</a>' +
             '</div>';
+          // The copy couldn't be stored, but the browser can often still
+          // load the picture from its original address. Try that first;
+          // only if it also fails to load, show the labeled tile.
+          if (/^https?:\/\//.test(fallbackUrl)) {
+            return '<span style="display:inline-block;">' +
+              '<a href="' + escHtml(fallbackUrl) + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">' +
+              '<img src="' + escHtml(fallbackUrl) + '" referrerpolicy="no-referrer" style="width:150px;height:150px;border-radius:8px;object-fit:cover;display:block;" onerror="var w=this.parentNode.parentNode;w.firstChild.style.display=\'none\';w.lastChild.style.display=\'flex\'"/></a>' +
+              failTile.replace('__DISP__', 'none') + '</span>';
+          }
+          return failTile.replace('__DISP__', 'flex');
         }
         var galleryIndex = galleryUrls.indexOf(url);
         return '<img src="' + escHtml(url) + '" onclick="event.stopPropagation();openImageZoom(' + galleryUrlsJson + ',' + Math.max(0, galleryIndex) + ')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>';
