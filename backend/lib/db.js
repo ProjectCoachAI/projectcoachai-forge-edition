@@ -1198,6 +1198,8 @@ function findChecklistCandidates(text) {
   }
   // A list made only of links is a list of sources, not tasks.
   function isLinkOnly(t) { return /^\[[^\]]*\]\([^)]+\)$/.test(t) || /^https?:\/\/\S+$/.test(t); }
+  // Width of a line's leading whitespace (a tab counts as four spaces).
+  function indentOf(line) { return (line.match(/^[ \t]*/)[0] || '').replace(/\t/g, '    ').length; }
   function itemText(line) {
     const m = line.match(/^[ \t]*[-*•] (.+)/) || line.match(/^[ \t]*\d+\. (.+)/);
     return m ? m[1].trim() : '';
@@ -1213,12 +1215,29 @@ function findChecklistCandidates(text) {
       const items = [];
       const position = i;
       let linkOnly = true;
+      // A bullet indented under an earlier item belongs to that item (it
+      // finishes its sentence), so it is folded into the item instead of
+      // becoming a checklist line of its own.
+      const baseIndent = indentOf(lines[i]);
+      let subs = [];
+      function closeItem() {
+        if (!items.length || !subs.length) { subs = []; return; }
+        const parent = items[items.length - 1];
+        items[items.length - 1] = parent + (/[:;,]$/.test(parent) ? ' ' : ': ') + subs.join('; ');
+        subs = [];
+      }
       while (i < lines.length && isListLine(lines[i])) {
         const raw = itemText(lines[i]);
         if (!isLinkOnly(raw)) linkOnly = false;
-        items.push(plainItem(raw));
+        if (items.length && indentOf(lines[i]) > baseIndent) {
+          subs.push(plainItem(raw).replace(/[.;]+$/, ''));
+        } else {
+          closeItem();
+          items.push(plainItem(raw));
+        }
         i++;
       }
+      closeItem();
       // A single bullet on its own isn't meaningfully a "checklist" —
       // not worth spending a classification call on.
       if (items.length >= 2 && !linkOnly) candidates.push({ items, position });
