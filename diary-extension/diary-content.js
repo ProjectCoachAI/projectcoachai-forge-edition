@@ -2412,6 +2412,10 @@ function queryAllDeep(selector) {
         if (PROVIDER === 'chatgpt') {
           try { images = getChatGPTPageImageUrls().concat(images); } catch (e) {}
         }
+        // Perplexity: your uploaded pictures and the ones it generates.
+        if (PROVIDER === 'perplexity') {
+          try { images = getPerplexityPageImageUrls().concat(images); } catch (e) {}
+        }
         // Gemini: your uploaded picture and the ones it generates.
         if (PROVIDER === 'gemini') {
           try { images = getGeminiPageImageUrls().concat(images); } catch (e) {}
@@ -4962,6 +4966,27 @@ function queryAllDeep(selector) {
     });
     var keepWeb = filterCapturedImageUrls(web);
     return order.filter(function(u) { return u.indexOf('blob:') === 0 || keepWeb.indexOf(u) !== -1; });
+  }
+
+  // Perplexity: a picture you upload and one it generates are not part of the
+  // picture groups in the thread data, but both are plain <img> elements on
+  // the page (confirmed on a live page): uploads on ppl-ai-file-upload and
+  // generated pictures on user-gen-media-assets, both on amazonaws.com. Read
+  // those, in page order; the small site icons are different addresses and
+  // are not picked up.
+  function getPerplexityPageImageUrls() {
+    var PREFIXES = [
+      'https://ppl-ai-file-upload.s3.amazonaws.com/',
+      'https://user-gen-media-assets.s3.amazonaws.com/'
+    ];
+    var out = [];
+    Array.from(document.querySelectorAll('img')).forEach(function(img) {
+      var src = img.currentSrc || img.src || '';
+      var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0);
+      if (!src || size < 100) return;
+      if (PREFIXES.some(function(p) { return src.indexOf(p) === 0; }) && out.indexOf(src) === -1) out.push(src);
+    });
+    return out;
   }
 
   // Gemini: your uploaded picture sits in the question (img[data-test-id="uploaded-img"])
