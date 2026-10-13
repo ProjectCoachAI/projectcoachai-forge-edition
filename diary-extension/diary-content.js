@@ -2412,10 +2412,6 @@ function queryAllDeep(selector) {
         if (PROVIDER === 'chatgpt') {
           try { images = getChatGPTPageImageUrls().concat(images); } catch (e) {}
         }
-        // Perplexity: your uploaded pictures and the ones it generates.
-        if (PROVIDER === 'perplexity') {
-          try { images = getPerplexityPageImageUrls().concat(images); } catch (e) {}
-        }
         // Gemini: your uploaded picture and the ones it generates.
         if (PROVIDER === 'gemini') {
           try { images = getGeminiPageImageUrls().concat(images); } catch (e) {}
@@ -2447,6 +2443,15 @@ function queryAllDeep(selector) {
           images = images.concat(_gemSearchImgs || []);
         } else if (images.length === 0 && ['claude','chatgpt','perplexity'].includes(PROVIDER)) {
           images = await captureResponseImages(token);
+        }
+        // Perplexity: your uploaded pictures and the ones it generates. Added
+        // last on purpose: Forge receives only the last few pictures of an
+        // entry, and your own pictures matter more than web search results.
+        if (PROVIDER === 'perplexity') {
+          try {
+            var _pplxOwn = getPerplexityPageImageUrls();
+            images = images.filter(function(u) { return _pplxOwn.indexOf(u) === -1; }).concat(_pplxOwn);
+          } catch (e) {}
         }
         images = images.filter(function(s,i,a){ return a.indexOf(s)===i; }); // dedupe
         // Pictures that only open while signed in to the AI site (Grok's own
