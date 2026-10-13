@@ -1881,6 +1881,21 @@ function queryAllDeep(selector) {
             var firstQ = null;
             var lastRole = null;
             var unfinished = false;
+            // Pictures you uploaded, listed in the thread data (the page drops
+            // old messages as you scroll, so the page alone can miss them).
+            var fileImages = [];
+            chain.forEach(function(m) {
+              if (m.role !== 'USER') return;
+              (m.fragments || []).forEach(function(f) {
+                if (!f || f.type !== 'FILE' || !Array.isArray(f.files)) return;
+                f.files.forEach(function(fi) {
+                  if (fi && fi.is_image && fi.status === 'SUCCESS' && typeof fi.signed_path === 'string' && fi.signed_path.indexOf('/file?') === 0) {
+                    fileImages.push('https://files.deepseeksvc.com/api' + fi.signed_path + '&ty=p');
+                  }
+                });
+              });
+            });
+            window.__diaryDeepSeekFileImages = { chat: idm[0], urls: fileImages };
             chain.forEach(function(m) {
               if (m.status && m.status !== 'FINISHED') unfinished = true;
               if (m.role === 'USER') {
@@ -2418,7 +2433,16 @@ function queryAllDeep(selector) {
         }
         // DeepSeek: the picture you upload sits in your question.
         if (PROVIDER === 'deepseek') {
-          try { images = getDeepSeekPageImageUrls().concat(images); } catch (e) {}
+          try {
+            var _dsFromThread = [];
+            var _dsStore = window.__diaryDeepSeekFileImages;
+            var _dsChat = (window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i) || [''])[0];
+            if (_dsStore && _dsStore.chat === _dsChat && Array.isArray(_dsStore.urls)) _dsFromThread = _dsStore.urls.slice();
+            var _dsIdOf = function(u) { var m = /file_id=([0-9a-f-]+)/i.exec(u); return m ? m[1] : u; };
+            var _dsHave = _dsFromThread.map(_dsIdOf);
+            var _dsFromPage = getDeepSeekPageImageUrls().filter(function(u) { return _dsHave.indexOf(_dsIdOf(u)) === -1; });
+            images = _dsFromThread.concat(_dsFromPage).concat(images);
+          } catch (e) {}
         }
         // ChatGPT second layout: read pictures straight from the page at
         // save time (a turn may not have been captured yet, or was
