@@ -609,7 +609,13 @@
             }
           }
         }
-        if (!answerParts.length) continue;
+        if (!answerParts.length) {
+          // A turn with no written answer (a picture-only reply, or a
+          // cancelled one) keeps its question, so the questions stay in
+          // chat order instead of being stacked at the end of the entry.
+          parts.push(boldQuestion(question.slice(0, 2000)));
+          continue;
+        }
         // Perplexity's answer text carries bare numeric markers ("[1][2]").
         // The matching source URLs sit in the same entry's blocks, in
         // citation order, so turn each marker into a real markdown link.
