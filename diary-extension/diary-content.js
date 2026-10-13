@@ -2416,6 +2416,10 @@ function queryAllDeep(selector) {
         if (PROVIDER === 'gemini') {
           try { images = getGeminiPageImageUrls().concat(images); } catch (e) {}
         }
+        // DeepSeek: the picture you upload sits in your question.
+        if (PROVIDER === 'deepseek') {
+          try { images = getDeepSeekPageImageUrls().concat(images); } catch (e) {}
+        }
         // ChatGPT second layout: read pictures straight from the page at
         // save time (a turn may not have been captured yet, or was
         // captured before its pictures finished loading).
@@ -4865,7 +4869,10 @@ function queryAllDeep(selector) {
   // function means any future fix here only ever needs to happen once.
   // Hosts whose image links only open while the user is signed in, so the
   // Diary server can't fetch them itself. Add a host here to cover it.
-  var SESSION_IMAGE_HOSTS = ['assets.grok.com', 'claude.ai', 'chatgpt.com'];
+  var SESSION_IMAGE_HOSTS = ['assets.grok.com', 'claude.ai', 'chatgpt.com', 'files.deepseeksvc.com'];
+  // Hosts that allow this page to read a picture only when the request carries
+  // no cookies (DeepSeek's uploaded pictures; the address itself is signed).
+  var NO_COOKIE_IMAGE_HOSTS = ['files.deepseeksvc.com'];
   // Pictures that only open with the user's Google sign-in and that this page
   // may not read itself (Gemini's uploaded pictures). The extension's
   // background script reads them; see hostInlineImages() in background.js.
@@ -4943,7 +4950,7 @@ function queryAllDeep(selector) {
       if (!host || !isSessionHost || done >= SESSION_IMAGE_MAX) { out.push(u); continue; }
       done++;
       try {
-        var r = await fetch(u, { credentials: 'include' });
+        var r = await fetch(u, { credentials: NO_COOKIE_IMAGE_HOSTS.indexOf(host) !== -1 ? 'omit' : 'include' });
         if (!r.ok) { out.push(u); continue; }
         var b = await r.blob();
         if (!b.size || b.size > SESSION_IMAGE_MAX_BYTES || !/^image\//.test(b.type)) { out.push(u); continue; }
@@ -5016,6 +5023,20 @@ function queryAllDeep(selector) {
       var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0);
       if (!src || size < 100) return;
       if (src.indexOf('blob:') === 0 || /^https?:/.test(src)) out.push(src);
+    });
+    return out;
+  }
+
+  // DeepSeek: a picture you upload is a plain <img> in the question, on
+  // files.deepseeksvc.com (confirmed on a live page). The thread data lists it
+  // only as an empty file entry, so read it from the page, in page order.
+  function getDeepSeekPageImageUrls() {
+    var out = [];
+    Array.from(document.querySelectorAll('img')).forEach(function(img) {
+      var src = img.currentSrc || img.src || '';
+      var size = Math.max(img.naturalWidth || 0, img.offsetWidth || 0);
+      if (!src || size < 100) return;
+      if (src.indexOf('https://files.deepseeksvc.com/api/file') === 0 && out.indexOf(src) === -1) out.push(src);
     });
     return out;
   }
