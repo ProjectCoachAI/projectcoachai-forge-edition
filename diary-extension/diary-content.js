@@ -4771,7 +4771,8 @@ function queryAllDeep(selector) {
               // citation URL, so without this rule its label leaked into the
               // saved text glued to the sentence ("...boils:spicedblog+2").
               // Dropped here; the pictures themselves are not in the page
-              // until the popup is opened. Guarded so a real citation pill
+              // until the popup is opened. Also dropped: a single-site
+              // picture chip (photo icon, no "+N"). Guarded so a real citation pill
               // (data-pplx-citation-url, on itself or inside) is never
               // touched.
               filter: function(node) {
@@ -4781,7 +4782,16 @@ function queryAllDeep(selector) {
                 if (cls.indexOf('cursor-pointer') === -1 || cls.indexOf('rounded-md') === -1 || cls.indexOf('group') === -1) return false;
                 if (node.getAttribute('data-pplx-citation-url')) return false;
                 if (node.querySelector && node.querySelector('[data-pplx-citation-url], a[href]')) return false;
-                return /\+\d+\s*$/.test((node.textContent || '').trim());
+                if (/\+\d+\s*$/.test((node.textContent || '').trim())) return true;
+                // A picture source with just one site ("getyourguide") has
+                // no "+N", but carries the photo icon (confirmed on a live
+                // page: <use xlink:href="#pplx-icon-photo">).
+                var uses = node.querySelectorAll ? node.querySelectorAll('use') : [];
+                for (var ui = 0; ui < uses.length; ui++) {
+                  var ref = uses[ui].getAttribute('xlink:href') || uses[ui].getAttribute('href') || '';
+                  if (ref.indexOf('pplx-icon-photo') !== -1) return true;
+                }
+                return false;
               },
               replacement: function() { return ''; }
             });
