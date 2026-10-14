@@ -1760,10 +1760,21 @@ function queryAllDeep(selector) {
             // Pictures you uploaded are listed on your own messages; the page
             // shows only a tiny preview of each.
             var grokFileImages = [];
+            var grokGenImages = [];
             orderIds.forEach(function(id) {
               var r = byResp[id];
               if (!r) { missing++; return; }
               if (r.isControl) return;
+              // A picture Grok generated is listed as a card on its answer.
+              if (r.sender === 'assistant' && Array.isArray(r.cardAttachmentsJson)) {
+                r.cardAttachmentsJson.forEach(function(cj) {
+                  try {
+                    var gc = JSON.parse(cj);
+                    var gu = gc && gc.type === 'render_generated_image' && gc.image_chunk && gc.image_chunk.imageUrl;
+                    if (typeof gu === 'string' && /^users\/[0-9a-f-]+\/generated\/[0-9a-f-]+\/[\w.-]+$/i.test(gu)) grokGenImages.push('https://assets.grok.com/' + gu);
+                  } catch(_) {}
+                });
+              }
               if (r.sender === 'human' && Array.isArray(r.fileAttachmentsMetadata)) {
                 r.fileAttachmentsMetadata.forEach(function(fm) {
                   if (fm && /^image\//.test(String(fm.fileMimeType || '')) && typeof fm.fileUri === 'string' && /^users\/[0-9a-f-]+\/[0-9a-f-]+\/content$/i.test(fm.fileUri)) {
@@ -1803,7 +1814,7 @@ function queryAllDeep(selector) {
                 lastRole = 'assistant';
               }
             });
-            window.__diaryGrokFileImages = { chat: idm[0], urls: grokFileImages };
+            window.__diaryGrokFileImages = { chat: idm[0], urls: grokFileImages, generated: grokGenImages };
             if (loadFailed || missing) reason = 'could not load ' + (missing || 'some') + ' response(s)';
             else if (anyPartial) reason = 'an answer is still partial';
             else if (lastRole !== 'assistant') reason = 'newest answer not available yet';
@@ -2497,7 +2508,14 @@ function queryAllDeep(selector) {
                 if (_gkUp.indexOf(full) === -1) _gkUp.push(full);
               }
             });
-            images = _gkUp.concat(images);
+            // Pictures Grok generated: from the thread data, then any still on the page.
+            var _gkGen = (_gkStore && _gkStore.chat === _gkChat && Array.isArray(_gkStore.generated)) ? _gkStore.generated.slice() : [];
+            Array.from(document.querySelectorAll('img')).forEach(function(im) {
+              var src = im.currentSrc || im.src || '';
+              var size = Math.max(im.naturalWidth || 0, im.offsetWidth || 0);
+              if (size >= 100 && /^https:\/\/assets\.grok\.com\/users\/[0-9a-f-]+\/generated\/[0-9a-f-]+\/image\.[a-z]+$/i.test(src) && _gkGen.indexOf(src) === -1) _gkGen.push(src);
+            });
+            images = _gkUp.concat(_gkGen).concat(images);
           } catch (e) {}
         }
         // ChatGPT second layout: read pictures straight from the page at
