@@ -91,7 +91,7 @@ async function attemptChatGPTClipboardCapture() {
               trueTurnCount = 0;
               for (var mid in mapping) {
                 var mmsg = mapping[mid] && mapping[mid].message;
-                if (mmsg && mmsg.content && mmsg.content.content_type === 'text') {
+                if (mmsg && mmsg.content && (mmsg.content.content_type === 'text' || mmsg.content.content_type === 'multimodal_text')) {
                   var mrole = mmsg.author && mmsg.author.role;
                   if (mrole === 'user' || mrole === 'assistant') trueTurnCount++;
                 }

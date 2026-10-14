@@ -498,7 +498,7 @@
         var parts2 = [];
         for (var i = 0; i < json.messages.length; i++) {
           var msg = json.messages[i];
-          if (!msg || !msg.content || msg.content.content_type !== 'text') continue;
+          if (!msg || !msg.content || (msg.content.content_type !== 'text' && msg.content.content_type !== 'multimodal_text')) continue;
           var role = msg.author && msg.author.role;
           if (role !== 'user' && role !== 'assistant') continue;
           var parts = msg.content.parts;
@@ -536,7 +536,7 @@
       for (var j = 0; j < chain.length; j++) {
         var node = mapping[chain[j]];
         var msgm = node && node.message;
-        if (!msgm || !msgm.content || msgm.content.content_type !== 'text') continue;
+        if (!msgm || !msgm.content || (msgm.content.content_type !== 'text' && msgm.content.content_type !== 'multimodal_text')) continue;
         var rolem = msgm.author && msgm.author.role;
         if (rolem !== 'user' && rolem !== 'assistant') continue;
         var partsm = msgm.content.parts;
@@ -1012,7 +1012,7 @@
               if (json && json.mapping) {
                 for (var mid in json.mapping) {
                   var mmsg = json.mapping[mid] && json.mapping[mid].message;
-                  if (mmsg && mmsg.content && mmsg.content.content_type === 'text') {
+                  if (mmsg && mmsg.content && (mmsg.content.content_type === 'text' || mmsg.content.content_type === 'multimodal_text')) {
                     var mrole = mmsg.author && mmsg.author.role;
                     if (mrole === 'user' || mrole === 'assistant') turnCount++;
                   }
