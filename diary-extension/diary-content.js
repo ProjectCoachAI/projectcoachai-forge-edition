@@ -1757,10 +1757,20 @@ function queryAllDeep(selector) {
             var lastRole = null;
             var anyPartial = false;
             var missing = 0;
+            // Pictures you uploaded are listed on your own messages; the page
+            // shows only a tiny preview of each.
+            var grokFileImages = [];
             orderIds.forEach(function(id) {
               var r = byResp[id];
               if (!r) { missing++; return; }
               if (r.isControl) return;
+              if (r.sender === 'human' && Array.isArray(r.fileAttachmentsMetadata)) {
+                r.fileAttachmentsMetadata.forEach(function(fm) {
+                  if (fm && /^image\//.test(String(fm.fileMimeType || '')) && typeof fm.fileUri === 'string' && /^users\/[0-9a-f-]+\/[0-9a-f-]+\/content$/i.test(fm.fileUri)) {
+                    grokFileImages.push('https://assets.grok.com/' + fm.fileUri);
+                  }
+                });
+              }
               var text = String(r.message || '').trim();
               if (!text) return;
               if (r.sender === 'human') {
@@ -1793,6 +1803,7 @@ function queryAllDeep(selector) {
                 lastRole = 'assistant';
               }
             });
+            window.__diaryGrokFileImages = { chat: idm[0], urls: grokFileImages };
             if (loadFailed || missing) reason = 'could not load ' + (missing || 'some') + ' response(s)';
             else if (anyPartial) reason = 'an answer is still partial';
             else if (lastRole !== 'assistant') reason = 'newest answer not available yet';
@@ -2469,6 +2480,24 @@ function queryAllDeep(selector) {
             var _dsHave = _dsFromThread.map(_dsIdOf);
             var _dsFromPage = getDeepSeekPageImageUrls().filter(function(u) { return _dsHave.indexOf(_dsIdOf(u)) === -1; });
             images = _dsFromThread.concat(_dsFromPage).concat(images);
+          } catch (e) {}
+        }
+        // Grok: the pictures you uploaded. Listed in the thread data; if that
+        // could not be read, fall back to the small previews on the page,
+        // whose full-size address differs only at the end.
+        if (PROVIDER === 'grok') {
+          try {
+            var _gkChat = (window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i) || [''])[0];
+            var _gkStore = window.__diaryGrokFileImages;
+            var _gkUp = (_gkStore && _gkStore.chat === _gkChat && Array.isArray(_gkStore.urls)) ? _gkStore.urls.slice() : [];
+            Array.from(document.querySelectorAll('img')).forEach(function(im) {
+              var src = im.currentSrc || im.src || '';
+              if (/^https:\/\/assets\.grok\.com\/users\/[0-9a-f-]+\/[0-9a-f-]+\/preview-image$/i.test(src)) {
+                var full = src.replace(/preview-image$/, 'content');
+                if (_gkUp.indexOf(full) === -1) _gkUp.push(full);
+              }
+            });
+            images = _gkUp.concat(images);
           } catch (e) {}
         }
         // ChatGPT second layout: read pictures straight from the page at
@@ -4958,6 +4987,26 @@ function queryAllDeep(selector) {
     } catch (e) { return null; }
   }
 
+  // Shrinks a picture that is over the size limit (a large photo you uploaded)
+  // so it can still be stored: longest side down to 2048 px, then 1280 px, as
+  // a JPEG. Returns null if that cannot be done.
+  async function downscalePicture(blob) {
+    try {
+      var bmp = await createImageBitmap(blob);
+      var sides = [2048, 1280];
+      for (var k = 0; k < sides.length; k++) {
+        var scale = Math.min(1, sides[k] / Math.max(bmp.width, bmp.height));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(bmp.width * scale));
+        c.height = Math.max(1, Math.round(bmp.height * scale));
+        c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+        var out = await new Promise(function(res) { c.toBlob(function(x) { res(x); }, 'image/jpeg', 0.85); });
+        if (out && out.size && out.size <= SESSION_IMAGE_MAX_BYTES) return out;
+      }
+    } catch (e) {}
+    return null;
+  }
+
   async function inlineSessionImages(images) {
     var out = [];
     var done = 0;
@@ -5004,6 +5053,13 @@ function queryAllDeep(selector) {
         var r = await fetch(u, { credentials: NO_COOKIE_IMAGE_HOSTS.indexOf(host) !== -1 ? 'omit' : 'include' });
         if (!r.ok) { out.push(u); continue; }
         var b = await r.blob();
+        // Grok pictures only open while signed in, so one that cannot be
+        // stored is left out rather than saved as a link that cannot open.
+        if (host === 'assets.grok.com' && b.size > SESSION_IMAGE_MAX_BYTES && /^image\//.test(b.type)) {
+          var smaller = await downscalePicture(b);
+          if (!smaller) continue;
+          b = smaller;
+        }
         if (!b.size || b.size > SESSION_IMAGE_MAX_BYTES || !/^image\//.test(b.type)) { out.push(u); continue; }
         var dataUrl = await new Promise(function(resolve, reject) {
           var fr = new FileReader();
