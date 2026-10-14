@@ -349,10 +349,31 @@ function matchDownloadToAttachment(attachments, downloadItem) {
 
   if (candidateName) {
     const normalizedCandidate = normalizeForMatch(candidateName);
-    const filenameMatch = pool.find(function(a) {
+    const nameMatches = pool.filter(function(a) {
       return normalizeForMatch(a.filename) === normalizedCandidate;
     });
-    if (filenameMatch) return filenameMatch;
+    if (nameMatches.length) {
+      // One title can be offered in several formats at once (confirmed
+      // live: a spreadsheet, a PDF and a Word file all called "Net salary
+      // calculation"). normalizeForMatch drops the extension, so every one
+      // of them matches by name, and taking the first match put a download
+      // into whichever slot happened to come first — the Word file ended up
+      // stored as the PDF. When the download's own type is known (from its
+      // MIME or its file extension), the slot of that type is the one.
+      const extMatch = String(candidateName).match(/\.([a-z0-9]+)$/i);
+      const extType = extMatch ? extMatch[1].toLowerCase() : null;
+      const knownTypes = Object.keys(MIME_TO_ATTACHMENT_TYPE).map(function(k) { return MIME_TO_ATTACHMENT_TYPE[k]; });
+      const downloadType = typeFromMime || (extType && knownTypes.indexOf(extType) !== -1 ? extType : null);
+      if (downloadType) {
+        const typed = nameMatches.filter(function(a) { return String(a.type || '').toLowerCase() === downloadType; });
+        if (typed.length) return typed[0];
+        // Several slots share this name but none has this type: a guess
+        // here could attach the bytes to the wrong file, so don't guess —
+        // the caller falls back to the pending-capture path instead.
+        if (nameMatches.length > 1) return null;
+      }
+      return nameMatches[0];
+    }
   }
   return null;
 }

@@ -2866,6 +2866,22 @@ async function resolveFileBytes(body) {
   throw new Error('Either data or sourceUrl is required');
 }
 
+// Checks that a file's first bytes fit the type it is being stored as. A PDF
+// must carry the "%PDF-" header; Word, Excel and PowerPoint files are zip
+// archives and must start with "PK". Other types are not checked here.
+// Confirmed live: a Word file was stored in a PDF slot (the title was shared
+// by three formats), and the viewer then showed "Couldn't load this file".
+function bytesMatchType(buffer, mime) {
+  try {
+    if (!buffer || !buffer.length) return false;
+    if (mime === 'application/pdf') return buffer.slice(0, 1024).indexOf('%PDF-') !== -1;
+    if (/^application\/vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation)$/.test(mime)) {
+      return buffer.length > 3 && buffer[0] === 0x50 && buffer[1] === 0x4B;
+    }
+  } catch (e) {}
+  return true;
+}
+
 router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2926,6 +2942,11 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
       effectiveType = 'text/plain'; // generic/missing type, but a text-like extension
     } else {
       return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
+    }
+
+    if (!bytesMatchType(buffer, effectiveType)) {
+      console.warn('[Diary] capture-attachment rejected: file content does not match its type (' + effectiveType + ') for "' + filename + '"');
+      return res.status(400).json({ success: false, error: 'File content does not match its type' });
     }
 
     const stored = await attachmentStorage.store({
@@ -3005,6 +3026,11 @@ router.post('/pending-capture', requireAuth, async (req, res) => {
       effectiveType = 'text/plain';
     } else {
       return res.status(400).json({ success: false, error: 'Unsupported attachment type for v1: ' + (contentType || 'unknown') });
+    }
+
+    if (!bytesMatchType(buffer, effectiveType)) {
+      console.warn('[Diary] pending-capture rejected: file content does not match its type (' + effectiveType + ') for "' + filename + '"');
+      return res.status(400).json({ success: false, error: 'File content does not match its type' });
     }
 
     const stored = await attachmentStorage.store({
