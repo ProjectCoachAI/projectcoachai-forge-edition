@@ -1107,6 +1107,33 @@ function queryAllDeep(selector) {
   // outer IIFE's real direct children that this location (immediately
   // before injectSaveDiaryButton, itself a confirmed direct child) is
   // genuinely safe.
+  // True when a sizeable picture sits on the page after the newest question:
+  // that turn was answered with a picture only (a generated image, say), so
+  // a saved text ending at the question is complete, not still loading.
+  function lastTurnHasPicture() {
+    try {
+      var config = (typeof PROVIDER_CONFIG !== 'undefined') ? PROVIDER_CONFIG : null;
+      var sels = (config && config.promptSelectors) || [];
+      var last = null;
+      for (var i = 0; i < sels.length && !last; i++) {
+        var els = document.querySelectorAll(sels[i]);
+        if (els.length) last = els[els.length - 1];
+      }
+      if (!last) return false;
+      var imgs = document.querySelectorAll('img');
+      for (var j = 0; j < imgs.length; j++) {
+        var img = imgs[j];
+        var size = Math.min(img.naturalWidth || 0, img.offsetWidth || 0);
+        if (size < 100) continue;
+        if (!(last.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+        if (last.contains(img)) continue;
+        if (img.closest && img.closest('nav, aside, footer, form, header')) continue;
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
   function getAllCapturedPrompts() {
     var config = (typeof PROVIDER_CONFIG !== 'undefined') ? PROVIDER_CONFIG : null;
     if (!config) return [];
@@ -3275,7 +3302,7 @@ function queryAllDeep(selector) {
         // specific signal the last answer wasn't there yet when this ran.
         var TITLE_MARK_CHECK = '\u2063';
         var endsWithUnansweredQuestionRe = new RegExp(TITLE_MARK_CHECK + '\\*\\*[^*]+\\*\\*' + TITLE_MARK_CHECK + '\\s*$');
-        if (endsWithUnansweredQuestionRe.test(contentToSave)) {
+        if (endsWithUnansweredQuestionRe.test(contentToSave) && !lastTurnHasPicture()) {
           console.log('[Diary Sync DIAG] refusing to save — captured text ends at a question with no answer after it (likely still rendering)');
           console.log('[Diary Sync DIAG] DIAGNOSTIC — full contentToSave length:', contentToSave.length, '| last 400 chars:', JSON.stringify(contentToSave.slice(-400)));
           console.log('[Diary Sync DIAG] DIAGNOSTIC — window.__diaryCapture.turns:', JSON.stringify((window.__diaryCapture && window.__diaryCapture.turns || []).map(function(t){ return {url:t.url, len:t.text.length, preview:t.text.slice(0,60)}; })));
