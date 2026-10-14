@@ -4531,6 +4531,22 @@ function queryAllDeep(selector) {
       if (src && /^https?:/.test(src) && (size >= 100 || isUpload) && images.indexOf(src) === -1) images.push(src);
     });
     var clone = root.cloneNode(true);
+    // A file card (PDF, Word, Excel...) would otherwise come out as three
+    // loose lines (icon, name, "Document - PDF"). Replace each card with one
+    // clean line in the same place. The file itself is listed under
+    // Attachments.
+    Array.from(clone.querySelectorAll('.group\\/artifact-block')).forEach(function(card) {
+      try {
+        var tEl = card.querySelector('.text-heading') || card.querySelector('.leading-tight.text-sm.line-clamp-1');
+        var kEl = card.querySelector('.text-footnote') || card.querySelector('.text-xs.line-clamp-1.text-text-400');
+        var nm = tEl ? (tEl.textContent || '').trim() : '';
+        var kind = kEl ? (kEl.textContent || '').split('\u00b7').pop().replace(/\u00a0/g, '').trim() : '';
+        if (!nm || !card.parentNode) return;
+        var line = clone.ownerDocument.createElement('p');
+        line.textContent = '\ud83d\udcce ' + nm + (kind && kind.length <= 8 ? ' \u00b7 ' + kind.toUpperCase() : '');
+        card.parentNode.replaceChild(line, card);
+      } catch (e) {}
+    });
     // Visually-hidden labels ("You said:"), buttons/toolbars, icons, status regions.
     Array.from(clone.querySelectorAll('.sr-only, [data-find-omitted], button, svg, style, script, [role="status"]'))
       .forEach(function(n) { if (n.parentNode) n.parentNode.removeChild(n); });
