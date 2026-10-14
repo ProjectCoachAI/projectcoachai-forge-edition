@@ -3461,7 +3461,7 @@ function queryAllDeep(selector) {
             // provider with its own getAttachments() defined is picked
             // up automatically here with no further change needed to
             // this call site; providers without one correctly send [].
-            attachments: (registry[PROVIDER] && registry[PROVIDER].getAttachments) ? registry[PROVIDER].getAttachments() : []
+            attachments: getAttachmentsMerged()
           }}, '*');
           var handler = function(e) {
             if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
@@ -4517,6 +4517,7 @@ function queryAllDeep(selector) {
       // An uploaded picture is real by definition, even if it has not
       // finished loading (size 0) at the moment the page is read.
       var isUpload = role === 'human' && /\/api\/[^/]+\/files\/[^/]+\/(preview|thumbnail)/.test(src);
+      if (isDocumentPreviewImg(img)) return;
       if (src && /^https?:/.test(src) && (size >= 100 || isUpload) && images.indexOf(src) === -1) images.push(src);
     });
     var clone = root.cloneNode(true);
@@ -4566,6 +4567,7 @@ function queryAllDeep(selector) {
     var byIdx = {};
     var anyStreaming = false;
     function collect() {
+      try { getAttachmentsMerged(); } catch (e) {}
       Array.from(document.querySelectorAll(CLAUDE_ROW_SEL)).forEach(function(r) {
         var idx = r.getAttribute('data-rs-index');
         if (idx === null || idx === '') return;
@@ -5180,6 +5182,44 @@ function queryAllDeep(selector) {
     return out;
   }
 
+  // A small preview of a DOCUMENT (a PDF/Word/Excel card thumbnail, or the
+  // little file chips an AI shows while it reads or writes a file) is not a
+  // picture from the conversation - the file belongs under Attachments.
+  // Shared by every provider's image reading. Two signals, both generic:
+  // the image is named like a document (alt text ends in a document
+  // extension), or it is drawn as a tiny chip/icon (under 64px on screen).
+  // An image not yet laid out (size 0) is never treated as tiny.
+  function isDocumentPreviewImg(img) {
+    try {
+      var alt = (img.getAttribute('alt') || '').trim();
+      if (/\.(pdf|docx?|xlsx?|pptx?|csv|md|txt)$/i.test(alt)) return true;
+      var w = img.offsetWidth || 0, h = img.offsetHeight || 0;
+      if (w > 0 && h > 0 && Math.max(w, h) < 64) return true;
+    } catch (e) {}
+    return false;
+  }
+
+  // Attachment cards can scroll out of view (Claude only keeps the rows on
+  // screen), so reading them only at the moment of saving misses files that
+  // are off screen. Every card seen during the save's scroll-through (and at
+  // save time) is remembered here for the current conversation.
+  var _attachmentCache = { url: '', items: [] };
+  function getAttachmentsMerged() {
+    var url = canonicalUrl();
+    if (_attachmentCache.url !== url) _attachmentCache = { url: url, items: [] };
+    var seen = {};
+    _attachmentCache.items.forEach(function(a) { seen[a.filename + '|' + a.type] = 1; });
+    var now = [];
+    try {
+      if (registry[PROVIDER] && registry[PROVIDER].getAttachments) now = registry[PROVIDER].getAttachments() || [];
+    } catch (e) {}
+    now.forEach(function(a) {
+      var k = a.filename + '|' + a.type;
+      if (!seen[k]) { seen[k] = 1; _attachmentCache.items.push(a); }
+    });
+    return _attachmentCache.items.slice();
+  }
+
   function filterCapturedImageUrls(rawImgUrls) {
     return rawImgUrls.filter(function(src) {
       if (!src || !src.startsWith('http') || src.includes('svg')) return false;
@@ -5230,10 +5270,10 @@ function queryAllDeep(selector) {
         // gather pictures from every answer, not just the newest one.
         imgUrls = [];
         Array.from(els).forEach(function(a) {
-          Array.from(a.querySelectorAll('img')).forEach(function(img) { imgUrls.push(img.src || ''); });
+          Array.from(a.querySelectorAll('img')).forEach(function(img) { if (!isDocumentPreviewImg(img)) imgUrls.push(img.src || ''); });
         });
       } else if (el) {
-        imgUrls = Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; });
+        imgUrls = Array.from(el.querySelectorAll('img')).filter(function(img) { return !isDocumentPreviewImg(img); }).map(function(img) { return img.src || ''; });
       }
     }
     // Providers whose pictures live outside the answer element (Mistral,
@@ -5255,6 +5295,7 @@ function queryAllDeep(selector) {
         });
         Array.from(document.querySelectorAll(config.imageSelector)).forEach(function(img) {
           var u = img.currentSrc || img.src || '';
+          if (isDocumentPreviewImg(img)) return;
           if (config.imageSrcRegex && !config.imageSrcRegex.test(u)) return;
           if (config.imageMinWidth && img.naturalWidth && img.naturalWidth < config.imageMinWidth) return;
           if (config.imageSrcContains && u.indexOf(config.imageSrcContains) === -1) {
