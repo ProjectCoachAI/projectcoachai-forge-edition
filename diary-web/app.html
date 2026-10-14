@@ -4909,7 +4909,7 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
         if (typeof XLSX === 'undefined') throw new Error('SheetJS not loaded');
         var wb = XLSX.read(xlsxBuf, { type: 'array', cellDates: true });
         wb.SheetNames.forEach(function(name) {
-          var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' });
+          var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '', raw: false });
           xlsxHtml += '<h3 style="font-family:Inter,sans-serif;font-size:14px;color:#1B2A4A;margin:16px 0 8px;">' + escHtml(name) + '</h3>';
           if (!rows.length) { xlsxHtml += '<div style="color:#9E9890;font-size:13px;">(empty sheet)</div>'; return; }
           var shown = rows.slice(0, 500);
