@@ -145,9 +145,19 @@
         try {
           var blocks = document.querySelectorAll('.group\\/artifact-block');
           blocks.forEach(function(block) {
-            var titleEl = block.querySelector('.leading-tight.text-sm.line-clamp-1');
-            var typeEl = block.querySelector('.text-xs.line-clamp-1.text-text-400');
+            // Current card markup (confirmed on a live page): the title is
+            // the ".text-heading" line, the "Document · PDF" line is
+            // ".text-footnote", and the card's open button carries
+            // aria-label="View <name>". The older class names are kept as
+            // a fallback.
+            var titleEl = block.querySelector('.text-heading') || block.querySelector('.leading-tight.text-sm.line-clamp-1');
+            var typeEl = block.querySelector('.text-footnote') || block.querySelector('.text-xs.line-clamp-1.text-text-400');
             var filename = titleEl ? (titleEl.textContent || '').trim() : '';
+            if (!filename) {
+              var openBtn = block.querySelector('[data-testid="file-card-open"]');
+              var lbl = openBtn ? (openBtn.getAttribute('aria-label') || '') : '';
+              if (/^View\s+/.test(lbl)) filename = lbl.replace(/^View\s+/, '').trim();
+            }
             var typeText = typeEl ? (typeEl.textContent || '').trim() : '';
             var type = typeText.split('\u00b7').pop().replace(/\u00a0/g, '').trim();
             if (filename && type && type.length <= 8) {
