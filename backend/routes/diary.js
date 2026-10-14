@@ -5,6 +5,8 @@ const router  = express.Router();
 const https   = require('https');
 const http    = require('http');
 const tls     = require('tls');
+const net     = require('net');
+const dns     = require('dns');
 const { requireAuth } = require('../middleware/auth');
 const db = require('../lib/db');
 // Sync/merge logic, and the message-splitting helper it depends on,
@@ -2833,14 +2835,112 @@ router.post('/upload-attachment', requireAuth, async (req, res) => {
 // fetching here instead means this works for any provider's file-
 // hosting choice, present or future, with nothing to ever add to the
 // extension's manifest again.
-async function fetchFileFromUrl(sourceUrl) {
-  const resp = await fetch(sourceUrl);
-  if (!resp.ok) {
-    throw new Error('Fetch failed with status ' + resp.status);
+const FILE_FETCH_MAX_BYTES = 25 * 1024 * 1024;
+const FILE_FETCH_MAX_REDIRECTS = 5;
+const FILE_FETCH_TOTAL_MS = 60000;
+
+// True for any address that is not a normal public internet address:
+// loopback, private ranges, link-local (cloud metadata lives at
+// 169.254.169.254), carrier-grade NAT, multicast/reserved, and their IPv6
+// equivalents (including IPv4 written inside an IPv6 address).
+function isPrivateAddress(ip) {
+  const addr = String(ip || '').replace(/^\[|\]$/g, '').toLowerCase();
+  const family = net.isIP(addr);
+  if (family === 4) {
+    const p = addr.split('.').map(Number);
+    return p[0] === 0 || p[0] === 10 || p[0] === 127 || p[0] >= 224 ||
+      (p[0] === 100 && p[1] >= 64 && p[1] <= 127) ||
+      (p[0] === 169 && p[1] === 254) ||
+      (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
+      (p[0] === 192 && p[1] === 168) ||
+      (p[0] === 192 && p[1] === 0 && p[2] === 0) ||
+      (p[0] === 198 && (p[1] === 18 || p[1] === 19));
   }
-  const contentType = resp.headers.get('content-type') || '';
-  const buffer = Buffer.from(await resp.arrayBuffer());
-  return { buffer, contentType };
+  if (family === 6) {
+    if (addr === '::' || addr === '::1') return true;
+    const mapped = addr.match(/^(?:0{0,4}:){0,5}(?:ffff:)?(\d+\.\d+\.\d+\.\d+)$/) || addr.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    if (mapped) return isPrivateAddress(mapped[1]);
+    const mappedHex = addr.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+    if (mappedHex) {
+      const hi = parseInt(mappedHex[1], 16), lo = parseInt(mappedHex[2], 16);
+      return isPrivateAddress([hi >> 8, hi & 255, lo >> 8, lo & 255].join('.'));
+    }
+    const first = parseInt(addr.split(':')[0] || '0', 16);
+    return (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80 || (first & 0xff00) === 0xff00;
+  }
+  return true; // not a valid address at all
+}
+
+// Used as the connection's own DNS lookup, so the check runs on the very
+// address the connection is about to use (a name that resolves to a
+// private address, or is switched to one after an earlier check, is
+// refused here too).
+function publicOnlyLookup(hostname, options, callback) {
+  if (typeof options === 'function') { callback = options; options = {}; }
+  dns.lookup(hostname, { all: true }, (err, addrs) => {
+    if (err) return callback(err);
+    const list = Array.isArray(addrs) ? addrs : [addrs];
+    if (!list.length || list.some((a) => isPrivateAddress(a.address))) {
+      return callback(new Error('File address not allowed'));
+    }
+    if (options && options.all) return callback(null, list);
+    callback(null, list[0].address, list[0].family);
+  });
+}
+
+// Fetches a file for the server-side capture path. Only https; each
+// redirect is checked again; private/internal addresses are refused; the
+// download is cut off at the 25 MB storage limit while it streams (not
+// after it is all in memory) and gives up after 60 seconds in total.
+function fetchFileFromUrl(sourceUrl) {
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    let activeReq = null;
+    const done = (fn, val) => { if (finished) return; finished = true; clearTimeout(timer); fn(val); };
+    const timer = setTimeout(() => {
+      if (activeReq) activeReq.destroy();
+      done(reject, new Error('File download timed out'));
+    }, FILE_FETCH_TOTAL_MS);
+
+    const go = (urlStr, hops) => {
+      let u;
+      try { u = new URL(urlStr); } catch (e) { return done(reject, new Error('File address not allowed')); }
+      const host = u.hostname.replace(/^\[|\]$/g, '');
+      if (u.protocol !== 'https:' || isPrivateImageHost(u.hostname) || (net.isIP(host) && isPrivateAddress(host))) {
+        return done(reject, new Error('File address not allowed'));
+      }
+      const req = https.get(u, { lookup: publicOnlyLookup, headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+          res.resume();
+          if (hops >= FILE_FETCH_MAX_REDIRECTS) return done(reject, new Error('Too many redirects'));
+          let next;
+          try { next = new URL(res.headers.location, u).toString(); } catch (e) { return done(reject, new Error('File address not allowed')); }
+          return go(next, hops + 1);
+        }
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          res.resume();
+          return done(reject, new Error('Fetch failed with status ' + res.statusCode));
+        }
+        const declared = parseInt(res.headers['content-length'] || '0', 10);
+        if (declared > FILE_FETCH_MAX_BYTES) {
+          res.resume();
+          return done(reject, new Error('File exceeds maximum size'));
+        }
+        const chunks = []; let size = 0;
+        res.on('data', (c) => {
+          size += c.length;
+          if (size > FILE_FETCH_MAX_BYTES) { req.destroy(); return done(reject, new Error('File exceeds maximum size')); }
+          chunks.push(c);
+        });
+        res.on('end', () => done(resolve, { buffer: Buffer.concat(chunks), contentType: res.headers['content-type'] || '' }));
+        res.on('error', (e) => done(reject, e));
+      });
+      activeReq = req;
+      req.on('error', (e) => done(reject, e));
+      req.setTimeout(20000, () => req.destroy(new Error('File download timed out')));
+    };
+    go(String(sourceUrl || ''), 0);
+  });
 }
 
 // Resolves actual file bytes + content-type from a request body that can
@@ -2961,23 +3061,32 @@ router.post('/:id/capture-attachment', requireAuth, async (req, res) => {
     // logic reads this same type field, and leaving it as the original,
     // stale "docx" would show the wrong icon and never offer the pdf.js
     // reader for a file that's genuinely, now, a real PDF.
-    const updatedAttachments = attachments.slice();
-    updatedAttachments[matchIndex] = Object.assign({}, attachments[matchIndex], {
-      url: stored.url,
-      status: 'hosted',
-      type: realType || type,
-    });
-
-    await db.query(
-      `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{attachments}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
-      [JSON.stringify(updatedAttachments), id, req.userEmail]
+    //
+    // Only the matching element is changed, inside ONE statement, so two
+    // downloads finishing at the same moment (three files from one chat)
+    // cannot overwrite each other: the earlier code wrote back a copy of
+    // the whole list read before the download started, and the last
+    // writer silently undid the others.
+    const patch = { url: stored.url, status: 'hosted', type: realType || type };
+    const updated = await db.query(
+      `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{attachments}', (
+         SELECT jsonb_agg(CASE WHEN t.elem->>'filename' = $2 AND t.elem->>'type' = $3 THEN t.elem || $4::jsonb ELSE t.elem END ORDER BY t.ord)
+         FROM jsonb_array_elements(metadata->'attachments') WITH ORDINALITY AS t(elem, ord)
+       ))
+       WHERE id = $1 AND user_email = $5 AND jsonb_typeof(metadata->'attachments') = 'array'
+         AND EXISTS (SELECT 1 FROM jsonb_array_elements(metadata->'attachments') AS e WHERE e->>'filename' = $2 AND e->>'type' = $3)
+       RETURNING id`,
+      [id, filename, type, JSON.stringify(patch), req.userEmail]
     );
+    if (!updated.rows.length) {
+      return res.status(404).json({ success: false, error: 'No matching attachment found on this entry (filename+type)' });
+    }
 
     console.log(`[Diary] Captured downloaded attachment "${filename}" for entry ${id}`);
     res.json({ success: true, url: stored.url });
   } catch (e) {
     console.error('[Diary] capture-attachment error:', e.message);
-    const status = /exceeds maximum size/.test(e.message) ? 400 : 500;
+    const status = /exceeds maximum size|File address not allowed/.test(e.message) ? 400 : 500;
     res.status(status).json({ success: false, error: e.message || 'Capture failed' });
   }
 });
@@ -3056,7 +3165,7 @@ router.post('/pending-capture', requireAuth, async (req, res) => {
     });
   } catch (e) {
     console.error('[Diary] pending-capture error:', e.message);
-    const status = /exceeds maximum size/.test(e.message) ? 400 : 500;
+    const status = /exceeds maximum size|File address not allowed/.test(e.message) ? 400 : 500;
     res.status(status).json({ success: false, error: e.message || 'Capture failed' });
   }
 });

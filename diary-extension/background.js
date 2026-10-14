@@ -206,6 +206,28 @@ async function tryClientSideFetch(url) {
   }
 }
 
+// Turns the payload of a non-base64 data: URI into base64. Percent-escapes
+// (%XX) become single bytes; every other character is written as UTF-8.
+// The earlier btoa(decodeURIComponent(...)) threw on any character outside
+// Latin-1 (umlauts handled, but not e.g. Cyrillic, Chinese or a euro sign
+// inside text) and on percent-escaped bytes that are not valid UTF-8.
+function dataUriPayloadToBase64(raw) {
+  const enc = new TextEncoder();
+  const out = [];
+  for (let i = 0; i < raw.length;) {
+    if (raw[i] === '%' && /^[0-9a-fA-F]{2}$/.test(raw.substr(i + 1, 2))) {
+      out.push(parseInt(raw.substr(i + 1, 2), 16));
+      i += 3;
+    } else {
+      const ch = String.fromCodePoint(raw.codePointAt(i));
+      const b = enc.encode(ch);
+      for (let k = 0; k < b.length; k++) out.push(b[k]);
+      i += ch.length;
+    }
+  }
+  return arrayBufferToBase64(new Uint8Array(out).buffer);
+}
+
 // Resolves the actual file data for ANY download, routing to the right
 // mechanism depending on the URL's own scheme:
 // - blob: URLs (confirmed live: Grok's own "Download" button) can ONLY
@@ -226,14 +248,14 @@ async function tryClientSideFetch(url) {
 //   approach (see tryClientSideFetch's own comment for why both exist).
 async function resolveDownloadFileData(item) {
   if (item.url.indexOf('data:') === 0) {
-    const match = item.url.match(/^data:([^;,]+)(;base64)?,([\s\S]*)$/);
+    const match = item.url.match(/^data:([^;,]*)((?:;[^;,]*)*),([\s\S]*)$/);
     if (!match) return null;
-    const mimeType = match[1] || '';
-    const isBase64 = !!match[2];
+    const mimeType = match[1] || 'text/plain';
+    const isBase64 = /;base64$/i.test(match[2] || '');
     const rawData = match[3];
     if (isBase64) return { data: rawData, contentType: mimeType };
     try {
-      return { data: btoa(decodeURIComponent(rawData)), contentType: mimeType };
+      return { data: dataUriPayloadToBase64(rawData), contentType: mimeType };
     } catch (e) { return null; }
   }
   if (item.url.indexOf('blob:') === 0) {
@@ -400,15 +422,11 @@ function isFromSupportedProvider(referrer) {
 
 chrome.downloads.onCreated.addListener(async function(item) {
   try {
-    // TEMPORARY DIAGNOSTIC — every early-exit below was silent, making
-    // it impossible to tell "listener never fired at all" apart from
-    // "fired but exited early for some specific reason" (e.g. a
-    // provider whose UI doesn't trigger the browser's native download
-    // mechanism at all, vs. a genuine matching failure). Confirmed live
-    // this ambiguity mattered: a real Perplexity download attempt
-    // produced zero [Diary BG] output at all. To be removed once every
-    // provider's actual behavior here is understood.
-    console.log('[Diary BG] onCreated fired:', JSON.stringify({ referrer: item.referrer, url: item.url, mime: item.mime, filename: item.filename }));
+    // Short diagnostic: where the download came from and what it is, never
+    // the full address (download links are often signed and carry tokens).
+    let diagHost = '';
+    try { diagHost = new URL(item.url).protocol + '//' + new URL(item.url).host; } catch (e) { diagHost = String(item.url || '').slice(0, 5); }
+    console.log('[Diary BG] onCreated fired:', JSON.stringify({ from: diagHost, mime: item.mime, filename: item.filename }));
 
     // A blob: URL download can arrive with a genuinely EMPTY referrer
     // (confirmed live: Grok) — but the blob URL itself always embeds
