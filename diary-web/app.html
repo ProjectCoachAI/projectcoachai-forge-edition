@@ -6294,8 +6294,47 @@ window._entryContentSegments = window._entryContentSegments || {};
 // across other, unrelated call sites, so changing their own output
 // shape there would carry real, avoidable regression risk elsewhere
 // for no benefit to those other callers.
+// A file the AI offered (saved as a line like "📎 Net salary calculation · PDF")
+// becomes a link: a stored file opens in the viewer, one that is not stored
+// yet jumps to its row in the entry's Attachments list.
+function linkifyFileLines(html) {
+  return String(html || '').replace(/<p>\s*\uD83D\uDCCE\s+([^<]+?)\s+\u00b7\s+([A-Za-z0-9]{2,5})\s*<\/p>/g, function(full, name, type) {
+    var safeName = name.replace(/"/g, '&quot;');
+    return '<p><a href="#" class="file-line" data-file-name="' + safeName + '" data-file-type="' + type.toLowerCase() + '" onclick="openFileLine(this,event);return false;" style="color:#4A4035;text-decoration:none;border-bottom:1px dashed #C17D3C;cursor:pointer;">\uD83D\uDCCE ' + name + ' \u00b7 ' + type + '</a></p>';
+  });
+}
+
+function openFileLine(el, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  var card = el.closest('.entry-card');
+  if (!card) return;
+  var entryId = card.id.replace('entry-', '');
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return String(x.id) === entryId; });
+  var atts = (entry && entry.metadata && entry.metadata.attachments) || [];
+  var name = el.getAttribute('data-file-name');
+  var type = el.getAttribute('data-file-type');
+  var idx = -1;
+  for (var i = 0; i < atts.length; i++) {
+    if (atts[i].filename === name && String(atts[i].type || '').toLowerCase() === type) { idx = i; break; }
+  }
+  if (idx === -1) return;
+  var att = atts[idx];
+  if (att.status === 'hosted' && att.url) {
+    openAttachmentReader(att.url, att.filename || 'Attachment', att.type);
+    return;
+  }
+  var rows = card.querySelectorAll('.attachment-row');
+  var row = rows[idx];
+  if (!row) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.style.transition = 'background 0.4s';
+  row.style.background = 'rgba(193,125,60,0.18)';
+  setTimeout(function() { row.style.background = ''; }, 1800);
+}
+window.openFileLine = openFileLine;
+
 function wrapTurnHtml(html, index) {
-  return '<div data-turn-index="' + index + '">' + html + '</div>';
+  return '<div data-turn-index="' + index + '">' + linkifyFileLines(html) + '</div>';
 }
 
 function renderEntryContentHtml(e) {
