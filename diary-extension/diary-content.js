@@ -4183,6 +4183,11 @@ function queryAllDeep(selector) {
       // (stored under /chat-images/assistant/) are wanted.
       imageSelector: 'span.image-block img',
       imageSrcContains: '/chat-images/assistant/',
+      // Pictures YOU upload sit in the same place but are stored under
+      // /chat-images/<ids> without "assistant" (confirmed live). Collected
+      // too, last in the list, and fetched through the same resizing path
+      // that already works for Mistral's own pictures.
+      imageOwnSrcContains: '/chat-images/',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -5227,11 +5232,20 @@ function queryAllDeep(selector) {
     // since the saved text is the whole conversation too.
     if (config && config.imageSelector) {
       try {
+        var _ownPics = [];
         Array.from(document.querySelectorAll(config.imageSelector)).forEach(function(img) {
           var u = img.currentSrc || img.src || '';
-          if (config.imageSrcContains && u.indexOf(config.imageSrcContains) === -1) return;
+          if (config.imageSrcContains && u.indexOf(config.imageSrcContains) === -1) {
+            if (config.imageOwnSrcContains && u.indexOf('https://') === 0 &&
+                u.indexOf(config.imageOwnSrcContains) !== -1 && u.indexOf('/cdn-cgi/') === -1 &&
+                u.indexOf('/chat-images/assistant/') === -1) {
+              _ownPics.push('https://chat.mistral.ai/cdn-cgi/image/width=800,fit=scale-down/' + u);
+            }
+            return;
+          }
           imgUrls.push(u);
         });
+        imgUrls = imgUrls.concat(_ownPics);
       } catch (e) {}
     }
     if (PROVIDER === 'perplexity') {

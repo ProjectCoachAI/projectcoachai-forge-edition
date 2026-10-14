@@ -1489,6 +1489,10 @@ const FACT_ATTRIBUTE_WORD = /\b(price|prices|cost|costs|msrp|starting|from|date|
 const STRUCTURED_FACTS_MAX = 10;
 function detectStructuredFactsArtifacts(text) {
   const facts = [];
+  // Picture links carry dates and numbers in their web address (for example
+  // "?sv=2025-01-05"); blank every address out, keeping the text length so
+  // positions stay the same.
+  text = String(text || '').replace(/https?:\/\/[^\s)>\]]+/g, m => ' '.repeat(m.length));
   detectDates(text).forEach(d => { const c = factContext(text, d.index); if (c) facts.push({ label: 'Date', value: d.value, context: c }); });
   detectPrices(text).forEach(p => {
     const c = factContext(text, p.index);
