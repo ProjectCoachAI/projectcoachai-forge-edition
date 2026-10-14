@@ -4216,7 +4216,13 @@ function queryAllDeep(selector) {
       // Generated pictures render in horizontal galleries between the
       // text sections, outside .ur-markdown (confirmed live: every image
       // reported inAnswer:false, each inside a gen-image-card).
-      imageSelector: '[class*="gen-image-card"] img',
+      // Also: the single generated picture (inside a media-item) and the
+      // picture you upload (a thumbnail inside your own message bubble) -
+      // both confirmed live. Only real picture files from Meta's own
+      // picture servers, at least 150 px wide, so small icons never count.
+      imageSelector: '[class*="gen-image-card"] img, [class*="media-item"] img, span.text-response img',
+      imageSrcRegex: /^https:\/\/(scontent|video)[^\/]*\.fbcdn\.net\//,
+      imageMinWidth: 150,
       clean: function(text) {
         return text.replace(/Here\'s the map.*$/m, '')
                    .replace(/\n{3,}/g, '\n\n')
@@ -5249,6 +5255,8 @@ function queryAllDeep(selector) {
         });
         Array.from(document.querySelectorAll(config.imageSelector)).forEach(function(img) {
           var u = img.currentSrc || img.src || '';
+          if (config.imageSrcRegex && !config.imageSrcRegex.test(u)) return;
+          if (config.imageMinWidth && img.naturalWidth && img.naturalWidth < config.imageMinWidth) return;
           if (config.imageSrcContains && u.indexOf(config.imageSrcContains) === -1) {
             return;
           }
