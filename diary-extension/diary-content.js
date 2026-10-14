@@ -4188,6 +4188,9 @@ function queryAllDeep(selector) {
       // too, last in the list, and fetched through the same resizing path
       // that already works for Mistral's own pictures.
       imageOwnSrcContains: '/chat-images/',
+      // Your own picture is not inside span.image-block (confirmed live:
+      // found with "main img" only), so look page-wide for it.
+      imageOwnSelector: 'main img',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -5233,14 +5236,20 @@ function queryAllDeep(selector) {
     if (config && config.imageSelector) {
       try {
         var _ownPics = [];
+        var _ownSeen = {};
+        var _pageOwn = config.imageOwnSelector ? Array.from(document.querySelectorAll(config.imageOwnSelector)) : [];
+        _pageOwn.forEach(function(img) {
+          var u = img.currentSrc || img.src || '';
+          if (config.imageOwnSrcContains && u.indexOf('https://') === 0 &&
+              u.indexOf(config.imageOwnSrcContains) !== -1 && u.indexOf('/cdn-cgi/') === -1 &&
+              u.indexOf('/chat-images/assistant/') === -1 && !_ownSeen[u]) {
+            _ownSeen[u] = 1;
+            _ownPics.push('https://chat.mistral.ai/cdn-cgi/image/width=800,fit=scale-down/' + u);
+          }
+        });
         Array.from(document.querySelectorAll(config.imageSelector)).forEach(function(img) {
           var u = img.currentSrc || img.src || '';
           if (config.imageSrcContains && u.indexOf(config.imageSrcContains) === -1) {
-            if (config.imageOwnSrcContains && u.indexOf('https://') === 0 &&
-                u.indexOf(config.imageOwnSrcContains) !== -1 && u.indexOf('/cdn-cgi/') === -1 &&
-                u.indexOf('/chat-images/assistant/') === -1) {
-              _ownPics.push('https://chat.mistral.ai/cdn-cgi/image/width=800,fit=scale-down/' + u);
-            }
             return;
           }
           imgUrls.push(u);
