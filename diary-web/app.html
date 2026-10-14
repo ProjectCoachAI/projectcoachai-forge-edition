@@ -576,6 +576,9 @@
        same "can't preview" message already shown for truly unsupported
        types rather than showing binary garbage. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <!-- SheetJS — reads a real .xlsx file (captured from a provider's own
+       download) in the attachment reader, same version as continue.html. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <!-- highlight.js — for the Code artifact's own syntax highlighting
        (enhanceCodeBlocks below). A minimal-theme CSS matching this
        page's own warm, muted palette rather than a stock, high-contrast
@@ -4889,6 +4892,55 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
       }
     }
     body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This file type can\'t be previewed here yet. <a href="' + escHtml(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+    return;
+  }
+  // A real .xlsx file captured from a provider's own download is a ZIP
+  // archive (starts with "PK"), not text — reading it as text showed raw
+  // binary garbage. Spreadsheets sent from Forge's own chat carry
+  // markdown text instead. Check the first bytes and handle both.
+  if (type === 'xlsx') {
+    var xlsxResp = await fetch(url);
+    if (!xlsxResp.ok) throw new Error('Fetch failed with status ' + xlsxResp.status);
+    var xlsxBuf = await xlsxResp.arrayBuffer();
+    var xlsxHead = new Uint8Array(xlsxBuf.slice(0, 2));
+    if (xlsxHead[0] === 0x50 && xlsxHead[1] === 0x4B) {
+      var xlsxHtml = '';
+      try {
+        if (typeof XLSX === 'undefined') throw new Error('SheetJS not loaded');
+        var wb = XLSX.read(xlsxBuf, { type: 'array', cellDates: true });
+        wb.SheetNames.forEach(function(name) {
+          var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' });
+          xlsxHtml += '<h3 style="font-family:Inter,sans-serif;font-size:14px;color:#1B2A4A;margin:16px 0 8px;">' + escHtml(name) + '</h3>';
+          if (!rows.length) { xlsxHtml += '<div style="color:#9E9890;font-size:13px;">(empty sheet)</div>'; return; }
+          var shown = rows.slice(0, 500);
+          xlsxHtml += '<div style="overflow:auto;"><table style="border-collapse:collapse;font-family:Inter,sans-serif;font-size:13px;color:#1B2A4A;">';
+          shown.forEach(function(r, ri) {
+            xlsxHtml += '<tr>' + r.map(function(c) {
+              var v = (c instanceof Date) ? c.toISOString().slice(0, 10) : String(c);
+              var tag = ri === 0 ? 'th' : 'td';
+              return '<' + tag + ' style="border:1px solid #D6D2C8;padding:4px 8px;text-align:left;' + (ri === 0 ? 'background:#F5F3EE;font-weight:600;' : '') + '">' + escHtml(v) + '</' + tag + '>';
+            }).join('') + '</tr>';
+          });
+          xlsxHtml += '</table></div>';
+          if (rows.length > shown.length) xlsxHtml += '<div style="color:#9E9890;font-size:12px;margin-top:6px;">Showing the first 500 of ' + rows.length + ' rows. Use Download for the full file.</div>';
+        });
+      } catch (e) {
+        console.warn('[Diary] xlsx preview failed:', e.message);
+        xlsxHtml = '';
+      }
+      if (xlsxHtml) {
+        body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + xlsxHtml + '</div>';
+      } else {
+        body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This file type can\'t be previewed here yet. <a href="' + escHtml(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+      }
+      return;
+    }
+    var xlsxText = new TextDecoder('utf-8').decode(xlsxBuf);
+    if (window.Forge && Forge.renderMarkdown) {
+      body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(xlsxText) + '</div>';
+    } else {
+      body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;background:#fff;padding:20px;border-radius:6px;margin:0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + escHtml(xlsxText) + '</pre>';
+    }
     return;
   }
   var resp = await fetch(url);
