@@ -981,6 +981,45 @@ function unsavedPicture(img) {
   return img.originalUrl;
 }
 
+// Claude only: stores documents you uploaded to a chat. The page has already
+// read each file once and checked it (diary-content.js, prepareClaudeUploads),
+// so every file listed here is known to be fetchable. Runs after the save has
+// been answered. Each file goes through the same route as a downloaded file
+// (capture-attachment), into the slot the save just created for it.
+async function hostUploadedFiles(files, conversationUrl, API, token) {
+  try {
+    const lr = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(conversationUrl), { headers: { 'Authorization': 'Bearer ' + token } });
+    const ld = await lr.json();
+    if (!(ld && ld.success && ld.entry)) { console.log('[Diary BG] Uploaded files: no entry found to attach to'); return; }
+    const entry = ld.entry;
+    const tracked = (entry.metadata && entry.metadata.attachments) || [];
+    for (const f of files) {
+      try {
+        if (!f || typeof f.url !== 'string' || f.url.indexOf('https://claude.ai/api/organizations/') !== 0) continue;
+        const slot = tracked.find(function(a) { return !a.url && a.filename === f.filename && a.type === f.type; });
+        if (!slot) continue; // already stored, or no slot for it
+        const resp = await fetch(f.url, { credentials: 'include' });
+        if (!resp.ok) { console.log('[Diary BG] Uploaded file not stored: HTTP', resp.status, f.filename); continue; }
+        const blob = await resp.blob();
+        if (!blob.size || blob.size > 25 * 1024 * 1024 || (f.size && blob.size !== f.size)) { console.log('[Diary BG] Uploaded file not stored: size', blob.size, f.filename); continue; }
+        const data = arrayBufferToBase64(await blob.arrayBuffer());
+        const cr = await fetch(API + '/api/diary/' + entry.id + '/capture-attachment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ filename: slot.filename, type: slot.type, realType: f.type, data: data, contentType: blob.type || '' })
+        });
+        const cd = await cr.json().catch(function() { return {}; });
+        if (cd && cd.success) console.log('[Diary BG] Stored uploaded file:', f.filename);
+        else console.warn('[Diary BG] Uploaded file not stored:', f.filename, '-', cd && cd.error);
+      } catch (e) {
+        console.warn('[Diary BG] Uploaded file error:', f && f.filename, e.message);
+      }
+    }
+  } catch (e) {
+    console.warn('[Diary BG] Uploaded files error:', e.message);
+  }
+}
+
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'BLOB_DATA_RESPONSE' && msg.blobUrl) {
     const pending = pendingBlobRequests.get(msg.blobUrl);
@@ -1252,6 +1291,11 @@ let data;
       // end, rather than guessing which side the time is really on.
       console.log('[Diary Sync DIAG] SAVE_TO_DIARY handler total (lookup + patch/post):', Date.now() - saveHandlerStartedAt, 'ms');
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, updated: data.updated, error: data.error, chatSessionSync: data.chatSessionSync } });
+      // Documents uploaded to a Claude chat are stored after the page has
+      // its answer, so the save itself is never held up by them.
+      if (data && data.success && Array.isArray(msg.uploadedFiles) && msg.uploadedFiles.length) {
+        hostUploadedFiles(msg.uploadedFiles, msg.url, API, token);
+      }
     } catch(e) {
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
     }

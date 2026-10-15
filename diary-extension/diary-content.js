@@ -3504,6 +3504,12 @@ function queryAllDeep(selector) {
           }
         }
 
+                var uploadedFiles = [];
+                try { uploadedFiles = await prepareClaudeUploads(); } catch (e) { uploadedFiles = []; }
+                var attachmentsForSave = getAttachmentsMerged();
+                uploadedFiles.forEach(function(u) {
+                  if (!attachmentsForSave.some(function(a) { return a.filename === u.filename && a.type === u.type; })) attachmentsForSave.push({ filename: u.filename, type: u.type });
+                });
                 var _saveMessageSentAt = Date.now();
                 logToBackgroundToo('[Diary Sync DIAG] performSaveToDiary: sending SAVE_TO_DIARY message after', _saveMessageSentAt - _saveStartedAt, 'ms of internal work');
                 var data = await new Promise(function(resolve, reject) {
@@ -3528,7 +3534,8 @@ function queryAllDeep(selector) {
             // provider with its own getAttachments() defined is picked
             // up automatically here with no further change needed to
             // this call site; providers without one correctly send [].
-            attachments: getAttachmentsMerged()
+            attachments: attachmentsForSave,
+            uploadedFiles: uploadedFiles
           }}, '*');
           var handler = function(e) {
             if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
@@ -4587,6 +4594,19 @@ function queryAllDeep(selector) {
       if (isDocumentPreviewImg(img)) return;
       if (src && /^https?:/.test(src) && (size >= 100 || isUpload) && images.indexOf(src) === -1) images.push(src);
     });
+    // Documents you uploaded sit in a card outside the message text (like
+    // pictures). One line per card, kept apart from the message so it is
+    // not part of the question itself.
+    var uploadLines = [];
+    if (role === 'human') {
+      Array.from(row.querySelectorAll('[data-testid="file-thumbnail"] span[title]')).forEach(function(sp) {
+        var t = (sp.getAttribute('title') || '').trim();
+        var em = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|md|json)$/i.exec(t);
+        if (!em) return;
+        var ln = '\uD83D\uDCCE ' + t + ' \u00b7 ' + em[1].toUpperCase();
+        if (uploadLines.indexOf(ln) === -1) uploadLines.push(ln);
+      });
+    }
     var clone = root.cloneNode(true);
     // A file card (PDF, Word, Excel...) would otherwise come out as three
     // loose lines (icon, name, "Document - PDF"). Replace each card with one
@@ -4628,7 +4648,7 @@ function queryAllDeep(selector) {
     // Safety net: a time label glued to the end of the text.
     text = text.replace(/\s*(just now|\d+\s*(?:second|minute|hour|day|week|month|year)s?\s+ago)\s*$/i, '').trim();
     if (!text) return null;
-    return { role: role, text: text, images: images, streaming: row.getAttribute('data-perf-row-streaming') === 'true' };
+    return { role: role, text: text, images: images, uploadLines: uploadLines.join('\n\n'), streaming: row.getAttribute('data-perf-row-streaming') === 'true' };
   }
 
   function findClaudeScroller(row) {
@@ -4694,6 +4714,7 @@ function queryAllDeep(selector) {
       if (r.role === 'human') {
         if (!firstQuestion) firstQuestion = r.text.slice(0, 500);
         parts.push(boldQuestion(r.text.slice(0, 2000)));
+        if (r.uploadLines) parts.push(r.uploadLines);
         // Pictures you uploaded in your own message.
         images = images.concat(r.images);
       } else {
@@ -5382,6 +5403,47 @@ function queryAllDeep(selector) {
       if (w > 0 && h > 0 && Math.max(w, h) < 64) return true;
     } catch (e) {}
     return false;
+  }
+
+  // Claude only: the documents you uploaded to this chat. Each one is read
+  // once from Claude (with your sign-in) and checked: the size must equal
+  // the size Claude reports and the first bytes must look like the file type.
+  // Only files that pass are returned, so a file that cannot actually be
+  // stored never shows up as an attachment. The background script reads the
+  // same address again to store the file.
+  var _claudeUploadChecked = {};
+  async function prepareClaudeUploads() {
+    if (PROVIDER !== 'claude') return [];
+    var hf = window.__diaryCapture && window.__diaryCapture.historyFiles;
+    var m = /\/chat\/([0-9a-f-]{20,})/i.exec(location.pathname);
+    if (!hf || !hf.org || !hf.files || !hf.files.length || !m || hf.convId !== m[1]) return [];
+    var out = [];
+    for (var i = 0; i < hf.files.length; i++) {
+      var f = hf.files[i];
+      var url = location.origin + '/api/organizations/' + hf.org + '/files/' + f.uuid + '/contents';
+      if (_claudeUploadChecked[f.uuid] === undefined) {
+        var ok = false;
+        try {
+          var r = await fetch(url, { credentials: 'include' });
+          if (r.ok) {
+            var buf = new Uint8Array(await r.arrayBuffer());
+            var sizeOk = buf.length > 0 && buf.length <= 25 * 1024 * 1024 && (!f.size || buf.length === f.size);
+            var b0 = buf[0], b1 = buf[1];
+            var magicOk = true;
+            if (/^(docx|xlsx|pptx)$/.test(f.type)) magicOk = b0 === 0x50 && b1 === 0x4B;
+            else if (f.type === 'pdf') magicOk = b0 === 0x25 && b1 === 0x50;
+            else if (/^(doc|xls|ppt)$/.test(f.type)) magicOk = b0 === 0xD0 && b1 === 0xCF;
+            ok = sizeOk && magicOk;
+            if (!ok) console.log('[Diary] Uploaded file not stored: bytes did not match', f.name, '| got', buf.length, 'expected', f.size);
+          } else {
+            console.log('[Diary] Uploaded file not stored: HTTP', r.status, f.name);
+          }
+        } catch (e) { console.log('[Diary] Uploaded file not stored:', f.name, String(e).slice(0, 80)); }
+        _claudeUploadChecked[f.uuid] = ok;
+      }
+      if (_claudeUploadChecked[f.uuid]) out.push({ filename: f.name, type: f.type, url: url, size: f.size });
+    }
+    return out;
   }
 
   // Attachment cards can scroll out of view (Claude only keeps the rows on

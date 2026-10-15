@@ -461,6 +461,40 @@
     return urls;
   }
 
+  // Documents you uploaded to a Claude chat (Word, PDF, Excel...). The
+  // conversation data lists each one with its name, size and file id; the
+  // original is served from /api/organizations/<org>/files/<id>/contents.
+  // Only the list is kept here; diary-content.js decides what to do with it.
+  function parseHistoryFiles(json, reqUrl) {
+    var out = { convId: '', org: '', files: [] };
+    try {
+      var cm = /\/chat_conversations\/([0-9a-f-]{20,})/i.exec(reqUrl || '');
+      var om = /\/api\/organizations\/([0-9a-f-]{20,})\//i.exec(reqUrl || '');
+      out.convId = cm ? cm[1] : '';
+      out.org = om ? om[1] : '';
+      var messages = json && json.chat_messages;
+      if (!Array.isArray(messages)) return out;
+      var seen = {};
+      messages.forEach(function(m) {
+        if (!m || m.sender !== 'human') return;
+        ['files', 'files_v2'].forEach(function(k) {
+          var arr = m[k];
+          if (!Array.isArray(arr)) return;
+          arr.forEach(function(f) {
+            var name = f && typeof f.file_name === 'string' ? f.file_name : '';
+            var uuid = f && typeof f.file_uuid === 'string' ? f.file_uuid : '';
+            if (!name || !uuid || seen[uuid]) return;
+            var em = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|md|json)$/i.exec(name);
+            if (!em) return;
+            seen[uuid] = true;
+            out.files.push({ name: name, uuid: uuid, size: Number(f.size_bytes) || 0, type: em[1].toLowerCase() });
+          });
+        });
+      });
+    } catch(e) {}
+    return out;
+  }
+
   // ── ChatGPT conversation-history endpoint ──────────────────────────────────
   // GET /backend-api/conversation/{uuid} returns the full existing thread as a
   // tree (mapping[id] = {message, parent, children}), not a streaming
@@ -907,6 +941,7 @@
           try {
             var json = await histClone.json();
             console.log('[Diary interceptor] History JSON parsed, chat_messages length:', json && json.chat_messages && json.chat_messages.length);
+            try { window.__diaryCapture.historyFiles = parseHistoryFiles(json, url); } catch(e) {}
             var seedText = parseHistorySeed(json);
             var seedImages = parseHistorySeedImages(json);
             console.log('[Diary interceptor] History seed text length:', seedText.length, '| images found:', seedImages.length);
