@@ -1164,8 +1164,8 @@ function enhanceCodeBlocks(container) {
 })();
 
 // A file the AI offered (shown as "file name . TYPE") becomes a link when
-// that file is stored with this Diary entry. It opens the Diary's own viewer
-// for that file in a new tab. Lines with no stored file stay plain text.
+// that file is stored with this Diary entry. It opens the stored file
+// in the viewer. Lines with no stored file stay plain text.
 function linkifyFileLinesChat(html) {
   if (!chatEntryAttachments || !chatEntryAttachments.length) return html;
   return String(html || '').replace(/<p>\s*\uD83D\uDCCE\s+([^<]+?)\s+\u00b7\s+([A-Za-z0-9]{2,5})\s*<\/p>/g, function(full, name, type) {
@@ -1180,9 +1180,15 @@ function linkifyFileLinesChat(html) {
 }
 function openFileLineChat(el, ev) {
   if (ev) { ev.stopPropagation(); ev.preventDefault(); }
-  if (!chatDiaryEntryId) return;
-  var file = el.getAttribute('data-file-name') + '|' + el.getAttribute('data-file-type');
-  window.open('/app.html?entryId=' + encodeURIComponent(chatDiaryEntryId) + '&openFile=' + encodeURIComponent(file), '_blank');
+  var name = el.getAttribute('data-file-name');
+  var type = el.getAttribute('data-file-type');
+  var att = null;
+  for (var i = 0; i < chatEntryAttachments.length; i++) {
+    var a = chatEntryAttachments[i];
+    if (a && a.filename === name && String(a.type || '').toLowerCase() === type && a.status === 'hosted' && a.url) { att = a; break; }
+  }
+  if (!att) return;
+  openAttachmentReader(att.url, att.filename || name, att.type || type, null, true);
 }
 window.openFileLineChat = openFileLineChat;
 
@@ -2484,13 +2490,13 @@ function escHtmlReader(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-async function openAttachmentReader(url, filename, type, libraryFileId) {
+async function openAttachmentReader(url, filename, type, libraryFileId, hostedFile) {
   var modal = document.getElementById('attachmentReaderModal');
   var titleEl = document.getElementById('attachmentReaderTitle');
   var body = document.getElementById('attachmentReaderBody');
   if (!modal || !titleEl || !body) return;
 
-  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase(), libraryFileId: libraryFileId || null };
+  currentReaderAttachment = { url: url, filename: filename || 'download', type: (type || '').toLowerCase(), libraryFileId: libraryFileId || null, hostedFile: !!hostedFile };
   titleEl.textContent = filename || 'Document';
   body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">Loading&hellip;</div>';
   modal.style.display = 'flex';
@@ -2538,6 +2544,27 @@ window.closeAttachmentReader = closeAttachmentReader;
 
 async function downloadAttachmentFromReader() {
   if (!currentReaderAttachment) return;
+  // A file stored with a Diary entry is the real original file, so it is
+  // saved as it is (same name, same extension), not as extracted text.
+  if (currentReaderAttachment.hostedFile) {
+    try {
+      var hResp = await fetch(currentReaderAttachment.url);
+      if (!hResp.ok) throw new Error('Fetch failed with status ' + hResp.status);
+      var hBlob = await hResp.blob();
+      var hUrl = URL.createObjectURL(hBlob);
+      var hA = document.createElement('a');
+      hA.href = hUrl;
+      hA.download = currentReaderAttachment.filename;
+      document.body.appendChild(hA);
+      hA.click();
+      document.body.removeChild(hA);
+      setTimeout(function() { URL.revokeObjectURL(hUrl); }, 1000);
+    } catch (e) {
+      console.warn('[Chat] Stored file download failed:', e.message);
+      window.open(currentReaderAttachment.url, '_blank');
+    }
+    return;
+  }
   // Real fix: when a libraryFileId is present (the original file was
   // genuinely uploaded to the Forge Library at attach time — see
   // uploadOriginalFileToLibrary), fetch and download that REAL,
@@ -2628,6 +2655,41 @@ async function renderTextIntoReader(url, body) {
 // back to the existing, text-only url fetch on any failure at all
 // (missing libraryFileId, a deleted library file, a parse error),
 // since showing the plain text is always better than showing nothing.
+// Turns the bytes of a real .docx / .xlsx into viewer HTML (same approach as
+// the Diary's own viewer). Returns '' if it can't be read.
+async function renderOfficeBinaryHtml(buf, type) {
+  try {
+    if (type === 'docx') {
+      if (typeof mammoth === 'undefined') return '';
+      var result = await mammoth.convertToHtml({ arrayBuffer: buf });
+      return (result.value && result.value.trim()) ? result.value : '';
+    }
+    if (typeof XLSX === 'undefined') return '';
+    var wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    var out = '';
+    wb.SheetNames.forEach(function(name) {
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '', raw: false });
+      out += '<h3 style="font-family:Inter,sans-serif;font-size:14px;color:#1B2A4A;margin:16px 0 8px;">' + escHtmlReader(name) + '</h3>';
+      if (!rows.length) { out += '<div style="color:#9E9890;font-size:13px;">(empty sheet)</div>'; return; }
+      var shown = rows.slice(0, 500);
+      out += '<div style="overflow:auto;"><table style="border-collapse:collapse;font-family:Inter,sans-serif;font-size:13px;color:#1B2A4A;">';
+      shown.forEach(function(r, ri) {
+        out += '<tr>' + r.map(function(c) {
+          var v = (c instanceof Date) ? c.toISOString().slice(0, 10) : String(c);
+          var tag = ri === 0 ? 'th' : 'td';
+          return '<' + tag + ' style="border:1px solid #D6D2C8;padding:4px 8px;text-align:left;' + (ri === 0 ? 'background:#F5F3EE;font-weight:600;' : '') + '">' + escHtmlReader(v) + '</' + tag + '>';
+        }).join('') + '</tr>';
+      });
+      out += '</table></div>';
+      if (rows.length > shown.length) out += '<div style="color:#9E9890;font-size:12px;margin-top:6px;">Showing the first 500 of ' + rows.length + ' rows. Use Download for the full file.</div>';
+    });
+    return out;
+  } catch (e) {
+    console.warn('[Chat] Office file preview failed:', e.message);
+    return '';
+  }
+}
+
 async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
   if (type === 'pptx' && libraryFileId) {
     try {
@@ -2654,6 +2716,32 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
       console.warn('[Chat] Failed to re-extract PPTX with images, falling back to plain text:', e.message);
       // Falls through intentionally.
     }
+  }
+  // A real .docx/.xlsx stored with a Diary entry is a ZIP file ("PK"), not
+  // text. Those are read with mammoth / SheetJS. Anything else (text sent
+  // from this page) carries markdown and falls through to the text path.
+  if (type === 'docx' || type === 'xlsx') {
+    var binResp = await fetch(url);
+    if (!binResp.ok) throw new Error('Fetch failed with status ' + binResp.status);
+    var binBuf = await binResp.arrayBuffer();
+    var binHead = new Uint8Array(binBuf.slice(0, 2));
+    var panelHtml = '';
+    if (binHead[0] === 0x50 && binHead[1] === 0x4B) {
+      panelHtml = await renderOfficeBinaryHtml(binBuf, type);
+      if (panelHtml) {
+        body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);' + (type === 'docx' ? 'font-family:Inter,sans-serif;font-size:14px;line-height:1.7;color:#1B2A4A;' : '') + '">' + panelHtml + '</div>';
+      } else {
+        body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This file type can\'t be previewed here yet. <a href="' + escHtmlReader(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+      }
+      return;
+    }
+    var binText = new TextDecoder('utf-8').decode(binBuf);
+    if (window.Forge && Forge.renderMarkdown) {
+      body.innerHTML = '<div class="chat-msg-body">' + Forge.renderMarkdown(binText) + '</div>';
+    } else {
+      body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;">' + escHtmlReader(binText) + '</pre>';
+    }
+    return;
   }
   var resp = await fetch(url);
   if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
