@@ -4996,6 +4996,54 @@ function queryAllDeep(selector) {
               },
               replacement: function() { return ''; }
             });
+            // Gemini canvas documents: each one arrives inside an
+            // <immersive-entry-chip> that also carries Gemini's own interface
+            // text (the Export button and the "Edit directly or with Gemini /
+            // Click anywhere to type..." hint). Those are not part of the
+            // conversation, so they are dropped. The document's own title and
+            // text are kept.
+            svc.addRule('geminiCanvasChrome', {
+              filter: function(node) {
+                if (!node || node.nodeType !== 1) return false;
+                var nn = node.nodeName;
+                if (nn === 'INLINE-EDIT-EDUCATION-TOOLTIP' || nn === 'GEM-DISCOVERY-TOOLTIP') return true;
+                if (node.closest && node.closest('immersive-entry-chip') && node.children.length <= 3 &&
+                    (node.textContent || '').trim() === 'Export') return true;
+                return false;
+              },
+              replacement: function() { return ''; }
+            });
+            // A table whose first row uses plain cells instead of header
+            // cells is not recognised as a table by the GFM plugin, so every
+            // cell came out as its own line with a stray "|". Such tables are
+            // written as a normal markdown table, first row as the header.
+            // Tables the plugin already handles are left to it.
+            svc.addRule('headerlessTable', {
+              filter: function(node) {
+                if (!node || node.nodeName !== 'TABLE' || !node.rows || !node.rows.length) return false;
+                var first = node.rows[0];
+                var parentName = first.parentNode && first.parentNode.nodeName;
+                if (parentName === 'THEAD') return false;
+                for (var ci = 0; ci < first.cells.length; ci++) {
+                  if (first.cells[ci].nodeName !== 'TH') return true;
+                }
+                return false;
+              },
+              replacement: function(content, node) {
+                var rows = Array.from(node.rows).map(function(r) {
+                  return Array.from(r.cells).map(function(c) {
+                    return (c.textContent || '').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|');
+                  });
+                });
+                var cols = rows.reduce(function(m, r) { return Math.max(m, r.length); }, 0);
+                if (!cols) return '';
+                rows = rows.map(function(r) { while (r.length < cols) r.push(''); return r; });
+                var out = '\n\n| ' + rows[0].join(' | ') + ' |\n';
+                out += '| ' + rows[0].map(function() { return '---'; }).join(' | ') + ' |\n';
+                rows.slice(1).forEach(function(r) { out += '| ' + r.join(' | ') + ' |\n'; });
+                return out + '\n';
+              }
+            });
             window.__diaryTurndownInstance = svc;
           }
           // Pass the actual DOM node, NOT el.innerHTML as a string.
