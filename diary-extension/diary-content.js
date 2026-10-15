@@ -4715,6 +4715,52 @@ function queryAllDeep(selector) {
     } catch (e) { return false; }
   }
 
+  // Perplexity only: its generated files (xlsx / docx / pdf) are drawn as
+  // file cards that sit OUTSIDE the answer text blocks, so they never reach
+  // the saved conversation text. Returns one "name . TYPE" line per card that
+  // follows answer block number i (and comes before the next block), in the
+  // same form Claude and ChatGPT already save, so the Diary and Continue
+  // make them clickable. Uses the same card recognition as
+  // registry.perplexity.getAttachments.
+  function perplexityFileLines(els, i) {
+    try {
+      if (window.location.hostname.indexOf('perplexity.ai') === -1) return '';
+      var ICON_TYPE_MAP = { 'type-pdf': 'pdf', 'spreadsheet': 'xlsx', 'text': 'docx', 'word': 'docx', 'presentation': 'pptx', 'powerpoint': 'pptx' };
+      var LABEL_TYPE_MAP = { pdf: 'pdf', word: 'docx', excel: 'xlsx', powerpoint: 'pptx', spreadsheet: 'xlsx', presentation: 'pptx', document: 'docx' };
+      var FOLLOWING = 4, PRECEDING = 2;
+      var lines = [];
+      var seen = {};
+      Array.from(document.querySelectorAll('use')).forEach(function(useEl) {
+        var href = useEl.getAttribute('xlink:href') || useEl.getAttribute('href') || '';
+        var m = href.match(/^#pplx-icon-file-(.+)$/);
+        if (!m) return;
+        var card = useEl.closest('.group');
+        if (!card) return;
+        var nameEl = card.querySelector('.font-bold.truncate');
+        var name = nameEl ? (nameEl.textContent || '').trim() : '';
+        if (!name) return;
+        var type = ICON_TYPE_MAP[m[1]] || null;
+        if (!type) {
+          var labelEls = card.querySelectorAll('.text-secondary.truncate');
+          for (var k = 0; k < labelEls.length; k++) {
+            var fw = (labelEls[k].textContent || '').trim().split(/\s+/)[0].toLowerCase();
+            if (LABEL_TYPE_MAP[fw]) { type = LABEL_TYPE_MAP[fw]; break; }
+          }
+        }
+        if (!type) return;
+        // The card belongs to block i when it comes after that block and
+        // before the next one.
+        if (!(els[i].compareDocumentPosition(card) & FOLLOWING)) return;
+        if (i + 1 < els.length && !(els[i + 1].compareDocumentPosition(card) & PRECEDING)) return;
+        var key = name + '.' + type;
+        if (seen[key]) return;
+        seen[key] = true;
+        lines.push('\uD83D\uDCCE ' + key + ' \u00b7 ' + type.toUpperCase());
+      });
+      return lines.length ? '\n\n' + lines.join('\n\n') : '';
+    } catch (e) { return ''; }
+  }
+
   function readDomResponse() {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
@@ -5080,6 +5126,8 @@ function queryAllDeep(selector) {
         console.error('[Diary] Markdown conversion failed, falling back to plain text:', e);
       }
       return plain;
+    }).map(function(t, i) {
+      return t ? t + perplexityFileLines(els, i) : t;
     }).filter(function(t) {
       var tooShort = t.length < 20;
       var key = t.slice(0, 50);
