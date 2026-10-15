@@ -1828,6 +1828,16 @@ function queryAllDeep(selector) {
             // shows only a tiny preview of each.
             var grokFileImages = [];
             var grokGenImages = [];
+            // A document Grok generated (xlsx, pdf, docx...) is a card on its answer.
+            // It becomes the same "name · TYPE" file line every other provider gets,
+            // instead of a raw path shown as a numbered link.
+            var grokFileLine = function(u) {
+              var m = /^(?:https:\/\/assets\.grok\.com\/)?users\/[0-9a-f-]+\/generated\/[0-9a-f-]+\/([^\/?#]+\.(xlsx|xls|docx|doc|pptx|ppt|pdf|csv|txt|md|json|zip))$/i.exec(String(u || ''));
+              if (!m) return null;
+              var nm = m[1];
+              try { nm = decodeURIComponent(nm); } catch(_) {}
+              return '\uD83D\uDCCE ' + nm + ' \u00b7 ' + m[2].toUpperCase();
+            };
             orderIds.forEach(function(id) {
               var r = byResp[id];
               if (!r) { missing++; return; }
@@ -1862,6 +1872,16 @@ function queryAllDeep(selector) {
                 // <grok:render card_id="..."> tags; the real link for each is in the
                 // response's cardAttachmentsJson (matched by card id). Turn each tag into
                 // a numbered link ([1], [2]... per answer, same source = same number).
+                var grokFileLines = [];
+                if (Array.isArray(r.cardAttachmentsJson)) {
+                  r.cardAttachmentsJson.forEach(function(cj) {
+                    try {
+                      var fc = JSON.parse(cj);
+                      var fl = fc && fc.url ? grokFileLine(fc.url) : null;
+                      if (fl && grokFileLines.indexOf(fl) === -1) grokFileLines.push(fl);
+                    } catch(_) {}
+                  });
+                }
                 if (text.indexOf('<grok:render') !== -1) {
                   var cardUrls = {};
                   (Array.isArray(r.cardAttachmentsJson) ? r.cardAttachmentsJson : []).forEach(function(cj) {
@@ -1872,11 +1892,13 @@ function queryAllDeep(selector) {
                   text = text.replace(/<grok:render\b[^>]*?card_id="([^"]+)"[^>]*>[\s\S]*?<\/grok:render>/g, function(_m, cid) {
                     var u = cardUrls[cid];
                     if (!u) return '';
+                    if (grokFileLine(u)) return '';
                     if (!citeNums[u]) citeNums[u] = citeNext++;
                     return '[' + citeNums[u] + '](' + u.replace(/\(/g, '%28').replace(/\)/g, '%29').replace(/\s/g, '%20') + ')';
                   });
                   text = text.replace(/<\/?grok:[^>]*>/g, '').trim();
                 }
+                if (grokFileLines.length) text = text + '\n\n' + grokFileLines.join('\n\n');
                 parts.push(text);
                 lastRole = 'assistant';
               }
