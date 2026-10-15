@@ -5013,26 +5013,32 @@ function queryAllDeep(selector) {
               },
               replacement: function() { return ''; }
             });
-            // A table whose first row uses plain cells instead of header
-            // cells is not recognised as a table by the GFM plugin, so every
-            // cell came out as its own line with a stray "|". Such tables are
-            // written as a normal markdown table, first row as the header.
-            // Tables the plugin already handles are left to it.
-            svc.addRule('headerlessTable', {
+            // Two kinds of table came out as one cell per line with stray "|"
+            // characters: a table whose first row uses plain cells instead of
+            // header cells (the GFM plugin does not recognise it as a table),
+            // and a table whose cells hold block elements such as paragraphs
+            // (each cell then spans several lines). Both are written as a
+            // normal markdown table here, first row as the header, with each
+            // cell on one line. Ordinary tables are left to the plugin.
+            svc.addRule('flatCellTable', {
               filter: function(node) {
                 if (!node || node.nodeName !== 'TABLE' || !node.rows || !node.rows.length) return false;
                 var first = node.rows[0];
-                var parentName = first.parentNode && first.parentNode.nodeName;
-                if (parentName === 'THEAD') return false;
-                for (var ci = 0; ci < first.cells.length; ci++) {
-                  if (first.cells[ci].nodeName !== 'TH') return true;
+                var headerless = false;
+                if (!(first.parentNode && first.parentNode.nodeName === 'THEAD')) {
+                  for (var ci = 0; ci < first.cells.length; ci++) {
+                    if (first.cells[ci].nodeName !== 'TH') { headerless = true; break; }
+                  }
                 }
-                return false;
+                if (headerless) return true;
+                return !!node.querySelector('td p, td div, td ul, td ol, th p, th div, th ul, th ol');
               },
               replacement: function(content, node) {
                 var rows = Array.from(node.rows).map(function(r) {
                   return Array.from(r.cells).map(function(c) {
-                    return (c.textContent || '').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|');
+                    var cellMd = '';
+                    try { cellMd = svc.turndown(c); } catch (e) { cellMd = c.textContent || ''; }
+                    return cellMd.replace(/\s*\n+\s*/g, ' ').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|');
                   });
                 });
                 var cols = rows.reduce(function(m, r) { return Math.max(m, r.length); }, 0);
