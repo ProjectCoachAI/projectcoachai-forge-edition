@@ -6209,27 +6209,9 @@ async function renderUnifiedEntryContent(entryId) {
     var html = '';
     for (var i = startIndex; i < total; i++) html += wrapTurnHtml(nativeSegments[i], i);
 
-    // Images-disclosure banner — reworded here specifically for the
-    // unified view, where there's now a real, visible boundary to be
-    // precise about. The single-thread version of this banner ("Forge
-    // won't know about images from the original conversation") no longer
-    // fits once the native portion with its own images is directly, visibly
-    // shown right above the Forge-only portion that lacks them — this
-    // version names that actual boundary instead of speaking generically.
-    //
-    // NOTE: fixed a genuine, confirmed wording issue — this used to
-    // unconditionally claim images are "shown above", but the native
-    // side is paginated (ENTRY_INITIAL_VISIBLE_TURNS=3 by default, see
-    // below), so an image sitting in an older, not-yet-expanded turn
-    // genuinely isn't visible at all until "Load earlier" is clicked.
-    // Reworded to describe where the images genuinely live (the native
-    // side) without claiming they're currently on-screen, which is true
-    // regardless of pagination state.
-    if (meta.images && meta.images.length && forgeMessages.length) {
-      html += '<div style="margin:14px 0;padding:10px 14px;background:#FBF7EF;border:0.5px solid #E8DCC8;border-radius:8px;font-size:12px;color:#9E9890;">' +
-        heroicon('photo') + ' This conversation\'s native side includes images (scroll up or use "Load earlier" if needed); anything continued in Forge below won\'t include or reference them.' +
-      '</div>';
-    }
+    // Images-disclosure banner removed: Continue in Forge now gives the model a
+    // written description of all images with the first message, so the old
+    // "won't include or reference them" note is no longer accurate.
 
     // "Still syncing" indicator — a real, honest signal for a real,
     // possible state: content's own save can succeed independently of
