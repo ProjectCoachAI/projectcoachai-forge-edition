@@ -1450,6 +1450,7 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
   // already be part of the default, recency-sorted page.
   (async function() {
     var openEntryId = new URLSearchParams(window.location.search).get('entryId');
+    var openFileParam = new URLSearchParams(window.location.search).get('openFile');
     if (!openEntryId) return;
     history.replaceState({}, '', '/app.html');
     var targetId = parseInt(openEntryId, 10);
@@ -1473,6 +1474,26 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
       }
     }
     setTimeout(function() { toggleEntry(targetId); }, 100);
+    // Opened from a file line in Continue: open that file's viewer once the
+    // entry has rendered.
+    if (openFileParam && openFileParam.indexOf('|') > 0) {
+      var wantName = openFileParam.slice(0, openFileParam.lastIndexOf('|'));
+      var wantType = openFileParam.slice(openFileParam.lastIndexOf('|') + 1).toLowerCase();
+      var tries = 0;
+      var timer = setInterval(function() {
+        tries++;
+        var card = document.getElementById('entry-' + targetId);
+        var links = card ? card.querySelectorAll('.file-line') : [];
+        for (var li = 0; li < links.length; li++) {
+          if (links[li].getAttribute('data-file-name') === wantName && links[li].getAttribute('data-file-type') === wantType) {
+            clearInterval(timer);
+            openFileLine(links[li]);
+            return;
+          }
+        }
+        if (tries > 30) clearInterval(timer);
+      }, 200);
+    }
   })();
 })();
 

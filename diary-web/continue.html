@@ -921,6 +921,9 @@ function clearChatImageAttachment() {
 window.clearChatImageAttachment = clearChatImageAttachment;
 
 let chatDiaryEntryId = null;
+// Files stored with this Diary entry (name + type), used to make the
+// "file name . TYPE" lines in the conversation clickable.
+let chatEntryAttachments = [];
 let chatHistory = [];
 let chatSessionId = null;
 let chatIsSending = false;
@@ -1160,6 +1163,29 @@ function enhanceCodeBlocks(container) {
   observer.observe(chatMessagesEl, { childList: true, subtree: true });
 })();
 
+// A file the AI offered (shown as "file name . TYPE") becomes a link when
+// that file is stored with this Diary entry. It opens the Diary's own viewer
+// for that file in a new tab. Lines with no stored file stay plain text.
+function linkifyFileLinesChat(html) {
+  if (!chatEntryAttachments || !chatEntryAttachments.length) return html;
+  return String(html || '').replace(/<p>\s*\uD83D\uDCCE\s+([^<]+?)\s+\u00b7\s+([A-Za-z0-9]{2,5})\s*<\/p>/g, function(full, name, type) {
+    var t = type.toLowerCase();
+    var stored = chatEntryAttachments.some(function(a) {
+      return a && a.filename === name && String(a.type || '').toLowerCase() === t && a.status === 'hosted' && a.url;
+    });
+    if (!stored) return full;
+    var safeName = name.replace(/"/g, '&quot;');
+    return '<p><a href="#" class="file-line" data-file-name="' + safeName + '" data-file-type="' + t + '" onclick="openFileLineChat(this,event);return false;" style="color:#4A4035;text-decoration:none;border-bottom:1px dashed #C17D3C;cursor:pointer;">\uD83D\uDCCE ' + name + ' \u00b7 ' + type + '</a></p>';
+  });
+}
+function openFileLineChat(el, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  if (!chatDiaryEntryId) return;
+  var file = el.getAttribute('data-file-name') + '|' + el.getAttribute('data-file-type');
+  window.open('/app.html?entryId=' + encodeURIComponent(chatDiaryEntryId) + '&openFile=' + encodeURIComponent(file), '_blank');
+}
+window.openFileLineChat = openFileLineChat;
+
 function addMessageToDOM(role, content, opts) {
   opts = opts || {};
   var empty = document.getElementById('chatEmpty');
@@ -1170,6 +1196,7 @@ function addMessageToDOM(role, content, opts) {
   if (opts.id) div.id = opts.id;
 
   var rendered = window.Forge && Forge.renderMarkdown ? renderWithBubbles(content) : content;
+  if (role === 'assistant') rendered = linkifyFileLinesChat(rendered);
 
   if (role === 'assistant') {
     var modelLabel = MODEL_LABELS[chatModel] || chatModel;
@@ -2231,6 +2258,7 @@ window.sendChatMessage = sendChatMessage;
     document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel] || chatModel;
     updateChatImageAttachButtonState();
     chatConversationUrl = meta && meta.url ? meta.url : null;
+    chatEntryAttachments = (meta && Array.isArray(meta.attachments)) ? meta.attachments : [];
     updateSyncButtonLabel();
 
     // Honest, visible disclosure — not a missing-feature apology, a
