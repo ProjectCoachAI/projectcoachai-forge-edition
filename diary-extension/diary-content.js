@@ -238,6 +238,63 @@
             }
           });
         } catch(_) {}
+        // Files ChatGPT offers through its newer "Download ..." cards.
+        // Those cards are not links and carry no file name on the page
+        // (confirmed live: only a label such as "Download Excel recipe"),
+        // but the conversation's own history names every file the answer
+        // links to, as [label](sandbox:/mnt/data/<file name>). Read the
+        // names from there, so each offered file gets its own slot with
+        // its real name and type, which is also the name the download
+        // arrives under (potato_casserole_recipe.xlsx).
+        try {
+          var hs = window.__diaryCapture && window.__diaryCapture.historySeed;
+          var rawHist = hs && hs.rawJson;
+          var inThisChat = true;
+          var chatIdMatch = /\/c\/([0-9a-f-]{20,})/i.exec(location.pathname);
+          if (hs && hs.convId && chatIdMatch && hs.convId !== chatIdMatch[1]) inThisChat = false;
+          if (rawHist && inThisChat) {
+            var assistantTexts = [];
+            var pushIfAssistant = function(msg) {
+              if (!msg || !msg.content || !msg.author || msg.author.role !== 'assistant') return;
+              // The whole content object is searched, not only its text
+              // parts, so the link is found wherever ChatGPT stores it
+              // inside the answer.
+              assistantTexts.push(JSON.stringify(msg.content));
+            };
+            if (Array.isArray(rawHist.messages)) {
+              rawHist.messages.forEach(pushIfAssistant);
+            } else if (rawHist.mapping && typeof rawHist.mapping === 'object') {
+              // Follow the active branch only, so a regenerated answer
+              // that was abandoned cannot add files that are not shown.
+              var cursor = rawHist.current_node, hops = 0, seenNodes = {};
+              while (cursor && rawHist.mapping[cursor] && !seenNodes[cursor] && hops < 5000) {
+                seenNodes[cursor] = true;
+                pushIfAssistant(rawHist.mapping[cursor].message);
+                cursor = rawHist.mapping[cursor].parent;
+                hops++;
+              }
+            }
+            var linkRe = /\]\(sandbox:([^)\s]+)\)/g;
+            var docTypes = /^(pdf|docx?|xlsx?|pptx?|csv|txt|md|json)$/i;
+            var haveKeys = {};
+            attachments.forEach(function(a) { haveKeys[a.filename + '|' + a.type] = 1; });
+            assistantTexts.forEach(function(t) {
+              var lm;
+              linkRe.lastIndex = 0;
+              while ((lm = linkRe.exec(t)) !== null) {
+                var fileName = lm[1].split('/').pop();
+                try { fileName = decodeURIComponent(fileName); } catch (e2) {}
+                var extM = /\.([A-Za-z0-9]{1,5})$/.exec(fileName);
+                if (!fileName || !extM || !docTypes.test(extM[1])) continue;
+                var typeLc = extM[1].toLowerCase();
+                var key = fileName + '|' + typeLc;
+                if (haveKeys[key]) continue;
+                haveKeys[key] = 1;
+                attachments.push({ filename: fileName, type: typeLc });
+              }
+            });
+          }
+        } catch(_) {}
         return attachments;
       }
     },
