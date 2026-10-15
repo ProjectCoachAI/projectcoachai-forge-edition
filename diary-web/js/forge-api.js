@@ -793,6 +793,13 @@
       .replace(/(<li data-ol[^>]*>[\s\S]*?<\/li>\n*)+/g, s => `<ol>${s.replace(/\n{2,}/g, '\n')}</ol>`)
       .replace(/(<li(?! data-ol)[^>]*>[\s\S]*?<\/li>\n*)+/g, s => `<ul>${s.replace(/\n{2,}/g, '\n')}</ul>`)
       .replace(/ data-ol/g, '')
+      // A <br> written by the AI inside a table cell or list item arrives here
+      // as escaped text ("&lt;br&gt;"), because the whole input is escaped first.
+      // Turn it back into a real line break, only inside cells and list items:
+      // code blocks stay exactly as written.
+      .replace(/<(td|th|li)([^>]*)>([\s\S]*?)<\/\1>/g, function (m, tag, attrs, inner) {
+        return '<' + tag + attrs + '>' + inner.replace(/&lt;br\s*\/?&gt;/gi, '<br>') + '</' + tag + '>';
+      })
       .replace(/\n\n/g, '</p><p>')
       // NOTE: fixed a genuine, confirmed bug found while independently
       // re-verifying the fix above (its own claimed "5 test cases"
