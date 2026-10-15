@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Diary — Your AI Memory | Save any AI response forever</title>
-  <meta name="description" content="Save any AI response from Claude, ChatGPT, Gemini and more in one click. One place. Stored forever." />
+  <title>Diary — Your AI Memory | Save, find and use your AI answers</title>
+  <meta name="description" content="Save conversations from Claude, ChatGPT, Gemini and more in one click, then find and use them again. Your AI answers, made usable." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
@@ -93,7 +93,7 @@
       text-align: center;
       padding: 6rem 2rem 5rem;
       border-bottom: 0.5px solid #D6D2C8;
-      max-width: 700px;
+      max-width: 780px;
       margin: 0 auto;
     }
 
@@ -108,9 +108,9 @@
 
     .hero-headline {
       font-family: 'Lora', serif;
-      font-size: 52px;
+      font-size: 44px;
       font-weight: 400;
-      line-height: 1.15;
+      line-height: 1.2;
       color: #1B2A4A;
       margin-bottom: 1.5rem;
       letter-spacing: -0.5px;
@@ -125,7 +125,7 @@
       font-size: 16px;
       color: #6B6559;
       line-height: 1.7;
-      max-width: 420px;
+      max-width: 520px;
       margin: 0 auto 2.75rem;
     }
 
@@ -476,7 +476,7 @@
       }
 
       .hero-headline {
-        font-size: 36px;
+        font-size: 30px;
       }
 
       .problem {
@@ -511,6 +511,26 @@
         text-align: center;
       }
     }
+
+    /* ── LANDING 2026-10: hero screenshot, why, 4-step grid, artifacts, coverage ── */
+    .hero-shot-wrap { padding: 3rem 2rem 1rem; border-bottom: 0.5px solid #D6D2C8; }
+    .hero-shot { max-width: 920px; margin: 0 auto 2rem; }
+    .why-wrap, .art-wrap, .cov-wrap { border-bottom: 0.5px solid #D6D2C8; }
+    .why { max-width: 680px; margin: 0 auto; padding: 4.5rem 2rem; text-align: center; }
+    .why-headline, .art-headline, .cov-headline { font-family: 'Lora', serif; font-size: 28px; font-weight: 400; color: #1B2A4A; line-height: 1.3; margin-bottom: 1rem; }
+    .why-body, .art-body, .cov-body { font-size: 15px; color: #6B6559; line-height: 1.75; }
+    .how-wide { max-width: 1000px; }
+    .how-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3rem 2.5rem; }
+    .how-card { text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .how-card .step-icon { width: 44px; height: 44px; font-size: 18px; margin-bottom: 0.9rem; }
+    .step-kicker { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #C17D3C; font-weight: 500; margin-bottom: 0.5rem; }
+    .how-card .step-body { margin-bottom: 1.25rem; max-width: 420px; }
+    .how-card .screenshot-frame { width: 100%; margin-top: auto; }
+    .art { max-width: 760px; margin: 0 auto; padding: 4.5rem 2rem; text-align: center; }
+    .art .how-title { margin-bottom: 1rem; }
+    .art-body { max-width: 520px; margin: 0 auto 2rem; }
+    .cov { max-width: 620px; margin: 0 auto; padding: 4rem 2rem; text-align: center; }
+    @media (max-width: 700px) { .how-grid { grid-template-columns: 1fr; gap: 2.5rem; } .hero-shot-wrap { padding: 2rem 1rem 0.5rem; } .why, .art { padding: 3rem 1.5rem; } .cov { padding: 3rem 1.5rem; } }
 
     /* ── PRICING ── */
     .pricing-wrap { border-bottom: 0.5px solid #D6D2C8; }
@@ -582,46 +602,97 @@
   <!-- HERO -->
   <section class="hero">
     <p class="hero-eyebrow">Your AI memory</p>
-    <h1 class="hero-headline">Find it in seconds.<br><em>Yours forever.</em></h1>
-    <p class="hero-sub">Save unlimited AI answers from Claude, ChatGPT, Gemini and more — then find any of them again, instantly, in one place.</p>
-    <a href="#" onclick="installExtension(event)" class="hero-cta" id="heroCta">Add to Chrome — Free</a>
-    <div style="font-size:12px;color:#9E9890;margin-top:0.75rem;">Works on Chrome, Edge &amp; Opera</div>
+    <h1 class="hero-headline">Your AI conversations hold the answers. <em>Diary makes them usable.</em></h1>
+    <p class="hero-sub">Every chat with Claude, ChatGPT or Gemini produces real information. Buried in scrollback, it is just noise. Diary saves it, organizes it, and makes it easy to find, recall and use.</p>
+    <a href="#" onclick="installExtension(event)" class="hero-cta" id="heroCta">Add the extension &mdash; free</a>
+    <div style="font-size:12px;color:#9E9890;margin-top:0.75rem;">No credit card required &middot; Works on Chrome, Edge &amp; Opera</div>
+  </section>
+
+  <!-- HERO SCREENSHOT: stays hidden until /img/screenshot_hero_search.png exists -->
+  <div class="hero-shot-wrap" id="heroShotWrap" style="display:none;">
+    <div class="hero-shot">
+      <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_hero_search.png', 'Searching saved AI conversations in Diary')">
+        <img src="/img/screenshot_hero_search.png" alt="The Diary entries list with a search active and a matching result showing" onload="document.getElementById('heroShotWrap').style.display='block'" />
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUST -->
+  <section class="trust">
+    <div class="trust-inner">
+      <span class="trust-icon"><i class="ti ti-lock" aria-hidden="true"></i></span>
+      <h2 class="trust-headline">Your entries are yours.</h2>
+      <p class="trust-body">Your saved conversations live in your own private archive.</p>
+    </div>
   </section>
 
   <!-- PROBLEM -->
   <div class="problem-wrap">
     <div class="problem">
-      <p>Great AI answers get buried in chat history — or scattered across five different chatbots. Diary keeps them in one place, and easy to find.</p>
+      <p>Great AI answers get buried the moment you close the tab.</p>
+    </div>
+  </div>
+
+  <!-- WHY IT MATTERS -->
+  <div class="why-wrap">
+    <div class="why">
+      <h2 class="why-headline">Information is only as good as what you can do with it.</h2>
+      <p class="why-body">A student needs the one explanation that finally made sense. A director needs the exact figure from a conversation three weeks ago. A founder needs last quarter&rsquo;s pricing logic as a table, not a paragraph. Different people, same problem: the answer existed, but it was not usable when it mattered. Diary closes that gap.</p>
     </div>
   </div>
 
   <!-- HOW IT WORKS -->
   <div class="how-wrap" id="how">
-    <div class="how">
+    <div class="how how-wide">
       <p class="how-title">How it works</p>
-      <div class="how-steps">
-        <div class="how-step">
-          <div class="step-icon">
-            <i class="ti ti-search" aria-hidden="true"></i>
-          </div>
-          <p class="step-title">Find</p>
-          <p class="step-body">Search everything you've ever saved, instantly. Your knowledge base, always ready.</p>
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="step-icon"><i class="ti ti-device-floppy" aria-hidden="true"></i></div>
+          <p class="step-kicker">1 &middot; Save</p>
+          <h3 class="step-title">Capture the information the moment you get it.</h3>
+          <p class="step-body">While you chat with Claude, ChatGPT, Gemini, Perplexity or others, save the conversation with one click, without leaving the page.</p>
+          <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_how_find.png', 'Save from any AI')"><img src="/img/screenshot_how_find.png" alt="Forge Diary extension dock showing the AI switcher and Save button on a Claude conversation" onerror="this.parentNode.style.display='none'" /></div>
         </div>
-        <div class="how-step">
-          <div class="step-icon">
-            <i class="ti ti-device-floppy" aria-hidden="true"></i>
-          </div>
-          <p class="step-title">Save</p>
-          <p class="step-body">One click saves any response from any AI — straight to your personal archive.</p>
+        <div class="how-card">
+          <div class="step-icon"><i class="ti ti-search" aria-hidden="true"></i></div>
+          <p class="step-kicker">2 &middot; Find</p>
+          <h3 class="step-title">Turn scattered answers into a searchable library.</h3>
+          <p class="step-body">Search by what you remember, not where you filed it. No more scrolling through chat history for the answer you know you got.</p>
+          <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_reader.png', 'Find anything you have saved')"><img src="/img/screenshot_carousel_reader.png" alt="A saved Diary entry with search active, showing a highlighted match and 1 of 17 navigation" onerror="this.parentNode.style.display='none'" /></div>
         </div>
-        <div class="how-step">
-          <div class="step-icon">
-            <i class="ti ti-lock" aria-hidden="true"></i>
-          </div>
-          <p class="step-title">Keep</p>
-          <p class="step-body">Stored permanently in your personal archive. Not cached. Not temporary. Forever.</p>
+        <div class="how-card">
+          <div class="step-icon"><i class="ti ti-arrow-forward-up" aria-hidden="true"></i></div>
+          <p class="step-kicker">3 &middot; Continue in Forge</p>
+          <h3 class="step-title">Keep building on what you already know.</h3>
+          <p class="step-body">Open any saved conversation in Forge and pick up where you left off. Your question and context come with you, so you never start from zero.</p>
+          <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_forge.png', 'Continue in Forge')"><img src="/img/screenshot_carousel_forge.png" alt="A Diary entry showing the Continued in Forge divider, with the saved conversation above it and the continued conversation below" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
+        <div class="how-card">
+          <div class="step-icon"><i class="ti ti-archive" aria-hidden="true"></i></div>
+          <p class="step-kicker">4 &middot; Keep</p>
+          <h3 class="step-title">Your information, organized and ready.</h3>
+          <p class="step-body">Every entry waits in your personal archive, with the documents and images that came with it, ready whenever you need it again.</p>
+          <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_how_keep.png', 'Your personal archive')"><img src="/img/screenshot_how_keep.png" alt="Forge Diary app showing saved AI conversations with categories and search" onerror="this.parentNode.style.display='none'" /></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ARTIFACTS -->
+  <div class="art-wrap">
+    <div class="art">
+      <p class="how-title">Artifacts</p>
+      <h2 class="art-headline">From answer to artifact.</h2>
+      <p class="art-body">Do not just save what the AI told you. Turn it into something you can use: a clean table, a checklist, a structured summary.</p>
+      <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_table.png', 'From answer to artifact')"><img src="/img/screenshot_carousel_table.png" alt="The Table artifact open on a Diary entry, showing a multi-row table with filter and export controls" onerror="this.parentNode.style.display='none'" /></div>
+    </div>
+  </div>
+
+  <!-- COVERAGE -->
+  <div class="cov-wrap">
+    <div class="cov">
+      <h2 class="cov-headline">Works where you already chat.</h2>
+      <p class="cov-body">Claude, ChatGPT, Gemini, Perplexity and more. Documents and images that come with your answers are kept too, from Claude, ChatGPT and Perplexity today, with the other assistants joining.</p>
     </div>
   </div>
 
@@ -630,41 +701,6 @@
     <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
     <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()" />
   </div>
-
-  <!-- SCREENSHOTS -->
-  <div class="screenshots-wrap">
-    <div class="screenshots">
-      <div class="screenshot-item">
-        <div class="screenshot-label">Chat with any AI</div>
-        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_how_save.png', 'Chat with any AI')">
-          <img src="/img/screenshot_how_save.png" alt="Forge Diary Chat with AI page showing all supported assistants" loading="lazy" />
-        </div>
-      </div>
-      <div class="screenshot-item">
-        <div class="screenshot-label">Save from any AI</div>
-        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_how_find.png', 'Save from any AI')">
-          <img src="/img/screenshot_how_find.png" alt="Forge Diary extension dock showing AI switcher on Claude" loading="lazy" />
-        </div>
-      </div>
-      <div class="screenshot-item">
-        <div class="screenshot-label">Your personal archive</div>
-        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_how_keep.png', 'Your personal archive')">
-          <img src="/img/screenshot_how_keep.png" alt="Forge Diary app showing saved AI insights with categories and search" loading="lazy" />
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TRUST -->
-  <section class="trust">
-    <div class="trust-inner">
-      <span class="trust-icon"><i class="ti ti-database" aria-hidden="true"></i></span>
-      <h2 class="trust-headline">Every entry lives in your personal archive — permanently and securely.</h2>
-      <p class="trust-body">Not cached. Not temporary. Every response you save is stored in your own personal database for as long as you need it. The thinking you do today, still there in five years.</p>
-      <span class="trust-badge">Lifetime Archive</span>
-    </div>
-  </section>
-
 
   <!-- PRICING -->
   <div class="pricing-wrap" id="pricing">
@@ -799,9 +835,9 @@
   <!-- CLOSE CTA -->
   <div class="close-wrap" id="pricing">
     <div class="close">
-      <h2 class="close-headline">Find it instantly.<br>Keep it forever.</h2>
-      <p class="close-sub">Start free. Upgrade to Pro for $14.95/month.<br></p>
-      <a href="#" onclick="installExtension(event)" class="close-cta" id="closeCta">Add to Chrome — Free</a>
+      <h2 class="close-headline">Don&rsquo;t let your best AI answers disappear.</h2>
+      <p class="close-sub">Diary remembers, so you don&rsquo;t have to.<br>Start free. Upgrade to Pro for $14.95/month.</p>
+      <a href="#" onclick="installExtension(event)" class="close-cta" id="closeCta">Add the extension &mdash; free</a>
     </div>
   </div>
 
