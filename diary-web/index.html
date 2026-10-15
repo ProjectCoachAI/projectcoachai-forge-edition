@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Diary — Your AI Memory | Save, find and use your AI answers</title>
-  <meta name="description" content="Save conversations from Claude, ChatGPT, Gemini and more in one click, then find and use them again. Your AI answers, made usable." />
+  <meta name="description" content="Save conversations from Claude, ChatGPT, Gemini and more in one click, then find and use them again. Your AI answers, made usable and kept for life." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
@@ -603,7 +603,7 @@
   <section class="hero">
     <p class="hero-eyebrow">Your AI memory</p>
     <h1 class="hero-headline">Your AI conversations hold the answers. <em>Diary makes them usable.</em></h1>
-    <p class="hero-sub">Every chat with Claude, ChatGPT or Gemini produces real information. Buried in scrollback, it is just noise. Diary saves it, organizes it, and makes it easy to find, recall and use.</p>
+    <p class="hero-sub">Every chat with Claude, ChatGPT or Gemini produces real information. Buried in scrollback, it is just noise. Diary saves it, organizes it, and makes it searchable by meaning, so you can find, recall and use it. Stored for life. No subscription needed to keep what you have already saved.</p>
     <a href="#" onclick="installExtension(event)" class="hero-cta" id="heroCta">Add the extension &mdash; free</a>
     <div style="font-size:12px;color:#9E9890;margin-top:0.75rem;">No credit card required &middot; Works on Chrome, Edge &amp; Opera</div>
   </section>
@@ -622,7 +622,7 @@
     <div class="trust-inner">
       <span class="trust-icon"><i class="ti ti-lock" aria-hidden="true"></i></span>
       <h2 class="trust-headline">Your entries are yours.</h2>
-      <p class="trust-body">Your saved conversations live in your own private archive.</p>
+      <p class="trust-body">Your saved conversations live in your own private archive, kept permanently. You don&rsquo;t need a subscription to keep what you&rsquo;ve saved.</p>
     </div>
   </section>
 
@@ -657,7 +657,7 @@
           <div class="step-icon"><i class="ti ti-search" aria-hidden="true"></i></div>
           <p class="step-kicker">2 &middot; Find</p>
           <h3 class="step-title">Turn scattered answers into a searchable library.</h3>
-          <p class="step-body">Search by what you remember, not where you filed it. No more scrolling through chat history for the answer you know you got.</p>
+          <p class="step-body">Search by meaning, not just the exact words you used. Find the answer you know you got, without scrolling through chat history.</p>
           <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_reader.png', 'Find anything you have saved')"><img src="/img/screenshot_carousel_reader.png" alt="A saved Diary entry with search active, showing a highlighted match and 1 of 17 navigation" onerror="this.parentNode.style.display='none'" /></div>
         </div>
         <div class="how-card">
@@ -671,7 +671,7 @@
           <div class="step-icon"><i class="ti ti-archive" aria-hidden="true"></i></div>
           <p class="step-kicker">4 &middot; Keep</p>
           <h3 class="step-title">Your information, organized and ready.</h3>
-          <p class="step-body">Every entry waits in your personal archive, with the documents and images that came with it, ready whenever you need it again.</p>
+          <p class="step-body">Every entry waits in your personal archive, kept permanently, with the documents and images that came with it, ready whenever you need it again.</p>
           <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_how_keep.png', 'Your personal archive')"><img src="/img/screenshot_how_keep.png" alt="Forge Diary app showing saved AI conversations with categories and search" onerror="this.parentNode.style.display='none'" /></div>
         </div>
       </div>
@@ -683,7 +683,7 @@
     <div class="art">
       <p class="how-title">Artifacts</p>
       <h2 class="art-headline">From answer to artifact.</h2>
-      <p class="art-body">Do not just save what the AI told you. Turn it into something you can use: a clean table, a checklist, a structured summary.</p>
+      <p class="art-body">Do not just save what the AI told you. Every time you save, Diary automatically picks out the tables, checklists, sources, key facts, images, reasoning steps and code inside it, and turns each into something you can use.</p>
       <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_table.png', 'From answer to artifact')"><img src="/img/screenshot_carousel_table.png" alt="The Table artifact open on a Diary entry, showing a multi-row table with filter and export controls" onerror="this.parentNode.style.display='none'" /></div>
     </div>
   </div>
@@ -742,12 +742,12 @@
             <span class="price-period">/month</span>
           </div>
           <p class="price-annual" id="pro-annual">&nbsp;</p>
-          <p class="card-desc">Unlimited search, unlimited Continue Conversation, and the full Diary experience — your AI memory, permanently yours.</p>
+          <p class="card-desc">Unlimited search, Continue Conversation on every entry, and the full Diary experience — your AI memory, permanently yours.</p>
           <a href="/signup.html" class="card-cta primary">Get started free</a>
           <ul class="card-features">
             <li><span class="check">&#10003;</span> Unlimited saves</li>
             <li><span class="check">&#10003;</span> Unlimited search</li>
-            <li><span class="check">&#10003;</span> Unlimited Continue Conversation</li>
+            <li><span class="check">&#10003;</span> Continue Conversation on unlimited entries</li>
             <li><span class="check">&#10003;</span> Lifetime Archive — stored permanently</li>
             <li><span class="check">&#10003;</span> Auto-categories &amp; smart tags</li>
             <li><span class="check">&#10003;</span> Quick Answer — ask any AI, save instantly</li>
@@ -1148,7 +1148,7 @@
       },
       {
         headline: 'Never wonder if you\u2019re looking at the full picture',
-        body: 'If a conversation keeps going after you save it, Sync brings in what\u2019s new \u2014 anytime, from anywhere. The original is always the source of truth.',
+        body: 'If a conversation keeps going after you save it, Sync brings in what\u2019s new with one click, from any browser with the extension. The original is always the source of truth.',
         image: '/img/screenshot_carousel_sync.png',
         imageAlt: 'A Diary entry showing a "Synced just now" confirmation with a link back to the original conversation',
         cta: null
