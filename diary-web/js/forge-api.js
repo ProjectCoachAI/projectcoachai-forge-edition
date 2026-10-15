@@ -550,6 +550,19 @@
       // defensive insurance in case an image URL ever contains a
       // character (like a space) that doesn't match the image rules'
       // own URL pattern and so slips through unconverted.
+      // NOTE: provider file-download links. ChatGPT's history text carries
+      // each "Download X" card as [label](sandbox:/mnt/data/<file>) - a
+      // link that only works inside ChatGPT and showed up as raw
+      // markdown. Shown instead as the same clean "file name - TYPE"
+      // line the Diary already makes clickable. Only document file types
+      // are converted; every other link is left exactly as before.
+      .replace(/\[[^\]]*\]\(sandbox:([^)\s]+)\)/g, function(full, path) {
+        var name = path.split('/').pop();
+        try { name = decodeURIComponent(name); } catch (e) {}
+        var m = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|md|json)$/i.exec(name);
+        if (!m) return full;
+        return '\uD83D\uDCCE ' + name + ' \u00b7 ' + m[1].toUpperCase();
+      })
       .replace(/(?<!!)\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
       // NOTE: code-block rendering enhanced — confirmed live via direct
       // product decision that code blocks specifically don't need a
