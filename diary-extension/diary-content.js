@@ -555,6 +555,18 @@
             }
           });
         } catch(_) {}
+        // Documents Grok generated are also listed in the conversation data
+        // (read when the thread is saved); the page itself may not show them as
+        // cards, so those are added too, for this conversation only.
+        try {
+          var gkChat = (window.location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i) || [''])[0];
+          var gkStore = window.__diaryGrokFileImages;
+          if (gkStore && gkStore.chat === gkChat && Array.isArray(gkStore.files)) {
+            gkStore.files.forEach(function(f) {
+              if (!attachments.some(function(a) { return a.filename === f.filename && a.type === f.type; })) attachments.push({ filename: f.filename, type: f.type });
+            });
+          }
+        } catch(_) {}
         return attachments;
       }
     },
@@ -1828,6 +1840,9 @@ function queryAllDeep(selector) {
             // shows only a tiny preview of each.
             var grokFileImages = [];
             var grokGenImages = [];
+            // The same generated documents, kept as tracked attachments (name + type)
+            // so the Diary can store them and offer them under Attachments.
+            var grokFileAtts = [];
             // A document Grok generated (xlsx, pdf, docx...) is a card on its answer.
             // It becomes the same "name · TYPE" file line every other provider gets,
             // instead of a raw path shown as a numbered link.
@@ -1879,6 +1894,11 @@ function queryAllDeep(selector) {
                       var fc = JSON.parse(cj);
                       var fl = fc && fc.url ? grokFileLine(fc.url) : null;
                       if (fl && grokFileLines.indexOf(fl) === -1) grokFileLines.push(fl);
+                      if (fl) {
+                        var flSep = fl.lastIndexOf(' \u00b7 ');
+                        var flName = fl.slice(3, flSep), flType = fl.slice(flSep + 3).toLowerCase();
+                        if (/^(pdf|docx?|xlsx?|pptx?|md)$/.test(flType) && !grokFileAtts.some(function(a) { return a.filename === flName && a.type === flType; })) grokFileAtts.push({ filename: flName, type: flType });
+                      }
                     } catch(_) {}
                   });
                 }
@@ -1903,7 +1923,7 @@ function queryAllDeep(selector) {
                 lastRole = 'assistant';
               }
             });
-            window.__diaryGrokFileImages = { chat: idm[0], urls: grokFileImages, generated: grokGenImages };
+            window.__diaryGrokFileImages = { chat: idm[0], urls: grokFileImages, generated: grokGenImages, files: grokFileAtts };
             if (loadFailed || missing) reason = 'could not load ' + (missing || 'some') + ' response(s)';
             else if (anyPartial) reason = 'an answer is still partial';
             else if (lastRole !== 'assistant') reason = 'newest answer not available yet';
