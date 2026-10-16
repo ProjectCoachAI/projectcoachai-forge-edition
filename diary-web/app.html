@@ -1775,15 +1775,6 @@ function clearTagFilter() {
 }
 window.filterTag = filterTag; window.filterTagEl = filterTagEl; window.clearTagFilter = clearTagFilter;
 
-function filterSource(src) {
-  activeSource = src;
-  currentPage = 1;
-  document.querySelectorAll('#sourceList .cat-item').forEach(function(el) { el.classList.remove('active'); });
-  var el = document.getElementById('src-' + src);
-  if (el) el.classList.add('active');
-  refreshCurrentView();
-}
-
 function toggleFavoriteFilter() {
   activeFavorite = !activeFavorite;
   currentPage = 1;
@@ -4672,7 +4663,15 @@ async function downloadAttachmentFromReader() {
     // file directly.
     var downloadName = currentReaderAttachment.filename;
     if (currentReaderAttachment.type === 'docx' || currentReaderAttachment.type === 'xlsx' || currentReaderAttachment.type === 'pptx') {
-      downloadName = downloadName.replace(/\.(docx|xlsx|pptx)$/i, '') + '.md';
+      // A real Office file is a ZIP archive and starts with the bytes "PK".
+      // One captured from an AI chat is stored as that real file, so it keeps
+      // its own name; only extracted text (no "PK") is saved as .md.
+      var isRealOfficeFile = false;
+      try {
+        var head = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+        isRealOfficeFile = head.length === 2 && head[0] === 0x50 && head[1] === 0x4B;
+      } catch (_sniffErr) {}
+      if (!isRealOfficeFile) downloadName = downloadName.replace(/\.(docx|xlsx|pptx)$/i, '') + '.md';
     }
     a.download = downloadName;
     document.body.appendChild(a);
