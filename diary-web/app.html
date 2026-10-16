@@ -2380,6 +2380,7 @@ function renderEntryCard(e) {
               '<span>' + escHtml(stripMarkdownForPlainText(stripCitationMarkersForPlainText(item.text))) + '</span>' +
             '</label>';
           }).join('') +
+          checklistSourceHtml(e, getChecklistArtifactSource(e, checklistArt)) +
           '</div>' +
         '</div>';
       })()) +
@@ -4371,6 +4372,84 @@ async function viewTableArtifactSource() {
   setTimeout(function() { jumpToTurn(entryId, turnIndex); }, 60);
 }
 window.viewTableArtifactSource = viewTableArtifactSource;
+
+// Checklist breadcrumb: the same "which question was this from?" line the table
+// modal shows, placed under the checklist in the entry. The checklist's stored
+// line position (see findChecklistCandidates in db.js) is where its first list
+// starts in the entry's saved text, after the saved "Sources:" footers are left
+// out, exactly as detection did. If the line at that position is not the
+// checklist's first item, nothing is shown rather than a wrong question.
+function getChecklistArtifactSource(entry, art) {
+  try {
+    if (!entry || !art || typeof art.position !== 'number' || !art.items || !art.items.length) return null;
+    var content = String(entry.content || '').replace(/\*\*Sources:\*\*\n(?:\d+\. \[[^\]]*\]\([^)]+\)\n?)+/g, '');
+    var lines = content.split('\n');
+    if (art.position < 0 || art.position >= lines.length) return null;
+    var cleanKey = function(s) { return String(s || '').replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[\s|*_`]/g, ''); };
+    var lm = lines[art.position].match(/^[ \t]*[-*•] (.+)/) || lines[art.position].match(/^[ \t]*\d+\. (.+)/);
+    if (!lm) return null;
+    var lineKey = cleanKey(lm[1]), itemKey = cleanKey(art.items[0].text);
+    if (!lineKey || !itemKey) return null;
+    if (lineKey !== itemKey && itemKey.indexOf(lineKey) !== 0) return null;
+    var offset = 0;
+    for (var i = 0; i < art.position; i++) offset += lines[i].length + 1;
+    var re = new RegExp('⁣\\*\\*([^*]+)\\*\\*⁣', 'g');
+    var m, qIdx = -1, question = null;
+    while ((m = re.exec(content)) !== null) {
+      if (m.index >= offset) break;
+      qIdx++;
+      question = m[1];
+    }
+    if (question === null) {
+      if (!entry.prompt) return null;
+      return { question: entry.prompt, qIdx: null };
+    }
+    return { question: question, qIdx: qIdx };
+  } catch (_e) { return null; }
+}
+
+function checklistSourceHtml(entry, src) {
+  if (!src || !src.question) return '';
+  var q = String(src.question).replace(/\s+/g, ' ').trim();
+  if (q.length > 90) q = q.slice(0, 89).replace(/\s+$/, '') + '…';
+  var provider = TABLE_SOURCE_PROVIDER_NAMES[entry.source] || '';
+  var dateText = '';
+  try {
+    var d = new Date(entry.created_at);
+    if (!isNaN(d.getTime())) dateText = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch (_e) {}
+  var meta = [provider, dateText].filter(Boolean).join(' · ');
+  return '<div style="display:flex;align-items:center;gap:10px;margin-top:4px;font-size:11px;color:#9E9890;font-family:Inter,sans-serif;">' +
+    '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">↳ From: “' + escHtml(q) + '”</span>' +
+    (meta ? '<span style="white-space:nowrap;">' + escHtml(meta) + '</span>' : '') +
+    (src.qIdx !== null && src.qIdx !== undefined ? '<button onclick="viewChecklistSource(' + entry.id + ')" style="background:none;border:none;padding:0;cursor:pointer;color:#C17D3C;font-size:11px;font-family:Inter,sans-serif;font-weight:500;white-space:nowrap;">View source</button>' : '') +
+  '</div>';
+}
+
+async function viewChecklistSource(entryId) {
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+  if (!entry) return;
+  var artifacts = [];
+  try { artifacts = (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch(_e) {}
+  var art = artifacts.filter(function(a) { return a.type === 'checklist'; })[0];
+  var src = getChecklistArtifactSource(entry, art);
+  if (!src || src.qIdx === null || src.qIdx === undefined) return;
+  if (!expandedIds.has(entryId)) await toggleEntry(entryId);
+  var state = window._entryContentSegments && window._entryContentSegments[entryId];
+  var turnIndex = null;
+  if (state && state.segments) {
+    var seen = -1;
+    for (var s = 0; s < state.segments.length; s++) {
+      if (String(state.segments[s]).indexOf('<div class="user-bubble') === 0) {
+        seen++;
+        if (seen === src.qIdx) { turnIndex = s; break; }
+      }
+    }
+  }
+  if (turnIndex === null) return;
+  setTimeout(function() { jumpToTurn(entryId, turnIndex); }, 60);
+}
+window.viewChecklistSource = viewChecklistSource;
 
 function openTableArtifact(entryId, artifactIndex) {
   var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
