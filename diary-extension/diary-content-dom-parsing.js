@@ -1551,11 +1551,46 @@
       return null;
     }
   }
+  // A canvas document Mistral made is a card above the answer that announces
+  // it, outside the answer text. Return the standard "name . TYPE" file line
+  // for each canvas card that sits between the previous message part and this
+  // one, so the line lands on the answer that follows the card. One line per
+  // title; seen[] keeps a title from being listed twice.
+  function mistralCanvasLines(els, i, seen) {
+    try {
+      if (window.location.hostname.indexOf('mistral.ai') === -1) return '';
+      var FOLLOWING = 4;
+      var titles = [];
+      document.querySelectorAll('button[aria-label="Export as"]').forEach(function(btn) {
+        var header = btn.closest('.rounded-t-xl') || (btn.parentElement && btn.parentElement.parentElement);
+        var span = header ? header.querySelector('span.truncate') : null;
+        var t = span ? (span.textContent || '').trim() : '';
+        if (t) titles.push({ el: span, title: t });
+      });
+      document.querySelectorAll('p.text-subtle.text-xs').forEach(function(sub) {
+        if ((sub.textContent || '').trim() !== 'Text') return;
+        var te = sub.previousElementSibling;
+        var t = te && te.tagName === 'P' ? (te.textContent || '').trim() : '';
+        if (t) titles.push({ el: te, title: t });
+      });
+      var lines = [];
+      titles.forEach(function(c) {
+        if (seen[c.title]) return;
+        // The card must come before this answer part and after the previous one.
+        if (!(c.el.compareDocumentPosition(els[i]) & FOLLOWING)) return;
+        if (i > 0 && !(els[i - 1].compareDocumentPosition(c.el) & FOLLOWING)) return;
+        seen[c.title] = true;
+        lines.push('\uD83D\uDCCE ' + c.title + ' \u00b7 PDF');
+      });
+      return lines.length ? '\n\n' + lines.join('\n\n') : '';
+    } catch (e) { return ''; }
+  }
   function buildMistralPairedThread(opts) {
     try {
       var els = document.querySelectorAll(opts.combinedSelector);
       if (!els.length) return null;
       var parts = [];
+      var mistralSeenCanvas = {};
       // No consecutive-question dedup here — matching
       // buildGeminiPairedThread's plain, unconditional shape, on direct
       // instruction, after this and other dedup layers each addressed a
@@ -1882,11 +1917,14 @@
                 if (metaImgMarkdown) text += '\n\n' + metaImgMarkdown;
               }
             }
+            var canvasText = mistralCanvasLines(els, i, mistralSeenCanvas);
             if (text) {
               var host = window.location.hostname;
               var config = window.DOM_SELECTORS[host];
               text = config ? window.cleanDomText(config.clean(text)) : window.cleanDomText(text);
-              parts.push(text);
+              parts.push(text + canvasText);
+            } else if (canvasText) {
+              parts.push(canvasText.replace(/^\n+/, ''));
             }
           }
         }
