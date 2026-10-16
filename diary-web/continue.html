@@ -1173,12 +1173,24 @@ function linkifyFileLinesChat(html) {
     // The line is already HTML here, so a name like "A & B" arrives as "A &amp; B".
     // Compare against the stored (plain) name.
     var plainName = name.replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-    var stored = chatEntryAttachments.some(function(a) {
-      return a && a.filename === plainName && String(a.type || '').toLowerCase() === t && a.status === 'hosted' && a.url;
+    // Stored files under this name: the one the line names first, then any other
+    // format of the same document (a canvas can be saved as both PDF and Markdown).
+    var types = [];
+    chatEntryAttachments.forEach(function(a) {
+      if (!a || a.filename !== plainName || a.status !== 'hosted' || !a.url) return;
+      var at = String(a.type || '').toLowerCase();
+      if (at && types.indexOf(at) === -1) types.push(at);
     });
-    if (!stored) return full;
+    if (!types.length) return full;
+    if (types.indexOf(t) > 0) { types.splice(types.indexOf(t), 1); types.unshift(t); }
     var safeName = name.replace(/"/g, '&quot;');
-    return '<p><a href="#" class="file-line" data-file-name="' + safeName + '" data-file-type="' + t + '" onclick="openFileLineChat(this,event);return false;" style="color:#4A4035;text-decoration:none;border-bottom:1px dashed #C17D3C;cursor:pointer;">\uD83D\uDCCE ' + name + ' \u00b7 ' + type + '</a></p>';
+    var linkStyle = 'color:#4A4035;text-decoration:none;border-bottom:1px dashed #C17D3C;cursor:pointer;';
+    var mk = function(ty, label) {
+      return '<a href="#" class="file-line" data-file-name="' + safeName + '" data-file-type="' + ty + '" onclick="openFileLineChat(this,event);return false;" style="' + linkStyle + '">' + label + '</a>';
+    };
+    var out = mk(types[0], '\uD83D\uDCCE ' + name + ' \u00b7 ' + (types[0] === t ? type : types[0].toUpperCase()));
+    for (var k = 1; k < types.length; k++) out += ' \u00b7 ' + mk(types[k], types[k].toUpperCase());
+    return '<p>' + out + '</p>';
   });
 }
 function openFileLineChat(el, ev) {
