@@ -546,6 +546,12 @@
       // fixed coordinates at hover time. See __showCitePopup/
       // __hideCitePopup in app.html for the full rationale.
       .replace(/\uE000([^\uE003]*)\uE003([^\uE001]*)\uE001([^\uE004]*)\uE004([^\uE002]*)\uE002/g, function(full, pill, title, url, favicon) {
+        // Source labels can carry invisible or symbol characters (private-use,
+        // format, control, the capture's own "\u241F" separator) that many fonts
+        // draw as an empty box after the name. Removed from the label and title
+        // for display only; the saved text is never changed.
+        pill = pill.replace(/[\p{Co}\p{Cf}\p{Cc}\p{Cn}\u241F\uFFFD]/gu, '').trim();
+        title = title.replace(/[\p{Co}\p{Cf}\p{Cc}\p{Cn}\u241F\uFFFD]/gu, '').trim();
         return '<a href="' + url + '" target="_blank" rel="noopener" ' +
           'data-cite-pill="' + pill.replace(/"/g, '&quot;') + '" ' +
           'data-cite-title="' + title.replace(/"/g, '&quot;') + '" ' +
