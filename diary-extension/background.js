@@ -265,6 +265,11 @@ async function resolveDownloadFileData(item) {
   if (item.url.indexOf('blob:') === 0) {
     let origin;
     try { origin = new URL(item.url).origin; } catch (e) { return null; }
+    // A blob made inside a sandboxed frame has the origin "null" (blob:null/...)
+    // and can only be read by code running inside that frame, so the page cannot
+    // hand it over. "null/*" is not a valid tab pattern either, which made this
+    // call throw (confirmed live on Gemini); say so plainly instead.
+    if (origin === 'null') return null;
     const tabs = await chrome.tabs.query({ url: origin + '/*' });
     if (!tabs.length) return null;
     const activeTab = tabs.find(function(t) { return t.active; });
@@ -567,7 +572,20 @@ chrome.downloads.onCreated.addListener(async function(item) {
         return;
       }
 
-      const matched = matchDownloadToAttachment(attachments, item);
+      let matched = matchDownloadToAttachment(attachments, item);
+      // A blob: or data: download has no file name when it is created; Chrome
+      // settles on one a moment later. Without it, two open slots of the same
+      // type (two canvases exported as PDF) cannot be told apart and the match
+      // came back empty. Wait for the settled name and match again; if it still
+      // does not match, the pending-capture path below runs exactly as before.
+      if (!matched && !extractFilenameFromDownloadUrl(item.url) && !item.filename &&
+          (item.url.indexOf('blob:') === 0 || item.url.indexOf('data:') === 0)) {
+        const settledName = await waitForDeterminedFilename(item.id);
+        if (settledName) {
+          item = Object.assign({}, item, { filename: settledName });
+          matched = matchDownloadToAttachment(attachments, item);
+        }
+      }
       if (!matched) {
         console.log('[Diary BG] No matching tracked attachment for this download (or ambiguous) — falling back to pending-capture', JSON.stringify(attachments));
         await fallBackToPendingCapture('entry exists, no matching tracked attachment');

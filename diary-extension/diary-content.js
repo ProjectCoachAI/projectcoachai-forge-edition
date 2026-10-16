@@ -341,7 +341,7 @@
             }
           });
         } catch(_) {}
-        // Canvas documents (a written document, a designed page, sheet data): each
+        // Canvas documents (a written document, sheet data): each
         // sits in a card whose header holds the title and an Export menu. That
         // menu offers PDF and Drive only (confirmed live), and the PDF it downloads
         // is named after the title, so each canvas is one PDF slot. The header is
@@ -349,6 +349,11 @@
         try {
           document.querySelectorAll('.title-container').forEach(function(box) {
             if (!box.querySelector('button[aria-label="Export"], gem-button[aria-label="Export"]')) return;
+            // A designed web page (shown in a frame) exports a PDF that is built
+            // inside a sandboxed frame and cannot be read from the page, so it is
+            // not offered as a file; only document canvases are.
+            var wrap = box.closest('.inline-preview-container') || box.parentElement;
+            if (wrap && wrap.querySelector('web-preview')) return;
             var titleEl = box.querySelector('.title');
             var title = titleEl ? (titleEl.textContent || '').trim() : '';
             if (!title) return;

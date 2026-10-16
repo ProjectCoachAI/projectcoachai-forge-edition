@@ -2144,6 +2144,9 @@
         var FOLLOWING = 4;
         document.querySelectorAll('.title-container').forEach(function(box) {
           if (!box.querySelector('button[aria-label="Export"], gem-button[aria-label="Export"]')) return;
+          // Designed web pages (shown in a frame) are not offered as files.
+          var wrap = box.closest('.inline-preview-container') || box.parentElement;
+          if (wrap && wrap.querySelector('web-preview')) return;
           var titleEl = box.querySelector('.title');
           var title = titleEl ? (titleEl.textContent || '').trim() : '';
           if (!title || canvasSeen[title]) return;
