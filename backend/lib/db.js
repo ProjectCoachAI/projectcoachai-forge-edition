@@ -1142,13 +1142,35 @@ function detectTableArtifacts(text) {
 // occurrence of a given URL wins its title and its sequential number;
 // a later, duplicate citation of the same URL is dropped rather than
 // creating a second entry for it.
+// Turn number of a spot in an entry's saved text: how many question markers
+// (\u2063**question**\u2063) sit above it, minus one, so the first question is
+// 0, the second 1, and so on. Anything above the first marker has no turn. The
+// Diary reader finds the same question by counting markers the same way, which
+// is what lets a source, a fact or an image say which question it came from.
+function makeTurnLookup(text) {
+  const starts = [];
+  const re = /\u2063\*\*([^*]+)\*\*\u2063/g;
+  const t = String(text || '');
+  let m;
+  while ((m = re.exec(t)) !== null) starts.push(m.index);
+  return function turnAt(index) {
+    let count = 0;
+    while (count < starts.length && starts[count] < index) count++;
+    return count - 1;
+  };
+}
+
 function detectCitationArtifacts(text) {
   const sources = [];
   const seenUrls = {};
-  function addSource(title, url) {
+  const turnAt = makeTurnLookup(text);
+  function addSource(title, url, index) {
     if (!url || seenUrls.hasOwnProperty(url)) return;
     seenUrls[url] = true;
-    sources.push({ number: sources.length + 1, url, title: title || url });
+    const entry = { number: sources.length + 1, url, title: title || url };
+    const turn = typeof index === 'number' ? turnAt(index) : -1;
+    if (turn >= 0) entry.turn = turn;
+    sources.push(entry);
   }
 
   const footerRe = /\*\*Sources:\*\*\n((?:\d+\. \[[^\]]*\]\([^)]+\)\n?)+)/g;
@@ -1156,14 +1178,14 @@ function detectCitationArtifacts(text) {
   while ((footerMatch = footerRe.exec(text)) !== null) {
     footerMatch[1].split('\n').filter(l => l.trim()).forEach(line => {
       const lineMatch = line.match(/^\d+\. \[([^\]]*)\]\(([^)]+)\)/);
-      if (lineMatch) addSource(lineMatch[1], lineMatch[2]);
+      if (lineMatch) addSource(lineMatch[1], lineMatch[2], footerMatch.index);
     });
   }
 
   const puaRe = /\uE000([^\uE003]*)\uE003([^\uE001]*)\uE001([^\uE004]*)\uE004([^\uE002]*)\uE002/g;
   let puaMatch;
   while ((puaMatch = puaRe.exec(text)) !== null) {
-    addSource(puaMatch[2] || puaMatch[1], puaMatch[3]);
+    addSource(puaMatch[2] || puaMatch[1], puaMatch[3], puaMatch.index);
   }
 
   return sources.length ? [{ type: 'citations', sources, position: 0 }] : [];
@@ -1489,17 +1511,22 @@ const FACT_ATTRIBUTE_WORD = /\b(price|prices|cost|costs|msrp|starting|from|date|
 const STRUCTURED_FACTS_MAX = 10;
 function detectStructuredFactsArtifacts(text) {
   const facts = [];
+  // Turn numbers are worked out on the text as saved, before the addresses
+  // below are blanked out (a question that contains an address would
+  // otherwise stop being recognised as a question marker).
+  const turnAt = makeTurnLookup(text);
+  const withTurn = (fact, index) => { const turn = turnAt(index); if (turn >= 0) fact.turn = turn; return fact; };
   // Picture links carry dates and numbers in their web address (for example
   // "?sv=2025-01-05"); blank every address out, keeping the text length so
   // positions stay the same.
   text = String(text || '').replace(/https?:\/\/[^\s)>\]]+/g, m => ' '.repeat(m.length));
-  detectDates(text).forEach(d => { const c = factContext(text, d.index); if (c) facts.push({ label: 'Date', value: d.value, context: c }); });
+  detectDates(text).forEach(d => { const c = factContext(text, d.index); if (c) facts.push(withTurn({ label: 'Date', value: d.value, context: c }, d.index)); });
   detectPrices(text).forEach(p => {
     const c = factContext(text, p.index);
     if (!c) return;
     // Keep a limiting word ("up to $7,500", "under $37k") so a cap is not read as a price.
     const q = text.slice(Math.max(0, p.index - 12), p.index).match(/\b(up to|under|over|above|below|around|about|from)[\s(*]*$/i);
-    facts.push({ label: 'Price', value: (q ? q[1].toLowerCase() + ' ' : '') + p.value, context: c });
+    facts.push(withTurn({ label: 'Price', value: (q ? q[1].toLowerCase() + ' ' : '') + p.value, context: c }, p.index));
   });
   return facts.length ? [{ type: 'structured_facts', facts: facts.slice(0, STRUCTURED_FACTS_MAX), position: 0 }] : [];
 }
@@ -1592,9 +1619,10 @@ function detectCodeArtifacts(text) {
 // multiple distinct images, legacy and newer formats mixed together, a
 // duplicate URL (correctly deduped), a failed-hosting entry (correctly
 // excluded), and no images present at all.
-function detectImagesArtifacts(meta) {
+function detectImagesArtifacts(meta, text) {
   const rawImages = (meta && meta.images) || [];
   if (!rawImages.length) return [];
+  const turnAt = text ? makeTurnLookup(text) : null;
   const images = [];
   const seenUrls = {};
   rawImages.forEach(img => {
@@ -1604,7 +1632,16 @@ function detectImagesArtifacts(meta) {
     if (!url || status === 'failed') return;
     if (seenUrls[url]) return;
     seenUrls[url] = true;
-    images.push({ url, status });
+    const image = { url, status };
+    // An image only gets a turn when its address actually appears in the saved
+    // text (an inline picture); one that exists only in the entry's picture
+    // list has no spot in the conversation to point to.
+    if (turnAt) {
+      const at = text.indexOf(url);
+      const turn = at === -1 ? -1 : turnAt(at);
+      if (turn >= 0) image.turn = turn;
+    }
+    images.push(image);
   });
   return images.length ? [{ type: 'images', images, position: 0 }] : [];
 }
@@ -1733,7 +1770,7 @@ async function detectAndStoreArtifacts(entryId, userEmail, callClaudeHaikuAPI, a
     const meta = entryRes.rows[0].metadata || {};
     const checklistArtifacts = await detectChecklistArtifacts(unifiedContent, existingArtifacts, callClaudeHaikuAPI, apiKey);
     const reasoningArtifacts = await detectReasoningArtifacts(unifiedContent, callClaudeHaikuAPI, apiKey);
-    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent)).concat(detectImagesArtifacts(meta)).concat(reasoningArtifacts).concat(detectCodeArtifacts(unifiedContent));
+    const artifacts = detectTableArtifacts(unifiedContent).concat(detectCitationArtifacts(unifiedContent)).concat(checklistArtifacts).concat(detectStructuredFactsArtifacts(unifiedContent)).concat(detectImagesArtifacts(meta, unifiedContent)).concat(reasoningArtifacts).concat(detectCodeArtifacts(unifiedContent));
     await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), entryId, userEmail]);
   } catch (e) {
     console.error('[Diary] detectAndStoreArtifacts failed for entry', entryId, ':', e.message);
@@ -1882,7 +1919,7 @@ async function logCompareApiError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, makeTurnLookup, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
