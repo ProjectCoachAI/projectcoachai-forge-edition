@@ -4281,6 +4281,81 @@ window.closeAttachmentReader = closeAttachmentReader;
 // source data.
 var _currentTableArtifact = null;
 
+// ── Table artifact source: "↳ From: question · provider · date" ───────────
+// Shown quietly under the table in its modal, so "why do I have this table?"
+// is answered in place. The question is found from the table's own stored
+// line position (see detectTableArtifacts in db.js): the last question marker
+// above that line in the entry's own saved text. Anything that does not line
+// up (a table from the Forge-continued part, an entry edited since, a missing
+// marker) simply shows nothing rather than a wrong question.
+var TABLE_SOURCE_PROVIDER_NAMES = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', perplexity:'Perplexity', grok:'Grok', deepseek:'DeepSeek', mistral:'Mistral', meta:'Meta AI', external:'Other AI' };
+
+function getTableArtifactSource(entry, art) {
+  try {
+    if (!entry || !art || typeof art.position !== 'number' || !art.headers) return null;
+    var content = entry.content || '';
+    var lines = content.split('\n');
+    if (art.position < 0 || art.position >= lines.length) return null;
+    var cleanKey = function(s) { return String(s || '').replace(/[\s|*_`]/g, ''); };
+    if (cleanKey(lines[art.position]) !== cleanKey(art.headers.join(''))) return null;
+    var offset = 0;
+    for (var i = 0; i < art.position; i++) offset += lines[i].length + 1;
+    var re = new RegExp('⁣\\*\\*([^*]+)\\*\\*⁣', 'g');
+    var m, qIdx = -1, question = null;
+    while ((m = re.exec(content)) !== null) {
+      if (m.index >= offset) break;
+      qIdx++;
+      question = m[1];
+    }
+    if (question === null) {
+      if (!entry.prompt) return null;
+      return { question: entry.prompt, turnIndex: null };
+    }
+    var state = window._entryContentSegments && window._entryContentSegments[entry.id];
+    var turnIndex = null;
+    if (state && state.segments) {
+      var seen = -1;
+      for (var s = 0; s < state.segments.length; s++) {
+        if (String(state.segments[s]).indexOf('<div class="user-bubble') === 0) {
+          seen++;
+          if (seen === qIdx) { turnIndex = s; break; }
+        }
+      }
+    }
+    return { question: question, turnIndex: turnIndex };
+  } catch (_e) { return null; }
+}
+
+function renderTableArtifactSource(entry, src) {
+  var el = document.getElementById('tableArtifactSource');
+  if (!el) return;
+  if (!src || !src.question) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  var q = String(src.question).replace(/\s+/g, ' ').trim();
+  if (q.length > 90) q = q.slice(0, 89).replace(/\s+$/, '') + '…';
+  var provider = TABLE_SOURCE_PROVIDER_NAMES[entry.source] || '';
+  var dateText = '';
+  try {
+    var d = new Date(entry.created_at);
+    if (!isNaN(d.getTime())) dateText = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch (_e) {}
+  var meta = [provider, dateText].filter(Boolean).join(' · ');
+  el.innerHTML =
+    '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">↳ From: “' + escHtml(q) + '”</span>' +
+    (meta ? '<span style="white-space:nowrap;">' + escHtml(meta) + '</span>' : '') +
+    (src.turnIndex !== null && src.turnIndex !== undefined ? '<button onclick="viewTableArtifactSource()" style="background:none;border:none;padding:0;cursor:pointer;color:#C17D3C;font-size:11px;font-family:Inter,sans-serif;font-weight:500;white-space:nowrap;">View source</button>' : '');
+  el.style.display = 'flex';
+}
+
+async function viewTableArtifactSource() {
+  var cur = _currentTableArtifact;
+  if (!cur || cur.entryId === undefined || !cur.src || cur.src.turnIndex === null || cur.src.turnIndex === undefined) return;
+  var entryId = cur.entryId, turnIndex = cur.src.turnIndex;
+  closeTableArtifact();
+  if (!expandedIds.has(entryId)) await toggleEntry(entryId);
+  setTimeout(function() { jumpToTurn(entryId, turnIndex); }, 60);
+}
+window.viewTableArtifactSource = viewTableArtifactSource;
+
 function openTableArtifact(entryId, artifactIndex) {
   var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
   if (!entry) return;
@@ -4288,7 +4363,9 @@ function openTableArtifact(entryId, artifactIndex) {
   try { artifacts = (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch(_e) {}
   var art = artifacts[artifactIndex];
   if (!art || art.type !== 'table') return;
-  _currentTableArtifact = { headers: art.headers, rows: art.rows, sortCol: null, sortDir: 1 };
+  var tableSrc = getTableArtifactSource(entry, art);
+  _currentTableArtifact = { headers: art.headers, rows: art.rows, sortCol: null, sortDir: 1, entryId: entryId, src: tableSrc };
+  renderTableArtifactSource(entry, tableSrc);
   var filterInput = document.getElementById('tableArtifactFilter');
   if (filterInput) filterInput.value = '';
   var modal = document.getElementById('tableArtifactModal');
@@ -6909,6 +6986,7 @@ document.addEventListener('keydown', function(e) {
       <button onclick="closeTableArtifact()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
     </div>
     <div id="tableArtifactBody" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0;"></div>
+    <div id="tableArtifactSource" style="display:none;align-items:center;gap:12px;padding:8px 20px;border-top:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;font-size:11px;color:#9E9890;font-family:Inter,sans-serif;"></div>
   </div>
 </div>
 
