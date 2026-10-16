@@ -2250,6 +2250,26 @@ function queryAllDeep(selector) {
               var firstQ = null;
               var lastRole = null;
               var bad = '';
+              // A canvas document is not part of the answer text. Its title is read
+              // from the page, then placed on the answer that created it (the first
+              // one whose data mentions the title) as the same "name . TYPE" file
+              // line the other providers get. Placed once per title.
+              var canvasTitles = [];
+              try {
+                (registry.mistral.getAttachments() || []).forEach(function(at) {
+                  if (at && at.type === 'pdf' && at.filename && canvasTitles.indexOf(at.filename) === -1) canvasTitles.push(at.filename);
+                });
+              } catch(_) {}
+              var canvasPlaced = {};
+              var canvasBlob = function(msg) {
+                var sb = '';
+                try { sb = JSON.stringify(msg.contentChunks || []); } catch(_) {}
+                (sb.match(/\$[0-9a-f]+/gi) || []).forEach(function(rf) {
+                  var rw = rows[rf.slice(1)];
+                  if (rw && typeof rw.t === 'string') sb += ' ' + rw.t;
+                });
+                return norm(sb);
+              };
               chain.forEach(function(m) {
                 if (m.generationStatus && m.generationStatus !== 'success') bad = 'a message is not finished yet';
                 if (m.role === 'user') {
@@ -2277,7 +2297,17 @@ function queryAllDeep(selector) {
                   }
                   if (unresolved) { bad = 'unresolved answer text'; return; }
                   a = a.trim();
-                  if (!a) return;
+                  var canvasLines = [];
+                  if (canvasTitles.length) {
+                    var blob = canvasBlob(m);
+                    canvasTitles.forEach(function(ct) {
+                      if (canvasPlaced[ct] || !blob || blob.indexOf(norm(ct)) === -1) return;
+                      canvasPlaced[ct] = true;
+                      canvasLines.push('\uD83D\uDCCE ' + ct + ' \u00b7 PDF');
+                    });
+                  }
+                  if (!a && !canvasLines.length) return;
+                  if (canvasLines.length) a = (a ? a + '\n\n' : '') + canvasLines.join('\n\n');
                   parts.push(a);
                   lastRole = 'assistant';
                 }
@@ -2294,6 +2324,7 @@ function queryAllDeep(selector) {
                 } else if (ansEls.length && !sampleFound(ansEls[ansEls.length - 1].textContent, hay)) {
                   reason = 'newest answer on the page not in fetched thread';
                 } else {
+                  if (canvasTitles.length) console.log('[Diary] Mistral canvas file lines placed:', Object.keys(canvasPlaced).length, 'of', canvasTitles.length);
                   res = { success: true, fullThread: full, prompt: firstQ ? firstQ.slice(0, 500) : null };
                   console.log('[Diary] Mistral history capture OK on attempt', attempt + 1, '| questions:', userCount, '| length:', full.length, '| took', Date.now() - t0, 'ms');
                 }
