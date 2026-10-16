@@ -2133,6 +2133,31 @@
       if (!els.length) return null;
       var config = window.DOM_SELECTORS['gemini.google.com'];
       var parts = [];
+      // Canvas documents get a "file" line under the answer they belong to, as on
+      // the other providers. Each canvas card is found by its header (title plus
+      // Export button) and given to the answer that contains it; a card that sits
+      // outside every answer goes to the last answer before it. A title is listed
+      // once, however many cards carry it.
+      var canvasByAnswer = {};
+      try {
+        var canvasSeen = {};
+        var FOLLOWING = 4;
+        document.querySelectorAll('.title-container').forEach(function(box) {
+          if (!box.querySelector('button[aria-label="Export"], gem-button[aria-label="Export"]')) return;
+          var titleEl = box.querySelector('.title');
+          var title = titleEl ? (titleEl.textContent || '').trim() : '';
+          if (!title || canvasSeen[title]) return;
+          var owner = -1;
+          for (var k = 0; k < els.length; k++) {
+            if (els[k].tagName.toLowerCase() !== 'model-response') continue;
+            if (els[k].contains(box)) { owner = k; break; }
+            if (els[k].compareDocumentPosition(box) & FOLLOWING) owner = k;
+          }
+          if (owner < 0) return;
+          canvasSeen[title] = true;
+          (canvasByAnswer[owner] = canvasByAnswer[owner] || []).push('\uD83D\uDCCE ' + title + ' \u00b7 PDF');
+        });
+      } catch (e) {}
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         var tag = el.tagName ? el.tagName.toLowerCase() : '';
@@ -2462,7 +2487,9 @@
               }
             } catch (e) {}
             if (!text) text = (rEl.innerText || rEl.textContent || '').trim();
-            if (text) parts.push(window.cleanDomText(config.clean(text)));
+            var canvasText = canvasByAnswer[i] ? '\n\n' + canvasByAnswer[i].join('\n\n') : '';
+            if (text) parts.push(window.cleanDomText(config.clean(text)) + canvasText);
+            else if (canvasText) parts.push(canvasText.replace(/^\n+/, ''));
           }
         }
       }

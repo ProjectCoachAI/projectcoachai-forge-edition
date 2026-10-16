@@ -443,6 +443,24 @@ chrome.downloads.onCreated.addListener(async function(item) {
       try { effectiveReferrer = new URL(item.url).origin + '/'; } catch (e) {}
     }
 
+    // Gemini only: its canvas "Export > PDF" download is a blob whose origin is
+    // opaque (blob:null/..., logged as "blob://" with no host) and it carries no
+    // referrer, so nothing in the download itself says it came from Gemini and it
+    // was dropped below (confirmed live). The tab the person is on is the one
+    // that evidence is left with: when that tab is a Gemini page, the download is
+    // read as coming from it. Every other provider, and every download from any
+    // other site, takes the same path as before.
+    try {
+      if (item.url && item.url.indexOf('blob:') === 0 && new URL(item.url).origin === 'null') {
+        const geminiTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        const geminiTab = geminiTabs && geminiTabs[0];
+        if (geminiTab && geminiTab.url) {
+          const tabParsed = new URL(geminiTab.url);
+          if (tabParsed.hostname === 'gemini.google.com') effectiveReferrer = tabParsed.origin + tabParsed.pathname;
+        }
+      }
+    } catch (e) {}
+
     if (!effectiveReferrer || !item.url) { console.log('[Diary BG] Skipped: no referrer or url'); return; }
     if (!isFromSupportedProvider(effectiveReferrer)) { console.log('[Diary BG] Skipped: download not from a supported AI provider'); return; }
 
