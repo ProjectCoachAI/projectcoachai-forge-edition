@@ -269,13 +269,15 @@ async function resolveDownloadFileData(item) {
     // and can only be read by code running inside that frame, so the page cannot
     // hand it over. "null/*" is not a valid tab pattern either, which made this
     // call throw (confirmed live on Gemini); say so plainly instead.
+    // Where the blob was made (a page origin, never an address with a token).
+    console.log('[Diary BG] Blob download made in:', origin === 'null' ? 'a sandboxed frame (opaque origin)' : origin);
     if (origin === 'null') return null;
     const tabs = await chrome.tabs.query({ url: origin + '/*' });
     if (!tabs.length) return null;
     const activeTab = tabs.find(function(t) { return t.active; });
     const targetTab = activeTab || tabs[0];
     const blobData = await fetchBlobDataFromTab(targetTab.id, item.url);
-    if (!blobData) return null;
+    if (!blobData) { console.log('[Diary BG] Blob could not be read from the page'); return null; }
     return { data: blobData.base64, contentType: blobData.contentType };
   }
   const clientFetch = await tryClientSideFetch(item.url);
