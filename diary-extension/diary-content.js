@@ -1324,7 +1324,7 @@ function queryAllDeep(selector) {
   // page layout): <box>, <row>, <divider/>, <AsyncImage .../> (the image
   // itself is already saved in the entry's IMAGES strip), <Cite .../>
   // and <Entity ... value="X"/> (kept as its plain text X), <icon .../>
-  // (dropped) and <text ...>X</text> (kept as X). Text inside fenced code
+  // (dropped), <text ...>X</text> and <title ...>X</title> (kept as X). Text inside fenced code
   // blocks and inline code is left untouched.
   function stripChatGPTWidgetTags(text) {
     if (!text || text.indexOf('<') === -1) return text;
@@ -1336,6 +1336,8 @@ function queryAllDeep(selector) {
         .replace(/^[ \t]*<icon\s+[a-z-]+="[^"]*"[^>]*\/>[ \t]*\n?/gm, '')
         // <text color="secondary" size="sm">…</text>: keep the inner text
         .replace(/<text\s+[a-z-]+="[^"]*"[^>]*>([\s\S]*?)<\/text>/g, '$1')
+        // <title size="xl" color="default">82 aircraft</title>: a big-number label, keep the inner text
+        .replace(/<title\s+[a-z-]+="[^"]*"[^>]*>([\s\S]*?)<\/title>/g, '$1')
         .replace(/[ \t]*<Cite\b[^>]*\/>/g, '')
         .replace(/<Entity\b[^>]*\bvalue="([^"]*)"[^>]*\/>/g, '$1')
         .replace(/^[ \t]*<\/?(?:box|row|column|stack|spacer)\b[^>]*>[ \t]*\n?/gim, '')

@@ -165,6 +165,10 @@ function normalizeForMatch(name) {
 function deriveRealFileType(item, filename) {
   const mime = (item.mime || '').split(';')[0].trim().toLowerCase();
   let typeGuess = MIME_TO_ATTACHMENT_TYPE[mime];
+  // Providers (ChatGPT) often send a Markdown file as plain text. When the file
+  // name says .md, that is the real type; otherwise it would be filed as plain
+  // text and never match the Markdown it belongs to.
+  if (typeGuess === 'txt' && filename && /\.md$/i.test(filename)) typeGuess = 'md';
   if (!typeGuess && filename) {
     const extMatch = filename.match(/\.([a-z0-9]+)$/i);
     typeGuess = extMatch ? extMatch[1].toLowerCase() : null;
