@@ -1170,8 +1170,11 @@ function linkifyFileLinesChat(html) {
   if (!chatEntryAttachments || !chatEntryAttachments.length) return html;
   return String(html || '').replace(/<p>\s*\uD83D\uDCCE\s+([^<]+?)\s+\u00b7\s+([A-Za-z0-9]{2,5})\s*<\/p>/g, function(full, name, type) {
     var t = type.toLowerCase();
+    // The line is already HTML here, so a name like "A & B" arrives as "A &amp; B".
+    // Compare against the stored (plain) name.
+    var plainName = name.replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
     var stored = chatEntryAttachments.some(function(a) {
-      return a && a.filename === name && String(a.type || '').toLowerCase() === t && a.status === 'hosted' && a.url;
+      return a && a.filename === plainName && String(a.type || '').toLowerCase() === t && a.status === 'hosted' && a.url;
     });
     if (!stored) return full;
     var safeName = name.replace(/"/g, '&quot;');
