@@ -502,7 +502,8 @@ chrome.downloads.onCreated.addListener(async function(item) {
     // entry happened to already exist.
     async function fallBackToPendingCapture(logContext) {
       let urlFilename = extractFilenameFromDownloadUrl(item.url) || item.filename;
-      if (!urlFilename && item.url.indexOf('blob:') === 0) {
+      if (!urlFilename && (item.url.indexOf('blob:') === 0 || item.url.indexOf('data:') === 0)) {
+        // data: URLs (Mistral) carry no file name either, same as blob: URLs.
         // blob: URLs carry no filename information themselves — this
         // waits for Chrome's own onDeterminingFilename event instead,
         // which reflects the page's real, intended filename (see that

@@ -627,6 +627,21 @@
             }
           });
         } catch(_) {}
+        // While the canvas panel is open beside the chat, the document shows as a
+        // small collapsed card (title plus a "Text" label) with no export button
+        // on it, so the scan above finds nothing. Read that card too; the same
+        // title yields the same two slots, so a title seen in both is kept once.
+        try {
+          document.querySelectorAll('p.text-subtle.text-xs').forEach(function(sub) {
+            if ((sub.textContent || '').trim() !== 'Text') return;
+            var titleEl = sub.previousElementSibling;
+            var title = titleEl && titleEl.tagName === 'P' ? (titleEl.textContent || '').trim() : '';
+            if (!title) return;
+            ['pdf', 'md'].forEach(function(t) {
+              if (!attachments.some(function(a) { return a.filename === title && a.type === t; })) attachments.push({ filename: title, type: t });
+            });
+          });
+        } catch(_) {}
         return attachments;
       }
     },
