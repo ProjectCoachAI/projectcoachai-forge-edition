@@ -11,6 +11,7 @@
  * same as the stored ones apart from the new turn numbers.
  *
  *   node backfill-artifact-turns.js            dry run: counts only, writes nothing
+ *   node backfill-artifact-turns.js --explain  dry run plus a breakdown of why entries are left alone
  *   node backfill-artifact-turns.js --apply    writes a backup file, then updates
  *
  * Run it where DATABASE_URL is set (for example: railway run node backfill-artifact-turns.js).
@@ -19,13 +20,36 @@ const fs = require('fs');
 const db = require('../lib/db');
 
 const APPLY = process.argv.includes('--apply');
+const EXPLAIN = process.argv.includes('--explain');
 const REPLACED = ['citations', 'structured_facts', 'images'];
 
 async function main() {
   const res = await db.query('SELECT id, user_email, unified_content, artifacts, metadata FROM diary_entries WHERE unified_content IS NOT NULL ORDER BY id');
   const changes = [];
   let unchanged = 0, skipped = 0, differs = 0;
-  const noTurn = v => JSON.stringify(v, (k, x) => (k === 'turn' ? undefined : x));
+  const why = {}; const sampleIds = {}; const detail = {};
+  // Postgres JSONB hands back object keys in its own order, so compare with sorted keys.
+  const canon = v => {
+    if (Array.isArray(v)) return v.map(canon);
+    if (v && typeof v === 'object') { const o = {}; Object.keys(v).sort().forEach(k => { o[k] = canon(v[k]); }); return o; }
+    return v;
+  };
+  // Field-level difference summary (key paths and length changes only, never values).
+  const diffPaths = (a, b, p, out) => {
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) out.push((p || '(root)') + ' length ' + (a.length < b.length ? 'stored<fresh' : 'stored>fresh'));
+      for (let i = 0; i < Math.min(a.length, b.length); i++) diffPaths(a[i], b[i], p + '[]', out);
+    } else if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) {
+      new Set(Object.keys(a).concat(Object.keys(b))).forEach(k => {
+        if (k === 'turn') return;
+        if (!(k in a)) out.push(p + '.' + k + ' only in fresh');
+        else if (!(k in b)) out.push(p + '.' + k + ' only in stored');
+        else diffPaths(a[k], b[k], p + '.' + k, out);
+      });
+    } else if (JSON.stringify(a) !== JSON.stringify(b)) out.push(p + ' value differs');
+  };
+  const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+  const noTurn = v => JSON.stringify(canon(v), (k, x) => (k === 'turn' ? undefined : x));
   for (const row of res.rows) {
     let existing = row.artifacts;
     if (typeof existing === 'string') { try { existing = JSON.parse(existing); } catch (_e) { existing = null; } }
@@ -40,17 +64,41 @@ async function main() {
     // Keep every other artifact exactly as stored; swap in the three recomputed types.
     const kept = existing.filter(a => REPLACED.indexOf(a && a.type) === -1);
     const next = kept.concat(fresh);
-    const before = JSON.stringify(existing.filter(a => REPLACED.indexOf(a && a.type) !== -1));
-    const after = JSON.stringify(fresh);
-    if (before === after) { unchanged++; continue; }
+    if (same(existing.filter(a => REPLACED.indexOf(a && a.type) !== -1), fresh)) { unchanged++; continue; }
     // Strictly additive: only entries whose three types match what is stored once
     // the turn numbers are ignored are updated. If the recomputed content differs
     // for any other reason (the detectors changed since the entry was saved), the
     // entry is left alone and only counted.
-    if (noTurn(existing.filter(a => REPLACED.indexOf(a && a.type) !== -1)) !== noTurn(fresh)) { differs++; continue; }
+    if (noTurn(existing.filter(a => REPLACED.indexOf(a && a.type) !== -1)) !== noTurn(fresh)) {
+      differs++;
+      if (EXPLAIN) {
+        REPLACED.forEach(t => {
+          const o = existing.filter(a => a && a.type === t), f = fresh.filter(a => a && a.type === t);
+          let k = null;
+          if (!o.length && f.length) k = 'stored has none, recompute finds some';
+          else if (o.length && !f.length) k = 'stored has some, recompute finds none';
+          else if (noTurn(o) !== noTurn(f)) k = 'both have some, contents differ';
+          if (k === 'both have some, contents differ') {
+            const out = [];
+            diffPaths(canon(o), canon(f), t, out);
+            new Set(out).forEach(x => { detail[x] = (detail[x] || 0) + 1; });
+          }
+          if (k) { const key = t + ': ' + k; why[key] = (why[key] || 0) + 1; (sampleIds[key] = sampleIds[key] || []).length < 3 && sampleIds[key].push(row.id); }
+        });
+      }
+      continue;
+    }
     changes.push({ id: row.id, user_email: row.user_email, before: existing, after: next });
   }
   console.log('entries read:', res.rows.length, '| would change:', changes.length, '| already current:', unchanged, '| skipped (no artifacts list):', skipped, '| left alone (differs beyond turns):', differs);
+  if (EXPLAIN) {
+    console.log('Why entries are left alone (an entry can appear under several lines):');
+    Object.keys(why).sort().forEach(k => console.log('  ' + k + ' = ' + why[k] + '   e.g. entry ids ' + sampleIds[k].join(', ')));
+  }
+  if (EXPLAIN) {
+    console.log('Where the stored and recomputed items differ (entries per field path):');
+    Object.keys(detail).sort((a, b) => detail[b] - detail[a]).slice(0, 14).forEach(k => console.log('  ' + k + ' = ' + detail[k]));
+  }
   if (!APPLY) { console.log('Dry run only. Nothing written. Add --apply to write.'); return; }
   if (!changes.length) { console.log('Nothing to change.'); return; }
   const backupFile = 'artifacts-backup-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
