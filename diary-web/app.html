@@ -2297,9 +2297,13 @@ function renderEntryCard(e) {
         '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
           _eartifacts.map(function(art, idx) {
             if (art.type !== 'table') return '';
-            return '<button onclick="openTableArtifact(' + e.id + ',' + idx + ')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:#4A4035;font-family:Inter,sans-serif;">' +
+            var tblSrc = getTableArtifactSource(e, art);
+            var tblLine = (tblSrc && tblSrc.question)
+              ? sourceLineHtml(e, tblSrc.question, (tblSrc.turnIndex !== null && tblSrc.turnIndex !== undefined) ? 'viewTableCardSource(' + e.id + ',' + idx + ')' : '')
+              : '';
+            return '<div style="flex:1 1 100%;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;">' + '<button onclick="openTableArtifact(' + e.id + ',' + idx + ')" style="display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:#4A4035;font-family:Inter,sans-serif;">' +
               '📊 View table (' + art.rows.length + ' rows)' +
-            '</button>';
+            '</button>' + (tblLine ? '<div style="width:100%;">' + tblLine + '</div>' : '') + '</div>';
           }).join('') +
         '</div>'
       : '') +
@@ -2336,11 +2340,28 @@ function renderEntryCard(e) {
             '<span class="citations-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
             'Sources (' + citationArt.sources.length + ')' +
           '</button>' +
-          '<ol id="' + sid + '" style="display:none;margin:8px 0 0;padding-left:18px;font-size:12px;color:#6B655C;line-height:1.8;">' +
-          citationArt.sources.map(function(s) {
-            return '<li><a href="' + escHtml(s.url) + '" target="_blank" rel="noopener" style="color:#C17D3C;text-decoration:none;">' + escHtml(s.title) + '</a></li>';
-          }).join('') +
-          '</ol>' +
+          '<div id="' + sid + '" style="display:none;margin:8px 0 0;font-size:12px;color:#6B655C;line-height:1.8;">' +
+          (function() {
+            // Sources are saved in the order they appear, so sources from the
+            // same question sit next to each other: one question line per run.
+            var qs = entryQuestions(e), groups = [];
+            citationArt.sources.forEach(function(s, n) {
+              var t = (typeof s.turn === 'number' && s.turn >= 0) ? s.turn : -1;
+              var g = groups[groups.length - 1];
+              if (!g || g.turn !== t) { g = { turn: t, start: n, items: [] }; groups.push(g); }
+              g.items.push(s);
+            });
+            return groups.map(function(g) {
+              var q = itemQuestion(qs, g.turn);
+              var head = q ? sourceLineHtml(e, q, 'viewTurnSource(' + e.id + ',' + g.turn + ')', true) : '';
+              return head + '<ol start="' + (g.start + 1) + '" style="margin:2px 0 6px;padding-left:18px;">' +
+                g.items.map(function(s) {
+                  return '<li><a href="' + escHtml(s.url) + '" target="_blank" rel="noopener" style="color:#C17D3C;text-decoration:none;">' + escHtml(s.title) + '</a></li>';
+                }).join('') +
+              '</ol>';
+            }).join('');
+          })() +
+          '</div>' +
         '</div>';
       })()) +
       // Checklist (third of the brief's own build order). Per the
@@ -2408,7 +2429,8 @@ function renderEntryCard(e) {
           '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Key facts</div>' +
           '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
           shownFacts.map(function(f) {
-            return '<div title="' + escHtml(f.label) + '" style="font-size:12px;color:#4A4035;background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;padding:4px 10px;"><span style="color:#9E9890;">' + escHtml(f.context) + '</span> ' + escHtml(f.value) + '</div>';
+            var fq = itemQuestion(entryQuestions(e), f.turn);
+            return '<div title="' + escHtml(f.label + (fq ? ' \u2014 from \u201c' + shortQuestion(fq, 90) + '\u201d' : '')) + '" style="font-size:12px;color:#4A4035;background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;padding:4px 10px;"><span style="color:#9E9890;">' + escHtml(f.context) + '</span> ' + escHtml(f.value) + '</div>';
           }).join('') +
           '</div>' +
         '</div>';
@@ -2425,6 +2447,10 @@ function renderEntryCard(e) {
         // on a failed entry with nothing real to show.
         var imagesArt = (_eartifacts || []).filter(function(a) { return a.type === 'images'; })[0];
         var galleryUrls = imagesArt ? imagesArt.images.map(function(im) { return im.url; }) : [];
+        // Which question each saved image came from (only images whose address
+        // appears in the entry's text get a turn).
+        var imgQs = entryQuestions(e), imgTurns = {};
+        if (imagesArt) imagesArt.images.forEach(function(im) { if (im && typeof im.turn === 'number') imgTurns[im.url] = im.turn; });
         // Confirmed via direct testing to be a real, necessary fix:
         // JSON.stringify's own double quotes need HTML-entity escaping
         // here, since this gets embedded inside an already
@@ -2464,7 +2490,8 @@ function renderEntryCard(e) {
           return failTile.replace('__DISP__', 'flex');
         }
         var galleryIndex = galleryUrls.indexOf(url);
-        return '<img src="' + escHtml(url) + '" onclick="event.stopPropagation();openImageZoom(' + galleryUrlsJson + ',' + Math.max(0, galleryIndex) + ')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>';
+        var iq = itemQuestion(imgQs, imgTurns[url]);
+        return '<img src="' + escHtml(url) + '"' + (iq ? ' title="' + escHtml('From \u201c' + shortQuestion(iq, 90) + '\u201d') + '"' : '') + ' onclick="event.stopPropagation();openImageZoom(' + galleryUrlsJson + ',' + Math.max(0, galleryIndex) + ')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>';
         }).join('');
       })() + '</div></div>' : '') +
       // Reasoning trace (seventh and final artifact of the brief's own
@@ -4410,7 +4437,15 @@ function getChecklistArtifactSource(entry, art) {
 
 function checklistSourceHtml(entry, src) {
   if (!src || !src.question) return '';
-  var q = String(src.question).replace(/\s+/g, ' ').trim();
+  return sourceLineHtml(entry, src.question, (src.qIdx !== null && src.qIdx !== undefined) ? 'viewChecklistSource(' + entry.id + ')' : '');
+}
+
+// The shared "↳ From: question · provider · date  View source" line, used under
+// a checklist and under each table button. viewCall is the onclick code for the
+// View source link; empty means no link (the question came from the entry's
+// own first prompt, so there is no turn to jump to).
+function sourceLineHtml(entry, question, viewCall, noMeta) {
+  var q = String(question).replace(/\s+/g, ' ').trim();
   if (q.length > 90) q = q.slice(0, 89).replace(/\s+$/, '') + '…';
   var provider = TABLE_SOURCE_PROVIDER_NAMES[entry.source] || '';
   var dateText = '';
@@ -4418,13 +4453,73 @@ function checklistSourceHtml(entry, src) {
     var d = new Date(entry.created_at);
     if (!isNaN(d.getTime())) dateText = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   } catch (_e) {}
-  var meta = [provider, dateText].filter(Boolean).join(' · ');
+  var meta = noMeta ? '' : [provider, dateText].filter(Boolean).join(' · ');
   return '<div style="display:flex;align-items:center;gap:10px;margin-top:4px;font-size:11px;color:#9E9890;font-family:Inter,sans-serif;">' +
     '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">↳ From: “' + escHtml(q) + '”</span>' +
     (meta ? '<span style="white-space:nowrap;">' + escHtml(meta) + '</span>' : '') +
-    (src.qIdx !== null && src.qIdx !== undefined ? '<button onclick="viewChecklistSource(' + entry.id + ')" style="background:none;border:none;padding:0;cursor:pointer;color:#C17D3C;font-size:11px;font-family:Inter,sans-serif;font-weight:500;white-space:nowrap;">View source</button>' : '') +
+    (viewCall ? '<button onclick="' + viewCall + '" style="background:none;border:none;padding:0;cursor:pointer;color:#C17D3C;font-size:11px;font-family:Inter,sans-serif;font-weight:500;white-space:nowrap;">View source</button>' : '') +
   '</div>';
 }
+
+// Per-item breadcrumb. The server now saves, with each source, fact and image,
+// the number of the question it came from ("turn": 0 is the first question in
+// the entry). These helpers turn that number back into the question text, and
+// jump to it. Entries saved before this have no turn, so nothing extra is shown
+// for them. With only one question in the entry the line would say nothing, so
+// it is skipped there too.
+function entryQuestions(entry) {
+  var out = [];
+  try {
+    var re = new RegExp('\\u2063\\*\\*([^*]+)\\*\\*\\u2063', 'g');
+    var content = String((entry && entry.content) || ''), m;
+    while ((m = re.exec(content)) !== null) out.push(m[1]);
+  } catch (_e) {}
+  return out;
+}
+
+function itemQuestion(questions, turn) {
+  if (!questions || questions.length < 2 || typeof turn !== 'number' || turn < 0) return null;
+  return questions[turn] || null;
+}
+
+function shortQuestion(q, max) {
+  var t = String(q).replace(/\s+/g, ' ').trim();
+  return t.length > max ? t.slice(0, max - 1).replace(/\s+$/, '') + '…' : t;
+}
+
+async function viewTurnSource(entryId, turn) {
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+  if (!entry || typeof turn !== 'number' || turn < 0) return;
+  if (!expandedIds.has(entryId)) await toggleEntry(entryId);
+  var state = window._entryContentSegments && window._entryContentSegments[entryId];
+  var turnIndex = null;
+  if (state && state.segments) {
+    var seen = -1;
+    for (var s = 0; s < state.segments.length; s++) {
+      if (String(state.segments[s]).indexOf('<div class="user-bubble') === 0) {
+        seen++;
+        if (seen === turn) { turnIndex = s; break; }
+      }
+    }
+  }
+  if (turnIndex === null) return;
+  setTimeout(function() { jumpToTurn(entryId, turnIndex); }, 60);
+}
+window.viewTurnSource = viewTurnSource;
+
+async function viewTableCardSource(entryId, artifactIndex) {
+  var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
+  if (!entry) return;
+  var artifacts = [];
+  try { artifacts = (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch(_e) {}
+  var art = artifacts[artifactIndex];
+  if (!art || art.type !== 'table') return;
+  if (!expandedIds.has(entryId)) await toggleEntry(entryId);
+  var src = getTableArtifactSource(entry, art);
+  if (!src || src.turnIndex === null || src.turnIndex === undefined) return;
+  setTimeout(function() { jumpToTurn(entryId, src.turnIndex); }, 60);
+}
+window.viewTableCardSource = viewTableCardSource;
 
 async function viewChecklistSource(entryId) {
   var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
