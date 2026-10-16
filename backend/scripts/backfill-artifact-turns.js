@@ -16,7 +16,7 @@
  * Run it where DATABASE_URL is set (for example: railway run node backfill-artifact-turns.js).
  */
 const fs = require('fs');
-const db = require('./db');
+const db = require('../lib/db');
 
 const APPLY = process.argv.includes('--apply');
 const REPLACED = ['citations', 'structured_facts', 'images'];
