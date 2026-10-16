@@ -7,7 +7,7 @@
  * It only re-reads the saved text and recomputes three artifact types:
  * citations, structured facts and images. Tables, checklists (including ticked
  * items), reasoning and code are copied across exactly as they are. No AI calls.
- * Strictly additive: an entry is only updated when the recomputed items are the
+ * Strictly additive: each type is only updated when its recomputed items are the
  * same as the stored ones apart from the new turn numbers.
  *
  *   node backfill-artifact-turns.js            dry run: counts only, writes nothing
@@ -27,7 +27,7 @@ async function main() {
   const res = await db.query('SELECT id, user_email, unified_content, artifacts, metadata FROM diary_entries WHERE unified_content IS NOT NULL ORDER BY id');
   const changes = [];
   let unchanged = 0, skipped = 0, differs = 0;
-  const why = {}; const sampleIds = {}; const detail = {};
+  const why = {}; const sampleIds = {}; const detail = {}; const perType = {}; const blockedType = {};
   // Postgres JSONB hands back object keys in its own order, so compare with sorted keys.
   const canon = v => {
     if (Array.isArray(v)) return v.map(canon);
@@ -61,36 +61,45 @@ async function main() {
       db.detectStructuredFactsArtifacts(text),
       db.detectImagesArtifacts(meta, text)
     );
-    // Keep every other artifact exactly as stored; swap in the three recomputed types.
-    const kept = existing.filter(a => REPLACED.indexOf(a && a.type) === -1);
-    const next = kept.concat(fresh);
-    if (same(existing.filter(a => REPLACED.indexOf(a && a.type) !== -1), fresh)) { unchanged++; continue; }
-    // Strictly additive: only entries whose three types match what is stored once
-    // the turn numbers are ignored are updated. If the recomputed content differs
-    // for any other reason (the detectors changed since the entry was saved), the
-    // entry is left alone and only counted.
-    if (noTurn(existing.filter(a => REPLACED.indexOf(a && a.type) !== -1)) !== noTurn(fresh)) {
-      differs++;
-      if (EXPLAIN) {
-        REPLACED.forEach(t => {
-          const o = existing.filter(a => a && a.type === t), f = fresh.filter(a => a && a.type === t);
-          let k = null;
-          if (!o.length && f.length) k = 'stored has none, recompute finds some';
-          else if (o.length && !f.length) k = 'stored has some, recompute finds none';
-          else if (noTurn(o) !== noTurn(f)) k = 'both have some, contents differ';
-          if (k === 'both have some, contents differ') {
-            const out = [];
-            diffPaths(canon(o), canon(f), t, out);
-            new Set(out).forEach(x => { detail[x] = (detail[x] || 0) + 1; });
-          }
-          if (k) { const key = t + ': ' + k; why[key] = (why[key] || 0) + 1; (sampleIds[key] = sampleIds[key] || []).length < 3 && sampleIds[key].push(row.id); }
-        });
+    // Each of the three types is decided on its own. A type is updated only when
+    // what is stored equals the recomputed items apart from the turn numbers;
+    // otherwise that type stays exactly as stored. Every other artifact (tables,
+    // checklists, reasoning, code) is never touched, and positions in the list
+    // do not move.
+    const next = existing.slice();
+    let anyUpdated = false, anyBlocked = false;
+    REPLACED.forEach(t => {
+      const o = existing.filter(a => a && a.type === t), f = fresh.filter(a => a && a.type === t);
+      if (!o.length && !f.length) return;
+      if (same(o, f)) return;
+      if (o.length && f.length && noTurn(o) === noTurn(f)) {
+        let k = 0;
+        for (let i = 0; i < next.length; i++) if (next[i] && next[i].type === t) next[i] = f[k++];
+        anyUpdated = true;
+        perType[t] = (perType[t] || 0) + 1;
+        return;
       }
-      continue;
-    }
-    changes.push({ id: row.id, user_email: row.user_email, before: existing, after: next });
+      anyBlocked = true;
+      blockedType[t] = (blockedType[t] || 0) + 1;
+      if (EXPLAIN) {
+        let k = null;
+        if (!o.length && f.length) k = 'stored has none, recompute finds some';
+        else if (o.length && !f.length) k = 'stored has some, recompute finds none';
+        else k = 'both have some, contents differ';
+        if (k === 'both have some, contents differ') {
+          const out = [];
+          diffPaths(canon(o), canon(f), t, out);
+          new Set(out).forEach(x => { detail[x] = (detail[x] || 0) + 1; });
+        }
+        const key = t + ': ' + k; why[key] = (why[key] || 0) + 1; (sampleIds[key] = sampleIds[key] || []).length < 3 && sampleIds[key].push(row.id);
+      }
+    });
+    if (anyUpdated) changes.push({ id: row.id, user_email: row.user_email, before: existing, after: next });
+    else if (anyBlocked) differs++;
+    else unchanged++;
   }
-  console.log('entries read:', res.rows.length, '| would change:', changes.length, '| already current:', unchanged, '| skipped (no artifacts list):', skipped, '| left alone (differs beyond turns):', differs);
+  console.log('entries read:', res.rows.length, '| would change:', changes.length, '| already current:', unchanged, '| skipped (no artifacts list):', skipped, '| nothing safe to add:', differs);
+  console.log('types that would be updated:', JSON.stringify(perType), '| types left as stored (differ beyond turns):', JSON.stringify(blockedType));
   if (EXPLAIN) {
     console.log('Why entries are left alone (an entry can appear under several lines):');
     Object.keys(why).sort().forEach(k => console.log('  ' + k + ' = ' + why[k] + '   e.g. entry ids ' + sampleIds[k].join(', ')));
