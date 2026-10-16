@@ -2519,7 +2519,16 @@ function renderEntryCard(e) {
         // reading as a working-view element bleeding into the reading
         // flow (the exact Read/Work blur the brief called out).
         '<div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;border-top:1px solid #EDE9E0;margin-top:14px;padding-top:10px;margin-bottom:8px;">Attachments</div>' +
-        '<div style="display:flex;flex-direction:column;gap:10px;">' + _emeta.attachments.map(function(att) {
+        '<div style="display:flex;flex-direction:column;gap:10px;">' + _emeta.attachments.filter(function(att) {
+        // A canvas document (Mistral) is tracked as both a PDF and an MD slot under
+        // one title, since either can be exported. Once one of them has been
+        // downloaded, the other slot can no longer be useful, so don't show it
+        // as a "download once" tile.
+        if (att.status === 'hosted' && att.url) return true;
+        return !_emeta.attachments.some(function(o) {
+          return o !== att && o.status === 'hosted' && o.url && o.filename === att.filename && o.type !== att.type;
+        });
+      }).map(function(att) {
         // NOTE: was deriving the extension from the FILENAME
         // (.split('.').pop()) — confirmed live this was wrong: Claude's
         // displayed filename has no dot/extension at all ("Infor m3
