@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Diary</title>
+  <title>Forge Diary</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', system-ui, sans-serif; font-size: 14px; width: 280px; min-height: 160px; padding: 0; }
@@ -24,20 +24,25 @@
     .sign-out { font-size: 11px; color: #9E9890; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
     .sign-out:hover { color: #1B2A4A; }
     .divider { height: 0.5px; background: #D6D2C8; margin: 10px 0; }
+    .state-offline { text-align: center; padding: 8px 0; }
+    .state-offline p { font-size: 12px; color: #6B6559; line-height: 1.6; }
     .tip { font-size: 11px; color: #9E9890; line-height: 1.6; text-align: center; margin-top: 10px; }
     .tip span { color: #C17D3C; }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">Diary<span>.</span></div>
+    <div class="logo">Forge Diary<span>.</span></div>
     <div style="font-size:11px;color:rgba(245,243,238,0.6);margin-top:1px;">Your AI memory</div>
   </div>
   <div class="body">
     <div id="signedOut" class="state-signed-out" style="display:none">
-      <p>Sign in to save AI responses directly to your personal Diary.</p>
+      <p>Sign in to save your AI conversations to your Diary.</p>
       <a href="https://diary.projectcoachai.com/signin.html" target="_blank" class="btn btn-primary">Sign In</a>
       <a href="https://diary.projectcoachai.com/signup.html" target="_blank" class="btn btn-secondary">Create Free Account</a>
+    </div>
+    <div id="offline" class="state-offline" style="display:none">
+      <p>Couldn't reach your Diary. Please try again.</p>
     </div>
     <div id="signedIn" class="state-signed-in" style="display:none">
       <div class="user-row">
@@ -47,7 +52,7 @@
       <a href="https://diary.projectcoachai.com/app.html" target="_blank" class="btn btn-primary">&#128214; Open My Diary</a>
       <div class="divider"></div>
       <a href="https://diary.projectcoachai.com/chat.html" target="_blank" class="btn btn-secondary">&#9889; Chat with AI</a>
-      <p class="tip">Look for the <span>Save to Diary</span> button on any AI page.</p>
+      <p class="tip">Look for the <span>Save to Diary</span> button in your AI chats.</p>
     </div>
   </div>
   <script src="popup.js"></script>

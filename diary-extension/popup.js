@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       })
       .catch(function() {
-        document.getElementById('signedOut').style.display = 'block';
+        // Could not reach the server: say so, rather than showing a signed-in user the sign-in buttons.
+        document.getElementById('offline').style.display = 'block';
       });
   });
 
