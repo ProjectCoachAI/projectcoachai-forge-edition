@@ -442,6 +442,27 @@ chrome.downloads.onCreated.addListener(async function(item) {
     if (!effectiveReferrer || !item.url) { console.log('[Diary BG] Skipped: no referrer or url'); return; }
     if (!isFromSupportedProvider(effectiveReferrer)) { console.log('[Diary BG] Skipped: download not from a supported AI provider'); return; }
 
+    // Meta AI only: serves a Word file with the generic type "text/plain"
+    // (confirmed live), so the download was read as a text file and never
+    // matched the Word slot. When the download's own file name shows a
+    // document type, that type wins over a generic type; everything
+    // downstream (matching, type, storage) then sees the real type.
+    try {
+      if (new URL(effectiveReferrer).hostname === 'www.meta.ai') {
+        const genericMimes = ['', 'text/plain', 'application/octet-stream', 'binary/octet-stream'];
+        const metaMime = (item.mime || '').split(';')[0].trim().toLowerCase();
+        if (genericMimes.indexOf(metaMime) !== -1) {
+          const metaName = extractFilenameFromDownloadUrl(item.url) || item.filename || '';
+          const metaExt = (metaName.match(/\.([a-z0-9]+)$/i) || [])[1];
+          const docTypes = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+          if (metaExt && docTypes.indexOf(metaExt.toLowerCase()) !== -1) {
+            const fixedMime = Object.keys(MIME_TO_ATTACHMENT_TYPE).find(function(k) { return MIME_TO_ATTACHMENT_TYPE[k] === metaExt.toLowerCase(); });
+            if (fixedMime) item = Object.assign({}, item, { mime: fixedMime });
+          }
+        }
+      }
+    } catch (e) {}
+
     // See resolveConversationUrl's own comment — item.referrer alone
     // isn't reliable for every provider (confirmed live: Perplexity's
     // cross-origin file host truncates it to a bare origin).
