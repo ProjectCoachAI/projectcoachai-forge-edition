@@ -457,37 +457,15 @@
         }
         return '';
       },
-      // ── Attachment detection (lightweight index, not the files) ──────────
-      // Confirmed live, directly from real DOM captured via Inspect: the
-      // full filename WITH extension sits as the text content of a div
-      // with class "e70accd6". NOTE: unlike the other four providers'
-      // class names (semantic, utility-style — e.g. "truncate",
-      // "text-sm"), this one is a short, hash-style identifier typical
-      // of auto-generated build tooling, and genuinely more likely to
-      // change on a future DeepSeek deploy without any real UI change at
-      // all — a real, different risk profile than the other four, not
-      // something to treat as equally stable. Uses queryAllDeep() rather
-      // than plain document.querySelectorAll(), matching this same
-      // provider's own getPrompt() above, since DeepSeek's page has
-      // already been confirmed to need shadow-DOM piercing elsewhere.
-      // Filtered by a real file-extension match at the end of the text,
-      // same safety pattern as the other class-name-based providers.
-      // Confirmed present in the thread without clicking or hovering on
-      // anything first.
+      // ── Attachment detection ─────────────────────────────────────────────
+      // DeepSeek generates no files, so the only files in a DeepSeek chat are
+      // ones you uploaded yourself. An uploaded file's bytes cannot be taken
+      // from the page the way a download can, so listing it only produced a
+      // "download this file once" tile that could never be satisfied. Nothing is
+      // tracked here, so no such tile is shown. (Pictures you upload are handled
+      // separately, from the thread data, and are unaffected.)
       getAttachments: function() {
-        var attachments = [];
-        try {
-          var els = queryAllDeep('.e70accd6');
-          var extPattern = /\.(pdf|docx?|xlsx?|pptx?|md)$/i;
-          els.forEach(function(el) {
-            var text = (el.textContent || '').trim();
-            var m = text.match(extPattern);
-            if (m && text.length > m[1].length + 1) {
-              attachments.push({ filename: text, type: m[1].toLowerCase() });
-            }
-          });
-        } catch(_) {}
-        return attachments;
+        return [];
       }
     },
     grok: {
