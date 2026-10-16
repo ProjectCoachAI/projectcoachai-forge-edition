@@ -4290,6 +4290,22 @@ var _currentTableArtifact = null;
 // marker) simply shows nothing rather than a wrong question.
 var TABLE_SOURCE_PROVIDER_NAMES = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', perplexity:'Perplexity', grok:'Grok', deepseek:'DeepSeek', mistral:'Mistral', meta:'Meta AI', external:'Other AI' };
 
+// Table cells are stored as the AI wrote them, so bold/italic/code markers can
+// still be in the text ("**Net**"). The modal and the CSV show plain text, so
+// the markers are removed once here, when the table is opened. Only markers that
+// wrap text as a pair are removed; a lone "*" (a footnote mark) or a snake_case
+// name is left alone.
+function stripInlineMarkdown(value) {
+  if (typeof value !== 'string' || (value.indexOf('*') === -1 && value.indexOf('_') === -1 && value.indexOf('`') === -1)) return value;
+  var t = value;
+  t = t.replace(/\*\*\*([^*\n]+?)\*\*\*/g, '$1');
+  t = t.replace(/\*\*([^*\n]+?)\*\*/g, '$1');
+  t = t.replace(/__([^_\n]+?)__/g, '$1');
+  t = t.replace(/(^|[^*\w])\*([^\s*](?:[^*\n]*[^\s*])?)\*(?!\w)/g, '$1$2');
+  t = t.replace(/`([^`\n]+)`/g, '$1');
+  return t;
+}
+
 function getTableArtifactSource(entry, art) {
   try {
     if (!entry || !art || typeof art.position !== 'number' || !art.headers) return null;
@@ -4364,7 +4380,7 @@ function openTableArtifact(entryId, artifactIndex) {
   var art = artifacts[artifactIndex];
   if (!art || art.type !== 'table') return;
   var tableSrc = getTableArtifactSource(entry, art);
-  _currentTableArtifact = { headers: art.headers, rows: art.rows, sortCol: null, sortDir: 1, entryId: entryId, src: tableSrc };
+  _currentTableArtifact = { headers: art.headers.map(stripInlineMarkdown), rows: art.rows.map(function(r) { return r.map(stripInlineMarkdown); }), sortCol: null, sortDir: 1, entryId: entryId, src: tableSrc };
   renderTableArtifactSource(entry, tableSrc);
   var filterInput = document.getElementById('tableArtifactFilter');
   if (filterInput) filterInput.value = '';
