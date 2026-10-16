@@ -1128,6 +1128,44 @@
       return null;
     }
   }
+  // Meta AI only: its generated files (xlsx / pdf / docx) are drawn as file
+  // cards that sit OUTSIDE the answer text, so they never reached the saved
+  // conversation text (the answer read "Excel:", "PDF:", "Word / Docs:" with
+  // nothing under them). Returns one "name . TYPE" line per card that follows
+  // answer block number i (and comes before the next block) inside the same
+  // answer, in the same form Claude, ChatGPT and Perplexity already save, so
+  // the Diary and Continue make them clickable. Uses the same card recognition
+  // as registry.meta.getAttachments (name element plus type sibling).
+  function metaFileLines(els, i, seen) {
+    try {
+      if (window.location.hostname.indexOf('meta.ai') === -1) return '';
+      var FOLLOWING = 4, PRECEDING = 2;
+      var boxOf = function(n) {
+        return n.closest('[data-testid="assistant-message"]') || n.closest('[data-message-item]');
+      };
+      var boxI = boxOf(els[i]);
+      if (!boxI && i + 1 >= els.length) return '';
+      var lines = [];
+      Array.from(document.querySelectorAll('.text-subheadline-medium.truncate')).forEach(function(nameEl) {
+        var parent = nameEl.parentElement;
+        if (!parent) return;
+        var typeEl = parent.querySelector('.text-footnote.truncate');
+        if (!typeEl) return;
+        var name = (nameEl.textContent || '').trim();
+        var type = (typeEl.textContent || '').trim();
+        if (!name || !type || type.length > 6 || !/^[A-Za-z0-9]+$/.test(type)) return;
+        type = type.toLowerCase();
+        if (!(els[i].compareDocumentPosition(nameEl) & FOLLOWING)) return;
+        if (i + 1 < els.length && !(els[i + 1].compareDocumentPosition(nameEl) & PRECEDING)) return;
+        if (boxI && boxOf(nameEl) !== boxI) return;
+        var key = name + '.' + type;
+        if (seen[key]) return;
+        seen[key] = true;
+        lines.push('📎 ' + key + ' · ' + type.toUpperCase());
+      });
+      return lines.length ? '\n\n' + lines.join('\n\n') : '';
+    } catch (e) { return ''; }
+  }
   function buildMetaAIPairedThread(opts) {
     try {
       var els = document.querySelectorAll(opts.combinedSelector);
@@ -1140,6 +1178,7 @@
       // underlying problem for Grok (same architecture, already
       // simplified the same way). Applying the same simplification
       // here rather than another isolated fix.
+      var metaSeenFiles = {};
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (opts.isQuestion(el)) {
@@ -1489,11 +1528,14 @@
                 if (metaImgMarkdown) text += '\n\n' + metaImgMarkdown;
               }
             }
+            var metaFileText = metaFileLines(els, i, metaSeenFiles);
             if (text) {
               var host = window.location.hostname;
               var config = window.DOM_SELECTORS[host];
               text = config ? window.cleanDomText(config.clean(text)) : window.cleanDomText(text);
-              parts.push(text);
+              parts.push(text + metaFileText);
+            } else if (metaFileText) {
+              parts.push(metaFileText.replace(/^\n+/, ''));
             }
           }
         }
