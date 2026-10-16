@@ -6216,7 +6216,7 @@ async function renderUnifiedEntryContent(entryId) {
     // what keeps it in sync with this function's own, freshly-set
     // pagination values instead.
     var html = '';
-    for (var i = startIndex; i < total; i++) html += wrapTurnHtml(nativeSegments[i], i);
+    for (var i = startIndex; i < total; i++) html += wrapTurnHtml(nativeSegments[i], i, entryId);
 
     // Images-disclosure banner removed: Continue in Forge now gives the model a
     // written description of all images with the first message, so the old
@@ -6248,7 +6248,7 @@ async function renderUnifiedEntryContent(entryId) {
       // _entryContentSegments[entryId].titles to include forge user turns.
       var forgeStartIdx = nativeSegments.length;
       var wrappedForgeHtml = forgeSegments.map(function(seg, j) {
-        return wrapTurnHtml(seg, forgeStartIdx + j);
+        return wrapTurnHtml(seg, forgeStartIdx + j, entryId);
       }).join('');
       var forgeTitles = extractMessageTurnTitles(forgeMessages);
       window._entryContentSegments[entryId].titles = window._entryContentSegments[entryId].titles.concat(forgeTitles);
@@ -6311,10 +6311,34 @@ window._entryContentSegments = window._entryContentSegments || {};
 // A file the AI offered (saved as a line like "📎 Net salary calculation · PDF")
 // becomes a link: a stored file opens in the viewer, one that is not stored
 // yet jumps to its row in the entry's Attachments list.
-function linkifyFileLines(html) {
+function linkifyFileLines(html, entryId) {
+  var atts = [];
+  if (entryId !== undefined && entryId !== null) {
+    var ent = (window._diaryEntries || allEntries || []).find(function(x) { return String(x.id) === String(entryId); });
+    atts = (ent && ent.metadata && ent.metadata.attachments) || [];
+  }
   return String(html || '').replace(/<p>\s*\uD83D\uDCCE\s+([^<]+?)\s+\u00b7\s+([A-Za-z0-9]{2,5})\s*<\/p>/g, function(full, name, type) {
     var safeName = name.replace(/"/g, '&quot;');
-    return '<p><a href="#" class="file-line" data-file-name="' + safeName + '" data-file-type="' + type.toLowerCase() + '" onclick="openFileLine(this,event);return false;" style="color:#4A4035;text-decoration:none;border-bottom:1px dashed #C17D3C;cursor:pointer;">\uD83D\uDCCE ' + name + ' \u00b7 ' + type + '</a></p>';
+    var linkStyle = 'color:#4A4035;text-decoration:none;border-bottom:1px dashed #C17D3C;cursor:pointer;';
+    var mk = function(ty, label) {
+      return '<a href="#" class="file-line" data-file-name="' + safeName + '" data-file-type="' + ty + '" onclick="openFileLine(this,event);return false;" style="' + linkStyle + '">' + label + '</a>';
+    };
+    // The line is already HTML here, so a name like "A & B" arrives as "A &amp; B".
+    var plainName = name.replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    var t = type.toLowerCase();
+    // Stored formats of this document: the one the line names first, then any other
+    // (a canvas can be saved as both PDF and Markdown).
+    var types = [];
+    atts.forEach(function(a) {
+      if (!a || a.filename !== plainName || a.status !== 'hosted' || !a.url) return;
+      var at = String(a.type || '').toLowerCase();
+      if (at && types.indexOf(at) === -1) types.push(at);
+    });
+    if (!types.length) return '<p>' + mk(t, '\uD83D\uDCCE ' + name + ' \u00b7 ' + type) + '</p>';
+    if (types.indexOf(t) > 0) { types.splice(types.indexOf(t), 1); types.unshift(t); }
+    var out = mk(types[0], '\uD83D\uDCCE ' + name + ' \u00b7 ' + (types[0] === t ? type : types[0].toUpperCase()));
+    for (var k = 1; k < types.length; k++) out += ' \u00b7 ' + mk(types[k], types[k].toUpperCase());
+    return '<p>' + out + '</p>';
   });
 }
 
@@ -6347,8 +6371,8 @@ function openFileLine(el, ev) {
 }
 window.openFileLine = openFileLine;
 
-function wrapTurnHtml(html, index) {
-  return '<div data-turn-index="' + index + '">' + linkifyFileLines(html) + '</div>';
+function wrapTurnHtml(html, index, entryId) {
+  return '<div data-turn-index="' + index + '">' + linkifyFileLines(html, entryId) + '</div>';
 }
 
 function renderEntryContentHtml(e) {
@@ -6370,7 +6394,7 @@ function renderEntryContentHtml(e) {
   // renderEntryCard). This function's own job is now genuinely just
   // the entry's own turns, nothing else.
   var html = '';
-  for (var i = startIndex; i < total; i++) html += wrapTurnHtml(segments[i], i);
+  for (var i = startIndex; i < total; i++) html += wrapTurnHtml(segments[i], i, e.id);
   return html;
 }
 
@@ -6580,7 +6604,7 @@ function loadEarlierEntryContent(entryId) {
   // 'afterend' against. Newly-revealed content always inserts directly
   // at the very top of container itself now.
   var revealedHtml = '';
-  for (var i = newStart; i < state.renderedFromIndex; i++) revealedHtml += wrapTurnHtml(state.segments[i], i);
+  for (var i = newStart; i < state.renderedFromIndex; i++) revealedHtml += wrapTurnHtml(state.segments[i], i, entryId);
   container.insertAdjacentHTML('afterbegin', revealedHtml);
   enhanceCodeBlocks(container);
   state.renderedFromIndex = newStart;
