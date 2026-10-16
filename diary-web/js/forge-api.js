@@ -333,6 +333,21 @@
     }).join('');
   }
 
+  // -- Escaped brackets (\[ and \]) ----------------------------------------------
+  // The extension's Markdown conversion writes a literal "[" or "]" as "\[" or
+  // "\]" (confirmed live: a Claude answer headed "[Q1] Best electric vehicles"
+  // showed as "\[Q1\] ..."). This renderer had no handling for backslash
+  // escapes, so the backslashes appeared. Removed from plain text only, never
+  // inside an HTML tag, <pre> or <code>, so code that really contains "\[" is
+  // left exactly as written.
+  function unescapeBrackets(html) {
+    if (html.indexOf('\\') === -1) return html;
+    return html.split(/(<pre[\s\S]*?<\/pre>|<code[^>]*>[\s\S]*?<\/code>|<[^>]+>)/).map(function (part, i) {
+      if (i % 2 === 1) return part;
+      return part.replace(/\\([\[\]])/g, '$1');
+    }).join('');
+  }
+
   // -- Markdown renderer (lightweight, no deps) ---------------------------------
   function renderMarkdown(text) {
     if (!text) return '';
@@ -855,6 +870,7 @@
       // tag this function ever learns to generate.
       .replace(/^(?!<|$)(.+)$/gm, m => `<p>${m}</p>`)
       .replace(/<p><\/p>/g, '')
+      .replace(/[\s\S]+/, function (t) { return unescapeBrackets(t); })
       .replace(/(<strong>)(Agreement|Disagreement|Consensus|Key Risk|Warning|Critical|Note|Important|Recommendation)(<\/strong>)/g,
         '<strong style="color:#E8652A">$2</strong>');
   }
