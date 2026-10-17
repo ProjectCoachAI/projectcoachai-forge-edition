@@ -125,7 +125,7 @@
     posthog.init('phc_wVedb6RwcG5xJUcbVLd3wePsquhWZ6BmxrvGEeybunam', {
       api_host: 'https://eu.i.posthog.com',
       defaults: '2026-05-30',
-      person_profiles: 'identified_only', disable_session_recording: true, autocapture: false, disable_session_recording: true, autocapture: false,
+      person_profiles: 'identified_only', disable_session_recording: true, autocapture: false,
     });
   </script>
   <!-- End PostHog -->
@@ -430,7 +430,7 @@
             // Pro: show lifetime + monthly, no progress bar
             document.getElementById('usageBar').style.display = 'none';
             var monthlyText = monthly !== null ? ' · ' + monthly + ' this month' : '';
-            document.getElementById('usageCount').textContent = used + ' saves — lifetime archive' + monthlyText;
+            document.getElementById('usageCount').textContent = used + ' saves — kept permanently' + monthlyText;
             // Hide Save Limit Warnings toggle for Pro
             var limitToggle = document.querySelector('[data-setting="usageWarnings"]');
             if (limitToggle) {
