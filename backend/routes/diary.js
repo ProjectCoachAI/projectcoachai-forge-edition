@@ -2453,9 +2453,47 @@ router.get('/:id/diag-chat-session-size', requireAuth, async (req, res) => {
 
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
+    // Find this entry's uploaded files first (needs the row that's about to go),
+    // so deleting an entry also removes its files from storage, not just the row.
+    let storageKeys = [];
+    const base = process.env.R2_PUBLIC_URL ? process.env.R2_PUBLIC_URL.replace(/\/+$/, '') + '/' : '';
+    if (base) {
+      try {
+        const own = await db.query(
+          `SELECT COALESCE(metadata::text,'') || ' ' || COALESCE(content,'') AS t
+             FROM diary_entries WHERE id = $1 AND user_email = $2`,
+          [req.params.id, req.userEmail]);
+        const tts = await db.query(
+          `SELECT t.audio_url AS t FROM tts_cache t JOIN diary_entries d ON d.id = t.entry_id
+            WHERE d.id = $1 AND d.user_email = $2`,
+          [req.params.id, req.userEmail]);
+        const esc = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(esc + '([^"\\s)\\\\<>]+)', 'g');
+        const found = new Map(); // decoded storage key -> the form it has in saved text
+        own.rows.concat(tts.rows).forEach(function(r) {
+          var m; re.lastIndex = 0;
+          while (r.t && (m = re.exec(r.t)) !== null) { var dec = m[1]; try { dec = decodeURIComponent(m[1]); } catch (_) {} found.set(dec, m[1]); }
+        });
+        storageKeys = Array.from(found.entries());
+      } catch (e) { console.warn('[Diary] could not list files for deleted entry:', e.message); }
+    }
+
     await db.query('DELETE FROM diary_entries WHERE id = $1 AND user_email = $2',
       [req.params.id, req.userEmail]);
     res.json({ success: true });
+
+    // Best effort, after responding: remove the files, unless another of this
+    // user's entries still points at the same file.
+    for (const pair of storageKeys) {
+      const key = pair[0], raw = pair[1];
+      try {
+        const still = await db.query(
+          `SELECT 1 FROM diary_entries WHERE user_email = $1 AND (metadata::text LIKE $2 OR content LIKE $2) LIMIT 1`,
+          [req.userEmail, '%' + raw.replace(/[%_\\]/g, '\\$&') + '%']);
+        if (still.rows.length) continue;
+        await attachmentStorage.remove(key);
+      } catch (e) { console.warn('[Diary] could not remove stored file for deleted entry:', e.message); }
+    }
   } catch(e) {
     console.error('[Diary] DELETE error:', e.message);
     res.status(500).json({ success: false, error: 'Could not delete entry' });
