@@ -112,18 +112,74 @@ async function collectStorageKeys(email) {
   return Array.from(keys);
 }
 
-// Tables that hold the user's email without being removed along with the user row.
-const LOOSE_TABLES = [
-  ['synthesis_logs', 'user_email'],
+// The database has no foreign keys, so NOTHING is removed along with the user row:
+// every table that holds the user's data is deleted from explicitly, here.
+// [table, email column]. A table that doesn't exist (yet) is skipped.
+const ACCOUNT_TABLES = [
+  ['diary_chat_usage', 'user_email'],
+  ['diary_pending_prompts', 'user_email'],
+  ['diary_search_log', 'user_email'],
+  ['excel_analyses', 'user_email'],
+  ['feature_usage', 'user_email'],
+  ['forge_library', 'user_email'],
   ['forge_recordings', 'user_email'],
-  ['knowledge_injections', 'user_email'],
   ['knowledge_candidates', 'user_email'],
+  ['knowledge_injections', 'user_email'],
+  ['pending_attachment_captures', 'user_email'],
+  ['prompts', 'user_email'],
+  ['provider_keys', 'user_email'],
+  ['read_aloud_usage', 'user_email'],
+  ['sessions', 'user_email'],
+  ['synthesis_logs', 'user_email'],
+  ['synthesis_usage', 'user_email'],
+  ['traffic_visits', 'user_email'],
+  ['subscriptions', 'user_email'],
+  ['chat_sessions', 'user_email'],
   ['referral_rewards', 'user_email'],
   ['referral_clicks', 'signup_email'],
+  ['referrals', 'referee_email'],
+  ['invites', 'inviter_email'],
   ['student_verifications', 'email'],
+  ['network_applications', 'email'],
   ['contact_messages', 'email'],
-  ['subscriptions', 'user_email']
+  ['diary_entries', 'user_email']      // last of the diary tables: children are removed first
 ];
+// Kept on purpose (Swiss accounting): billing/revenue records. Never swept up below.
+const KEEP_TABLES = ['revenue_events', 'users'];
+const SAFE_IDENT = /^[a-z0-9_]+$/i;
+
+// Delete everything that belongs to `email`, using `run(sql, params)`.
+// Safe to repeat. Returns the number of tables touched.
+async function deleteAccountData(run, email) {
+  const ignorable = e => e && (e.code === '42P01' || e.code === '42703');
+  const attempt = async (sql, params) => {
+    try { await run(sql, params); }
+    catch (e) { if (!ignorable(e)) throw e; }
+  };
+  // 1) Tables that point at an entry by id (audio cache, facts, images …): remove first.
+  const byEntry = await run(
+    `SELECT DISTINCT table_name FROM information_schema.columns
+      WHERE table_schema='public' AND column_name='entry_id' AND table_name <> 'diary_entries'`, []);
+  for (const r of byEntry.rows) {
+    if (!SAFE_IDENT.test(r.table_name) || KEEP_TABLES.includes(r.table_name)) continue;
+    await attempt(`DELETE FROM "${r.table_name}" WHERE entry_id IN (SELECT id FROM diary_entries WHERE user_email=$1)`, [email]);
+  }
+  // 2) The known tables.
+  for (const [table, col] of ACCOUNT_TABLES) {
+    await attempt(`DELETE FROM ${table} WHERE ${col}=$1`, [email]);
+  }
+  // 3) Safety net: any other table with a user_email column (e.g. added later).
+  const known = new Set(ACCOUNT_TABLES.map(t => t[0]).concat(KEEP_TABLES));
+  const sweep = await run(
+    `SELECT DISTINCT table_name FROM information_schema.columns
+      WHERE table_schema='public' AND column_name='user_email'`, []);
+  for (const r of sweep.rows) {
+    if (known.has(r.table_name) || !SAFE_IDENT.test(r.table_name)) continue;
+    await attempt(`DELETE FROM "${r.table_name}" WHERE user_email=$1`, [email]);
+  }
+  // 4) The account itself.
+  await run('DELETE FROM users WHERE email=$1', [email]);
+}
 
 // DELETE /api/account — permanently delete the account and all its data.
 router.delete('/', requireAuth, async (req, res) => {
@@ -160,11 +216,28 @@ router.delete('/', requireAuth, async (req, res) => {
 
     // 3) Remove rows that are not removed along with the user, then the user itself.
     //    Re-running after a partial failure is safe: each step is idempotent.
-    for (const [table, col] of LOOSE_TABLES) {
-      try { await db.query(`DELETE FROM ${table} WHERE ${col}=$1`, [email]); }
-      catch (e) { if (!(e && (e.code === '42P01' || e.code === '42703'))) throw e; }
+    //    One transaction when a pool is available: all removed, or nothing.
+    const pool = db.pool || (typeof db.getPool === 'function' ? db.getPool() : null);
+    if (pool && typeof pool.connect === 'function') {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // A failed statement aborts a Postgres transaction, so use a savepoint per statement.
+        let n = 0;
+        await deleteAccountData(async (sql, params) => {
+          const sp = 'sp' + (n++);
+          await client.query('SAVEPOINT ' + sp);
+          try { const r = await client.query(sql, params); await client.query('RELEASE SAVEPOINT ' + sp); return r; }
+          catch (e) { await client.query('ROLLBACK TO SAVEPOINT ' + sp); throw e; }
+        }, email);
+        await client.query('COMMIT');
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        throw e;
+      } finally { client.release(); }
+    } else {
+      await deleteAccountData((sql, params) => db.query(sql, params), email);
     }
-    await db.query('DELETE FROM users WHERE email=$1', [email]); // cascades entries, sessions, usage, chats…
 
     // 4) Remove stored files (best effort — the data rows are already gone).
     let filesRemoved = 0;

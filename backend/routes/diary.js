@@ -2478,6 +2478,22 @@ router.delete('/:id', requireAuth, async (req, res) => {
       } catch (e) { console.warn('[Diary] could not list files for deleted entry:', e.message); }
     }
 
+    // No foreign keys in this database: remove rows that point at the entry
+    // (audio cache and similar) ourselves, before the entry row.
+    try {
+      const kids = await db.query(
+        `SELECT DISTINCT table_name FROM information_schema.columns
+          WHERE table_schema='public' AND column_name='entry_id' AND table_name <> 'diary_entries'`);
+      for (const k of kids.rows) {
+        if (!/^[a-z0-9_]+$/i.test(k.table_name)) continue;
+        try {
+          await db.query(
+            `DELETE FROM "${k.table_name}" WHERE entry_id IN (SELECT id FROM diary_entries WHERE id = $1 AND user_email = $2)`,
+            [req.params.id, req.userEmail]);
+        } catch (e) { console.warn('[Diary] could not clean', k.table_name, e.message); }
+      }
+    } catch (e) { console.warn('[Diary] could not list entry child tables:', e.message); }
+
     await db.query('DELETE FROM diary_entries WHERE id = $1 AND user_email = $2',
       [req.params.id, req.userEmail]);
     res.json({ success: true });
