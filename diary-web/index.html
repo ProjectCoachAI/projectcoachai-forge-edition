@@ -529,6 +529,13 @@
     .art { max-width: 760px; margin: 0 auto; padding: 4.5rem 2rem; text-align: center; }
     .art .how-title { margin-bottom: 1rem; }
     .art-body { max-width: 520px; margin: 0 auto 2rem; }
+    .art-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .art-tab { font-family: inherit; font-size: 14px; font-weight: 500; color: #6B6559; background: transparent; border: 0.5px solid #D6D2C8; border-radius: 999px; padding: 0.5rem 1.1rem; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+    .art-tab:hover { border-color: #C17D3C; color: #1B2A4A; }
+    .art-tab:focus-visible { outline: 2px solid #C17D3C; outline-offset: 2px; }
+    .art-tab[aria-selected="true"] { background: #1B2A4A; border-color: #1B2A4A; color: #FFFFFF; }
+    .art-panel[hidden] { display: none; }
+    .art-caption { font-size: 14px; color: #6B6559; line-height: 1.6; margin-top: 1rem; }
     .use-wrap { border-bottom: 0.5px solid #D6D2C8; }
     .use { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; text-align: center; }
     .use-headline { font-family: 'Lora', serif; font-size: 28px; font-weight: 400; color: #1B2A4A; line-height: 1.3; margin-bottom: 2.5rem; }
@@ -693,7 +700,28 @@
       <p class="how-title">Artifacts</p>
       <h2 class="art-headline">From answer to artifact.</h2>
       <p class="art-body">Do not just save what the AI told you. Every time you save, Diary automatically picks out the tables, checklists, sources, key facts, images, reasoning steps and code inside it, and turns each into something you can use.</p>
-      <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_table.png', 'From answer to artifact')"><img src="/img/screenshot_carousel_table.png" alt="The Table artifact open on a Diary entry, showing a multi-row table with filter and export controls" onerror="this.parentNode.style.display='none'" /></div>
+      <div class="art-tabs" role="tablist" aria-label="Artifact types">
+        <button class="art-tab" role="tab" id="art-tab-tables" aria-controls="art-panel-tables" aria-selected="true" tabindex="0" type="button">Tables</button>
+        <button class="art-tab" role="tab" id="art-tab-checklists" aria-controls="art-panel-checklists" aria-selected="false" tabindex="-1" type="button">Checklists</button>
+        <button class="art-tab" role="tab" id="art-tab-keyfacts" aria-controls="art-panel-keyfacts" aria-selected="false" tabindex="-1" type="button">Key facts</button>
+        <button class="art-tab" role="tab" id="art-tab-sources" aria-controls="art-panel-sources" aria-selected="false" tabindex="-1" type="button">Sources &amp; images</button>
+      </div>
+      <div class="art-panel" role="tabpanel" id="art-panel-tables" aria-labelledby="art-tab-tables">
+        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_table.png', 'Tables')"><img src="/img/screenshot_carousel_table.png" alt="The Table artifact open on a Diary entry, showing a multi-row table with filter and export controls" onerror="this.parentNode.style.display='none'" /></div>
+        <p class="art-caption">Tables become real tables you can filter, sort and export.</p>
+      </div>
+      <div class="art-panel" role="tabpanel" id="art-panel-checklists" aria-labelledby="art-tab-checklists" hidden>
+        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_checklist.png', 'Checklists')"><img src="/img/screenshot_tab_checklist.png" alt="A Diary entry with a checklist of snack tips, each with a tick box" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        <p class="art-caption">Checklists become tick boxes you can work through.</p>
+      </div>
+      <div class="art-panel" role="tabpanel" id="art-panel-keyfacts" aria-labelledby="art-tab-keyfacts" hidden>
+        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_keyfacts.png', 'Key facts')"><img src="/img/screenshot_tab_keyfacts.png" alt="A Diary entry with Key facts chips showing electric car prices, and topic tags below them" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        <p class="art-caption">Key facts are pulled out as chips, so the numbers are easy to spot.</p>
+      </div>
+      <div class="art-panel" role="tabpanel" id="art-panel-sources" aria-labelledby="art-tab-sources" hidden>
+        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_sources_images.jpg', 'Sources and images')"><img src="/img/screenshot_tab_sources_images.jpg" alt="A Diary entry listing seven numbered sources and a grid of fifteen saved aircraft photos" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        <p class="art-caption">Sources and images are kept with the entry they came from.</p>
+      </div>
     </div>
   </div>
 
@@ -969,6 +997,29 @@
       lb.classList.add('open');
       document.body.style.overflow = 'hidden';
     }
+    (function () {
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.art-tab'));
+      function select(tab, focus) {
+        tabs.forEach(function (t) {
+          var on = t === tab;
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+          t.tabIndex = on ? 0 : -1;
+          document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+        });
+        if (focus) tab.focus();
+      }
+      tabs.forEach(function (t, i) {
+        t.addEventListener('click', function () { select(t, false); });
+        t.addEventListener('keydown', function (e) {
+          var n = null;
+          if (e.key === 'ArrowRight') n = tabs[(i + 1) % tabs.length];
+          else if (e.key === 'ArrowLeft') n = tabs[(i - 1 + tabs.length) % tabs.length];
+          else if (e.key === 'Home') n = tabs[0];
+          else if (e.key === 'End') n = tabs[tabs.length - 1];
+          if (n) { e.preventDefault(); select(n, true); }
+        });
+      });
+    })();
     function closeLightbox() {
       document.getElementById('lightbox').classList.remove('open');
       document.body.style.overflow = '';
