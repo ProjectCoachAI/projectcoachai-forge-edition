@@ -701,13 +701,18 @@
       <h2 class="art-headline">From answer to artifact.</h2>
       <p class="art-body">Do not just save what the AI told you. Every time you save, Diary automatically picks out the tables, checklists, sources, key facts, images, reasoning steps and code inside it, and turns each into something you can use.</p>
       <div class="art-tabs" role="tablist" aria-label="Artifact types">
-        <button class="art-tab" role="tab" id="art-tab-tables" aria-controls="art-panel-tables" aria-selected="true" tabindex="0" type="button">Tables</button>
+        <button class="art-tab" role="tab" id="art-tab-summary" aria-controls="art-panel-summary" aria-selected="true" tabindex="0" type="button">Summary</button>
+        <button class="art-tab" role="tab" id="art-tab-tables" aria-controls="art-panel-tables" aria-selected="false" tabindex="-1" type="button">Tables</button>
         <button class="art-tab" role="tab" id="art-tab-checklists" aria-controls="art-panel-checklists" aria-selected="false" tabindex="-1" type="button">Checklists</button>
         <button class="art-tab" role="tab" id="art-tab-keyfacts" aria-controls="art-panel-keyfacts" aria-selected="false" tabindex="-1" type="button">Key facts</button>
         <button class="art-tab" role="tab" id="art-tab-sources" aria-controls="art-panel-sources" aria-selected="false" tabindex="-1" type="button">Sources &amp; images</button>
       </div>
-      <div class="art-panel" role="tabpanel" id="art-panel-tables" aria-labelledby="art-tab-tables">
-        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_table.png', 'Tables')"><img src="/img/screenshot_carousel_table.png" alt="The Table artifact open on a Diary entry, showing a multi-row table with filter and export controls" onerror="this.parentNode.style.display='none'" /></div>
+      <div class="art-panel" role="tabpanel" id="art-panel-summary" aria-labelledby="art-tab-summary">
+        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_summary.png', 'Summary')"><img src="/img/screenshot_tab_summary.png" alt="A Diary entry in Summary view, with three short sections: what this was about, where it landed, and where you left off" onerror="this.parentNode.style.display='none'" /></div>
+        <p class="art-caption">Every entry opens with a short summary: what it was about, where it landed and where you left off.</p>
+      </div>
+      <div class="art-panel" role="tabpanel" id="art-panel-tables" aria-labelledby="art-tab-tables" hidden>
+        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_table.png', 'Tables')"><img src="/img/screenshot_carousel_table.png" alt="The Table artifact open on a Diary entry, showing a multi-row table with filter and export controls" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
         <p class="art-caption">Tables become real tables you can filter, sort and export.</p>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-checklists" aria-labelledby="art-tab-checklists" hidden>
