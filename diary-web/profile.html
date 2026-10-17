@@ -274,7 +274,7 @@
         </div>
         <div class="privacy-card">
           <div class="privacy-card-title">🇨🇭 Your privacy is protected</div>
-          <div class="privacy-card-body">Your saved entries are stored securely and are never shared or used for AI training. Swiss privacy compliant (FADP) · Xencore Global GmbH, Zürich, Switzerland.</div>
+          <div class="privacy-card-body">Your saved entries are stored securely and are never sold or used for AI training. Swiss privacy compliant (FADP) · Xencore Global GmbH, Zürich, Switzerland.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Export Your Data</label>
@@ -494,11 +494,16 @@
       var input = document.getElementById('deleteConfirm').value.trim();
       if (input !== 'DELETE') { showToast('Type DELETE to confirm.'); return; }
       try {
-        var r = await Forge.request('DELETE', '/api/auth/me');
-        if (r.ok) {
-          Forge.auth.signout();
+        // Deletes the account and everything in it (entries, files, extra records),
+        // and cancels any paid plan first. See backend/routes/account.js.
+        var r = await Forge.request('DELETE', '/api/account', { confirm: 'DELETE' });
+        if (r.ok && r.data && r.data.success) {
+          closeDeleteModal();
+          showToast('Your account has been deleted. Thank you for trying Diary.', 4000);
+          try { await Forge.auth.signout(); } catch(_) {}
+          setTimeout(function() { window.location.href = '/'; }, 2500);
         } else {
-          showToast(r.data?.error || 'Failed to delete account.');
+          showToast((r.data && r.data.error) || 'Failed to delete account.', 5000);
         }
       } catch(_) { showToast('Something went wrong.'); }
     }
@@ -506,17 +511,19 @@
     async function handleExportData() {
       showToast('Preparing export… check your downloads shortly.');
       try {
-        var r = await Forge.request('GET', '/api/diary/export');
-        if (r.ok && r.data) {
+        var r = await Forge.request('GET', '/api/account/export');
+        if (r.ok && r.data && r.data.success) {
           var blob = new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' });
           var url = URL.createObjectURL(blob);
           var a = document.createElement('a');
-          a.href = url; a.download = 'diary-export.json'; a.click();
-          URL.revokeObjectURL(url);
+          a.href = url; a.download = 'diary-export-' + new Date().toISOString().slice(0, 10) + '.json';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+          showToast('Your data has been downloaded.');
         } else {
-          showToast('Export not available yet.');
+          showToast((r.data && r.data.error) || 'Could not export your data. Please try again.', 5000);
         }
-      } catch(_) { showToast('Export not available yet.'); }
+      } catch(_) { showToast('Could not export your data. Please try again.', 5000); }
     }
 
     document.addEventListener('keydown', function(e) {
