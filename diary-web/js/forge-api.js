@@ -351,7 +351,19 @@
   // -- Markdown renderer (lightweight, no deps) ---------------------------------
   function renderMarkdown(text) {
     if (!text) return '';
-    return text
+    // Code blocks are lifted out BEFORE any formatting rule runs and put
+    // back at the very end. Previously the fenced block became a <pre> early
+    // on, but every later rule (headings, bold, italics, underscores, lists,
+    // paragraph wrapping) still ran over the code inside it: a "# comment"
+    // line turned into a heading and lost its "#" and the blank line above
+    // it, "**kwargs" or "__init__" turned into bold, and so on. Lifting the
+    // blocks out means code is shown exactly as it was written.
+    var codeStash = [];
+    text = text.replace(/```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g, function(full, lang, code) {
+      codeStash.push({ lang: (lang || '').trim().toLowerCase(), code: code });
+      return '\n\nDIARYCODEBLOCK' + (codeStash.length - 1) + 'END\n\n';
+    });
+    var renderedHtml = text
       .replace(/^[-*•]\s*$/gm, '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       // NOTE: image rule added — confirmed live this renderer had NO
@@ -879,6 +891,15 @@
       .replace(/[\s\S]+/, function (t) { return unescapeBrackets(t); })
       .replace(/(<strong>)(Agreement|Disagreement|Consensus|Key Risk|Warning|Critical|Note|Important|Recommendation)(<\/strong>)/g,
         '<strong style="color:#E8652A">$2</strong>');
+    // Put the lifted-out code blocks back, HTML-escaped, inside the same
+    // <pre data-code-block><code class="language-x"> markup as before
+    // (highlight.js and the Copy button hook onto that).
+    return renderedHtml.replace(/(?:<p>)?DIARYCODEBLOCK(\d+)END(?:<\/p>)?/g, function(full, i) {
+      var blk = codeStash[Number(i)];
+      if (!blk) return '';
+      var esc = blk.code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return '<pre data-code-block="1"><code' + (blk.lang ? ' class="language-' + blk.lang + '"' : '') + '>' + esc + '</code></pre>';
+    });
   }
 
 
