@@ -1375,7 +1375,25 @@ function queryAllDeep(selector) {
     // besides Claude, which only ever had one simple label to begin
     // with) safely fall back to using that same single label for pill
     // and footer, with no favicon at all.
+    // NOTE: citation titles sometimes arrive with invisible/private-use
+    // characters (e.g. a trailing icon glyph from the provider's page) that
+    // render as an empty box (▯) in the Diary. Removed here at the source,
+    // for every provider, so new captures are clean. Keeps ZWJ/ZWNJ, which
+    // real scripts need. The diary-web cleanLabel() stays as a safety net
+    // for entries saved before this fix.
+    function cleanCitationText(t) {
+      return String(t == null ? '' : t)
+        .replace(/(?![\u200C\u200D])[\p{Co}\p{Cf}\p{Cn}]|[\uFFFD\u241F\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, '')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+    }
     function splitCompoundLabel(label) {
+      var r = splitCompoundLabelRaw(label);
+      var footer = cleanCitationText(r.footer);
+      var pill = cleanCitationText(r.pill) || footer;
+      return { pill: pill, footer: footer, favicon: r.favicon };
+    }
+    function splitCompoundLabelRaw(label) {
       var sepIdx = label.indexOf('\u241F');
       if (sepIdx === -1) return { pill: label, footer: label, favicon: '' };
       var rest = label.slice(sepIdx + 1);

@@ -613,6 +613,7 @@
       <button class="btn-import" id="chatWithAiBtn" aria-label="Chat with AI" onclick="window.location.href='/chat.html'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg><span class="btn-import-label">Chat with AI</span></button>
       <button class="btn-import" aria-label="Import" onclick="openImportModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"/></svg><span class="btn-import-label">Import</span></button>
       <!-- Try Forge nav button hidden for Diary launch -->
+      <button class="btn-signout" aria-label="Account" onclick="openAccountModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg><span class="btn-signout-label">Account</span></button>
       <button class="btn-signout" aria-label="Sign out" onclick="handleSignOut()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25"/></svg><span class="btn-signout-label">Sign out</span></button>
     </div>
   </nav>
@@ -4590,6 +4591,28 @@ function sortTableArtifact(columnIndex) {
 }
 window.sortTableArtifact = sortTableArtifact;
 
+// Table cells arrive as the AI's own markdown, and can carry citation markers
+// (private-use characters that show up as empty boxes plus the raw title and
+// link). Remove the markers, show **bold** and `code` properly instead of as
+// literal asterisks/backticks; searching, sorting and CSV use the plain text.
+function tableCellClean(c) {
+  return String(c == null ? '' : c)
+    .replace(/\uE000[^\uE002]*\uE002/g, '')   // a complete citation marker
+    .replace(/\uE000[^\uE002]*$/, '')          // a marker cut off at the end of the cell
+    .replace(/[\uE000-\uE004]/g, '')           // any leftover marker character
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+function tableCellPlain(c) {
+  return tableCellClean(c)
+    .replace(/\*\*([^*\n]+?)\*\*/g, '$1')
+    .replace(/`([^`\n]+?)`/g, '$1');
+}
+function tableCellHtml(c) {
+  return escHtml(tableCellClean(c))
+    .replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`\n]+?)`/g, '<code style="background:#F0ECE3;padding:1px 4px;border-radius:3px;font-size:12px;">$1</code>');
+}
 function renderTableArtifactBody() {
   if (!_currentTableArtifact) return;
   var headers = _currentTableArtifact.headers;
@@ -4599,7 +4622,7 @@ function renderTableArtifactBody() {
   var filterText = (filterInput && filterInput.value || '').toLowerCase().trim();
   if (filterText) {
     rows = rows.filter(function(row) {
-      return row.some(function(cell) { return (cell || '').toLowerCase().includes(filterText); });
+      return row.some(function(cell) { return tableCellPlain(cell).toLowerCase().includes(filterText); });
     });
   }
 
@@ -4607,8 +4630,8 @@ function renderTableArtifactBody() {
     var col = _currentTableArtifact.sortCol;
     var dir = _currentTableArtifact.sortDir;
     rows.sort(function(a, b) {
-      var av = a[col] || '';
-      var bv = b[col] || '';
+      var av = tableCellPlain(a[col]);
+      var bv = tableCellPlain(b[col]);
       // Numeric-aware: strips common currency/percent formatting before
       // comparing, so "$9" correctly sorts before "$50" — a plain string
       // sort would otherwise put "$100" before "$50" lexicographically.
@@ -4623,7 +4646,7 @@ function renderTableArtifactBody() {
   html += '<thead><tr style="background:#EDE9E0;">';
   headers.forEach(function(h, i) {
     var arrow = _currentTableArtifact.sortCol === i ? (_currentTableArtifact.sortDir === 1 ? ' &uarr;' : ' &darr;') : '';
-    html += '<th onclick="sortTableArtifact(' + i + ')" style="padding:10px 14px;text-align:left;cursor:pointer;position:sticky;top:0;background:#EDE9E0;color:#1B2A4A;font-weight:600;user-select:none;white-space:nowrap;">' + escHtml(h) + arrow + '</th>';
+    html += '<th onclick="sortTableArtifact(' + i + ')" style="padding:10px 14px;text-align:left;cursor:pointer;position:sticky;top:0;background:#EDE9E0;color:#1B2A4A;font-weight:600;user-select:none;white-space:nowrap;">' + tableCellHtml(h) + arrow + '</th>';
   });
   html += '</tr></thead><tbody>';
   if (!rows.length) {
@@ -4632,7 +4655,7 @@ function renderTableArtifactBody() {
     rows.forEach(function(row, ri) {
       html += '<tr style="border-bottom:0.5px solid #D6D2C8;' + (ri % 2 === 1 ? 'background:#FAF8F4;' : '') + '">';
       row.forEach(function(cell) {
-        html += '<td style="padding:9px 14px;color:#4A4035;">' + escHtml(cell) + '</td>';
+        html += '<td style="padding:9px 14px;color:#4A4035;">' + tableCellHtml(cell) + '</td>';
       });
       html += '</tr>';
     });
@@ -4657,15 +4680,15 @@ function exportTableArtifactCsv() {
   var filterText = (filterInput && filterInput.value || '').toLowerCase().trim();
   if (filterText) {
     rows = rows.filter(function(row) {
-      return row.some(function(cell) { return (cell || '').toLowerCase().includes(filterText); });
+      return row.some(function(cell) { return tableCellPlain(cell).toLowerCase().includes(filterText); });
     });
   }
   if (_currentTableArtifact.sortCol !== null) {
     var col = _currentTableArtifact.sortCol;
     var dir = _currentTableArtifact.sortDir;
     rows.sort(function(a, b) {
-      var av = a[col] || '';
-      var bv = b[col] || '';
+      var av = tableCellPlain(a[col]);
+      var bv = tableCellPlain(b[col]);
       var anum = parseFloat(av.replace(/[$,%]/g, ''));
       var bnum = parseFloat(bv.replace(/[$,%]/g, ''));
       if (!isNaN(anum) && !isNaN(bnum)) return (anum - bnum) * dir;
@@ -4673,7 +4696,7 @@ function exportTableArtifactCsv() {
     });
   }
   function csvEscape(val) {
-    var s = String(val == null ? '' : val);
+    var s = tableCellPlain(val);
     if (/["\n,]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
   }
@@ -5866,6 +5889,81 @@ function goToProfile() {
   }
   return true; // follow default href /profile.html
 }
+
+// ── Account: export my data / delete my account ───────────────────────────
+function openAccountModal() {
+  var u = null;
+  try { u = Forge.getUser ? Forge.getUser() : JSON.parse(localStorage.getItem('forge_user') || 'null'); } catch (_) {}
+  document.getElementById('accountEmail').textContent = (u && u.email) || '';
+  cancelDeleteAccount();
+  document.getElementById('accountModal').classList.add('visible');
+}
+function closeAccountModal() { document.getElementById('accountModal').classList.remove('visible'); }
+function startDeleteAccount() {
+  document.getElementById('accountMain').style.display = 'none';
+  document.getElementById('accountDelete').style.display = 'block';
+  var inp = document.getElementById('accountDeleteInput');
+  inp.value = '';
+  document.getElementById('accountDeleteGo').disabled = true;
+  document.getElementById('accountDeleteError').textContent = '';
+  setTimeout(function() { inp.focus(); }, 50);
+}
+function cancelDeleteAccount() {
+  document.getElementById('accountDelete').style.display = 'none';
+  document.getElementById('accountDone').style.display = 'none';
+  document.getElementById('accountMain').style.display = 'block';
+}
+async function exportMyData() {
+  var btn = document.getElementById('accountExportBtn');
+  var label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Preparing…';
+  try {
+    var r = await Forge.request('GET', '/api/account/export');
+    if (!r.ok || !r.data || !r.data.success) {
+      showTopToast((r.data && r.data.error) || 'Could not export your data', true);
+      return;
+    }
+    var blob = new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'diary-export-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+    showTopToast('Your data has been downloaded');
+  } catch (_) {
+    showTopToast('Could not export your data', true);
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+async function confirmDeleteAccount() {
+  var go = document.getElementById('accountDeleteGo');
+  var err = document.getElementById('accountDeleteError');
+  var typed = document.getElementById('accountDeleteInput').value.trim();
+  if (typed !== 'DELETE') return;
+  go.disabled = true; go.textContent = 'Deleting…'; err.textContent = '';
+  try {
+    var r = await Forge.request('DELETE', '/api/account', { confirm: 'DELETE' });
+    if (r.ok && r.data && r.data.success) {
+      document.getElementById('accountDelete').style.display = 'none';
+      document.getElementById('accountDone').style.display = 'block';
+      try { await Forge.auth.signout(); } catch (_) {}
+      setTimeout(function() { window.location.href = '/'; }, 3000);
+      return;
+    }
+    err.textContent = (r.data && r.data.error) || 'Could not delete your account. Please try again.';
+  } catch (_) {
+    err.textContent = 'Something went wrong. Please try again.';
+  }
+  go.textContent = 'Delete everything';
+  go.disabled = document.getElementById('accountDeleteInput').value.trim() !== 'DELETE';
+}
+window.openAccountModal = openAccountModal;
+window.closeAccountModal = closeAccountModal;
+window.startDeleteAccount = startDeleteAccount;
+window.cancelDeleteAccount = cancelDeleteAccount;
+window.exportMyData = exportMyData;
+window.confirmDeleteAccount = confirmDeleteAccount;
 
 function handleSignOut() {
   Forge.auth.signout();
@@ -7060,6 +7158,41 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <!-- Search Help Modal -->
+<div class="upgrade-modal-backdrop" id="accountModal" onclick="if(event.target===this)closeAccountModal()">
+  <div style="background:#fff;border-radius:12px;padding:1.75rem;width:440px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(27,42,74,0.2);font-family:'Inter',sans-serif;">
+    <div id="accountMain">
+      <div style="font-family:'Lora',serif;font-size:19px;color:#1B2A4A;margin-bottom:0.25rem;">Your account</div>
+      <div id="accountEmail" style="font-size:13px;color:#9E9890;margin-bottom:1.25rem;"></div>
+      <div style="border:0.5px solid #D6D2C8;border-radius:10px;padding:1rem;margin-bottom:0.75rem;">
+        <div style="font-size:14px;font-weight:600;color:#1B2A4A;margin-bottom:4px;">Export my data</div>
+        <div style="font-size:13px;color:#4A4035;line-height:1.5;margin-bottom:10px;">Download everything saved in your Diary as one file.</div>
+        <button id="accountExportBtn" onclick="exportMyData()" style="font-size:13px;font-weight:500;padding:8px 14px;border-radius:8px;border:0.5px solid #D6D2C8;background:#fff;color:#1B2A4A;cursor:pointer;font-family:'Inter',sans-serif;">Download my data</button>
+      </div>
+      <div style="border:0.5px solid #E8C4C4;border-radius:10px;padding:1rem;">
+        <div style="font-size:14px;font-weight:600;color:#B91C1C;margin-bottom:4px;">Delete my account</div>
+        <div style="font-size:13px;color:#4A4035;line-height:1.5;margin-bottom:10px;">Permanently deletes your account and every entry, file and setting. Any paid plan is cancelled immediately. This can&rsquo;t be undone.</div>
+        <button onclick="startDeleteAccount()" style="font-size:13px;font-weight:500;padding:8px 14px;border-radius:8px;border:0.5px solid #B91C1C;background:#fff;color:#B91C1C;cursor:pointer;font-family:'Inter',sans-serif;">Delete my account&hellip;</button>
+      </div>
+      <div style="text-align:right;margin-top:1.25rem;"><button onclick="closeAccountModal()" style="font-size:13px;color:#9E9890;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;">Close</button></div>
+    </div>
+    <div id="accountDelete" style="display:none;">
+      <div style="font-family:'Lora',serif;font-size:19px;color:#B91C1C;margin-bottom:0.5rem;">Delete your account?</div>
+      <div style="font-size:13px;color:#4A4035;line-height:1.6;margin-bottom:12px;">All your entries, files and settings will be permanently deleted, and any paid plan will be cancelled right away. Consider downloading your data first.</div>
+      <label for="accountDeleteInput" style="font-size:13px;color:#1B2A4A;display:block;margin-bottom:6px;">Type <strong>DELETE</strong> to confirm</label>
+      <input id="accountDeleteInput" type="text" autocomplete="off" oninput="document.getElementById('accountDeleteGo').disabled = this.value.trim() !== 'DELETE'" style="width:100%;font-size:14px;padding:9px 10px;border:0.5px solid #D6D2C8;border-radius:8px;font-family:'Inter',sans-serif;box-sizing:border-box;" />
+      <div id="accountDeleteError" style="font-size:12px;color:#B91C1C;min-height:18px;margin-top:6px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:0.5rem;">
+        <button onclick="cancelDeleteAccount()" style="font-size:13px;padding:8px 14px;border-radius:8px;border:0.5px solid #D6D2C8;background:#fff;color:#1B2A4A;cursor:pointer;font-family:'Inter',sans-serif;">Cancel</button>
+        <button id="accountDeleteGo" disabled onclick="confirmDeleteAccount()" style="font-size:13px;font-weight:500;padding:8px 14px;border-radius:8px;border:none;background:#B91C1C;color:#fff;cursor:pointer;font-family:'Inter',sans-serif;opacity:1;">Delete everything</button>
+      </div>
+    </div>
+    <div id="accountDone" style="display:none;text-align:center;padding:1rem 0;">
+      <div style="font-family:'Lora',serif;font-size:19px;color:#1B2A4A;margin-bottom:0.5rem;">Your account has been deleted</div>
+      <div style="font-size:13px;color:#4A4035;line-height:1.6;">All your data has been removed. Thank you for trying Diary.</div>
+    </div>
+  </div>
+</div>
+
 <div class="upgrade-modal-backdrop" id="searchHelpModal" onclick="if(event.target===this)closeSearchHelpModal()">
   <div style="background:#fff;border-radius:12px;padding:1.75rem;width:420px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(27,42,74,0.2);font-family:'Inter',sans-serif;">
     <div style="font-family:'Lora',serif;font-size:19px;color:#1B2A4A;margin-bottom:1rem;">Search tips</div>
