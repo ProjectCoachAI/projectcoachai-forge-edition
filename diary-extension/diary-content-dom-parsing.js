@@ -95,7 +95,8 @@
             try {
               if (typeof TurndownService !== 'undefined') {
                 if (!window.__diaryTurndownInstance) {
-                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+                  if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
                   if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
                     svc.use(turndownPluginGfm.gfm);
                   }
@@ -474,7 +475,8 @@
             try {
               if (typeof TurndownService !== 'undefined') {
                 if (!window.__diaryTurndownInstance) {
-                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+                  if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
                   if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
                     svc.use(turndownPluginGfm.gfm);
                   }
@@ -829,7 +831,8 @@
             try {
               if (typeof TurndownService !== 'undefined') {
                 if (!window.__diaryTurndownInstance) {
-                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+                  if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
                   if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
                     svc.use(turndownPluginGfm.gfm);
                   }
@@ -1219,7 +1222,8 @@
             try {
               if (typeof TurndownService !== 'undefined') {
                 if (!window.__diaryTurndownInstance) {
-                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+                  if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
                   if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
                     svc.use(turndownPluginGfm.gfm);
                   }
@@ -1638,7 +1642,8 @@
             try {
               if (typeof TurndownService !== 'undefined') {
                 if (!window.__diaryTurndownInstance) {
-                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+                  if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
                   if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
                     svc.use(turndownPluginGfm.gfm);
                   }
@@ -2197,7 +2202,8 @@
             try {
               if (typeof TurndownService !== 'undefined') {
                 if (!window.__diaryTurndownInstance) {
-                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+                  if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
                   if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
                     svc.use(turndownPluginGfm.gfm);
                   }

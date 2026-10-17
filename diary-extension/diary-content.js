@@ -9,6 +9,50 @@
   if (window.__diaryProviderActive) return;
   window.__diaryProviderActive = true;
 
+  // Code blocks: Turndown's default code-block style is "indented", which
+  // the Diary reader does not render as code - Gemini and Claude code ended
+  // up as plain paragraphs with the indentation lost. Every Turndown
+  // instance now uses fenced blocks, plus this rule, which turns ANY <pre>
+  // into a fenced block straight from its text (so line breaks and
+  // indentation survive), taking the language from a language-xxx class
+  // when there is one. Gemini's <code-block> element (with its header bar
+  // holding the language name and copy button) gets its own rule below, so
+  // "Python" no longer lands in the code itself.
+  window.__diaryCodeRule = function (svc) {
+    try {
+      svc.addRule('diaryFencedPre', {
+        filter: 'pre',
+        replacement: function (content, node) {
+          var codeEl = node.querySelector ? node.querySelector('code') : null;
+          var raw = ((codeEl || node).textContent || '').replace(/^\n+/, '').replace(/\s+$/, '');
+          var cls = (codeEl && codeEl.getAttribute('class')) || node.getAttribute('class') || '';
+          var m = cls.match(/language-([A-Za-z0-9_+-]+)/);
+          var lang = m ? m[1].toLowerCase() : '';
+          return '\n\n```' + lang + '\n' + raw + '\n```\n\n';
+        }
+      });
+      // Gemini wraps each code block in a <code-block> element with a header
+      // bar (language name + copy button). Take the code from the <pre>
+      // inside it and the language from the header, and leave the rest out.
+      svc.addRule('diaryGeminiCodeBlock', {
+        filter: function (node) { return node.nodeName === 'CODE-BLOCK'; },
+        replacement: function (content, node) {
+          var codeEl = node.querySelector('pre code') || node.querySelector('code') || node.querySelector('pre');
+          if (!codeEl) return '';
+          var raw = (codeEl.textContent || '').replace(/^\n+/, '').replace(/\s+$/, '');
+          var lang = '';
+          var deco = node.querySelector('.code-block-decoration');
+          var labelEl = deco ? (deco.querySelector('span') || deco) : null;
+          var label = labelEl ? (labelEl.textContent || '').trim().toLowerCase() : '';
+          // Only trust a label that is a known language name, so a stray
+          // word from the header bar never ends up as the language.
+          if (/^(python|javascript|js|typescript|ts|html|css|scss|json|bash|sh|shell|zsh|sql|java|kotlin|swift|c|cpp|c\+\+|csharp|c#|go|rust|ruby|php|r|yaml|yml|xml|markdown|powershell|dart|lua|perl|scala|dockerfile|plaintext|text)$/.test(label)) lang = label;
+          return '\n\n```' + lang + '\n' + raw + '\n```\n\n';
+        }
+      });
+    } catch (e) {}
+  };
+
   // Added specifically to solve a real, repeated, practical problem
   // this exact investigation kept running into: diary-content.js's own
   // console.log output lives in the actual provider tab's own DevTools
@@ -4632,7 +4676,8 @@ function queryAllDeep(selector) {
   function getClaudeTurndown() {
     if (window.__diaryClaudeTurndown) return window.__diaryClaudeTurndown;
     if (typeof TurndownService === 'undefined') return null;
-    var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+    var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+    if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
     try {
       if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) svc.use(turndownPluginGfm.gfm);
     } catch (e) {}
@@ -4909,7 +4954,8 @@ function queryAllDeep(selector) {
         var md = '';
         if (typeof TurndownService !== 'undefined') {
           if (!window.__diaryTurndownInstance) {
-            var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+            var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-', codeBlockStyle: 'fenced', fence: '```' });
+            if (window.__diaryCodeRule) window.__diaryCodeRule(svc);
             if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
               svc.use(turndownPluginGfm.gfm);
             }
