@@ -2356,7 +2356,7 @@ function renderEntryCard(e) {
               var head = q ? sourceLineHtml(e, q, 'viewTurnSource(' + e.id + ',' + g.turn + ')', true) : '';
               return head + '<ol start="' + (g.start + 1) + '" style="margin:2px 0 6px;padding-left:18px;">' +
                 g.items.map(function(s) {
-                  return '<li><a href="' + escHtml(s.url) + '" target="_blank" rel="noopener" style="color:#C17D3C;text-decoration:none;">' + escHtml(s.title) + '</a></li>';
+                  return '<li><a href="' + escHtml(s.url) + '" target="_blank" rel="noopener" style="color:#C17D3C;text-decoration:none;">' + escHtml(cleanLabel(s.title) || s.url) + '</a></li>';
                 }).join('') +
               '</ol>';
             }).join('');
@@ -4467,6 +4467,13 @@ function sourceLineHtml(entry, question, viewCall, noMeta) {
 // jump to it. Entries saved before this have no turn, so nothing extra is shown
 // for them. With only one question in the entry the line would say nothing, so
 // it is skipped there too.
+// Some saved source titles end in a stray invisible or unassigned character,
+// which the browser draws as an empty box. Taken out when a title is shown;
+// the saved text is left as it is. Tabs and line breaks are kept.
+function cleanLabel(t) {
+  return String(t == null ? '' : t).replace(/[\p{Co}\p{Cf}\p{Cn}␟�\u0000-\u0008\u000B-\u001F\u007F-\u009F]/gu, '').trim();
+}
+
 function entryQuestions(entry) {
   var out = [];
   try {
@@ -6189,7 +6196,7 @@ function extractSourcesBlock(text) {
   if (!sourcesMatch) return { mainText: text, sourcesHtml: '' };
   var mainText = text.slice(0, sourcesMatch.index);
   var sourceLines = sourcesMatch[1].split('\n').filter(function(l) { return l.trim(); });
-  var sourcesBody = Forge.renderMarkdown(sourcesMatch[1]).replace(/<p>\s*<\/p>/g, '');
+  var sourcesBody = Forge.renderMarkdown(cleanLabel(sourcesMatch[1])).replace(/<p>\s*<\/p>/g, '');
   var sid = 'src-' + Math.random().toString(36).slice(2, 10);
   var sourcesHtml = '<div class="sources-collapsible" style="margin-top:14px;">' +
     '<button onclick="event.stopPropagation();var b=document.getElementById(\'' + sid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.sources-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
