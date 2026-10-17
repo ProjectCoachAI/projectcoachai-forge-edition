@@ -1019,7 +1019,13 @@ async function updateSyncButtonLabelForEntry(entryId) {
   // visible forever.
   var opensNewTab = false;
   try {
-    var tabCheck = await extSyncSendMessage({ type: 'CHECK_TAB_OPEN', conversationUrl: conversationUrl });
+    // A slow or asleep extension must not leave the button waiting
+    // forever, so give up after three seconds and show the label without
+    // live tab status.
+    var tabCheck = await Promise.race([
+      extSyncSendMessage({ type: 'CHECK_TAB_OPEN', conversationUrl: conversationUrl }),
+      new Promise(function(resolve) { setTimeout(function() { resolve(null); }, 3000); })
+    ]);
     opensNewTab = !(tabCheck && tabCheck.isOpen);
   } catch (e) {
     console.warn('[Diary] updateSyncButtonLabelForEntry: CHECK_TAB_OPEN failed, showing label without live tab status:', e.message);
@@ -2633,7 +2639,7 @@ function renderEntryCard(e) {
         ' — this entry\'s own content won\'t include what happens there. ' +
         '<a href="/continue.html?entryId=' + e.id + '" style="color:#C17D3C;font-weight:500;">Open the Forge conversation &rarr;</a>' +
         '<div style="margin-top:6px;">' +
-          '<button class="entry-btn accent" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">' + heroicon('arrow-path') + ' Checking&hellip;</button>' +
+          '<button class="entry-btn accent" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">' + heroicon('arrow-path') + ' Sync</button>' +
         '</div>' +
       '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
@@ -4238,7 +4244,7 @@ function openMoveModal(id) {
   var cats = [];
   document.querySelectorAll('#categoryList .cat-item').forEach(function(el) {
     var span = el.querySelector('span');
-    if (span && span.textContent !== 'All') cats.push(span.textContent);
+    if (span && el.id !== 'cat-all' && span.textContent !== 'All entries' && span.textContent !== 'All') cats.push(span.textContent);
   });
   if (!cats.length) cats = ['General', 'Research & Learning', 'Market Research', 'Strategy', 'Personal'];
   cats.forEach(function(cat) {

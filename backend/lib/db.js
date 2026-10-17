@@ -1215,8 +1215,16 @@ function findChecklistCandidates(text) {
   function isListLine(line) { return /^[ \t]*[-*•] (.+)/.test(line) || /^[ \t]*\d+\. (.+)/.test(line); }
   // Shown as plain text in the checklist, so a markdown link becomes just
   // its label (and an image is dropped) instead of raw "[label](url)".
+  // Citation markers ("([9](url))", "[9](url)", "(9)", "[9]", "(9, 10)")
+  // are not part of the task, so they are dropped too.
   function plainItem(t) {
-    return t.replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').trim();
+    return t
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+      .replace(/\s*\(\s*(?:\[\d{1,3}\]\([^)]*\)[,;\s]*)+\)/g, '')
+      .replace(/\s*\[\d{1,3}\]\([^)]*\)/g, '')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\s*[(\[]\d{1,3}(?:\s*[,–-]\s*\d{1,3})*[)\]](?=\s*[.;,:]?\s*$)/g, '')
+      .trim();
   }
   // A list made only of links is a list of sources, not tasks.
   function isLinkOnly(t) { return /^\[[^\]]*\]\([^)]+\)$/.test(t) || /^https?:\/\/\S+$/.test(t); }
@@ -1251,11 +1259,12 @@ function findChecklistCandidates(text) {
       while (i < lines.length && isListLine(lines[i])) {
         const raw = itemText(lines[i]);
         if (!isLinkOnly(raw)) linkOnly = false;
+        const shown = plainItem(raw);
         if (items.length && indentOf(lines[i]) > baseIndent) {
-          subs.push(plainItem(raw).replace(/[.;]+$/, ''));
+          if (shown) subs.push(shown.replace(/[.;]+$/, ''));
         } else {
           closeItem();
-          items.push(plainItem(raw));
+          if (shown) items.push(shown);
         }
         i++;
       }

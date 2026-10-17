@@ -2004,6 +2004,13 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // implementing here.
     const { content, metadata, prompt, category, decision_note, rating, is_favorite, is_archived, turnCount } = req.body;
 
+    // "All entries" is the sidebar's label for no filter, never a real
+    // category. Refuse it (and empty or oversized values) so it can't be
+    // saved on an entry and show up as its own category.
+    if (category !== undefined && (typeof category !== 'string' || !category.trim() || category.length > 80 || /^all( entries)?$/i.test(category.trim()))) {
+      return res.status(400).json({ success: false, error: 'Invalid category.' });
+    }
+
     const sets = [];
     const params = [];
     let i = 1;
