@@ -164,6 +164,9 @@ async function deleteAccountData(run, email) {
     if (!SAFE_IDENT.test(r.table_name) || KEEP_TABLES.includes(r.table_name)) continue;
     await attempt(`DELETE FROM "${r.table_name}" WHERE entry_id IN (SELECT id FROM diary_entries WHERE user_email=$1)`, [email]);
   }
+  // 1b) Tables that point at a chat by session id (message embeddings): remove before the chats.
+  await attempt(
+    'DELETE FROM chat_message_embeddings WHERE session_id IN (SELECT session_id FROM chat_sessions WHERE user_email=$1)', [email]);
   // 2) The known tables.
   for (const [table, col] of ACCOUNT_TABLES) {
     await attempt(`DELETE FROM ${table} WHERE ${col}=$1`, [email]);
