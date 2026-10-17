@@ -255,6 +255,15 @@
       opacity: 0.7;
     }
     .lightbox-close:hover { opacity: 1; }
+    .lightbox-nav { display: none; position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.14); color: #fff; font-size: 30px; line-height: 1; cursor: pointer; align-items: center; justify-content: center; padding: 0 0 4px; font-family: inherit; transition: background 0.15s ease; }
+    .lightbox-nav:hover { background: rgba(255,255,255,0.28); }
+    .lightbox-nav:focus-visible { outline: 2px solid #C17D3C; outline-offset: 2px; }
+    .lightbox-prev { left: 1.25rem; }
+    .lightbox-next { right: 1.25rem; }
+    .lightbox.has-nav .lightbox-nav { display: flex; }
+    .lightbox-count { display: none; position: absolute; bottom: 1.1rem; left: 0; right: 0; text-align: center; color: rgba(255,255,255,0.8); font-size: 13px; pointer-events: none; }
+    .lightbox.has-nav .lightbox-count { display: block; }
+    @media (max-width: 700px) { .lightbox-nav { width: 40px; height: 40px; font-size: 26px; } .lightbox-prev { left: 0.5rem; } .lightbox-next { right: 0.5rem; } }
     @media (max-width: 700px) {
       .screenshots {
         grid-template-columns: 1fr;
@@ -529,8 +538,9 @@
     .art { max-width: 760px; margin: 0 auto; padding: 4.5rem 2rem; text-align: center; }
     .art .how-title { margin-bottom: 1rem; }
     .art-body { max-width: 520px; margin: 0 auto 2rem; }
-    .art-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-bottom: 1.25rem; }
-    .art-tab { font-family: inherit; font-size: 14px; font-weight: 500; color: #6B6559; background: transparent; border: 0.5px solid #D6D2C8; border-radius: 999px; padding: 0.5rem 1.1rem; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+    .art-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin: 0 -3rem 1.25rem; }
+    @media (max-width: 860px) { .art-tabs { margin-left: 0; margin-right: 0; } }
+    .art-tab { font-family: inherit; font-size: 14px; font-weight: 500; color: #6B6559; background: transparent; border: 0.5px solid #D6D2C8; border-radius: 999px; padding: 0.5rem 0.9rem; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
     .art-tab:hover { border-color: #C17D3C; color: #1B2A4A; }
     .art-tab:focus-visible { outline: 2px solid #C17D3C; outline-offset: 2px; }
     .art-tab[aria-selected="true"] { background: #1B2A4A; border-color: #1B2A4A; color: #FFFFFF; }
@@ -775,7 +785,10 @@
   <!-- LIGHTBOX -->
   <div class="lightbox" id="lightbox" onclick="closeLightbox()">
     <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+    <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous image" onclick="event.stopPropagation(); lightboxStep(-1)">&#8249;</button>
     <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()" />
+    <button class="lightbox-nav lightbox-next" type="button" aria-label="Next image" onclick="event.stopPropagation(); lightboxStep(1)">&#8250;</button>
+    <div class="lightbox-count" id="lightbox-count" aria-live="polite"></div>
   </div>
 
   <!-- PRICING -->
@@ -1004,11 +1017,44 @@
     window.startCheckout = startCheckout;
   </script>
   <script>
+    /* Artifact images can be paged through with the arrows or the
+       left/right keys. Any other image opens on its own, no arrows. */
+    var lbGroup = [], lbIndex = -1;
+    function lbBuildGroup() {
+      var out = [];
+      Array.prototype.forEach.call(document.querySelectorAll('.art-panel .screenshot-frame'), function (f) {
+        var m = (f.getAttribute('onclick') || '').match(/openLightbox\('([^']+)',\s*'([^']+)'\)/);
+        if (m) out.push({ src: m[1], alt: m[2] });
+      });
+      return out;
+    }
+    function lbShow(i) {
+      var lb = document.getElementById('lightbox');
+      var img = document.getElementById('lightbox-img');
+      var it = lbGroup[i];
+      lbIndex = i;
+      img.src = it.src;
+      img.alt = it.alt;
+      document.getElementById('lightbox-count').textContent = it.alt + ' \u00b7 ' + (i + 1) + ' of ' + lbGroup.length;
+    }
+    function lightboxStep(d) {
+      if (lbIndex < 0 || lbGroup.length < 2) return;
+      lbShow((lbIndex + d + lbGroup.length) % lbGroup.length);
+    }
     function openLightbox(src, alt) {
       var lb = document.getElementById('lightbox');
       var img = document.getElementById('lightbox-img');
-      img.src = src;
-      img.alt = alt;
+      lbGroup = lbBuildGroup();
+      lbIndex = -1;
+      for (var i = 0; i < lbGroup.length; i++) { if (lbGroup[i].src === src) { lbIndex = i; break; } }
+      if (lbIndex >= 0) {
+        lb.classList.add('has-nav');
+        lbShow(lbIndex);
+      } else {
+        lb.classList.remove('has-nav');
+        img.src = src;
+        img.alt = alt;
+      }
       lb.classList.add('open');
       document.body.style.overflow = 'hidden';
     }
@@ -1036,11 +1082,14 @@
       });
     })();
     function closeLightbox() {
-      document.getElementById('lightbox').classList.remove('open');
+      document.getElementById('lightbox').classList.remove('open', 'has-nav');
+      lbIndex = -1;
       document.body.style.overflow = '';
     }
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft' && document.getElementById('lightbox').classList.contains('open')) lightboxStep(-1);
+      else if (e.key === 'ArrowRight' && document.getElementById('lightbox').classList.contains('open')) lightboxStep(1);
     });
   </script>
 
