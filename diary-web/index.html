@@ -699,7 +699,7 @@
     <div class="art">
       <p class="how-title">Artifacts</p>
       <h2 class="art-headline">From answer to artifact.</h2>
-      <p class="art-body">Do not just save what the AI told you. Every time you save, Diary automatically picks out the tables, checklists, sources, key facts, images and reasoning steps inside it, and turns each into something you can use.</p>
+      <p class="art-body">Do not just save what the AI told you. Every time you save, Diary automatically picks out the tables, checklists, sources, key facts, images, code and reasoning steps inside it, and turns each into something you can use.</p>
       <div class="art-tabs" role="tablist" aria-label="Artifact types">
         <button class="art-tab" role="tab" id="art-tab-summary" aria-controls="art-panel-summary" aria-selected="true" tabindex="0" type="button">Summary</button>
         <button class="art-tab" role="tab" id="art-tab-tables" aria-controls="art-panel-tables" aria-selected="false" tabindex="-1" type="button">Tables</button>
@@ -707,6 +707,7 @@
         <button class="art-tab" role="tab" id="art-tab-keyfacts" aria-controls="art-panel-keyfacts" aria-selected="false" tabindex="-1" type="button">Key facts</button>
         <button class="art-tab" role="tab" id="art-tab-sources" aria-controls="art-panel-sources" aria-selected="false" tabindex="-1" type="button">Sources &amp; images</button>
         <button class="art-tab" role="tab" id="art-tab-reasoning" aria-controls="art-panel-reasoning" aria-selected="false" tabindex="-1" type="button">Reasoning</button>
+        <button class="art-tab" role="tab" id="art-tab-code" aria-controls="art-panel-code" aria-selected="false" tabindex="-1" type="button">Code</button>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-summary" aria-labelledby="art-tab-summary">
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_summary.png', 'Summary')"><img src="/img/screenshot_tab_summary.png" alt="A Diary entry in Summary view, with three short sections: what this was about, where it landed, and where you left off" onerror="this.parentNode.style.display='none'" /></div>
@@ -731,6 +732,10 @@
       <div class="art-panel" role="tabpanel" id="art-panel-reasoning" aria-labelledby="art-tab-reasoning" hidden>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_reasoning.png', 'Reasoning')"><img src="/img/screenshot_tab_reasoning.png" alt="A Diary entry with a Reasoning section of five numbered steps showing how the conclusion was reached, with topic tags below" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
         <p class="art-caption">Reasoning is pulled out as numbered steps, so you can follow how the answer got there.</p>
+      </div>
+      <div class="art-panel" role="tabpanel" id="art-panel-code" aria-labelledby="art-tab-code" hidden>
+        <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_code.png', 'Code')"><img src="/img/screenshot_tab_code.png" alt="A Diary entry with a Python function shown in a code box with syntax colours, indentation kept and a Copy button" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        <p class="art-caption">Code is kept in its own box, with the indentation intact and a Copy button, so you can always find it again.</p>
       </div>
     </div>
   </div>
