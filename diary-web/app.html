@@ -1149,6 +1149,7 @@ function renderRelatedEntries(entryId, related) {
     } catch (_e) {}
     var meta = [SOURCE_LABELS[r.source] || r.source, when].filter(Boolean).join(' \u00b7 ');
     var chips = (r.types || []).map(function(t) { return '<span class="rel-chip">' + escHtml(RELATED_TYPE_LABELS[t] || t) + '</span>'; }).join('');
+    if (r.archived) chips = '<span class="rel-chip">Archived</span>' + chips;
     html += '<button type="button" class="entry-related-item" onclick="event.stopPropagation();openRelatedEntry(' + r.id + ')">' +
       '<span class="rel-title">' + escHtml(r.title || 'Untitled entry') + '</span>' +
       '<span class="rel-meta">' + escHtml(meta) + '</span>' +

@@ -2381,7 +2381,9 @@ router.get('/diag-r2-test', requireAuth, async (req, res) => {
 // Worked out when an entry is opened, not stored, so there is nothing to keep
 // in step when entries are added, changed or deleted, and entries saved long
 // ago work without any backfill. Quick answers and Sweep results are not
-// separate AIs, so they are left out.
+// separate AIs, so they are left out. Archived entries are deliberately still
+// matched (and marked as archived): archiving only hides an entry from the
+// default list, it must never take it out of what the Diary can connect.
 const RELATED_MIN_SIMILARITY = 0.72;
 const RELATED_MAX = 5;
 const RELATED_TYPE_ORDER = ['table', 'checklist', 'structured_facts', 'citations', 'images', 'reasoning', 'code'];
@@ -2400,14 +2402,13 @@ router.get('/:id/related', requireAuth, async (req, res) => {
     const minOverride = Number(req.query.min);
     const minSim = (minOverride >= 0.3 && minOverride <= 0.95) ? minOverride : RELATED_MIN_SIMILARITY;
     const r = await db.query(
-      `SELECT d.id, d.title, d.prompt, d.source, d.created_at, d.artifacts,
+      `SELECT d.id, d.title, d.prompt, d.source, d.created_at, d.artifacts, d.is_archived,
               1 - (d.embedding <=> me.embedding) AS sim
          FROM diary_entries me
          JOIN diary_entries d
            ON d.user_email = me.user_email AND d.id <> me.id AND d.source IS DISTINCT FROM me.source
         WHERE me.id = $1 AND me.user_email = $2 AND me.embedding IS NOT NULL
           AND d.embedding IS NOT NULL
-          AND (d.is_archived = false OR d.is_archived IS NULL)
           AND d.source NOT IN ('quick_answer', 'sweep')
           AND 1 - (d.embedding <=> me.embedding) >= $3
         ORDER BY d.embedding <=> me.embedding
@@ -2419,6 +2420,7 @@ router.get('/:id/related', requireAuth, async (req, res) => {
       title: row.title || (row.prompt ? String(row.prompt).slice(0, 80) : 'Untitled entry'),
       source: row.source,
       created_at: row.created_at,
+      archived: row.is_archived === true,
       types: relatedArtifactTypes(row.artifacts),
       similarity: Math.round(Number(row.sim) * 100) / 100
     }));
