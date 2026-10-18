@@ -2375,6 +2375,60 @@ router.get('/diag-r2-test', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/diary/:id/related — the same topic, asked of other AIs ────────
+// Finds this person's other entries that are about the same thing but were
+// saved from a different AI, using the embeddings search already stores.
+// Worked out when an entry is opened, not stored, so there is nothing to keep
+// in step when entries are added, changed or deleted, and entries saved long
+// ago work without any backfill. Quick answers and Sweep results are not
+// separate AIs, so they are left out.
+const RELATED_MIN_SIMILARITY = 0.72;
+const RELATED_MAX = 5;
+const RELATED_TYPE_ORDER = ['table', 'checklist', 'structured_facts', 'citations', 'images', 'reasoning', 'code'];
+function relatedArtifactTypes(artifacts) {
+  let list = artifacts;
+  if (typeof list === 'string') { try { list = JSON.parse(list); } catch (_) { list = []; } }
+  if (!Array.isArray(list)) return [];
+  const present = new Set(list.map(a => a && a.type));
+  return RELATED_TYPE_ORDER.filter(t => present.has(t));
+}
+router.get('/:id/related', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ success: false });
+    // ?min=0.6 lets a tester try a different cut-off without a deploy.
+    const minOverride = Number(req.query.min);
+    const minSim = (minOverride >= 0.3 && minOverride <= 0.95) ? minOverride : RELATED_MIN_SIMILARITY;
+    const r = await db.query(
+      `SELECT d.id, d.title, d.prompt, d.source, d.created_at, d.artifacts,
+              1 - (d.embedding <=> me.embedding) AS sim
+         FROM diary_entries me
+         JOIN diary_entries d
+           ON d.user_email = me.user_email AND d.id <> me.id AND d.source IS DISTINCT FROM me.source
+        WHERE me.id = $1 AND me.user_email = $2 AND me.embedding IS NOT NULL
+          AND d.embedding IS NOT NULL
+          AND (d.is_archived = false OR d.is_archived IS NULL)
+          AND d.source NOT IN ('quick_answer', 'sweep')
+          AND 1 - (d.embedding <=> me.embedding) >= $3
+        ORDER BY d.embedding <=> me.embedding
+        LIMIT $4`,
+      [id, req.userEmail, minSim, RELATED_MAX]
+    );
+    const related = r.rows.map(row => ({
+      id: row.id,
+      title: row.title || (row.prompt ? String(row.prompt).slice(0, 80) : 'Untitled entry'),
+      source: row.source,
+      created_at: row.created_at,
+      types: relatedArtifactTypes(row.artifacts),
+      similarity: Math.round(Number(row.sim) * 100) / 100
+    }));
+    res.json({ success: true, related });
+  } catch (e) {
+    console.error('[Diary] related entries failed:', e.message);
+    res.status(500).json({ success: false, error: 'Could not load related entries.' });
+  }
+});
+
 // ── GET /api/diary/:id — fetch single entry ──────────────────────────────────
 router.get('/:id', requireAuth, async (req, res) => {
   try {

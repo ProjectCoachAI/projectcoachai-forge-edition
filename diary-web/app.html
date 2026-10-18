@@ -244,6 +244,16 @@
     .entry-content.md tr:nth-child(even) td, .entry-panel-content tr:nth-child(even) td { background: #FAFAF8; }
     .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .entry-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
+    .entry-related { margin: 0 0 0.75rem; padding: 0.75rem 0.9rem; border: 0.5px solid #D6D2C8; border-radius: 8px; background: #FDFCFA; }
+    .entry-related-title { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #9E9890; margin-bottom: 0.4rem; }
+    .entry-related-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; width: 100%; text-align: left; background: none; border: 0; border-top: 0.5px solid #EDEAE3; padding: 7px 0; cursor: pointer; font-family: inherit; color: #1B2A4A; }
+    .entry-related-item:first-of-type { border-top: 0; }
+    .entry-related-item:hover .rel-title { color: #C17D3C; }
+    .entry-related-item:focus-visible { outline: 2px solid #C17D3C; outline-offset: 2px; border-radius: 4px; }
+    .rel-title { font-size: 13px; font-weight: 500; flex: 1 1 220px; min-width: 0; }
+    .rel-meta { font-size: 12px; color: #6B6559; white-space: nowrap; }
+    .rel-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    .rel-chip { font-size: 10px; padding: 1px 7px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
     .entry-tag.clickable { cursor: pointer; transition: background 0.15s, color 0.15s; }
     .entry-tag.clickable:hover { background: #1B2A4A; color: #fff; }
     .tag-filter-bar { display: none; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; background: #EDEAE3; border-radius: 8px; font-size: 12px; color: #3D3830; }
@@ -1117,6 +1127,70 @@ async function performEntrySync(entryId) {
   }
 }
 window.performEntrySync = performEntrySync;
+
+// ── Same topic in other AIs ─────────────────────────────────────────────────
+// Shown inside an open entry when the person has saved the same subject from a
+// different AI. Looked up when the entry is opened (see GET
+// /api/diary/:id/related) and kept for the page's lifetime. Nothing is shown
+// at all when there is no match.
+var RELATED_TYPE_LABELS = { table: 'Table', checklist: 'Checklist', structured_facts: 'Key facts', citations: 'Sources', images: 'Images', reasoning: 'Reasoning', code: 'Code' };
+window._relatedCache = window._relatedCache || {};
+
+function renderRelatedEntries(entryId, related) {
+  var box = document.getElementById('related-' + entryId);
+  if (!box) return;
+  if (!related || !related.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  var html = '<div class="entry-related-title">Same topic in other AIs</div>';
+  related.forEach(function(r) {
+    var when = '';
+    try {
+      var d = new Date(r.created_at);
+      if (!isNaN(d.getTime())) when = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (_e) {}
+    var meta = [SOURCE_LABELS[r.source] || r.source, when].filter(Boolean).join(' \u00b7 ');
+    var chips = (r.types || []).map(function(t) { return '<span class="rel-chip">' + escHtml(RELATED_TYPE_LABELS[t] || t) + '</span>'; }).join('');
+    html += '<button type="button" class="entry-related-item" onclick="event.stopPropagation();openRelatedEntry(' + r.id + ')">' +
+      '<span class="rel-title">' + escHtml(r.title || 'Untitled entry') + '</span>' +
+      '<span class="rel-meta">' + escHtml(meta) + '</span>' +
+      (chips ? '<span class="rel-chips">' + chips + '</span>' : '') +
+    '</button>';
+  });
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+async function loadRelatedEntries(entryId) {
+  var cache = window._relatedCache;
+  if (cache[entryId]) { renderRelatedEntries(entryId, cache[entryId]); return; }
+  try {
+    var r = await Forge.request('GET', '/api/diary/' + entryId + '/related');
+    if (r && r.ok && r.data && r.data.success) {
+      cache[entryId] = r.data.related || [];
+      renderRelatedEntries(entryId, cache[entryId]);
+    }
+  } catch (_e) { /* related entries are a bonus; never show an error for them */ }
+}
+
+// Opens another entry from the related list. If it is not in the page that is
+// loaded (another page of results, or hidden by a filter), it is fetched and
+// added at the top first, the same way a link from Continue does it.
+async function openRelatedEntry(id) {
+  try {
+    var loaded = allEntries.some(function(e) { return e.id === id; });
+    if (!loaded) {
+      var r = await Forge.request('GET', '/api/diary/' + id);
+      if (!(r && r.ok && r.data && r.data.entry)) return;
+      allEntries = [r.data.entry].concat(allEntries);
+      filteredEntries = [r.data.entry].concat(filteredEntries);
+      window._diaryEntries = allEntries;
+      renderEntries();
+    }
+    if (!expandedIds.has(id)) await toggleEntry(id);
+    var card = document.getElementById('entry-' + id);
+    if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (_e) {}
+}
+window.openRelatedEntry = openRelatedEntry;
 var activeDateFrom = '';
 var activeDateTo = '';
 
@@ -2642,6 +2716,7 @@ function renderEntryCard(e) {
           '<button class="entry-btn accent" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">' + heroicon('arrow-path') + ' Sync</button>' +
         '</div>' +
       '</div>' : '') +
+      '<div class="entry-related" id="related-' + e.id + '" style="display:none"></div>' +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
@@ -3156,6 +3231,7 @@ async function toggleEntry(id) {
     // if this entry was never forked at all (the sync button simply
     // isn't in the DOM for it).
     updateSyncButtonLabelForEntry(id);
+    loadRelatedEntries(id);
   }
   // NOTE: added — requested feature: clicking a diary entry should
   // scroll the page so that entry's own position rises to the top of
