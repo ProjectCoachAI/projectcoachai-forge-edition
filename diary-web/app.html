@@ -4302,7 +4302,7 @@ window.bulkFavorite = bulkFavorite;
 async function bulkDelete() {
   var n = selectedIds.size;
   if (!n) return;
-  if (!confirm('Delete ' + n + ' selected entr' + (n === 1 ? 'y' : 'ies') + ' from your Diary?')) return;
+  if (!confirm('Delete ' + n + ' selected entr' + (n === 1 ? 'y' : 'ies') + ' from your Diary? Any Forge conversations continued from them are deleted too.')) return;
   var ids = Array.from(selectedIds);
   var failed = 0;
   showTopToast('Deleting ' + n + ' entr' + (n === 1 ? 'y' : 'ies') + '...', false, true);
@@ -5696,7 +5696,7 @@ document.addEventListener('click', function(e) {
 });
 
 async function deleteEntry(id) {
-  if (!confirm('Delete this entry from your Diary?')) return;
+  if (!confirm('Delete this entry from your Diary? If it was continued in Forge, that conversation is deleted too.')) return;
   try {
     var r = await Forge.request('DELETE', '/api/diary/' + id);
     if (r.ok) {

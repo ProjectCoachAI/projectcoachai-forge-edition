@@ -2435,35 +2435,73 @@ router.get('/:id/diag-chat-session-size', requireAuth, async (req, res) => {
 
 // ── PATCH /api/diary/:id — update decision note, category, rating, or append conversation ─────────
 
+// All the text columns of an entry that can hold a link to one of its stored files.
+// Used both to find an entry's files before it is deleted and to check, afterwards,
+// that no remaining entry of the same user still points at a file.
+const ENTRY_LINK_TEXT_SQL =
+  `COALESCE(metadata::text,'') || ' ' || COALESCE(content,'') || ' ' || COALESCE(document_text,'') || ' ' ||
+   COALESCE(conversation::text,'') || ' ' || COALESCE(decision_note,'') || ' ' || COALESCE(artifacts::text,'') || ' ' ||
+   COALESCE(search_text,'')`;
+
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    // Find this entry's uploaded files first (needs the row that's about to go),
-    // so deleting an entry also removes its files from storage, not just the row.
-    let storageKeys = [];
-    const base = process.env.R2_PUBLIC_URL ? process.env.R2_PUBLIC_URL.replace(/\/+$/, '') + '/' : '';
-    if (base) {
-      try {
-        const own = await db.query(
-          `SELECT COALESCE(metadata::text,'') || ' ' || COALESCE(content,'') AS t
-             FROM diary_entries WHERE id = $1 AND user_email = $2`,
-          [req.params.id, req.userEmail]);
-        const tts = await db.query(
-          `SELECT t.audio_url AS t FROM tts_cache t JOIN diary_entries d ON d.id = t.entry_id
-            WHERE d.id = $1 AND d.user_email = $2`,
-          [req.params.id, req.userEmail]);
+    // Step 1, before anything is removed: work out which stored files belong to this
+    // entry, and which Forge conversation (if any) was started from it.
+    let storageKeys = [];      // [decoded key, form as written in the saved text]
+    let chatSessionId = null;  // Forge conversation deleted together with the entry
+    try {
+      const own = await db.query(
+        `SELECT (${ENTRY_LINK_TEXT_SQL}) AS t, ((metadata::jsonb)->>'chatSessionId') AS sid
+           FROM diary_entries WHERE id = $1 AND user_email = $2`,
+        [req.params.id, req.userEmail]);
+      const texts = own.rows.map(r => r.t);
+      const sid = own.rows[0] && own.rows[0].sid;
+
+      // The Forge conversation goes with the entry, unless another entry of this
+      // user is linked to the very same conversation.
+      if (sid) {
+        const shared = await db.query(
+          `SELECT 1 FROM diary_entries WHERE user_email = $1 AND id <> $2 AND ((metadata::jsonb)->>'chatSessionId') = $3 LIMIT 1`,
+          [req.userEmail, req.params.id, sid]);
+        if (!shared.rows.length) {
+          chatSessionId = sid;
+          const chat = await db.query(
+            `SELECT messages::text AS t FROM chat_sessions WHERE session_id = $1 AND user_email = $2`,
+            [sid, req.userEmail]);
+          chat.rows.forEach(r => texts.push(r.t));
+        }
+      }
+      const tts = await db.query(
+        `SELECT t.audio_url AS t FROM tts_cache t JOIN diary_entries d ON d.id = t.entry_id
+          WHERE d.id = $1 AND d.user_email = $2`,
+        [req.params.id, req.userEmail]);
+      tts.rows.forEach(r => texts.push(r.t));
+
+      // Only files in THIS account's own storage folder are ever removed, so an entry
+      // that merely mentions someone else's file link cannot cause that file to go.
+      const folderRow = await db.query('SELECT storage_folder FROM users WHERE email = $1', [req.userEmail]);
+      const folder = folderRow.rows[0] && folderRow.rows[0].storage_folder;
+      const base = process.env.R2_PUBLIC_URL ? process.env.R2_PUBLIC_URL.replace(/\/+$/, '') + '/' : '';
+      if (base && folder && /^[a-f0-9]{24}$/.test(folder)) {
         const esc = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const re = new RegExp(esc + '([^"\\s)\\\\<>]+)', 'g');
-        const found = new Map(); // decoded storage key -> the form it has in saved text
-        own.rows.concat(tts.rows).forEach(function(r) {
+        // Keys only ever contain letters, digits and _ . - / (and %XX when encoded).
+        const re = new RegExp(esc + '([A-Za-z0-9_./%-]+)', 'g');
+        const own_prefix = 'u/' + folder + '/';
+        const found = new Map();
+        texts.forEach(function(t) {
           var m; re.lastIndex = 0;
-          while (r.t && (m = re.exec(r.t)) !== null) { var dec = m[1]; try { dec = decodeURIComponent(m[1]); } catch (_) {} found.set(dec, m[1]); }
+          while (t && (m = re.exec(t)) !== null) {
+            var raw = m[1].replace(/\.+$/, ''), dec = raw;
+            try { dec = decodeURIComponent(raw); } catch (_) {}
+            if (dec.indexOf(own_prefix) === 0 && dec.indexOf('..') === -1) found.set(dec, raw);
+          }
         });
         storageKeys = Array.from(found.entries());
-      } catch (e) { console.warn('[Diary] could not list files for deleted entry:', e.message); }
-    }
+      }
+    } catch (e) { console.warn('[Diary] could not list files for deleted entry:', e.message); }
 
-    // No foreign keys in this database: remove rows that point at the entry
-    // (audio cache and similar) ourselves, before the entry row.
+    // Step 2: remove the rows. There are no foreign keys in this database, so rows
+    // that point at the entry (audio cache and similar) are removed here, first.
     try {
       const kids = await db.query(
         `SELECT DISTINCT table_name FROM information_schema.columns
@@ -2478,19 +2516,36 @@ router.delete('/:id', requireAuth, async (req, res) => {
       }
     } catch (e) { console.warn('[Diary] could not list entry child tables:', e.message); }
 
+    // The Forge conversation started from this entry: its search data first, then the chat itself.
+    // Removed before the entry row, so a failure here never leaves a chat nothing points to.
+    if (chatSessionId) {
+      await db.query(
+        `DELETE FROM chat_message_embeddings WHERE session_id IN
+           (SELECT session_id FROM chat_sessions WHERE session_id = $1 AND user_email = $2)`,
+        [chatSessionId, req.userEmail]);
+      await db.query('DELETE FROM chat_sessions WHERE session_id = $1 AND user_email = $2',
+        [chatSessionId, req.userEmail]);
+    }
+
     await db.query('DELETE FROM diary_entries WHERE id = $1 AND user_email = $2',
       [req.params.id, req.userEmail]);
     res.json({ success: true });
 
-    // Best effort, after responding: remove the files, unless another of this
-    // user's entries still points at the same file.
+    // Step 3, best effort, after responding: remove the files, unless another entry
+    // or another Forge conversation of this user still points at the same file.
     for (const pair of storageKeys) {
       const key = pair[0], raw = pair[1];
       try {
-        const still = await db.query(
-          `SELECT 1 FROM diary_entries WHERE user_email = $1 AND (metadata::text LIKE $2 OR content LIKE $2) LIMIT 1`,
-          [req.userEmail, '%' + raw.replace(/[%_\\]/g, '\\$&') + '%']);
-        if (still.rows.length) continue;
+        const inEntries = await db.query(
+          `SELECT 1 FROM diary_entries WHERE user_email = $1
+              AND (strpos(${ENTRY_LINK_TEXT_SQL}, $2) > 0 OR strpos(${ENTRY_LINK_TEXT_SQL}, $3) > 0) LIMIT 1`,
+          [req.userEmail, raw, key]);
+        if (inEntries.rows.length) continue;
+        const inChats = await db.query(
+          `SELECT 1 FROM chat_sessions WHERE user_email = $1
+              AND (strpos(messages::text, $2) > 0 OR strpos(messages::text, $3) > 0) LIMIT 1`,
+          [req.userEmail, raw, key]);
+        if (inChats.rows.length) continue;
         await attachmentStorage.remove(key);
       } catch (e) { console.warn('[Diary] could not remove stored file for deleted entry:', e.message); }
     }
