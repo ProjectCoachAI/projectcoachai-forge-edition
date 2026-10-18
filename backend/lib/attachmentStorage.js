@@ -16,18 +16,25 @@
 //
 // "id" here IS the R2 object key — there's no separate ID-to-key
 // mapping table, since the key itself is already a unique, addressable
-// identifier (namespaced by user, timestamped, randomized). A future
+// identifier (in the account's random folder, timestamped, randomized). A future
 // backend that can't use a human-meaningful key as its own ID (e.g. an
 // auto-incrementing bytea row) would generate its own opaque ID scheme
 // internally; every caller of this module already treats "id" as an
 // opaque string, never parses or constructs one itself, so that swap
 // wouldn't require any caller changes.
 
-const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, HeadObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const db = require('./db');
 
+// R2_JURISDICTION=eu points the client at the EU-jurisdiction endpoint
+// (https://<account>.eu.r2.cloudflarestorage.com). A bucket created with a
+// jurisdiction is only reachable through that endpoint.
 const r2Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+  responseChecksumValidation: 'WHEN_REQUIRED',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}${process.env.R2_JURISDICTION ? '.' + process.env.R2_JURISDICTION : ''}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
@@ -56,12 +63,36 @@ function sanitizeForKey(str) {
   return (str || '').replace(/[^a-z0-9]/gi, '_');
 }
 
+// Each account's files live under u/<random folder>/ . The folder name is
+// random and meaningless: it is not derived from the email address, so a
+// file link never reveals who owns it, and two accounts can never share a
+// folder. It is created the first time an account stores a file and kept
+// in users.storage_folder, so deleting an account can remove the whole
+// folder by name.
+const FOLDER_RE = /^[a-f0-9]{24}$/;
+const _folderCache = new Map();
+async function getStorageFolder(userEmail) {
+  if (_folderCache.has(userEmail)) return _folderCache.get(userEmail);
+  let r = await db.query('SELECT storage_folder FROM users WHERE email=$1', [userEmail]);
+  if (!r.rows.length) throw new Error('No account found to store the file under');
+  let folder = r.rows[0].storage_folder;
+  if (!folder) {
+    // Only sets it if still empty, so two uploads racing at the same moment agree on one folder.
+    await db.query('UPDATE users SET storage_folder=$1 WHERE email=$2 AND storage_folder IS NULL', [crypto.randomBytes(12).toString('hex'), userEmail]);
+    r = await db.query('SELECT storage_folder FROM users WHERE email=$1', [userEmail]);
+    folder = r.rows[0] && r.rows[0].storage_folder;
+  }
+  if (!folder || !FOLDER_RE.test(folder)) throw new Error('Storage folder is missing or malformed');
+  _folderCache.set(userEmail, folder);
+  return folder;
+}
+
 /**
  * Store a buffer under a new, unique attachment ID.
  * @param {Object} opts
  * @param {Buffer} opts.buffer - the raw file bytes
  * @param {string} opts.contentType - MIME type, e.g. 'application/pdf'
- * @param {string} opts.userEmail - used only to namespace the storage key
+ * @param {string} opts.userEmail - the owner; their random storage folder is looked up (or created)
  * @param {string} [opts.filenameHint] - optional, for a more readable key
  * @returns {Promise<{id: string, url: string, contentType: string, size: number}>}
  */
@@ -72,7 +103,8 @@ async function store({ buffer, contentType, userEmail, filenameHint }) {
   }
   const ext = EXT_BY_CONTENT_TYPE[(contentType || '').split(';')[0]] || 'bin';
   const namePart = filenameHint ? sanitizeForKey(filenameHint).slice(0, 40) + '_' : '';
-  const id = `diary/${sanitizeForKey(userEmail)}/${Date.now()}_${Math.random().toString(36).slice(2)}_${namePart}.${ext}`;
+  const folder = await getStorageFolder(userEmail);
+  const id = `u/${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}_${namePart}.${ext}`;
 
   await r2Client.send(new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME,
@@ -148,4 +180,28 @@ async function remove(id) {
   }));
 }
 
-module.exports = { store, get, exists, remove, MAX_ATTACHMENT_BYTES };
+/**
+ * Remove every file in one account's storage folder (used when an account
+ * is deleted). Takes the folder NAME (read from users.storage_folder before
+ * the account row is deleted), not an email address. Returns how many files
+ * were removed.
+ * @param {string} folder
+ * @returns {Promise<number>}
+ */
+async function removeFolder(folder) {
+  if (!FOLDER_RE.test(folder || '')) throw new Error('Refusing to remove: not a valid storage folder name');
+  const prefix = `u/${folder}/`;
+  let removed = 0, token;
+  do {
+    const page = await r2Client.send(new ListObjectsV2Command({ Bucket: process.env.R2_BUCKET_NAME, Prefix: prefix, ContinuationToken: token }));
+    const keys = (page.Contents || []).map(o => ({ Key: o.Key })).filter(o => o.Key.indexOf(prefix) === 0);
+    if (keys.length) {
+      await r2Client.send(new DeleteObjectsCommand({ Bucket: process.env.R2_BUCKET_NAME, Delete: { Objects: keys, Quiet: true } }));
+      removed += keys.length;
+    }
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
+  return removed;
+}
+
+module.exports = { store, get, exists, remove, removeFolder, MAX_ATTACHMENT_BYTES };

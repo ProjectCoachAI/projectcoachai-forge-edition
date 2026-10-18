@@ -98,11 +98,21 @@ async function collectStorageKeys(email) {
   const base = process.env.R2_PUBLIC_URL ? process.env.R2_PUBLIC_URL.replace(/\/+$/, '') + '/' : '';
   if (base) {
     const esc = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(esc + '([^"\\s)\\\\<>]+)', 'g');
-    const scan = txt => { let m; while (txt && (m = re.exec(txt)) !== null) keys.add(decodeURIComponent(m[1])); };
+    // Only characters that can appear in a stored file name, so text around a link
+    // (**, quotes, brackets, a full stop) is never mistaken for part of the key.
+    const re = new RegExp(esc + '([A-Za-z0-9_./%-]+)', 'g');
+    const scan = txt => {
+      let m;
+      while (txt && (m = re.exec(txt)) !== null) {
+        let k = m[1].replace(/\.+$/, '');
+        try { k = decodeURIComponent(k); } catch (_) {}
+        keys.add(k);
+      }
+    };
     (await safeRows(
-      "SELECT COALESCE(metadata::text,'') || ' ' || COALESCE(content,'') AS t FROM diary_entries WHERE user_email=$1",
+      "SELECT COALESCE(metadata::text,'') || ' ' || COALESCE(content,'') || ' ' || COALESCE(artifacts::text,'') AS t FROM diary_entries WHERE user_email=$1",
       [email])).forEach(r => scan(r.t));
+    (await safeRows('SELECT messages::text AS t FROM chat_sessions WHERE user_email=$1', [email])).forEach(r => scan(r.t));
     (await safeRows(
       `SELECT t.audio_url AS t FROM tts_cache t JOIN diary_entries d ON d.id=t.entry_id WHERE d.user_email=$1`,
       [email])).forEach(r => scan(r.t));
@@ -215,7 +225,10 @@ router.delete('/', requireAuth, async (req, res) => {
     }
 
     // 2) Remember which stored files to remove (needs the rows that are about to go).
+    //    The account's whole storage folder is removed by name; individual keys found in the
+    //    data cover anything stored outside it (older files).
     const storageKeys = await collectStorageKeys(email);
+    const storageFolder = ((await safeRows('SELECT storage_folder FROM users WHERE email=$1', [email]))[0] || {}).storage_folder || null;
 
     // 3) Remove rows that are not removed along with the user, then the user itself.
     //    Re-running after a partial failure is safe: each step is idempotent.
@@ -246,7 +259,13 @@ router.delete('/', requireAuth, async (req, res) => {
     let filesRemoved = 0;
     try {
       const attachmentStorage = require('../lib/attachmentStorage');
+      if (storageFolder) {
+        try { filesRemoved += await attachmentStorage.removeFolder(storageFolder); }
+        catch (e) { console.warn('[Account] could not remove storage folder:', e.message); }
+      }
+      const folderPrefix = storageFolder ? 'u/' + storageFolder + '/' : null;
       for (const key of storageKeys) {
+        if (folderPrefix && key.indexOf(folderPrefix) === 0) continue; // already removed with the folder
         try { await attachmentStorage.remove(key); filesRemoved++; }
         catch (e) { console.warn('[Account] could not remove stored file:', e.message); }
       }
