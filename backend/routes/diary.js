@@ -2401,19 +2401,23 @@ router.get('/:id/related', requireAuth, async (req, res) => {
     // ?min=0.6 lets a tester try a different cut-off without a deploy.
     const minOverride = Number(req.query.min);
     const minSim = (minOverride >= 0.3 && minOverride <= 0.95) ? minOverride : RELATED_MIN_SIMILARITY;
+    // ?same=1 also lists entries from the SAME AI (for tuning only; the Diary
+    // itself only shows other AIs).
+    const includeSame = req.query.same === '1';
     const r = await db.query(
-      `SELECT d.id, d.title, d.prompt, d.source, d.created_at, d.artifacts, d.is_archived,
+      `SELECT d.id, d.title, d.prompt, d.source, d.created_at, d.artifacts, d.is_archived, me.source AS my_source,
               1 - (d.embedding <=> me.embedding) AS sim
          FROM diary_entries me
          JOIN diary_entries d
-           ON d.user_email = me.user_email AND d.id <> me.id AND d.source IS DISTINCT FROM me.source
-        WHERE me.id = $1 AND me.user_email = $2 AND me.embedding IS NOT NULL
+           ON d.user_email = me.user_email AND d.id <> me.id
+        WHERE ($5::boolean OR d.source IS DISTINCT FROM me.source)
+          AND me.id = $1 AND me.user_email = $2 AND me.embedding IS NOT NULL
           AND d.embedding IS NOT NULL
           AND d.source NOT IN ('quick_answer', 'sweep')
           AND 1 - (d.embedding <=> me.embedding) >= $3
         ORDER BY d.embedding <=> me.embedding
         LIMIT $4`,
-      [id, req.userEmail, minSim, RELATED_MAX]
+      [id, req.userEmail, minSim, RELATED_MAX, includeSame]
     );
     const related = r.rows.map(row => ({
       id: row.id,
@@ -2421,6 +2425,7 @@ router.get('/:id/related', requireAuth, async (req, res) => {
       source: row.source,
       created_at: row.created_at,
       archived: row.is_archived === true,
+      sameProvider: row.source === row.my_source,
       types: relatedArtifactTypes(row.artifacts),
       similarity: Math.round(Number(row.sim) * 100) / 100
     }));
