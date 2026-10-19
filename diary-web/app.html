@@ -4858,13 +4858,15 @@ async function toggleChecklistItem(entryId, text, done, checkboxEl) {
 }
 window.toggleChecklistItem = toggleChecklistItem;
 
-var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
+var ATTACHMENT_READER_TEXT_TYPES = ['txt','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
 // .docx/.xlsx attachments here carry genuine markdown in their own
 // textContent (continue.html's own extraction pipeline: mammoth's
 // convertToHtml + turndown-plugin-gfm for docx; a real pipe-syntax
 // markdown table per sheet for xlsx) — same reasoning as continue.html's
 // own copy of this list.
-var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx', 'pptx'];
+// .md files are real markdown, so they are rendered (headings, lists,
+// tables) rather than shown as raw text in a <pre> block.
+var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx', 'pptx', 'md'];
 // Tracks the currently-open attachment's real url/filename for the
 // Download button — see downloadAttachmentFromReader's own comment for
 // why this can't just be a plain <a href download> link.

@@ -2488,7 +2488,7 @@ function closeImageZoom() {
 }
 window.closeImageZoom = closeImageZoom;
 
-var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
+var ATTACHMENT_READER_TEXT_TYPES = ['txt','csv','json','js','jsx','ts','tsx','py','rb','go','java','c','cpp','h','hpp','cs','php','sh','yml','yaml','xml','html','css','sql'];
 // .docx/.xlsx attachments carry genuine markdown in their own
 // textContent (mammoth.js's own convertToHtml output run through
 // turndown for docx; a real pipe-syntax markdown table per sheet for
@@ -2500,7 +2500,8 @@ var ATTACHMENT_READER_TEXT_TYPES = ['txt','md','csv','json','js','jsx','ts','tsx
 // that array still correctly renders as escaped plain text — .md files
 // included, deliberately unchanged here since that's a separate,
 // pre-existing question outside what was reported.
-var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx', 'pptx'];
+// .md files are real markdown, so they are rendered rather than shown raw.
+var ATTACHMENT_READER_MARKDOWN_TYPES = ['docx', 'xlsx', 'pptx', 'md'];
 var currentReaderAttachment = null;
 var currentPdfDoc = null;
 var currentPdfScale = 1.4;
