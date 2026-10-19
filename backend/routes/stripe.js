@@ -35,6 +35,23 @@ const PRICE_IDS = {
   'sweep-pro-yearly':  process.env.STRIPE_SWEEP_PRO_YEARLY  || 'price_1TrMO5D9SDC8fk3BABJJdDoe'
 };
 
+// ── Stripe Tax ────────────────────────────────────────────────────────────────
+// Off by default. Set STRIPE_TAX_ENABLED=true in Railway only AFTER Stripe Tax
+// is set up in the Stripe Dashboard (origin address, default tax behaviour =
+// exclusive, matching the current prices, and at least one registration). If this were on before that, Stripe would reject
+// every checkout. With it on, Checkout calculates VAT/GST/sales tax from the
+// customer's billing address, asks business customers for a VAT/tax ID (so EU
+// reverse charge works) and puts the tax on the invoice.
+const STRIPE_TAX_ENABLED = process.env.STRIPE_TAX_ENABLED === 'true';
+function taxCheckoutParams() {
+  if (!STRIPE_TAX_ENABLED) return {};
+  return {
+    automatic_tax: { enabled: true },
+    billing_address_collection: 'required',
+    tax_id_collection: { enabled: true }
+  };
+}
+
 // ── Per-product entitlement tracking ──────────────────────────────────────────
 // A single users.tier column can't represent "subscribed to Sweep AND Forge at
 // once" — the most recent purchase just overwrites whatever was there before,
@@ -153,6 +170,7 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
         },
       ],
       mode: 'subscription',
+      ...taxCheckoutParams(),
       custom_text: {
         submit: {
           message: 'ProjectCoachAI Forge Edition by Xencore Global GmbH'
@@ -198,6 +216,7 @@ router.post('/lite-unlimited-checkout', async (req, res) => {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
+      ...taxCheckoutParams(),
       custom_text: {
         submit: {
           message: 'ProjectCoachAI Forge Edition by Xencore Global GmbH'
@@ -382,7 +401,12 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       const invoice = event.data.object;
       try {
         const db = require('../lib/db');
-        const amount = invoice.amount_paid / 100; // convert from cents
+        // Revenue excludes tax collected for the tax authorities (VAT/GST/sales
+        // tax): that money is not ours. total_excluding_tax is absent on very
+        // old invoices, so fall back to the amount paid.
+        const paidCents = invoice.amount_paid || 0;
+        const exclTaxCents = (typeof invoice.total_excluding_tax === 'number') ? invoice.total_excluding_tax : paidCents;
+        const amount = Math.min(paidCents, exclTaxCents) / 100; // convert from cents
         const stripeFee = parseFloat((amount * 0.029 + 0.30).toFixed(2));
         const net = parseFloat((amount - stripeFee).toFixed(2));
         const ym = new Date(invoice.created * 1000).toISOString().slice(0, 7);
