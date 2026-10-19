@@ -57,6 +57,17 @@ const EXT_BY_CONTENT_TYPE = {
   'image/png': 'png',
   'image/gif': 'gif',
   'image/webp': 'webp',
+  // Office, spreadsheet and markdown files. Without these they were stored
+  // with a .bin ending, which looked odd when browsing the bucket. Purely
+  // cosmetic: the file is always served with its stored ContentType.
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.ms-excel': 'xls',
+  'application/msword': 'doc',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'text/csv': 'csv',
+  'text/markdown': 'md',
 };
 
 function sanitizeForKey(str) {
