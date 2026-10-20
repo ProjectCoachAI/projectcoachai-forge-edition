@@ -5313,7 +5313,7 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
         var arrayBuffer = await docxResp.arrayBuffer();
         var result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
         if (result.value && result.value.trim()) {
-          body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);font-family:Inter,sans-serif;font-size:14px;line-height:1.7;color:#1B2A4A;">' + result.value + '</div>';
+          body.innerHTML = '<div class="reader-md" style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);font-family:Inter,sans-serif;font-size:14px;line-height:1.7;color:#1B2A4A;">' + result.value + '</div>';
           return;
         }
       } catch (e) {
