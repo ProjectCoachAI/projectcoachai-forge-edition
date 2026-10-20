@@ -3,6 +3,7 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../lib/db');
 const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
+const revenue = require('../lib/revenue');
 
 // GET /api/admin/users
 router.get('/users', requireAuth, requireAdmin, async (req, res) => {
@@ -35,8 +36,14 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
 // GET /api/admin/stats — usage for admin, full financial for super_admin
 router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const usersR = await db.query('SELECT tier, is_admin, last_login FROM users');
+    // stripe_customer_id and email were missing from this query, which made
+    // paidUsers always 0. Internal (company-owned) accounts are counted apart so
+    // conversion can be read for outside customers only.
+    const usersR = await db.query('SELECT email, tier, is_admin, last_login, stripe_customer_id FROM users');
     const users = usersR.rows;
+    const isInternal = revenue.loadInternalFilter();
+    const isPaid = u => u.tier && !['starter','free'].includes(u.tier) && u.stripe_customer_id;
+    const externalUsers = users.filter(u => !isInternal(u.email));
     const day30ago = new Date(Date.now() - 30*86400000).toISOString();
     const tierCounts = {};
     users.forEach(u => {
@@ -52,7 +59,9 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
       stats: {
         totalUsers:   users.length,
         adminUsers:   users.filter(u => u.is_admin).length,
-        paidUsers:    users.filter(u => u.tier && !['starter','free'].includes(u.tier) && u.stripe_customer_id).length,
+        paidUsers:    users.filter(isPaid).length,
+        externalUsers: externalUsers.length,
+        paidUsersExternal: externalUsers.filter(isPaid).length,
         activeUsers:  users.filter(u => u.last_login && (Date.now() - new Date(u.last_login).getTime()) < 30*24*60*60*1000).length,
         activeMonth:  users.filter(u => u.last_login && u.last_login >= day30ago).length,
         tierCounts,
@@ -376,6 +385,8 @@ router.get('/subscriptions', requireAuth, requireAdmin, async (req, res) => {
             base.status = sub.status;
             base.renewalDate = new Date(sub.current_period_end * 1000).toISOString();
             base.amount = (sub.items.data[0]?.price?.unit_amount / 100).toFixed(2);
+            base.interval = sub.items.data[0]?.price?.recurring?.interval || null;
+            base.monthly = revenue.monthlyAmount(sub);
           }
         } catch(e) {}
       }
@@ -383,9 +394,16 @@ router.get('/subscriptions', requireAuth, requireAdmin, async (req, res) => {
     }));
 
     const active = subscriptions.filter(s => s.status === 'active').length;
-    const mrr = subscriptions
-      .filter(s => s.status === 'active' && !s.tier.includes('yearly'))
-      .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0).toFixed(2);
+    // MRR = what the active subscriptions bring in per month: yearly plans count
+    // as one twelfth. Company-owned accounts are flagged and excluded from the
+    // external figure.
+    const isInternal = revenue.loadInternalFilter();
+    subscriptions.forEach(s => { s.internal = isInternal(s.email); });
+    const monthlyOf = s => (typeof s.monthly === 'number' ? s.monthly : parseFloat(s.amount || 0));
+    const activeSubs = subscriptions.filter(s => s.status === 'active');
+    const mrr = activeSubs.reduce((sum, s) => sum + monthlyOf(s), 0).toFixed(2);
+    const mrrExternal = activeSubs.filter(s => !s.internal).reduce((sum, s) => sum + monthlyOf(s), 0).toFixed(2);
+    const activeExternal = activeSubs.filter(s => !s.internal).length;
     const renewingSoon = subscriptions.filter(s => {
       if (!s.renewalDate) return false;
       const days = (new Date(s.renewalDate) - Date.now()) / 86400000;
@@ -396,7 +414,7 @@ router.get('/subscriptions', requireAuth, requireAdmin, async (req, res) => {
     res.json({
       ok: true,
       subscriptions,
-      summary: { active, mrr, renewingSoon, issues, total: subscriptions.length }
+      summary: { active, mrr, mrrExternal, activeExternal, renewingSoon, issues, total: subscriptions.length }
     });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });

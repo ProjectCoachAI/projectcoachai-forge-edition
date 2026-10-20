@@ -546,14 +546,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="stat-card" style="--accent-color:var(--orange)">
           <div class="stat-card-label">Total Users</div>
           <div class="stat-card-value" id="dash-total-users">—</div>
-          <div class="stat-card-delta delta-up">↑ 6 this week</div>
-          <div class="stat-card-sub">12 active in last 30d</div>
+          <div class="stat-card-sub" id="dash-users-sub">all accounts</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">MRR</div>
           <div class="stat-card-value" id="dash-mrr">—</div>
-          <div class="stat-card-delta delta-up">↑ 1 paid user</div>
-          <div class="stat-card-sub">creator tier active</div>
+          <div class="stat-card-delta" id="dash-mrr-delta" style="color:var(--text-muted)">&nbsp;</div>
+          <div class="stat-card-sub" id="dash-mrr-sub">excl. internal accounts</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--blue)">
           <div class="stat-card-label">Syntheses (30d)</div>
@@ -588,36 +587,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
               <div class="panel-title"><span class="panel-title-dot"></span>Plan Distribution</div>
             </div>
             <div class="panel-body">
-              <div class="plan-dist">
-                <div class="plan-row">
-                  <div class="plan-name" style="color:var(--text-muted)">Starter</div>
-                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:96%;background:var(--text-muted)"></div></div>
-                  <div class="plan-count">23</div>
-                  <div class="plan-mrr">$0</div>
-                </div>
-                <div class="plan-row">
-                  <div class="plan-name" style="color:#60a5fa">Creator</div>
-                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:4%;background:#60a5fa"></div></div>
-                  <div class="plan-count">1</div>
-                  <div class="plan-mrr">$14.95</div>
-                </div>
-                <div class="plan-row">
-                  <div class="plan-name" style="color:var(--orange)">Pro</div>
-                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:0%;background:var(--orange)"></div></div>
-                  <div class="plan-count">0</div>
-                  <div class="plan-mrr">$0</div>
-                </div>
-                <div class="plan-row">
-                  <div class="plan-name" style="color:#a78bfa">Team</div>
-                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:0%;background:#a78bfa"></div></div>
-                  <div class="plan-count">0</div>
-                  <div class="plan-mrr">$0</div>
-                </div>
-              </div>
-              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between">
+              <div style="display:flex;justify-content:space-between;padding:6px 0"><div style="font-size:12px;color:var(--text-dim)">Paying subscribers</div><div style="font-size:14px;font-weight:700;font-family:'DM Mono',monospace" id="dash-plan-subs">—</div></div>
+              <div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between">
                 <div style="font-size:11px;color:var(--text-muted)">Monthly Recurring Revenue</div>
-                <div style="font-size:14px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green)">$14.95</div>
+                <div style="font-size:14px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green)" id="dash-plan-mrr">—</div>
               </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:8px">Live from Stripe, excluding internal accounts. Per-plan split is on the Subscriptions page.</div>
             </div>
           </div>
 
@@ -990,56 +965,52 @@ Everything is ready — head to your workspace to get started.
       <div class="section-header">
         <div>
           <div class="section-title">Revenue</div>
-          <div class="section-sub">Stripe-connected · Monthly billing active</div>
+          <div class="section-sub" id="rev-sub">Stripe-connected · all figures ex-VAT, excluding internal accounts</div>
         </div>
       </div>
 
       <div class="stats-row">
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">MRR</div>
-          <div class="stat-card-value" id="dash-mrr">—</div>
-          <div class="stat-card-delta" style="color:var(--text-muted)">1 paid subscriber</div>
+          <div class="stat-card-value" id="rev-mrr">—</div>
+          <div class="stat-card-delta" id="rev-mrr-sub" style="color:var(--text-muted)">&nbsp;</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--blue)">
           <div class="stat-card-label">ARR (projected)</div>
-          <div class="stat-card-value">$179</div>
-          <div class="stat-card-sub">At current rate</div>
+          <div class="stat-card-value" id="rev-arr">—</div>
+          <div class="stat-card-sub">12 × MRR</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--orange)">
           <div class="stat-card-label">Conversion Rate</div>
-          <div class="stat-card-value">4.2%</div>
-          <div class="stat-card-sub">1 of 24 users paid</div>
+          <div class="stat-card-value" id="rev-conv">—</div>
+          <div class="stat-card-sub" id="rev-conv-sub">&nbsp;</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--red)">
-          <div class="stat-card-label">Failed Payments</div>
-          <div class="stat-card-value">0</div>
-          <div class="stat-card-delta delta-up">All clear</div>
+          <div class="stat-card-label">Refunded (this month)</div>
+          <div class="stat-card-value" id="rev-refunded">—</div>
+          <div class="stat-card-sub" id="rev-refunded-sub">&nbsp;</div>
         </div>
       </div>
+
+      <div id="rev-notice" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:12px;border:1px solid var(--border-strong);background:var(--surface2);color:var(--text-dim)"></div>
 
       <div class="grid-6040">
         <div class="panel">
           <div class="panel-header">
             <div class="panel-title"><span class="panel-title-dot"></span>Monthly Revenue</div>
-            <div class="panel-action">2026</div>
+            <div class="panel-action" id="rev-chart-label">Net of refunds</div>
           </div>
           <div class="panel-body">
-            <div class="rev-chart" style="margin-bottom:24px">
-              <div class="rev-bar" style="height:0%" ><span class="rev-bar-label">Jan</span><span class="rev-bar-val">$0</span></div>
-              <div class="rev-bar" style="height:0%"  ><span class="rev-bar-label">Feb</span><span class="rev-bar-val">$0</span></div>
-              <div class="rev-bar" style="height:0%"  ><span class="rev-bar-label">Mar</span><span class="rev-bar-val">$0</span></div>
-              <div class="rev-bar" style="height:0%"  ><span class="rev-bar-label">Apr</span><span class="rev-bar-val">$0</span></div>
-              <div class="rev-bar highlight" style="height:100%"><span class="rev-bar-label">May</span><span class="rev-bar-val">$14.95</span></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <div class="rev-chart" id="rev-chart" style="margin-bottom:24px"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;gap:16px;flex-wrap:wrap">
               <div>
-                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">First paid subscriber</div>
-                <div style="font-size:12px;color:var(--text)" id="cc-super-admin-email">—</div>
-                <div style="font-size:11px;color:var(--text-muted)">Creator · $14.95/mo · Renews 17 Jun 2026</div>
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px" id="rev-month-label">This month</div>
+                <div style="font-size:12px;color:var(--text)" id="rev-month-line">—</div>
+                <div style="font-size:11px;color:var(--text-muted)" id="rev-month-sub">&nbsp;</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Stripe Plan ID</div>
-                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">decide-faster</div>
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Year to date</div>
+                <div style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text)" id="rev-ytd">—</div>
               </div>
             </div>
           </div>
@@ -1049,37 +1020,7 @@ Everything is ready — head to your workspace to get started.
           <div class="panel-header">
             <div class="panel-title"><span class="panel-title-dot"></span>Revenue Targets</div>
           </div>
-          <div class="panel-body">
-            <div style="margin-bottom:16px">
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                <div style="font-size:12px;color:var(--text)">MRR $100</div>
-                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">15% there</div>
-              </div>
-              <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:15%;background:linear-gradient(90deg,var(--orange),#ea580c);border-radius:3px"></div>
-              </div>
-              <div style="font-size:10px;color:var(--text-muted);margin-top:4px">~6 more Creator subs needed</div>
-            </div>
-            <div style="margin-bottom:16px">
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                <div style="font-size:12px;color:var(--text)">MRR $500</div>
-                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">3% there</div>
-              </div>
-              <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:3%;background:var(--blue);border-radius:3px"></div>
-              </div>
-              <div style="font-size:10px;color:var(--text-muted);margin-top:4px">~33 Creator or 14 Pro subs needed</div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                <div style="font-size:12px;color:var(--text)">MRR $1,000</div>
-                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">1.5% there</div>
-              </div>
-              <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:1.5%;background:var(--purple);border-radius:3px"></div>
-              </div>
-            </div>
-          </div>
+          <div class="panel-body" id="rev-targets"></div>
         </div>
       </div>
     </div>
@@ -1388,7 +1329,8 @@ Everything is ready — head to your workspace to get started.
         <button class="period-btn" onclick="setPeriod('year',this)">Year</button>
       </div>
 
-      <div id="pl-period-label" style="font-size:11px;color:var(--text-muted);margin-bottom:16px;margin-top:-12px">May 2026</div>
+      <div id="pl-period-label" style="font-size:11px;color:var(--text-muted);margin-bottom:6px;margin-top:-12px">Loading…</div>
+      <div id="pl-notice" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:12px;border:1px solid var(--border-strong);background:var(--surface2);color:var(--text-dim)"></div>
 
       <div class="grid-6040">
 
@@ -1396,167 +1338,101 @@ Everything is ready — head to your workspace to get started.
         <div>
           <div class="pl-statement">
             <!-- REVENUE -->
-            <div class="pl-section-head">Revenue</div>
+            <div class="pl-section-head">Revenue (ex-VAT)</div>
             <div class="pl-row">
-              <div class="pl-label indent">Subscription revenue (Stripe gross)</div>
-              <div class="pl-amount pos" id="pl-gross">+$14.95</div>
+              <div class="pl-label indent">Subscription revenue billed</div>
+              <div class="pl-amount pos" id="pl-billed">—</div>
               <div class="pl-margin"></div>
             </div>
             <div class="pl-row">
-              <div class="pl-label indent">Stripe processing fee (2.9% + $0.30)</div>
-              <div class="pl-amount neg" id="pl-stripe-fee">−$0.73</div>
-              <div class="pl-margin" id="pl-stripe-pct">4.9%</div>
+              <div class="pl-label indent">Refunds / credit notes</div>
+              <div class="pl-amount neg" id="pl-refunded">—</div>
+              <div class="pl-margin"></div>
             </div>
             <div class="pl-row subtotal">
-              <div class="pl-label strong">Net Revenue</div>
-              <div class="pl-amount strong-pos" id="pl-net-rev">+$14.22</div>
+              <div class="pl-label strong">Net revenue</div>
+              <div class="pl-amount strong-pos" id="pl-gross">—</div>
+              <div class="pl-margin"></div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent">Stripe fees (estimate: 2.9% + $0.30)</div>
+              <div class="pl-amount neg" id="pl-stripe-fee">—</div>
+              <div class="pl-margin" id="pl-stripe-pct"></div>
+            </div>
+            <div class="pl-row subtotal">
+              <div class="pl-label strong">Revenue after fees</div>
+              <div class="pl-amount strong-pos" id="pl-net-rev">—</div>
               <div class="pl-margin"></div>
             </div>
 
             <!-- API COSTS -->
             <div class="pl-section-head">Cost of Revenue — AI APIs</div>
-            <div class="pl-row">
-              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#E8652A"></span>Claude (Anthropic)</div>
-              <div class="pl-amount neg" id="pl-claude">−$0.74</div>
-              <div class="pl-margin" id="pl-claude-pct">35%</div>
-            </div>
-            <div class="pl-row">
-              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#10A37F"></span>ChatGPT (OpenAI)</div>
-              <div class="pl-amount neg" id="pl-chatgpt">−$0.59</div>
-              <div class="pl-margin" id="pl-chatgpt-pct">28%</div>
-            </div>
-            <div class="pl-row">
-              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#4A8EF4"></span>Gemini (Google)</div>
-              <div class="pl-amount neg" id="pl-gemini">−$0.32</div>
-              <div class="pl-margin" id="pl-gemini-pct">15%</div>
-            </div>
-            <div class="pl-row">
-              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#EF9F27"></span>Mistral AI</div>
-              <div class="pl-amount neg" id="pl-mistral">−$0.17</div>
-              <div class="pl-margin" id="pl-mistral-pct">8%</div>
-            </div>
-            <div class="pl-row">
-              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#60a5fa"></span>DeepSeek</div>
-              <div class="pl-amount neg" id="pl-deepseek">−$0.11</div>
-              <div class="pl-margin" id="pl-deepseek-pct">5%</div>
-            </div>
-            <div class="pl-row">
-              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#a78bfa"></span>Perplexity AI</div>
-              <div class="pl-amount neg" id="pl-perplexity">−$0.11</div>
-              <div class="pl-margin" id="pl-perplexity-pct">5%</div>
-            </div>
-            <div class="pl-row">
-              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#f87171"></span>xAI (Grok)</div>
-              <div class="pl-amount neg" id="pl-grok">−$0.06</div>
-              <div class="pl-margin" id="pl-grok-pct">3%</div>
-            </div>
+            <div id="pl-providers"></div>
             <div class="pl-row subtotal">
-              <div class="pl-label strong">Total API Costs</div>
-              <div class="pl-amount strong-neg" id="pl-api-total">−$2.10</div>
-              <div class="pl-margin" id="pl-api-margin">14.8%</div>
+              <div class="pl-label strong">Total AI API costs</div>
+              <div class="pl-amount strong-neg" id="pl-api-total">—</div>
+              <div class="pl-margin" id="pl-api-margin"></div>
             </div>
 
             <!-- INFRASTRUCTURE -->
             <div class="pl-section-head">Infrastructure</div>
-            <div class="pl-row">
-              <div class="pl-label indent">Railway hosting</div>
-              <div class="pl-amount neg" id="pl-railway">−$15.00</div>
-              <div class="pl-margin"></div>
-            </div>
-            <div class="pl-row">
-              <div class="pl-label indent">Domain (projectcoachai.com)</div>
-              <div class="pl-amount neg" id="pl-domain">−$1.00</div>
-              <div class="pl-margin"></div>
-            </div>
             <div class="pl-row subtotal">
-              <div class="pl-label strong">Total Infrastructure</div>
-              <div class="pl-amount strong-neg" id="pl-infra-total">−$16.00</div>
+              <div class="pl-label strong">Infrastructure (Railway + domain)</div>
+              <div class="pl-amount strong-neg" id="pl-infra-total">—</div>
               <div class="pl-margin"></div>
             </div>
 
             <!-- NET -->
             <div class="pl-section-head">Bottom Line</div>
             <div class="pl-row">
-              <div class="pl-label strong">Total Costs</div>
-              <div class="pl-amount strong-neg" id="pl-total-costs">−$18.83</div>
+              <div class="pl-label strong">Total costs</div>
+              <div class="pl-amount strong-neg" id="pl-total-costs">—</div>
               <div class="pl-margin"></div>
             </div>
-            <div class="pl-row loss-row" id="pl-bottom-row">
+            <div class="pl-row" id="pl-bottom-row">
               <div class="pl-label strong" id="pl-bottom-label">Net Profit / (Loss)</div>
-              <div class="pl-amount strong-neg" id="pl-net">−$4.61</div>
-              <div class="pl-margin" id="pl-net-margin" style="color:var(--red)">−31%</div>
-            </div>
-          </div>
-
-          <!-- Break-even -->
-          <div class="breakeven-card">
-            <div class="breakeven-title">Break-even analysis</div>
-            <div class="breakeven-row">
-              <div class="breakeven-plan">Creator ($14.95) subs to break even</div>
-              <div class="breakeven-needed" id="be-creator">2 users</div>
-              <div class="breakeven-bar-wrap"><div class="breakeven-bar-fill" id="be-creator-bar" style="width:50%"></div></div>
-            </div>
-            <div class="breakeven-row">
-              <div class="breakeven-plan">Pro ($34.95) subs to break even</div>
-              <div class="breakeven-needed" id="be-pro">1 user</div>
-              <div class="breakeven-bar-wrap"><div class="breakeven-bar-fill" id="be-pro-bar" style="width:100%"></div></div>
-            </div>
-            <div class="breakeven-row">
-              <div class="breakeven-plan">Team ($59.95) subs to break even</div>
-              <div class="breakeven-needed" id="be-team">1 user</div>
-              <div class="breakeven-bar-wrap"><div class="breakeven-bar-fill" id="be-team-bar" style="width:100%"></div></div>
-            </div>
-            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">
-              At 10 Creator subscribers: MRR $149.50 → <span style="color:var(--green);font-weight:600">+$112 net profit</span> · 75% margin
+              <div class="pl-amount strong-neutral" id="pl-net">—</div>
+              <div class="pl-margin" id="pl-net-margin"></div>
             </div>
           </div>
         </div>
 
-        <!-- RIGHT: Charts + ratios -->
+        <!-- RIGHT: KPIs + chart -->
         <div style="display:flex;flex-direction:column;gap:16px">
-
-          <!-- KPI Cards -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="stat-card" style="--accent-color:var(--green);padding:14px 16px">
-              <div class="stat-card-label">Gross Revenue</div>
-              <div class="stat-card-value" id="kpi-rev" style="font-size:22px">$14.95</div>
-              <div class="stat-card-sub" id="kpi-rev-sub">1 subscriber</div>
+              <div class="stat-card-label">Net revenue</div>
+              <div class="stat-card-value" id="kpi-rev" style="font-size:22px">—</div>
+              <div class="stat-card-sub" id="kpi-rev-sub">&nbsp;</div>
             </div>
             <div class="stat-card" style="--accent-color:var(--red);padding:14px 16px">
               <div class="stat-card-label">Total Costs</div>
-              <div class="stat-card-value" id="kpi-costs" style="font-size:22px">$18.83</div>
+              <div class="stat-card-value" id="kpi-costs" style="font-size:22px">—</div>
               <div class="stat-card-sub">API + infra + fees</div>
             </div>
             <div class="stat-card" style="--accent-color:var(--amber);padding:14px 16px">
               <div class="stat-card-label">Net P/(L)</div>
-              <div class="stat-card-value" id="kpi-net" style="font-size:22px;color:var(--red)">−$4.61</div>
-              <div class="stat-card-sub" id="kpi-net-sub">−31% margin</div>
+              <div class="stat-card-value" id="kpi-net" style="font-size:22px">—</div>
+              <div class="stat-card-sub" id="kpi-net-sub">&nbsp;</div>
             </div>
             <div class="stat-card" style="--accent-color:var(--blue);padding:14px 16px">
-              <div class="stat-card-label">API Margin</div>
-              <div class="stat-card-value" style="font-size:22px;color:var(--green)">85%</div>
-              <div class="stat-card-sub">On API costs only</div>
+              <div class="stat-card-label">API cost / revenue</div>
+              <div class="stat-card-value" id="kpi-apimargin" style="font-size:22px">—</div>
+              <div class="stat-card-sub">AI API costs ÷ net revenue</div>
             </div>
           </div>
 
-          <!-- Revenue vs Cost chart -->
           <div class="panel">
             <div class="panel-header">
-              <div class="panel-title"><span class="panel-title-dot"></span>Revenue vs. Cost trend</div>
-              <div class="panel-action" id="chart-period-label">Monthly · 2026</div>
+              <div class="panel-title"><span class="panel-title-dot"></span>Net revenue by month</div>
+              <div class="panel-action" id="chart-period-label"></div>
             </div>
             <div class="panel-body">
-              <div style="display:flex;gap:12px;margin-bottom:10px">
-                <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:2px;background:var(--green);opacity:.6"></div>Revenue</div>
-                <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:2px;background:var(--red);opacity:.5"></div>Total Cost</div>
-              </div>
-              <div class="pl-chart-wrap" id="pl-chart">
-                <!-- Injected by JS -->
-              </div>
+              <div class="pl-chart-wrap" id="pl-chart"></div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:14px">Calendar year to date. Hover a bar for the amount. Costs are not tracked per month yet.</div>
             </div>
           </div>
 
-          <!-- Cost split donut-style -->
           <div class="panel">
             <div class="panel-header">
               <div class="panel-title"><span class="panel-title-dot"></span>Cost breakdown</div>
@@ -1566,35 +1442,31 @@ Everything is ready — head to your workspace to get started.
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:3px">
                     <span style="font-size:11px;color:var(--text-dim)">Infrastructure (Railway + domain)</span>
-                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-infra-val">$16.00 · 85%</span>
+                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-infra-val">—</span>
                   </div>
-                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-infra" style="height:100%;width:85%;background:var(--blue);border-radius:3px"></div></div>
+                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-infra" style="height:100%;width:0%;background:var(--blue);border-radius:3px"></div></div>
                 </div>
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:3px">
                     <span style="font-size:11px;color:var(--text-dim)">AI API costs (all providers)</span>
-                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-api-val">$2.10 · 11%</span>
+                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-api-val">—</span>
                   </div>
-                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-api" style="height:100%;width:11%;background:var(--orange);border-radius:3px"></div></div>
+                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-api" style="height:100%;width:0%;background:var(--orange);border-radius:3px"></div></div>
                 </div>
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-                    <span style="font-size:11px;color:var(--text-dim)">Stripe processing fees</span>
-                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-stripe-val">$0.73 · 4%</span>
+                    <span style="font-size:11px;color:var(--text-dim)">Stripe processing fees (estimate)</span>
+                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-stripe-val">—</span>
                   </div>
-                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-stripe" style="height:100%;width:4%;background:var(--purple);border-radius:3px"></div></div>
+                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-stripe" style="height:100%;width:0%;background:var(--purple);border-radius:3px"></div></div>
                 </div>
               </div>
-
               <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-                <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Profitability path</div>
-                <div style="font-size:11px;color:var(--text-muted);line-height:1.65" id="pl-narrative">
-                  Infrastructure is the dominant cost at 85% of total. Once 2 Creator subscribers are active, infrastructure is covered and every additional subscriber is ~$12 net profit. The API cost-per-synthesis ($0.015) scales gracefully — 1,000 syntheses/month = ~$15 in API costs.
-                </div>
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Summary</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.65" id="pl-narrative"></div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -1617,160 +1489,192 @@ Everything is ready — head to your workspace to get started.
 
 
 <script>
-// P&L PERIOD DATA
-// Format: [gross, stripeFee, claude, chatgpt, gemini, mistral, deepseek, perplexity, grok, railway, domain]
-const plData = {
-  day:     { label:'Today · 17 May 2026',   gross:0,      stripe:0,     claude:0.05, chatgpt:0.04, gemini:0.02, mistral:0.01, deepseek:0.01, perplexity:0.01, grok:0,    railway:0.50, domain:0.03, note:'No new subscriptions today. API usage costs only — free-tier users running ~10 syntheses.' },
-  week:    { label:'Week · 11–17 May 2026', gross:14.95,  stripe:0.73,  claude:0.17, chatgpt:0.14, gemini:0.07, mistral:0.04, deepseek:0.03, perplexity:0.02, grok:0.01, railway:3.75, domain:0.25, note:'First paid subscriber this week (Creator tier). Infrastructure cost is the main drag at weekly scale.' },
-  month:   { label:'May 2026',              gross:14.95,  stripe:0.73,  claude:0.74, chatgpt:0.59, gemini:0.32, mistral:0.17, deepseek:0.11, perplexity:0.11, grok:0.06, railway:15.00, domain:1.00, note:'Infrastructure is 85% of total cost. Every additional Creator subscriber adds ~$12 net profit. 2 subs = break-even.' },
-  quarter: { label:'Q2 2026 (Apr–Jun)',     gross:14.95,  stripe:0.73,  claude:0.74, chatgpt:0.59, gemini:0.32, mistral:0.17, deepseek:0.11, perplexity:0.11, grok:0.06, railway:45.00, domain:3.00, note:'First paid subscriber joined mid-Q2. Q2 shows a loss due to full infrastructure costs against single-month revenue.' },
-  year:    { label:'FY 2026 (Jan–May)',     gross:14.95,  stripe:0.73,  claude:0.74, chatgpt:0.59, gemini:0.32, mistral:0.17, deepseek:0.11, perplexity:0.11, grok:0.06, railway:75.00, domain:5.00, note:'Year-to-date: product launched in May, first paid subscriber 17 May. Infrastructure costs run Jan–May.' },
-};
+// ── P&L: live data ───────────────────────────────────────────────────────
+// Revenue comes from /api/stripe/revenue (ex-VAT, net of refunds, internal
+// accounts excluded). Costs come from /api/costs/summary, which only supports
+// the current month, so other periods show revenue only and say so.
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function money(n) { return (n < 0 ? '−' : '') + '$' + Math.abs(n).toFixed(2); }
+function fmt(n) { return '$' + Math.abs(n).toFixed(2); }
+function fmtSigned(n) { if (!n) return '$0.00'; return (n > 0 ? '+' : '−') + '$' + Math.abs(n).toFixed(2); }
+function pct(part, total) { if (!total) return ''; return Math.round(Math.abs(part) / Math.abs(total) * 100) + '%'; }
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const num0 = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 
-const chartData = {
-  day:     { labels:['00','04','08','12','16','20'], rev:[0,0,0,0,0,0],        costs:[0.08,0.09,0.12,0.08,0.07,0.05] },
-  week:    { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], rev:[0,0,0,0,0,0,0],   costs:[2.4,2.1,2.6,2.3,2.8,2.0,2.6] },
-  month:   { labels:['Wk1','Wk2','Wk3','Wk4'], rev:[0,0,14.95,14.95],        costs:[4.5,4.7,5.1,4.5] },
-  quarter: { labels:['Apr','May','Jun*'], rev:[14.95,14.95,0],                costs:[18.8,18.8,18.8] },
-  year:    { labels:['Jan','Feb','Mar','Apr','May'], rev:[0,0,0,14.95,14.95], costs:[16.5,16.5,16.5,16.5,18.8] },
-};
-
-function fmt(n) {
-  if (n === 0) return '$0.00';
-  return '$' + Math.abs(n).toFixed(2);
-}
-function fmtSigned(n) {
-  if (n === 0) return '$0.00';
-  return (n >= 0 ? '+' : '−') + '$' + Math.abs(n).toFixed(2);
-}
-function pct(part, total) {
-  if (!total) return '0%';
-  return Math.round(Math.abs(part) / Math.abs(total) * 100) + '%';
-}
+let _plPeriod = 'month';
+let _plSeq = 0;
 
 function setPeriod(period, btn) {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  const d = plData[period];
-  const apiTotal = d.claude + d.chatgpt + d.gemini + d.mistral + d.deepseek + d.perplexity + d.grok;
-  const infraTotal = d.railway + d.domain;
-  const totalCosts = d.stripe + apiTotal + infraTotal;
-  const netRev = d.gross - d.stripe;
-  const net = d.gross - totalCosts;
-  const isProfit = net >= 0;
-
-  // Period label
-  document.getElementById('pl-period-label').textContent = d.label;
-  document.getElementById('chart-period-label').textContent = d.label;
-
-  // Revenue
-  set('pl-gross', d.gross === 0 ? '$0.00' : '+' + fmt(d.gross), d.gross > 0 ? 'pos' : 'neg');
-  set('pl-stripe-fee', d.stripe === 0 ? '$0.00' : '−' + fmt(d.stripe), 'neg');
-  document.getElementById('pl-stripe-pct').textContent = d.gross > 0 ? pct(d.stripe, d.gross) : '';
-  set('pl-net-rev', fmtSigned(netRev), netRev >= 0 ? 'strong-pos' : 'strong-neg');
-
-  // API costs
-  const providers = { claude:d.claude, chatgpt:d.chatgpt, gemini:d.gemini, mistral:d.mistral, deepseek:d.deepseek, perplexity:d.perplexity, grok:d.grok };
-  for (const [k,v] of Object.entries(providers)) {
-    set('pl-'+k, v === 0 ? '$0.00' : '−'+fmt(v), 'neg');
-    const pctEl = document.getElementById('pl-'+k+'-pct');
-    if (pctEl) pctEl.textContent = apiTotal > 0 ? pct(v, apiTotal) : '';
-  }
-  set('pl-api-total', apiTotal === 0 ? '$0.00' : '−'+fmt(apiTotal), 'strong-neg');
-  document.getElementById('pl-api-margin').textContent = totalCosts > 0 ? pct(apiTotal, totalCosts) : '';
-
-  // Infra
-  set('pl-railway', d.railway === 0 ? '$0.00' : '−'+fmt(d.railway), 'neg');
-  set('pl-domain', d.domain === 0 ? '$0.00' : '−'+fmt(d.domain), 'neg');
-  set('pl-infra-total', infraTotal === 0 ? '$0.00' : '−'+fmt(infraTotal), 'strong-neg');
-
-  // Bottom line
-  set('pl-total-costs', totalCosts === 0 ? '$0.00' : '−'+fmt(totalCosts), 'strong-neg');
-  set('pl-net', fmtSigned(net), isProfit ? 'strong-pos' : 'strong-neg');
-  const marginPct = d.gross > 0 ? Math.round(net/d.gross*100) + '%' : 'N/A';
-  const marginEl = document.getElementById('pl-net-margin');
-  marginEl.textContent = (net >= 0 ? '' : '−') + Math.abs(Math.round(net/(d.gross||1)*100)) + '%';
-  marginEl.style.color = isProfit ? 'var(--green)' : 'var(--red)';
-
-  // Bottom row class
-  const row = document.getElementById('pl-bottom-row');
-  row.className = 'pl-row ' + (isProfit ? 'profit-row' : 'loss-row');
-
-  // KPIs
-  document.getElementById('kpi-rev').textContent = fmt(d.gross);
-  document.getElementById('kpi-rev-sub').textContent = d.gross > 0 ? '1 subscriber' : 'No revenue';
-  document.getElementById('kpi-costs').textContent = fmt(totalCosts);
-  const netEl = document.getElementById('kpi-net');
-  netEl.textContent = fmtSigned(net);
-  netEl.style.color = isProfit ? 'var(--green)' : 'var(--red)';
-  document.getElementById('kpi-net-sub').textContent = (net >= 0 ? '' : '−') + Math.abs(Math.round(net/(d.gross||totalCosts)*100)) + '% margin';
-
-  // Cost breakdown bars
-  document.getElementById('cb-infra-val').textContent = fmt(infraTotal) + ' · ' + pct(infraTotal, totalCosts);
-  document.getElementById('cb-api-val').textContent = fmt(apiTotal) + ' · ' + pct(apiTotal, totalCosts);
-  document.getElementById('cb-stripe-val').textContent = fmt(d.stripe) + ' · ' + pct(d.stripe, totalCosts);
-  const infraPct = totalCosts > 0 ? infraTotal/totalCosts*100 : 0;
-  const apiPct   = totalCosts > 0 ? apiTotal/totalCosts*100 : 0;
-  const stripePct= totalCosts > 0 ? d.stripe/totalCosts*100 : 0;
-  document.getElementById('cb-infra').style.width = infraPct + '%';
-  document.getElementById('cb-api').style.width   = Math.max(apiPct,1) + '%';
-  document.getElementById('cb-stripe').style.width = Math.max(stripePct,0.5) + '%';
-
-  // Narrative
-  document.getElementById('pl-narrative').textContent = d.note;
-
-  // Break-even
-  const fixedCost = infraTotal;
-  const netPerCreator = 14.95 * 0.971 - 0.30 - 0.09; // after Stripe & ~6 synth API cost
-  const netPerPro     = 34.95 * 0.971 - 0.30 - 0.09;
-  const netPerTeam    = 59.95 * 0.971 - 0.30 - 0.09;
-  const beCreator = fixedCost > 0 ? Math.ceil(fixedCost / netPerCreator) : 1;
-  const bePro     = fixedCost > 0 ? Math.ceil(fixedCost / netPerPro) : 1;
-  const beTeam    = fixedCost > 0 ? Math.ceil(fixedCost / netPerTeam) : 1;
-  document.getElementById('be-creator').textContent = beCreator + ' user' + (beCreator !== 1 ? 's' : '');
-  document.getElementById('be-pro').textContent     = bePro + ' user' + (bePro !== 1 ? 's' : '');
-  document.getElementById('be-team').textContent    = beTeam + ' user' + (beTeam !== 1 ? 's' : '');
-  document.getElementById('be-creator-bar').style.width = Math.min(100, 100/beCreator) + '%';
-  document.getElementById('be-pro-bar').style.width     = Math.min(100, 100/bePro) + '%';
-  document.getElementById('be-team-bar').style.width    = Math.min(100, 100/beTeam) + '%';
-
-  // Chart
-  renderPlChart(period);
+  if (btn) btn.classList.add('active');
+  _plPeriod = period;
+  loadPl(period);
 }
 
 function set(id, text, cls) {
   const el = document.getElementById(id);
   if (!el) return;
   el.textContent = text;
-  el.className = 'pl-amount ' + cls;
+  if (cls) el.className = 'pl-amount ' + cls;
+}
+function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+
+function showNotice(id, lines) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!lines.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.innerHTML = lines.map(esc).join('<br>');
+  el.style.display = '';
 }
 
-function renderPlChart(period) {
-  const cd = chartData[period];
+async function loadPl(period) {
+  period = period || _plPeriod;
+  const seq = ++_plSeq;
+  setText('pl-period-label', 'Loading…');
+  let rv = null, cs = null;
+  try {
+    const calls = [Forge.request('GET', '/api/stripe/revenue?period=' + period)];
+    if (period === 'month') calls.push(Forge.request('GET', '/api/costs/summary?period=month'));
+    const out = await Promise.all(calls.map(p => p.catch(() => null)));
+    rv = out[0]; cs = out[1] || null;
+  } catch (e) { console.warn('P&L load failed:', e); }
+  if (seq !== _plSeq) return; // a newer period was requested
+  renderPl(period, rv, cs);
+}
+
+function renderPl(period, rv, cs) {
+  const notices = [];
+  const d = rv && rv.ok && rv.data && rv.data.ok ? rv.data : null;
+  if (!d) {
+    setText('pl-period-label', 'Revenue unavailable');
+    notices.push('Could not load revenue from Stripe data' + (rv && rv.data && rv.data.error ? ' (' + rv.data.error + ')' : '') + '. Nothing is shown rather than a guess.');
+    showNotice('pl-notice', notices);
+    ['pl-billed','pl-refunded','pl-gross','pl-stripe-fee','pl-net-rev','pl-api-total','pl-infra-total','pl-total-costs','pl-net'].forEach(id => set(id, '—'));
+    renderPlChart(null);
+    return;
+  }
+
+  const billed = num0(d.billed), refunded = num0(d.refunded), netRevenue = num0(d.gross), fees = num0(d.fees);
+  const afterFees = netRevenue - fees;
+  setText('pl-period-label', d.label || period);
+  setText('chart-period-label', new Date().getUTCFullYear() + ' · year to date');
+
+  set('pl-billed', billed ? '+' + fmt(billed) : '$0.00', billed ? 'pos' : 'neg');
+  set('pl-refunded', refunded ? '−' + fmt(refunded) : '$0.00', 'neg');
+  set('pl-gross', fmtSigned(netRevenue), netRevenue >= 0 ? 'strong-pos' : 'strong-neg');
+  set('pl-stripe-fee', fees ? '−' + fmt(fees) : '$0.00', 'neg');
+  setText('pl-stripe-pct', netRevenue > 0 ? pct(fees, netRevenue) : '');
+  set('pl-net-rev', fmtSigned(afterFees), afterFees >= 0 ? 'strong-pos' : 'strong-neg');
+
+  // Costs (current month only)
+  let c = null;
+  if (period === 'month' && cs && cs.ok && cs.data && typeof cs.data.totalApiCost !== 'undefined') c = cs.data;
+  const provEl = document.getElementById('pl-providers');
+  let apiTotal = null, infra = null, totalCosts = null;
+  if (c) {
+    const diary = c.diary || { totalCost: 0, providers: [] };
+    apiTotal = num0(c.totalApiCost) + num0(diary.totalCost);
+    infra = num0(c.infraCost);
+    totalCosts = apiTotal + infra + fees;
+    const rows = [];
+    (c.providers || []).forEach(p => rows.push({ name: p.name + ' — Compare (estimated)', cost: num0(p.cost) }));
+    (diary.providers || []).forEach(p => rows.push({ name: p.name + ' — Diary (measured)', cost: num0(p.cost) }));
+    provEl.innerHTML = rows.length ? rows.map(r =>
+      '<div class="pl-row"><div class="pl-label indent">' + esc(r.name) + '</div>' +
+      '<div class="pl-amount neg">' + (r.cost ? '−' + fmt(r.cost) : '$0.00') + '</div>' +
+      '<div class="pl-margin">' + pct(r.cost, apiTotal) + '</div></div>'
+    ).join('') : '<div class="pl-row"><div class="pl-label indent">No API usage recorded</div><div class="pl-amount neg">$0.00</div><div class="pl-margin"></div></div>';
+    set('pl-api-total', apiTotal ? '−' + fmt(apiTotal) : '$0.00', 'strong-neg');
+    setText('pl-api-margin', totalCosts ? pct(apiTotal, totalCosts) : '');
+    set('pl-infra-total', infra ? '−' + fmt(infra) : '$0.00', 'strong-neg');
+  } else {
+    provEl.innerHTML = '<div class="pl-row"><div class="pl-label indent">Not available for this period</div><div class="pl-amount neg">—</div><div class="pl-margin"></div></div>';
+    set('pl-api-total', '—', 'strong-neg');
+    setText('pl-api-margin', '');
+    set('pl-infra-total', '—', 'strong-neg');
+    if (period !== 'month') notices.push('Costs are only tracked for the current month, so profit/loss is shown for Month only. Revenue for this period is accurate.');
+    else notices.push('Could not load costs for this month, so profit/loss is not shown.');
+  }
+
+  // Bottom line
+  const bottom = document.getElementById('pl-bottom-row');
+  if (totalCosts == null) {
+    set('pl-total-costs', '—', 'strong-neg');
+    set('pl-net', '—', 'strong-neutral');
+    setText('pl-net-margin', '');
+    bottom.className = 'pl-row';
+    setText('kpi-costs', '—');
+    const kn = document.getElementById('kpi-net'); kn.textContent = '—'; kn.style.color = '';
+    setText('kpi-net-sub', 'costs unavailable');
+    setText('kpi-apimargin', '—');
+  } else {
+    const net = netRevenue - totalCosts, isProfit = net >= 0;
+    set('pl-total-costs', totalCosts ? '−' + fmt(totalCosts) : '$0.00', 'strong-neg');
+    set('pl-net', fmtSigned(net), isProfit ? 'strong-pos' : 'strong-neg');
+    const mEl = document.getElementById('pl-net-margin');
+    mEl.textContent = netRevenue > 0 ? Math.round(net / netRevenue * 100) + '%' : 'n/a';
+    mEl.style.color = isProfit ? 'var(--green)' : 'var(--red)';
+    bottom.className = 'pl-row ' + (isProfit ? 'profit-row' : 'loss-row');
+    setText('kpi-costs', fmt(totalCosts));
+    const kn = document.getElementById('kpi-net');
+    kn.textContent = fmtSigned(net); kn.style.color = isProfit ? 'var(--green)' : 'var(--red)';
+    setText('kpi-net-sub', netRevenue > 0 ? Math.round(net / netRevenue * 100) + '% margin' : 'no revenue');
+    setText('kpi-apimargin', netRevenue > 0 ? Math.round(apiTotal / netRevenue * 100) + '%' : 'n/a');
+  }
+
+  // KPIs
+  setText('kpi-rev', money(netRevenue));
+  setText('kpi-rev-sub', d.payments + ' payment' + (d.payments === 1 ? '' : 's') + (d.refunds ? ' · ' + d.refunds + ' refund' + (d.refunds === 1 ? '' : 's') : ''));
+
+  // Cost breakdown bars
+  const bars = [['infra', infra], ['api', apiTotal], ['stripe', fees]];
+  bars.forEach(([k, v]) => {
+    const valEl = document.getElementById('cb-' + k + '-val'), barEl = document.getElementById('cb-' + k);
+    if (totalCosts == null && k !== 'stripe') { valEl.textContent = '—'; barEl.style.width = '0%'; return; }
+    valEl.textContent = fmt(v) + (totalCosts ? ' · ' + pct(v, totalCosts) : '');
+    barEl.style.width = (totalCosts ? v / totalCosts * 100 : 0) + '%';
+  });
+
+  // Summary sentence (facts only)
+  let sentence = d.payments + ' payment' + (d.payments === 1 ? '' : 's') + ' billed ' + money(billed) + ' ex-VAT';
+  sentence += refunded ? ', ' + money(refunded) + ' refunded, leaving ' + money(netRevenue) + ' net revenue.' : '.';
+  if (totalCosts != null) sentence += ' Costs this month: ' + money(totalCosts) + ' (AI APIs ' + money(apiTotal) + ', infrastructure ' + money(infra) + ', est. Stripe fees ' + money(fees) + ').';
+  setText('pl-narrative', sentence);
+
+  // Internal accounts
+  const it = d.internal || {};
+  if (num0(it.billed) || num0(it.refunded)) {
+    notices.push('Excluded as internal/test accounts: ' + money(num0(it.billed)) + ' billed, ' + money(num0(it.refunded)) + ' refunded (' + (it.payments || 0) + ' payment' + (it.payments === 1 ? '' : 's') + ').');
+  }
+  if (d.internalFilterConfigured === false) notices.push('No internal accounts are configured (INTERNAL_ACCOUNT_EMAILS / INTERNAL_ACCOUNT_DOMAINS on Railway), so your own test payments are counted as revenue.');
+  showNotice('pl-notice', notices);
+
+  renderPlChart(d.byMonth || []);
+}
+
+function renderPlChart(months) {
   const chart = document.getElementById('pl-chart');
-  const maxVal = Math.max(...cd.costs, ...cd.rev, 1);
   chart.innerHTML = '';
-  cd.labels.forEach((label, i) => {
-    const revH   = Math.max((cd.rev[i] / maxVal) * 80, 0);
-    const costH  = Math.max((cd.costs[i] / maxVal) * 80, 0);
-    const group  = document.createElement('div');
+  if (!months || !months.length) return;
+  const maxVal = Math.max(...months.map(m => Math.max(num0(m.gross), 0)), 1);
+  months.forEach(m => {
+    const idx = parseInt(String(m.month).slice(5, 7), 10) - 1;
+    const v = num0(m.gross);
+    const h = Math.max(v / maxVal * 80, 0);
+    const group = document.createElement('div');
     group.className = 'pl-chart-bar-group';
-    group.innerHTML =
-      `<div class="pl-bar-rev" style="height:${revH}px"></div>` +
-      `<div class="pl-bar-cost" style="height:${costH}px"></div>` +
-      `<div class="pl-chart-label">${label}</div>`;
+    group.title = MONTH_NAMES[idx] + ': ' + money(v) + (num0(m.refunded) ? ' (after ' + money(num0(m.refunded)) + ' refunds)' : '');
+    group.innerHTML = '<div class="pl-bar-rev" style="height:' + h + 'px;opacity:' + (v > 0 ? 0.7 : 0.25) + '"></div>' +
+                      '<div class="pl-chart-label">' + MONTH_NAMES[idx] + '</div>';
     chart.appendChild(group);
   });
-  // zero line
   const zero = document.createElement('div');
   zero.className = 'pl-chart-zero';
   zero.style.bottom = '20px';
   chart.appendChild(zero);
 }
 
-// Initialise P&L with monthly view
-setPeriod('month', document.querySelector('.period-btn.active'));
+// P&L loads when its page is opened (see nav) so it never renders before sign-in.
 
 
   new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) + ' · ' +
@@ -1845,6 +1749,7 @@ function nav(id, el) {
   if (id === 'network')        loadNetwork();
   if (id === 'users')          loadUsers();
   if (id === 'revenue')        loadRevenue();
+  if (id === 'pl')             loadPl(_plPeriod);
   if (id === 'feature-usage')  loadFeatureUsage();
   if (id === 'referrals')      loadReferralStats();
   if (id === 'qr')             loadQRStats();
@@ -1867,6 +1772,7 @@ function refresh() {
   else if (id === 'users')          loadUsers();
   else if (id === 'subscriptions')  loadSubscriptions();
   else if (id === 'revenue')        loadRevenue();
+  else if (id === 'pl')             loadPl(_plPeriod);
   else if (id === 'feature-usage')  loadFeatureUsage();
   else if (id === 'referrals')      loadReferralStats();
   else if (id === 'qr')             loadQRStats();
@@ -2390,8 +2296,11 @@ async function loadLiveData() {
       // real, measured cost alongside the Compare feature's estimated
       // one, since this whole section exists to show the TRUE combined
       // cost picture, not just the Compare feature's own slice of it.
-      const paidUsers = parseInt(document.getElementById('cc-paid-users')?.textContent || '0') || 0;
-      const monthlyRev = paidUsers * 14.95;
+      let monthlyRev = 0;
+      try {
+        const rr = await Forge.request('GET', '/api/stripe/revenue?period=month');
+        if (rr.ok && rr.data && rr.data.ok) monthlyRev = parseFloat(rr.data.gross) || 0;
+      } catch (e) { console.warn('Revenue for P&L cards failed:', e); }
       const totalApiSpend = c.totalApiCost + c.diary.totalCost;
       const totalCost  = totalApiSpend + c.infraCost;
       const netProfit  = monthlyRev - totalCost;
@@ -2753,52 +2662,72 @@ async function rejectCandidate(id) {
 }
 
 async function loadRevenue() {
+  const $ = id => document.getElementById(id);
+  const put = (id, v) => { const el = $(id); if (el) el.textContent = v; };
   try {
-    const r = await Forge.request('GET', '/api/stripe/revenue?period=month');
-    if (r.ok && r.data) {
-      const mrr = r.data.mrr || r.data.totalGross || r.data.revenue || null;
-      const mrrEl = document.getElementById('dash-mrr');
-      if (mrrEl && mrr !== null) mrrEl.textContent = '$' + parseFloat(mrr).toFixed(2);
-    }
-    if (!r.ok || !r.data) return;
-    const d = r.data;
-    // Update revenue stat cards if they exist
-    const els = {
-      'mrr':  document.querySelector('[data-stat="mrr"]'),
-      'arr':  document.querySelector('[data-stat="arr"]'),
-      'gross':document.querySelector('[data-stat="gross"]'),
-      'net':  document.querySelector('[data-stat="net"]'),
-    };
-    if (els.mrr)   els.mrr.textContent   = '$' + d.mrr;
-    if (els.arr)   els.arr.textContent   = '$' + d.arr;
-    if (els.gross) els.gross.textContent = '$' + d.gross;
-    if (els.net)   els.net.textContent   = '$' + d.net;
+    const [rv, st] = await Promise.all([
+      Forge.request('GET', '/api/stripe/revenue?period=month').catch(() => null),
+      Forge.request('GET', '/api/admin/stats').catch(() => null)
+    ]);
+    const d = rv && rv.ok && rv.data && rv.data.ok ? rv.data : null;
+    const notes = [];
+    if (!d) {
+      notes.push('Could not load revenue' + (rv && rv.data && rv.data.error ? ' (' + rv.data.error + ')' : '') + '.');
+      ['dash-mrr','rev-mrr','rev-arr','rev-refunded'].forEach(id => put(id, '—'));
+    } else {
+      const mrrOk = !d.mrrError && typeof d.mrr === 'number';
+      const mrrTxt = mrrOk ? money(d.mrr) : '—';
+      put('dash-mrr', mrrTxt); put('rev-mrr', mrrTxt); put('dash-plan-mrr', mrrTxt); put('dash-plan-subs', mrrOk ? String(d.subscribers) : '—');
+      put('rev-arr', mrrOk ? money(d.arr) : '—');
+      const subTxt = mrrOk ? d.subscribers + ' paying subscriber' + (d.subscribers === 1 ? '' : 's') + (d.cancelling ? ' · ' + d.cancelling + ' cancelling' : '') : (d.mrrError || 'MRR unavailable');
+      put('rev-mrr-sub', subTxt); put('dash-mrr-delta', subTxt);
+      if (d.nonUsdSubscriptions) notes.push(d.nonUsdSubscriptions + ' subscription(s) not billed in USD are not included in MRR.');
+      put('rev-refunded', money(num0(d.refunded)));
+      put('rev-refunded-sub', d.refunds ? d.refunds + ' refund' + (d.refunds === 1 ? '' : 's') + ' this month' : 'none this month');
 
-    // Update revenue section if it exists
-    const revEl = document.getElementById('cc-revenue-live');
-    if (revEl) {
-      revEl.innerHTML = `
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div style="background:var(--surface2);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">MRR</div>
-            <div style="font-size:22px;font-weight:800;color:var(--green)">$${d.mrr}</div>
-          </div>
-          <div style="background:var(--surface2);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">ARR</div>
-            <div style="font-size:22px;font-weight:800">$${d.arr}</div>
-          </div>
-          <div style="background:var(--surface2);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Gross (MTD)</div>
-            <div style="font-size:22px;font-weight:800">$${d.gross}</div>
-          </div>
-          <div style="background:var(--surface2);border-radius:10px;padding:14px">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Net (after fees)</div>
-            <div style="font-size:22px;font-weight:800;color:var(--green)">$${d.net}</div>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted)">${d.payments} payment(s) this month · Stripe fees deducted at 2.9% + $0.30</div>`;
+      const months = d.byMonth || [];
+      const maxV = Math.max(...months.map(m => Math.max(num0(m.gross), 0)), 1);
+      const nowKey = new Date().toISOString().slice(0, 7);
+      $('rev-chart').innerHTML = months.map(m => {
+        const idx = parseInt(String(m.month).slice(5, 7), 10) - 1, v = num0(m.gross);
+        return '<div class="rev-bar' + (m.month === nowKey ? ' highlight' : '') + '" style="height:' + Math.max(v / maxV * 100, 0) + '%">' +
+               '<span class="rev-bar-label">' + MONTH_NAMES[idx] + '</span><span class="rev-bar-val">' + money(v) + '</span></div>';
+      }).join('');
+      put('rev-chart-label', new Date().getUTCFullYear() + ' · net of refunds');
+      put('rev-month-label', d.label || 'This month');
+      put('rev-month-line', money(num0(d.billed)) + ' billed · ' + money(num0(d.refunded)) + ' refunded · ' + money(num0(d.gross)) + ' net');
+      put('rev-month-sub', d.payments + ' payment' + (d.payments === 1 ? '' : 's') + ' · est. Stripe fees ' + money(num0(d.fees)));
+      put('rev-ytd', money(months.reduce((t, m) => t + num0(m.gross), 0)));
+
+      const it = d.internal || {}, im = d.internalMrr || {};
+      if (num0(it.billed) || num0(it.refunded) || num0(im.mrr)) {
+        notes.push('Excluded as internal/test accounts: ' + money(num0(it.billed)) + ' billed this month' + (num0(im.mrr) ? ', ' + money(num0(im.mrr)) + ' MRR (' + (im.subscribers || 0) + ' subscription' + (im.subscribers === 1 ? '' : 's') + ')' : '') + '.');
+      }
+      if (d.internalFilterConfigured === false) notes.push('No internal accounts are configured (INTERNAL_ACCOUNT_EMAILS / INTERNAL_ACCOUNT_DOMAINS on Railway), so your own test accounts are counted.');
+
+      // Targets from real MRR
+      const cur = mrrOk ? d.mrr : 0;
+      $('rev-targets').innerHTML = [[100, 'var(--orange)'], [500, 'var(--blue)'], [1000, 'var(--purple)']].map(([t, col]) => {
+        const p = Math.min(cur / t * 100, 100);
+        return '<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+          '<div style="font-size:12px;color:var(--text)">MRR $' + t.toLocaleString('en-US') + '</div>' +
+          '<div style="font-size:11px;font-family:\'DM Mono\',monospace;color:var(--text-muted)">' + (mrrOk ? (p < 10 ? p.toFixed(1) : Math.round(p)) + '%' : '—') + '</div></div>' +
+          '<div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden"><div style="height:100%;width:' + p + '%;background:' + col + ';border-radius:3px"></div></div>' +
+          '<div style="font-size:10px;color:var(--text-muted);margin-top:4px">' + (mrrOk ? (cur >= t ? 'Reached' : '$' + (t - cur).toFixed(2) + ' MRR to go') : '') + '</div></div>';
+      }).join('');
     }
-  } catch(e) { console.warn('Revenue failed:', e); }
+
+    // Conversion: external paying users ÷ external users
+    const s = st && st.ok && st.data ? (st.data.stats || st.data) : null;
+    if (s && typeof s.totalUsers === 'number') put('dash-users-sub', typeof s.externalUsers === 'number' ? s.externalUsers + ' excl. internal' : 'all accounts');
+    if (s && typeof s.externalUsers === 'number' && typeof s.paidUsersExternal === 'number') {
+      put('rev-conv', s.externalUsers ? (s.paidUsersExternal / s.externalUsers * 100).toFixed(1) + '%' : '—');
+      put('rev-conv-sub', s.paidUsersExternal + ' of ' + s.externalUsers + ' users paid (excl. internal)');
+    } else { put('rev-conv', '—'); put('rev-conv-sub', 'unavailable'); }
+
+    const nEl = $('rev-notice');
+    if (nEl) { nEl.innerHTML = notes.map(esc).join('<br>'); nEl.style.display = notes.length ? '' : 'none'; }
+  } catch (e) { console.warn('Revenue failed:', e); }
 }
 
 function loadBlogSubmissions() {
@@ -2816,10 +2745,11 @@ async function loadSubscriptions() {
     // Update stat cards
     const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     setEl('subs-active-count', summary.active || 0);
-    setEl('subs-mrr', 'MRR $' + (summary.mrr || '0.00'));
+    const mrrShown = (summary.mrrExternal != null ? summary.mrrExternal : summary.mrr) || '0.00';
+    setEl('subs-mrr', 'MRR $' + mrrShown);
     setEl('subs-renewing', summary.renewingSoon || 0);
     setEl('subs-issues', summary.issues || 0);
-    setEl('subs-section-sub', (summary.active || 0) + ' active · $' + (summary.mrr || '0.00') + ' MRR');
+    setEl('subs-section-sub', (summary.active || 0) + ' active · $' + mrrShown + ' MRR' + (summary.mrrExternal != null && summary.mrr !== summary.mrrExternal ? ' (excl. internal; $' + summary.mrr + ' incl.)' : ''));
 
     const tbody = document.getElementById('subs-tbody');
     if (!tbody) return;
@@ -2831,9 +2761,9 @@ async function loadSubscriptions() {
       const renewal = s.renewalDate ? new Date(s.renewalDate).toLocaleDateString() : '—';
       const statusColor = s.status === 'active' ? 'var(--green)' : s.status === 'past_due' ? '#ef4444' : 'var(--amber)';
       return '<tr>'
-        + '<td style="font-size:12px">' + s.email + '</td>'
+        + '<td style="font-size:12px">' + s.email + (s.internal ? ' <span style="font-size:10px;color:var(--text-muted)">(internal)</span>' : '') + '</td>'
         + '<td style="font-size:12px">' + (s.name || '—') + '</td>'
-        + '<td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--orange-dim);color:var(--orange)">' + s.tier + '</span></td>'
+        + '<td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--orange-dim);color:var(--orange)">' + s.tier + (s.interval ? ' · ' + s.interval : '') + '</span></td>'
         + '<td><span style="font-size:11px;font-weight:700;color:' + statusColor + '">' + (s.status || 'unknown') + '</span></td>'
         + '<td style="font-size:12px">' + renewal + '</td>'
         + '<td style="font-size:12px;font-family:monospace">$' + (s.amount || '—') + '</td>'

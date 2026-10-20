@@ -4,6 +4,7 @@ const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { sendMail } = require('../lib/emailTransport');
 const { requireAuth, requireAdmin, optionalAuth } = require('../middleware/auth');
+const revenue = require('../lib/revenue');
 
 // Price IDs from stripe-config.js (matching the Forge app configuration)
 const PRICE_IDS = {
@@ -398,26 +399,24 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       break;
     }
     case 'invoice.payment_succeeded': {
+      // Revenue is recorded without the tax collected for the tax authority.
+      // See lib/revenue.js for the rules.
       const invoice = event.data.object;
       try {
         const db = require('../lib/db');
-        // Revenue excludes tax collected for the tax authorities (VAT/GST/sales
-        // tax): that money is not ours. total_excluding_tax is absent on very
-        // old invoices, so fall back to the amount paid.
-        const paidCents = invoice.amount_paid || 0;
-        const exclTaxCents = (typeof invoice.total_excluding_tax === 'number') ? invoice.total_excluding_tax : paidCents;
-        const amount = Math.min(paidCents, exclTaxCents) / 100; // convert from cents
-        const stripeFee = parseFloat((amount * 0.029 + 0.30).toFixed(2));
-        const net = parseFloat((amount - stripeFee).toFixed(2));
-        const ym = new Date(invoice.created * 1000).toISOString().slice(0, 7);
-        await db.query(`
-          INSERT INTO revenue_events(stripe_invoice_id, customer_id, amount_gross, stripe_fee, amount_net, year_month, created_at)
-          VALUES($1,$2,$3,$4,$5,$6,$7)
-          ON CONFLICT (stripe_invoice_id) DO NOTHING`,
-          [invoice.id, invoice.customer, amount, stripeFee, net, ym, new Date(invoice.created*1000).toISOString()]
-        );
-        console.log('Revenue tracked:', invoice.id, '$' + amount);
+        const out = await revenue.recordInvoice(db, invoice);
+        console.log('Revenue tracked:', invoice.id, out.recorded ? ('$' + out.amount) : ('skipped: ' + out.reason));
       } catch(err) { console.error('Revenue tracking failed:', err.message); }
+      break;
+    }
+    case 'credit_note.created': {
+      // A refund: recorded as negative revenue so refunded payments stop counting.
+      const cn = event.data.object;
+      try {
+        const db = require('../lib/db');
+        const out = await revenue.recordCreditNote(db, cn);
+        console.log('Credit note tracked:', cn.id, out.recorded ? ('-$' + out.amount) : ('skipped: ' + out.reason));
+      } catch(err) { console.error('Credit note tracking failed:', err.message); }
       break;
     }
     case 'invoice.payment_failed':
@@ -426,57 +425,45 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   res.json({ received: true });
 });
 
-// GET /api/stripe/revenue — admin revenue summary
+// GET /api/stripe/revenue?period=day|week|month|quarter|year — admin revenue summary.
+// Revenue excludes VAT and subtracts refunds; accounts named in the
+// INTERNAL_ACCOUNT_EMAILS / INTERNAL_ACCOUNT_DOMAINS variables are reported
+// separately under `internal` and left out of every headline figure.
 router.get('/revenue', requireAuth, requireAdmin, async (req, res) => {
   try {
     const db = require('../lib/db');
-    // Ensure table exists
-    await db.query(`CREATE TABLE IF NOT EXISTS revenue_events (
-      stripe_invoice_id TEXT PRIMARY KEY,
-      customer_id TEXT,
-      amount_gross NUMERIC,
-      stripe_fee NUMERIC,
-      amount_net NUMERIC,
-      year_month TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )`).catch(()=>{});
-
-    const period = req.query.period || 'month';
-    const now = new Date();
-    let ym;
-    switch(period) {
-      case 'day':   ym = now.toISOString().slice(0,10); break;
-      case 'year':  ym = now.getFullYear().toString(); break;
-      default:      ym = now.toISOString().slice(0,7);
-    }
-
-    const r = await db.query(
-      `SELECT SUM(amount_gross) as gross, SUM(stripe_fee) as fees, SUM(amount_net) as net, COUNT(*) as payments
-       FROM revenue_events WHERE year_month LIKE $1`,
-      [ym + '%']
-    );
-    const row = r.rows[0] || {};
-
-    // Get MRR from active subscribers
-    const subs = await db.query(
-      `SELECT tier, COUNT(*) as cnt FROM users WHERE tier NOT IN ('starter','free') AND tier IS NOT NULL GROUP BY tier`
-    );
-    const TIER_PRICES = { starter:0, lite:9.95, creator:14.95, professional:34.95, 'work-like-a-pro':34.95, pro:34.95, team:59.95, enterprise:99.95 };
-    const mrr = subs.rows.reduce((sum, row) => sum + (TIER_PRICES[row.tier] || 0) * parseInt(row.cnt), 0);
-
+    const period = ['day', 'week', 'month', 'quarter', 'year'].includes(req.query.period) ? req.query.period : 'month';
+    const isInternal = revenue.loadInternalFilter();
+    await revenue.fillMissingEmails(db, stripe).catch(e => console.warn('[Revenue] email fill:', e.message));
+    const summary = await revenue.summarise(db, period, isInternal);
+    let mrr = { mrr: null, arr: null, subscribers: null, cancelling: 0, nonUsd: 0, internal: null, error: null };
+    try { mrr = await revenue.computeMrr(stripe, isInternal); }
+    catch (e) { console.warn('[Revenue] MRR from Stripe failed:', e.message); mrr.error = 'MRR unavailable'; }
     res.json({
-      ok: true,
-      period,
-      gross: parseFloat(row.gross || 0).toFixed(2),
-      fees:  parseFloat(row.fees  || 0).toFixed(2),
-      net:   parseFloat(row.net   || 0).toFixed(2),
-      payments: parseInt(row.payments || 0),
-      mrr:   parseFloat(mrr).toFixed(2),
-      arr:   parseFloat(mrr * 12).toFixed(2),
-      subscribers: subs.rows
+      ok: true, ...summary,
+      mrr: mrr.mrr, arr: mrr.arr, subscribers: mrr.subscribers,
+      cancelling: mrr.cancelling, nonUsdSubscriptions: mrr.nonUsd,
+      internalMrr: mrr.internal, mrrError: mrr.error || undefined,
+      internalFilterConfigured: !!(process.env.INTERNAL_ACCOUNT_EMAILS || process.env.INTERNAL_ACCOUNT_DOMAINS)
     });
   } catch(e) {
     console.error('[Revenue]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/stripe/revenue/resync — rebuild revenue_events from Stripe (paid
+// invoices and credit notes). Idempotent; use after deploying this change to pick
+// up refunds issued earlier, or any time a webhook may have been missed.
+// Body: { days: 400 } (how far back, max 1500).
+router.post('/revenue/resync', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const db = require('../lib/db');
+    const days = Math.min(Math.max(parseInt(req.body && req.body.days, 10) || 400, 1), 1500);
+    const out = await revenue.resync(stripe, db, new Date(Date.now() - days * 86400000));
+    res.json({ ok: true, days, ...out });
+  } catch(e) {
+    console.error('[Revenue resync]', e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
