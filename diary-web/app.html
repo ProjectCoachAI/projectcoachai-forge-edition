@@ -242,6 +242,10 @@
     .entry-content.md th, .entry-panel-content th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
     .entry-content.md td, .entry-panel-content td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
     .entry-content.md tr:nth-child(even) td, .entry-panel-content tr:nth-child(even) td { background: #FAFAF8; }
+    .reader-md table { border-collapse: collapse; margin: 0.75rem 0; font-size: 13px; }
+    .reader-md th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
+    .reader-md td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
+    .reader-md tr:nth-child(even) td { background: #FAFAF8; }
     .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .entry-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
     .entry-related { margin: 0 0 0.75rem; padding: 0.75rem 0.9rem; border: 0.5px solid #D6D2C8; border-radius: 8px; background: #FDFCFA; }
@@ -5275,7 +5279,7 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
         var arrayBuf = new Uint8Array(byteNumbers).buffer;
         var textWithImages = await extractPptxText(arrayBuf, true);
         if (textWithImages.trim() && window.Forge && Forge.renderMarkdown) {
-          body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(textWithImages) + '</div>';
+          body.innerHTML = '<div class="reader-md" style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(textWithImages) + '</div>';
           return;
         }
       }
@@ -5382,7 +5386,7 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
     }
     var xlsxText = new TextDecoder('utf-8').decode(xlsxBuf);
     if (window.Forge && Forge.renderMarkdown) {
-      body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(xlsxText) + '</div>';
+      body.innerHTML = '<div class="reader-md" style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(xlsxText) + '</div>';
     } else {
       body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;background:#fff;padding:20px;border-radius:6px;margin:0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + escHtml(xlsxText) + '</pre>';
     }
@@ -5392,7 +5396,7 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
   if (!resp.ok) throw new Error('Fetch failed with status ' + resp.status);
   var text = await resp.text();
   if (window.Forge && Forge.renderMarkdown) {
-    body.innerHTML = '<div style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(text) + '</div>';
+    body.innerHTML = '<div class="reader-md" style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(text) + '</div>';
   } else {
     body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;background:#fff;padding:20px;border-radius:6px;margin:0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + escHtml(text) + '</pre>';
   }
