@@ -271,7 +271,7 @@
     const bc  = type === 'success' ? 'rgba(34,197,94,0.4)'   :
                 type === 'error'   ? 'rgba(239,68,68,0.4)'    :
                 type === 'warn'    ? 'rgba(245,158,11,0.4)'   : 'rgba(255,255,255,0.12)';
-    const icon = type === 'success' ? 'OK' : type === 'error' ? 'âš ' : type === 'warn' ? '!' : 'i';
+    const icon = type === 'success' ? 'OK' : type === 'error' ? '\u26A0' : type === 'warn' ? '!' : 'i';
     el.style.cssText = `background:${bg};border:1px solid ${bc};border-radius:10px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:9px;color:#1B2A4A;font-family:'Inter',sans-serif;max-width:340px;animation:forgeToastIn .2s ease;box-shadow:0 4px 20px rgba(0,0,0,0.12);`;
     el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
     c.appendChild(el);
@@ -340,11 +340,13 @@
   // escapes, so the backslashes appeared. Removed from plain text only, never
   // inside an HTML tag, <pre> or <code>, so code that really contains "\[" is
   // left exactly as written.
+  // Also removes the backslash the conversion puts before _ * ` # + - . ! > ~
+  // (confirmed live: a file name showed as "pilatus\_summary.xlsx").
   function unescapeBrackets(html) {
     if (html.indexOf('\\') === -1) return html;
     return html.split(/(<pre[\s\S]*?<\/pre>|<code[^>]*>[\s\S]*?<\/code>|<[^>]+>)/).map(function (part, i) {
       if (i % 2 === 1) return part;
-      return part.replace(/\\([\[\]])/g, '$1');
+      return part.replace(/\\([\[\]_*`#+\-.!>~])/g, '$1');
     }).join('');
   }
 
