@@ -242,6 +242,7 @@
     .entry-content.md th, .entry-panel-content th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
     .entry-content.md td, .entry-panel-content td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
     .entry-content.md tr:nth-child(even) td, .entry-panel-content tr:nth-child(even) td { background: #FAFAF8; }
+    .reader-md p:empty { display: none; }
     .reader-md table { border-collapse: collapse; margin: 0.75rem 0; font-size: 13px; }
     .reader-md th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
     .reader-md td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
@@ -5321,6 +5322,40 @@ async function renderMarkdownIntoReader(url, body, type, libraryFileId) {
       }
     }
     body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This file type can\'t be previewed here yet. <a href="' + escHtml(url) + '" target="_blank" style="color:#C17D3C;">Open directly &#8599;</a></div>';
+    return;
+  }
+  // A real .pptx file captured from a provider's own download is a ZIP
+  // archive too (starts with "PK"); reading it as text showed raw archive
+  // contents. The slide text is read out of the file here instead, one
+  // "Slide N" section each. Images are left out (the Download button gives
+  // the original file). A pptx that is already markdown text (sent from
+  // Forge's own chat) is not a ZIP and falls through to the text path.
+  if (type === 'pptx') {
+    var pptxResp = await fetch(url);
+    if (!pptxResp.ok) throw new Error('Fetch failed with status ' + pptxResp.status);
+    var pptxBuf = await pptxResp.arrayBuffer();
+    var pptxHead = new Uint8Array(pptxBuf.slice(0, 2));
+    if (pptxHead[0] === 0x50 && pptxHead[1] === 0x4B) {
+      var pptxMd = '';
+      try {
+        if (typeof JSZip === 'undefined') throw new Error('JSZip not loaded');
+        pptxMd = await extractPptxText(pptxBuf, false);
+      } catch (e) {
+        console.warn('[Diary] pptx preview failed:', e.message);
+      }
+      if (pptxMd.trim() && window.Forge && Forge.renderMarkdown) {
+        body.innerHTML = '<div class="reader-md" style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(pptxMd) + '</div>';
+      } else {
+        body.innerHTML = '<div style="text-align:center;color:#9E9890;padding:40px;font-family:Inter,sans-serif;font-size:13px;">This presentation has no text to preview. Use Download to open the original file.</div>';
+      }
+      return;
+    }
+    var pptxText = new TextDecoder('utf-8').decode(pptxBuf);
+    if (window.Forge && Forge.renderMarkdown) {
+      body.innerHTML = '<div class="reader-md" style="background:#fff;padding:20px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + Forge.renderMarkdown(pptxText) + '</div>';
+    } else {
+      body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#1B2A4A;background:#fff;padding:20px;border-radius:6px;margin:0;box-shadow:0 1px 4px rgba(0,0,0,0.08);">' + escHtml(pptxText) + '</pre>';
+    }
     return;
   }
   // A real .xlsx file captured from a provider's own download is a ZIP
