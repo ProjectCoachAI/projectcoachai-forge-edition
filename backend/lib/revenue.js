@@ -3,7 +3,8 @@
 // What this does (and why it lives in its own file):
 //  - revenue_events holds one row per paid Stripe invoice (positive amount,
 //    VAT/GST already taken out: that money is not ours) and one NEGATIVE row
-//    per issued credit note (a refund), so refunds reduce revenue.
+//    per issued credit note OR per refund made straight on a payment (the Refund
+//    button in the Stripe dashboard creates no credit note), so refunds reduce revenue.
 //  - Accounts that belong to the company (the owners' own test accounts) can be
 //    listed in the INTERNAL_ACCOUNT_EMAILS / INTERNAL_ACCOUNT_DOMAINS Railway
 //    variables. They are kept in the table but reported separately, so the
@@ -111,6 +112,57 @@ async function recordCreditNote(db, cn) {
      ON CONFLICT (stripe_invoice_id) DO NOTHING`,
     [key, cn.customer || orig.rows[0].customer_id, -amount, ymOf(cn.created), new Date(cn.created * 1000).toISOString(),
      orig.rows[0].customer_email, cn.invoice]
+  );
+  return { recorded: true, amount };
+}
+
+// A refund made directly on a payment (Stripe dashboard "Refund" button, or the
+// API) creates a Refund object but no credit note. Refunds issued THROUGH a credit
+// note are skipped here because recordCreditNote already books them (the amount
+// there is exact and excludes VAT). The refund amount includes VAT, so it is
+// scaled to the revenue recorded for that invoice. `charge` may be passed when
+// the caller already has it (the charge.refunded webhook carries it).
+async function recordRefund(stripe, db, refund, charge) {
+  if (!refund || !refund.id) return { recorded: false, reason: 'no refund' };
+  if (refund.status && refund.status !== 'succeeded' && refund.status !== 'pending') return { recorded: false, reason: 'refund ' + refund.status };
+  await ensureRevenueTable(db);
+  const key = 'rf_' + refund.id;
+  const existing = await db.query(`SELECT 1 FROM revenue_events WHERE stripe_invoice_id=$1`, [key]);
+  if (existing.rows.length) return { recorded: false, reason: 'already recorded' };
+
+  if (!charge || typeof charge !== 'object') {
+    const chargeId = typeof refund.charge === 'string' ? refund.charge : (refund.charge && refund.charge.id);
+    if (!chargeId) return { recorded: false, reason: 'no charge' };
+    charge = await stripe.charges.retrieve(chargeId);
+  }
+  const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : (charge.invoice && charge.invoice.id);
+  if (!invoiceId) return { recorded: false, reason: 'not an invoice payment' };
+
+  const orig = await db.query(
+    `SELECT amount_gross, customer_id, customer_email FROM revenue_events WHERE stripe_invoice_id=$1`, [invoiceId]);
+  if (!orig.rows.length) return { recorded: false, reason: 'invoice not recorded as paid' };
+
+  // Already booked through a credit note? Then leave it to that path.
+  try {
+    const cns = await stripe.creditNotes.list({ invoice: invoiceId, limit: 100 });
+    const linked = (cns.data || []).some(cn => cn.refund === refund.id ||
+      (Array.isArray(cn.refunds) && cn.refunds.some(r => r === refund.id || r.id === refund.id || r.refund === refund.id)));
+    if (linked) return { recorded: false, reason: 'covered by credit note' };
+  } catch (_) { /* fall through: the cap below still prevents refunding more than was paid */ }
+
+  const paidCents = charge.amount || 0;
+  if (!(paidCents > 0) || !(refund.amount > 0)) return { recorded: false, reason: 'no amount' };
+  const gross = num(orig.rows[0].amount_gross);
+  const done = await db.query(`SELECT COALESCE(SUM(-amount_gross),0) AS s FROM revenue_events WHERE refund_of=$1`, [invoiceId]);
+  const remaining = Math.max(gross - num(done.rows[0].s), 0);
+  const amount = round2(Math.min(gross * Math.min(refund.amount / paidCents, 1), remaining));
+  if (!(amount > 0)) return { recorded: false, reason: 'nothing left to refund' };
+  await db.query(
+    `INSERT INTO revenue_events(stripe_invoice_id, customer_id, amount_gross, stripe_fee, amount_net, year_month, created_at, customer_email, refund_of)
+     VALUES($1,$2,$3,0,$3,$4,$5,$6,$7)
+     ON CONFLICT (stripe_invoice_id) DO NOTHING`,
+    [key, charge.customer || orig.rows[0].customer_id, -amount, ymOf(refund.created), new Date(refund.created * 1000).toISOString(),
+     orig.rows[0].customer_email, invoiceId]
   );
   return { recorded: true, amount };
 }
@@ -312,7 +364,7 @@ function clearMrrCache() { _mrrCache = null; }
 async function resync(stripe, db, sinceDate) {
   await ensureRevenueTable(db);
   const sinceTs = Math.floor(sinceDate.getTime() / 1000);
-  const result = { invoicesSeen: 0, invoicesAdded: 0, creditNotesSeen: 0, creditNotesAdded: 0, skipped: {} };
+  const result = { invoicesSeen: 0, invoicesAdded: 0, creditNotesSeen: 0, creditNotesAdded: 0, refundsSeen: 0, refundsAdded: 0, skipped: {} };
 
   let after;
   for (let page = 0; page < 50; page++) {
@@ -342,12 +394,29 @@ async function resync(stripe, db, sinceDate) {
     if (!res.has_more || !res.data.length) break;
     after = res.data[res.data.length - 1].id;
   }
+  // Refunds made directly on a payment (no credit note). Done after credit notes so
+  // the ones already booked through a credit note are recognised and skipped.
+  after = undefined;
+  for (let page = 0; page < 50; page++) {
+    const res = await stripe.refunds.list(Object.assign(
+      { created: { gte: sinceTs }, limit: 100 }, after ? { starting_after: after } : {}));
+    for (const rf of res.data) {
+      result.refundsSeen++;
+      let o;
+      try { o = await recordRefund(stripe, db, rf); }
+      catch (e) { o = { recorded: false, reason: 'error: ' + e.message }; }
+      if (o.recorded) result.refundsAdded++;
+      else result.skipped['refund: ' + o.reason] = (result.skipped['refund: ' + o.reason] || 0) + 1;
+    }
+    if (!res.has_more || !res.data.length) break;
+    after = res.data[res.data.length - 1].id;
+  }
   clearMrrCache();
   return result;
 }
 
 module.exports = {
-  ensureRevenueTable, invoiceToRow, recordInvoice, recordCreditNote, creditNoteCents,
+  ensureRevenueTable, invoiceToRow, recordInvoice, recordCreditNote, recordRefund, creditNoteCents,
   loadInternalFilter, fillMissingEmails, periodBounds, summarise,
   monthlyAmount, computeMrr, clearMrrCache, resync
 };

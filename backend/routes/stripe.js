@@ -419,6 +419,18 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       } catch(err) { console.error('Credit note tracking failed:', err.message); }
       break;
     }
+    case 'charge.refunded': {
+      // A refund made directly on a payment (no credit note). Booked as negative revenue.
+      const charge = event.data.object;
+      try {
+        const db = require('../lib/db');
+        for (const rf of ((charge.refunds && charge.refunds.data) || [])) {
+          const out = await revenue.recordRefund(stripe, db, rf, charge);
+          console.log('Refund tracked:', rf.id, out.recorded ? ('-$' + out.amount) : ('skipped: ' + out.reason));
+        }
+      } catch(err) { console.error('Refund tracking failed:', err.message); }
+      break;
+    }
     case 'invoice.payment_failed':
       console.log('Payment failed:', event.data.object.id); break;
   }
