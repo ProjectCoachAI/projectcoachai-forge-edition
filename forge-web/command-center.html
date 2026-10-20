@@ -1030,7 +1030,7 @@ Everything is ready — head to your workspace to get started.
       <div class="section-header">
         <div>
           <div class="section-title">API Costs</div>
-          <div class="section-sub">Estimated spend per AI provider · May 2026</div>
+          <div class="section-sub" id="costs-period-sub">Estimated spend per AI provider · this month</div>
         </div>
       </div>
 
@@ -1491,8 +1491,9 @@ Everything is ready — head to your workspace to get started.
 <script>
 // ── P&L: live data ───────────────────────────────────────────────────────
 // Revenue comes from /api/stripe/revenue (ex-VAT, net of refunds, internal
-// accounts excluded). Costs come from /api/costs/summary, which only supports
-// the current month, so other periods show revenue only and say so.
+// accounts excluded). Costs come from /api/costs/summary for the same period.
+// Compare-feature costs are only tracked per month, so Day and Week show
+// Diary (measured) costs only and say so.
 function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function money(n) { return (n < 0 ? '−' : '') + '$' + Math.abs(n).toFixed(2); }
 function fmt(n) { return '$' + Math.abs(n).toFixed(2); }
@@ -1534,7 +1535,7 @@ async function loadPl(period) {
   let rv = null, cs = null;
   try {
     const calls = [Forge.request('GET', '/api/stripe/revenue?period=' + period)];
-    if (period === 'month') calls.push(Forge.request('GET', '/api/costs/summary?period=month'));
+    calls.push(Forge.request('GET', '/api/costs/summary?period=' + period));
     const out = await Promise.all(calls.map(p => p.catch(() => null)));
     rv = out[0]; cs = out[1] || null;
   } catch (e) { console.warn('P&L load failed:', e); }
@@ -1568,7 +1569,7 @@ function renderPl(period, rv, cs) {
 
   // Costs (current month only)
   let c = null;
-  if (period === 'month' && cs && cs.ok && cs.data && typeof cs.data.totalApiCost !== 'undefined') c = cs.data;
+  if (cs && cs.ok && cs.data && cs.data.period === period && typeof cs.data.compareAvailable === 'boolean' && typeof cs.data.totalApiCost !== 'undefined') c = cs.data;
   const provEl = document.getElementById('pl-providers');
   let apiTotal = null, infra = null, totalCosts = null;
   if (c) {
@@ -1587,13 +1588,14 @@ function renderPl(period, rv, cs) {
     set('pl-api-total', apiTotal ? '−' + fmt(apiTotal) : '$0.00', 'strong-neg');
     setText('pl-api-margin', totalCosts ? pct(apiTotal, totalCosts) : '');
     set('pl-infra-total', infra ? '−' + fmt(infra) : '$0.00', 'strong-neg');
+    if (!c.compareAvailable) notices.push('Compare-feature costs are only tracked per month, so this period includes Diary (measured) AI costs only.');
+    if (period !== 'month') notices.push('Infrastructure is pro-rated from the monthly hosting cost.');
   } else {
     provEl.innerHTML = '<div class="pl-row"><div class="pl-label indent">Not available for this period</div><div class="pl-amount neg">—</div><div class="pl-margin"></div></div>';
     set('pl-api-total', '—', 'strong-neg');
     setText('pl-api-margin', '');
     set('pl-infra-total', '—', 'strong-neg');
-    if (period !== 'month') notices.push('Costs are only tracked for the current month, so profit/loss is shown for Month only. Revenue for this period is accurate.');
-    else notices.push('Could not load costs for this month, so profit/loss is not shown.');
+    notices.push('Could not load costs for this period, so profit/loss is not shown.');
   }
 
   // Bottom line
@@ -1638,7 +1640,7 @@ function renderPl(period, rv, cs) {
   // Summary sentence (facts only)
   let sentence = d.payments + ' payment' + (d.payments === 1 ? '' : 's') + ' billed ' + money(billed) + ' ex-VAT';
   sentence += refunded ? ', ' + money(refunded) + ' refunded, leaving ' + money(netRevenue) + ' net revenue.' : '.';
-  if (totalCosts != null) sentence += ' Costs this month: ' + money(totalCosts) + ' (AI APIs ' + money(apiTotal) + ', infrastructure ' + money(infra) + ', est. Stripe fees ' + money(fees) + ').';
+  if (totalCosts != null) sentence += ' Costs this period: ' + money(totalCosts) + ' (AI APIs ' + money(apiTotal) + ', infrastructure ' + money(infra) + ', est. Stripe fees ' + money(fees) + ').';
   setText('pl-narrative', sentence);
 
   // Internal accounts
@@ -2308,6 +2310,7 @@ async function loadLiveData() {
       const setP = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       setP('pl-api-spend',      '$' + totalApiSpend.toFixed(2));
       setP('pl-synth-count',    c.totalSynths + ' syntheses · 8 AIs');
+      setP('costs-period-sub',  'Estimated spend per AI provider · ' + new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }));
       setP('pl-synth-total',    c.totalSynths + ' syntheses total');
       setP('pl-cost-per-synth', '$' + c.costPerSynth);
       setP('pl-margin',         margin + '%');

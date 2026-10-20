@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const db = require('../lib/db');
+const { periodBounds } = require('../lib/revenue');
 
 // Provider cost per 1K tokens (approximate, update as pricing changes)
 // Verified 2026-09-06 against current pricing trackers, matched against
@@ -72,26 +73,29 @@ const AVG_OUTPUT_TOKENS = 800;
 // GET /api/costs/summary
 router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
   try {
-    // Get synthesis counts per provider from usage data
-    const period = req.query.period || 'month';
+    // Same calendar periods (UTC) as the revenue figures, so revenue and costs
+    // in the P&L always cover exactly the same window.
+    const period = ['day', 'week', 'month', 'quarter', 'year'].includes(req.query.period) ? req.query.period : 'month';
     const now = new Date();
-    let since;
-    switch(period) {
-      case 'day':   since = new Date(now - 24*60*60*1000); break;
-      case 'week':  since = new Date(now - 7*24*60*60*1000); break;
-      case 'year':  since = new Date(now.getFullYear(), 0, 1); break;
-      default:      since = new Date(now.getFullYear(), now.getMonth(), 1);
+    const { start: since, end: until } = periodBounds(period, now);
+
+    // synthesis_usage only keeps a per-MONTH counter, so the Compare estimate
+    // exists for month, quarter and year, but not for a single day or week.
+    // For those we report it as unavailable instead of inventing a split.
+    const compareAvailable = period === 'month' || period === 'quarter' || period === 'year';
+    let totalSynths = 0;
+    if (compareAvailable) {
+      const r = await db.query(
+        `SELECT SUM(used) as total FROM synthesis_usage WHERE year_month >= $1 AND year_month <= $2`,
+        [since.toISOString().slice(0,7), new Date(until.getTime() - 1).toISOString().slice(0,7)]
+      );
+      totalSynths = parseInt(r.rows[0]?.total || 0);
     }
 
-    // Get total syntheses from synthesis_usage table
-    const r = await db.query(
-      `SELECT SUM(used) as total FROM synthesis_usage WHERE year_month >= $1`,
-      [since.toISOString().slice(0,7)]
-    );
-    const totalSynths = parseInt(r.rows[0]?.total || 0);
-
     // Calculate costs per provider
-    const providerCosts = Object.entries(PROVIDER_COSTS).map(([id, p]) => {
+    // Ask Diary is not a Compare provider (its real usage is in the Diary section
+    // below), so it is left out of the Compare estimate.
+    const providerCosts = !compareAvailable ? [] : Object.entries(PROVIDER_COSTS).filter(([id]) => id !== 'ask-diary').map(([id, p]) => {
       const inputCost  = (AVG_INPUT_TOKENS  / 1000) * p.input  * totalSynths;
       const outputCost = (AVG_OUTPUT_TOKENS / 1000) * p.output * totalSynths;
       const total = inputCost + outputCost;
@@ -99,7 +103,12 @@ router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
     });
 
     const totalApiCost = providerCosts.reduce((s, p) => s + p.cost, 0);
-    const infraCost = period === 'month' ? 15.00 : period === 'year' ? 180.00 : period === 'week' ? 3.46 : 0.49;
+    // Hosting is a fixed monthly amount (Railway + domain). Override with the
+    // INFRA_MONTHLY_USD env var if the real bill differs. A month is charged in
+    // full; other periods are pro-rated by the days elapsed so far.
+    const infraMonthly = parseFloat(process.env.INFRA_MONTHLY_USD) > 0 ? parseFloat(process.env.INFRA_MONTHLY_USD) : 15.00;
+    const elapsedDays = (Math.min(now.getTime(), until.getTime()) - since.getTime()) / 86400000;
+    const infraCost = period === 'month' ? infraMonthly : parseFloat((infraMonthly * elapsedDays / 30.4375).toFixed(2));
     const costPerSynth = totalSynths > 0 ? totalApiCost / totalSynths : 0;
 
     // Diary/Continue Conversation's own real cost — genuinely different
@@ -113,8 +122,8 @@ router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
     // blended into one number.
     const diaryR = await db.query(
       `SELECT provider, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output, COUNT(*) as calls
-       FROM diary_chat_usage WHERE created_at >= $1 GROUP BY provider`,
-      [since]
+       FROM diary_chat_usage WHERE created_at >= $1 AND created_at < $2 GROUP BY provider`,
+      [since, until]
     );
     const diaryProviderCosts = diaryR.rows.map((row) => {
       const p = PROVIDER_COSTS[row.provider];
@@ -159,6 +168,10 @@ router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
     res.json({
       ok: true,
       period,
+      start: since.toISOString(),
+      end: until.toISOString(),
+      compareAvailable,
+      infraMonthly,
       totalSynths,
       totalApiCost: parseFloat(totalApiCost.toFixed(2)),
       infraCost,
