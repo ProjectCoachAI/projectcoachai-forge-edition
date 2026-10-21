@@ -970,6 +970,26 @@ async function createChatSession(sessionId, userEmail, model, messages, title, s
   );
 }
 
+// Saves a session whether or not its row already exists, in ONE statement,
+// so two requests for the same session (a double send, a retry after a cut
+// connection) can no longer collide on the primary key. An existing row is
+// only updated when it belongs to the same user: the update is skipped,
+// not applied, for a session_id owned by another account. Returns true when
+// the row was written, false when the id belongs to someone else (the
+// caller then saves under a new id instead of overwriting their session).
+async function upsertChatSession(sessionId, userEmail, model, messages, title, source) {
+  const r = await query(
+    `INSERT INTO chat_sessions (session_id, user_email, model, messages, title, source, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW())
+     ON CONFLICT (session_id) DO UPDATE
+       SET messages = EXCLUDED.messages, updated_at = NOW()
+       WHERE chat_sessions.user_email = EXCLUDED.user_email
+     RETURNING session_id`,
+    [sessionId, userEmail, model, JSON.stringify(messages || []), title || null, source || 'forge']
+  );
+  return r.rows.length > 0;
+}
+
 async function getChatSession(sessionId, userEmail) {
   const r = await query('SELECT * FROM chat_sessions WHERE session_id=$1 AND user_email=$2', [sessionId, userEmail]);
   return r.rows[0] || null;
@@ -1928,7 +1948,7 @@ async function logCompareApiError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, makeTurnLookup, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, upsertChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, makeTurnLookup, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

@@ -821,10 +821,19 @@ router.post('/', requireAuth, async (req, res) => {
         let sid = sessionId;
         try {
             if (sid) {
-                const existing = await db.getChatSession(sid, req.userEmail);
-                if (existing) {
-                    await db.updateChatSession(sid, req.userEmail, messages);
-                } else {
+                // One atomic save (insert, or update when the row is this
+                // user's own). Replaces a read-then-write that raced with
+                // itself and failed with a duplicate-key error on the
+                // primary key, losing the conversation (seen in the logs
+                // as "chat_sessions_pkey").
+                const saved = await db.upsertChatSession(sid, req.userEmail, model, messages, message.slice(0, 80), source);
+                if (!saved) {
+                    // The session id exists but belongs to a different
+                    // account. Never overwrite it: keep this person's
+                    // conversation under a new id instead (the new id is
+                    // returned to the page as sessionId).
+                    console.warn('[Chat] session id belongs to another account; saving under a new id. sid=' + sid + ' user=' + req.userEmail + ' source=' + (source || 'forge') + ' diaryEntryId=' + (diaryEntryId || '(none)'));
+                    sid = genSessionId();
                     await db.createChatSession(sid, req.userEmail, model, messages, message.slice(0, 80), source);
                 }
             } else {
@@ -832,7 +841,7 @@ router.post('/', requireAuth, async (req, res) => {
                 await db.createChatSession(sid, req.userEmail, model, messages, message.slice(0, 80), source);
             }
         } catch (dbErr) {
-            console.error('[Chat] session persist failed:', dbErr.message);
+            console.error('[Chat] session persist failed:', dbErr.message, 'sid=' + sid, 'user=' + req.userEmail);
         }
 
         // Fire-and-forget — see computeAndStoreUnifiedContent's own
