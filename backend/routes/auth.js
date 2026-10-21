@@ -7,6 +7,10 @@ const { sendMail } = require('../lib/emailTransport');
 
 const router = express.Router();
 
+// query() is used below (referral code, referral conversion, Google token) but
+// was never defined in this file, so those calls threw and were swallowed.
+const query = (...args) => db.query(...args);
+
 const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 const RESET_WINDOW_MS = 15 * 60 * 1000;
 
@@ -270,13 +274,20 @@ router.post('/password-reset/request', async (req, res) => {
       console.warn('⚠️ [Auth API] Password reset email could not be delivered:', mailError?.message || mailError);
     }
 
-    if (!process.env.SMTP_PASS || !deliveredViaEmail) {
-      return res.json({
-        success: true,
-        message: 'Reset token generated for local use. Enter it in the reset form.',
-        resetToken,
-        deliveryMode: 'local_token'
-      });
+    // Handing the reset token back in the response is only for local development.
+    // On the live service it would let anyone who knows an email address reset that
+    // account's password, so there the answer is always the same generic message.
+    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+    if (!deliveredViaEmail) {
+      console.error('[Auth API] password reset email was NOT delivered for a reset request');
+      if (!isProduction) {
+        return res.json({
+          success: true,
+          message: 'Reset token generated for local use. Enter it in the reset form.',
+          resetToken,
+          deliveryMode: 'local_token'
+        });
+      }
     }
 
     return res.json({ success: true, message: genericMessage, deliveryMode: 'email' });
@@ -425,7 +436,20 @@ router.patch('/profile', async (req, res) => {
     const { name, avatar } = req.body;
     const fields = {};
     if (name) fields.name = String(name).trim().slice(0, 100);
-    if (avatar) fields.avatar = String(avatar).slice(0, 500000); // base64 image
+    if (avatar) {
+      // A picture is stored as a data URL. It used to be cut off at 500,000
+      // characters, which silently corrupted any image above about 370 KB (the
+      // save still reported success, and the picture showed as empty after a
+      // reload). It is now checked and refused with a clear message instead.
+      const a = String(avatar);
+      if (!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(a)) {
+        return res.status(400).json({ success: false, error: 'Please use a PNG, JPEG, WebP or GIF image.' });
+      }
+      if (a.length > 700000) {
+        return res.status(413).json({ success: false, error: 'That image is too large. Please choose a smaller one.' });
+      }
+      fields.avatar = a;
+    }
     if (Object.keys(fields).length === 0) return res.status(400).json({ success: false, error: 'Nothing to update' });
     await db.saveUser(session.user_email, fields);
     res.json({ success: true });

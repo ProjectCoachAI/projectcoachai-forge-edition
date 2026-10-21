@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <!-- Google Tag Manager -->
@@ -3244,7 +3244,7 @@ if (!window.electronAPI) {
             const avatarEl = document.getElementById('profileAvatar');
             if (profile.avatar) {
                 if (avatarEl) {
-                    avatarEl.style.backgroundImage = 'url(' + profile.avatar + ')';
+                    avatarEl.style.backgroundImage = 'url("' + String(profile.avatar).replace(/"/g, '%22') + '")';
                     avatarEl.style.backgroundSize = 'cover';
                     avatarEl.style.backgroundPosition = 'center';
                     avatarEl.classList.add('has-image');
@@ -4204,34 +4204,53 @@ function scrollToSection(sectionId) {
             if (!input) return;
             input.onchange = function() {
                 var file = input.files[0]; if (!file) return;
-                if (file.size > 500000) { showNotification('Image too large. Please use an image under 500KB.'); return; }
-                var reader = new FileReader();
-                reader.onload = async function(e) {
-                    var dataUrl = e.target.result;
-                    // Show immediately
+                if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) { showNotification('Please choose a PNG, JPEG, WebP or GIF image.'); return; }
+                if (file.size > 10 * 1024 * 1024) { showNotification('Image too large. Please choose one under 10 MB.'); return; }
+                var url = URL.createObjectURL(file);
+                var img = new Image();
+                img.onerror = function() { URL.revokeObjectURL(url); showNotification('Could not read that image.'); };
+                img.onload = async function() {
+                    URL.revokeObjectURL(url);
+                    // Shrink to a 256x256 square before saving: a few KB instead of
+                    // hundreds, so it always fits and the page stays fast.
+                    var size = 256, side = Math.min(img.width, img.height);
+                    var canvas = document.createElement('canvas');
+                    canvas.width = size; canvas.height = size;
+                    canvas.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+                    var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
                     var avatar = document.getElementById('profileAvatar');
+                    var initial = document.getElementById('profileAvatarInitial');
+                    var before = avatar ? { bg: avatar.style.backgroundImage, had: avatar.classList.contains('has-image'), initialShown: initial ? initial.style.display : '' } : null;
                     if (avatar) {
-                        avatar.style.backgroundImage = 'url('+dataUrl+')';
+                        avatar.style.backgroundImage = 'url("' + dataUrl + '")';
                         avatar.style.backgroundSize = 'cover';
                         avatar.style.backgroundPosition = 'center';
                         avatar.classList.add('has-image');
-                        var initial = document.getElementById('profileAvatarInitial');
                         if (initial) initial.style.display = 'none';
                     }
-                    // Save to backend
+                    var saved = false, reason = '';
                     try {
                         const r = await Forge.request('PATCH', '/api/auth/profile', { avatar: dataUrl });
-                        if (r.ok) {
-                            showNotification('Avatar saved!');
-                        } else {
-                            showNotification('Failed to save avatar: ' + (r.data?.error || 'Unknown error'));
+                        saved = !!(r && r.ok);
+                        if (!saved) reason = (r && r.data && r.data.error) || 'Unknown error';
+                    } catch (err) { reason = 'Could not reach the server.'; }
+                    if (saved) {
+                        // Update the saved copy of the user so other pages show the new picture straight away.
+                        try { var u = Forge.getUser(); if (u) { u.avatar = dataUrl; Forge.setUser(u); } } catch (_) {}
+                        showNotification('Avatar saved!');
+                    } else {
+                        // Put the old picture back so the page never shows one that was not saved.
+                        if (avatar && before) {
+                            avatar.style.backgroundImage = before.bg;
+                            if (!before.had) avatar.classList.remove('has-image');
+                            if (initial) initial.style.display = before.initialShown;
                         }
-                    } catch(err) {
-                        showNotification('Failed to save avatar.');
+                        showNotification('Failed to save avatar: ' + reason);
                     }
                 };
-                reader.readAsDataURL(file);
+                img.src = url;
             };
+            input.value = '';
             input.click();
         }
 
