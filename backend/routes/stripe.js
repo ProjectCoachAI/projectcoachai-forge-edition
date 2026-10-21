@@ -106,6 +106,21 @@ registerPrice(PRICE_IDS['sweep-pro-yearly'],  'sweep-pro', 'sweep-pro-yearly');
   if (pid && tier) registerPrice(pid, tier);
 });
 
+// The plan a live subscription is on, taken from the price it is actually billed
+// for. This matters when a customer changes plan in Stripe's own portal: the
+// subscription's saved metadata still names the old plan, the price does not lie.
+function tierFromSubscription(sub) {
+  try {
+    const item = sub && sub.items && sub.items.data && sub.items.data[0];
+    const plan = item && item.price && PRICE_PLANS[item.price.id];
+    if (plan) {
+      const meta = sub.metadata && sub.metadata.tierId;
+      return plan.accepts.includes(meta) ? meta : plan.tier;
+    }
+  } catch (_) {}
+  return (sub && sub.metadata && sub.metadata.tierId) || null;
+}
+
 // Returns { tier, corrected } for a price, or null if we don't sell that price.
 function resolvePlan(priceId, claimedTier) {
   const plan = PRICE_PLANS[priceId];
@@ -448,7 +463,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const sub = event.data.object;
-      const tierId = sub.metadata?.tierId || 'starter';
+      const tierId = tierFromSubscription(sub) || 'starter';
       const customerId = sub.customer;
       if (customerId && sub.status === 'active') {
         try {
@@ -475,7 +490,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       const sub = event.data.object;
       try {
         const db = require('../lib/db');
-        const cancelledTierId = sub.metadata?.tierId || null;
+        const cancelledTierId = tierFromSubscription(sub);
         const product = productForTier(cancelledTierId);
         const userRow = await db.query('SELECT email FROM users WHERE stripe_customer_id=$1', [sub.customer]);
         const userEmail = userRow.rows[0]?.email;
@@ -583,6 +598,7 @@ router.post('/revenue/resync', requireAuth, requireAdmin, async (req, res) => {
 router.PRICE_IDS = PRICE_IDS;
 router.productForTier = productForTier;
 router.resolvePlan = resolvePlan;
+router.tierFromSubscription = tierFromSubscription;
 router.PRICE_PLANS = PRICE_PLANS;
 router.upsertSubscription = upsertSubscription;
 router.ensureSubscriptionsTable = ensureSubscriptionsTable;

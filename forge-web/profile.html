@@ -2569,6 +2569,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </div>
                         </div>
 
+                        <div id="productPlansBox" style="margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-subtle);">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">Your plans</div>
+                            <div id="productPlansList" style="color: var(--text-secondary); line-height: 1.9;">Loading…</div>
+                            <div id="billingActions" style="display: none; margin-top: 0.9rem;">
+                                <button class="btn btn-secondary" onclick="openBillingPortal(this)">Manage billing &amp; cancel</button>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px; max-width: 520px;">Opens Stripe, our payment provider, where you can update your card, download invoices or cancel. If you cancel, your plan stays active until the end of the period you have paid for.</div>
+                            </div>
+                        </div>
+
                         <div style="color: var(--text-secondary); line-height: 1.8;" id="currentPlanFeatures">
                             <!-- Features populated dynamically -->
                         </div>
@@ -4255,6 +4264,65 @@ function scrollToSection(sectionId) {
         }
 
         function showNotification(msg) { if (typeof Forge !== 'undefined') Forge.showToast(msg, 'info', 2000); }
+
+        // ── Plans per product and billing ────────────────────────────────────
+        // One shared profile page serves Forge, Diary and Sweep, so the plans are
+        // listed per product from the per-product subscriptions table.
+        var PRODUCT_NAMES = { forge: 'Forge', diary: 'Diary', sweep: 'Sweep', excel: 'Excel', documents: 'Documents' };
+        var PLAN_NAMES = {
+            creator: 'Decide Faster', 'creator-yearly': 'Decide Faster (yearly)',
+            professional: 'Work Like a Pro', 'professional-yearly': 'Work Like a Pro (yearly)',
+            team: 'Run a Team', 'team-yearly': 'Run a Team (yearly)',
+            'diary-pro': 'Diary Pro', 'diary-pro-monthly': 'Diary Pro', 'diary-pro-yearly': 'Diary Pro (yearly)',
+            'sweep-pro': 'Sweep Pro', 'sweep-pro-yearly': 'Sweep Pro (yearly)',
+            'lite-unlimited': 'Forge Lite Unlimited'
+        };
+        async function loadProductPlans() {
+            var list = document.getElementById('productPlansList');
+            var actions = document.getElementById('billingActions');
+            if (!list) return;
+            try {
+                var r = await Forge.request('GET', '/api/stripe/subscriptions/mine');
+                var subs = (r && r.ok && r.data && r.data.subscriptions) || null;
+                if (!subs) { list.textContent = 'Your plans could not be loaded right now.'; return; }
+                var products = Object.keys(subs);
+                list.textContent = '';
+                if (!products.length) {
+                    list.textContent = 'You are on the free plan for all products.';
+                    return;
+                }
+                products.forEach(function (p) {
+                    var row = document.createElement('div');
+                    var name = document.createElement('strong');
+                    name.textContent = (PRODUCT_NAMES[p] || p) + ': ';
+                    name.style.color = 'var(--text-primary)';
+                    var plan = document.createElement('span');
+                    plan.textContent = PLAN_NAMES[subs[p]] || subs[p];
+                    row.appendChild(name); row.appendChild(plan);
+                    list.appendChild(row);
+                });
+                if (actions) actions.style.display = 'block';
+            } catch (e) {
+                list.textContent = 'Your plans could not be loaded right now.';
+            }
+        }
+        async function openBillingPortal(btn) {
+            var label = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
+            var failed = 'Could not open billing. Please try again, or email support@projectcoachai.com.';
+            try {
+                var r = await Forge.request('POST', '/api/stripe/create-portal-session', {
+                    returnUrl: window.location.origin + '/profile.html#settings'
+                });
+                if (r && r.ok && r.data && r.data.url) { window.location.href = r.data.url; return; }
+                Forge.showToast((r && r.data && r.data.error) || failed, 'error', 5000);
+            } catch (e) {
+                Forge.showToast(failed, 'error', 5000);
+            }
+            if (btn) { btn.disabled = false; btn.textContent = label; }
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadProductPlans);
+        else loadProductPlans();
 async function handleSignOut() {
             if (!confirm('Are you sure you want to sign out?')) return;
 
