@@ -1,0 +1,37 @@
+/*
+ * markdown.css - the one place that styles rendered markdown (tables and
+ * empty paragraphs) in Diary. Used by the entry view (.entry-content.md),
+ * the side panel (.entry-panel-content) and the file reader (.reader-md).
+ * Any other page that shows Forge.renderMarkdown() output (for example the
+ * shared-entry and continue pages) should load this file and put
+ * class="md-body" on the wrapper, instead of copying these rules.
+ */
+.md-body p:empty,
+.entry-content.md p:empty,
+.entry-panel-content p:empty,
+.reader-md p:empty { display: none; }
+
+.md-body table,
+.entry-content.md table,
+.entry-panel-content table,
+.reader-md table { border-collapse: collapse; margin: 0.75rem 0; font-size: 13px; }
+
+/* Entry view, side panel and shared pages fill the width; the reader sizes to its content. */
+.md-body table,
+.entry-content.md table,
+.entry-panel-content table { width: 100%; }
+
+.md-body th,
+.entry-content.md th,
+.entry-panel-content th,
+.reader-md th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
+
+.md-body td,
+.entry-content.md td,
+.entry-panel-content td,
+.reader-md td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
+
+.md-body tr:nth-child(even) td,
+.entry-content.md tr:nth-child(even) td,
+.entry-panel-content tr:nth-child(even) td,
+.reader-md tr:nth-child(even) td { background: #FAFAF8; }

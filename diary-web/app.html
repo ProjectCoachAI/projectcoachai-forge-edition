@@ -6,6 +6,7 @@
   <title>My Diary</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/markdown.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* overflow-anchor: none — confirmed as a real, direct fix via actual
@@ -235,18 +236,7 @@
     .entry-content code { background: #EDEAE3; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
     .entry-content strong { color: #1B2A4A; }
     .entry-content.md img { display: none; }
-    .entry-content.md p:empty { display: none; }
-    .entry-panel-content p:empty { display: none; }
-
-    .entry-content.md table, .entry-panel-content table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 13px; }
-    .entry-content.md th, .entry-panel-content th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
-    .entry-content.md td, .entry-panel-content td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
-    .entry-content.md tr:nth-child(even) td, .entry-panel-content tr:nth-child(even) td { background: #FAFAF8; }
-    .reader-md p:empty { display: none; }
-    .reader-md table { border-collapse: collapse; margin: 0.75rem 0; font-size: 13px; }
-    .reader-md th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
-    .reader-md td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
-    .reader-md tr:nth-child(even) td { background: #FAFAF8; }
+    /* Tables and empty paragraphs in rendered markdown: see /css/markdown.css (single source). */
     .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .entry-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
     .entry-related { margin: 0 0 0.75rem; padding: 0.75rem 0.9rem; border: 0.5px solid #D6D2C8; border-radius: 8px; background: #FDFCFA; }
@@ -2673,7 +2663,7 @@ function renderEntryCard(e) {
         var isHosted = att.status === 'hosted' && att.url;
         var clickHandler, badge;
         if (isHosted) {
-          clickHandler = 'openAttachmentReader(\'' + att.url.replace(/'/g, "\\'") + '\', \'' + escHtml(att.filename || 'Attachment').replace(/'/g, "\\'") + '\', \'' + type.replace(/'/g, "\\'") + '\')';
+          clickHandler = 'openAttachmentFromRow(this)';
           badge = ' <span style="color:#9E9890;">&#8226; Read here</span>';
         } else if (origUrl) {
           clickHandler = 'openOriginalUrl(this)';
@@ -2683,6 +2673,10 @@ function renderEntryCard(e) {
           badge = '';
         }
         var dataOrigAttr = (!isHosted && origUrl) ? ' data-orig-url="' + origUrl + '"' : '';
+        // Values for the reader go in data-* attributes (HTML-escaped), never
+        // inside an inline JavaScript string: a file name containing a
+        // backslash or quote used to be able to break the handler.
+        if (isHosted) dataOrigAttr = ' data-att-url="' + escHtml(att.url) + '" data-att-name="' + escHtml(att.filename || 'Attachment') + '" data-att-type="' + escHtml(type) + '"';
         var clickable = clickHandler ? ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;cursor:pointer;" onclick="' + clickHandler + '"' + dataOrigAttr : ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;"';
         // NOTE: added — attachments can accumulate quickly across a
         // long-running conversation (confirmed live, a real usage
@@ -2691,7 +2685,7 @@ function renderEntryCard(e) {
         // event.stopPropagation() is required: the row itself already
         // has its own click handler for opening the attachment, and
         // this button must not also trigger that.
-        var deleteBtn = '<button class="attachment-delete-btn" onclick="event.stopPropagation();deleteAttachment(' + e.id + ',\'' + escHtml(att.filename || '').replace(/'/g, "\\'") + '\',\'' + (att.type || '').replace(/'/g, "\\'") + '\')" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;padding:2px 6px;flex-shrink:0;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>';
+        var deleteBtn = '<button class="attachment-delete-btn" data-entry-id="' + e.id + '" data-att-name="' + escHtml(att.filename || '') + '" data-att-type="' + escHtml(att.type || '') + '" onclick="event.stopPropagation();deleteAttachmentFromBtn(this)" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;padding:2px 6px;flex-shrink:0;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>';
         // NOTE: added — Priority 8's proactive-notice decision was
         // designed but never actually implemented in this UI. Before
         // this, the ONLY visible difference between a captured and a
@@ -4962,6 +4956,16 @@ async function extractPptxText(arrayBuffer, includeImages) {
     if (paraTexts.length || slideImagesMd) slideTexts.push('## Slide ' + slideFiles[i].num + '\n\n' + paraTexts.join('\n') + slideImagesMd);
   }
   return slideTexts.join('\n\n');
+}
+
+// Click handlers for the attachment rows. They read the file name, URL and
+// type from data-* attributes (see the attachment row builder), so no
+// attachment text is ever placed inside an inline JavaScript string.
+function openAttachmentFromRow(el) {
+  openAttachmentReader(el.getAttribute('data-att-url'), el.getAttribute('data-att-name'), el.getAttribute('data-att-type'));
+}
+function deleteAttachmentFromBtn(el) {
+  deleteAttachment(Number(el.getAttribute('data-entry-id')), el.getAttribute('data-att-name'), el.getAttribute('data-att-type'));
 }
 
 async function openAttachmentReader(url, filename, type, libraryFileId) {

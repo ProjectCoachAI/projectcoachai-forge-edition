@@ -368,6 +368,13 @@
     var renderedHtml = text
       .replace(/^[-*•]\s*$/gm, '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      // Quote characters are escaped too. The image, caption and link rules
+      // below put captured text inside double-quoted HTML attributes
+      // (alt="...", href="...", src="..."). With the quote left as-is, an
+      // image description or URL containing a " could close the attribute
+      // and add its own (for example onerror=...). Found by the renderer
+      // tests (diary-web/tests/renderer.test.js).
+      .replace(/"/g,'&quot;')
       // NOTE: image rule added — confirmed live this renderer had NO
       // handling for markdown image syntax at all, ever, across every
       // one of its existing rules (bold, italic, headers, tables,
