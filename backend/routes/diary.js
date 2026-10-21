@@ -755,9 +755,9 @@ router.get('/usage', requireAuth, async (req, res) => {
     const { source } = req.query;
     const r = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
     const user = r.rows[0] || {};
-    const tier = user.tier || 'starter';
-    const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
-    const isPaid = PAID_TIERS.some(t => tier.includes(t));
+    const ent = await db.getDiaryEntitlement(req.userEmail);
+    const tier = ent.tier;
+    const isPaid = ent.entitled;
 
     let countR;
     if (source) {
@@ -1025,8 +1025,8 @@ router.post('/ask', requireAuth, async (req, res) => {
     // ── Daily limit ───────────────────────────────────────────────────────
     const userR = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
     const tier = (userR.rows[0] || {}).tier || 'starter';
-    const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
-    const isPaid = PAID_TIERS.some(t => tier.includes(t));
+    // One shared rule for who has Diary Pro (see lib/entitlements.js).
+    const isPaid = await db.hasDiaryPro(req.userEmail);
     const countR = await db.query(
       `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE found_results) AS successful
        FROM diary_search_log WHERE user_email=$1 AND search_date=$2 AND query LIKE 'ask:%'`,
@@ -1235,8 +1235,8 @@ router.get('/search', requireAuth, async (req, res) => {
     try {
       const userR = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
       const tier = (userR.rows[0] || {}).tier || 'starter';
-      const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
-      isPaid = PAID_TIERS.some(t => tier.includes(t));
+      // One shared rule for who has Diary Pro (see lib/entitlements.js).
+      isPaid = await db.hasDiaryPro(req.userEmail);
       if (!isPaid) {
         // NOTE: now reuses the shared, already-validated safeTz computed
         // above, rather than re-validating separately here.

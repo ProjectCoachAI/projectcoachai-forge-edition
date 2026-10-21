@@ -5,6 +5,7 @@
  * DATABASE_URL is set automatically by Railway when Postgres is linked.
  */
 const { Pool } = require('pg');
+const { diaryEntitlement } = require('./entitlements');
 
 const pool = new Pool({ max: 20, idleTimeoutMillis: 30000, connectionTimeoutMillis: 5000,
   connectionString: process.env.DATABASE_URL,
@@ -841,16 +842,23 @@ function getMessagesPerEntryCap(tier) {
 // not recognizing 'diary-pro-monthly'/'diary-pro-yearly' as keys at
 // all (now added above), but reading from the per-product table here
 // too closes the same, deeper gap for good, not just this one symptom.
-async function getDiaryTier(userEmail) {
+// One answer to "does this person have Diary Pro?", used by search, Ask Diary, the
+// usage count, Continue Conversation and Listen. It reads the per-product
+// subscriptions table (see lib/entitlements.js for the rules and why).
+async function getDiaryEntitlement(userEmail) {
+  let rows = [];
   try {
-    const subR = await query(
-      "SELECT tier FROM subscriptions WHERE user_email=$1 AND product='diary' AND status='active'",
-      [userEmail]
-    );
-    if (subR.rows.length) return subR.rows[0].tier;
-  } catch(_) {}
+    const r = await query('SELECT product, tier, status FROM subscriptions WHERE user_email=$1', [userEmail]);
+    rows = r.rows || [];
+  } catch (_) {}
   const user = await getUser(userEmail);
-  return user?.tier || 'starter';
+  return diaryEntitlement(rows, user && user.tier);
+}
+async function hasDiaryPro(userEmail) {
+  return (await getDiaryEntitlement(userEmail)).entitled;
+}
+async function getDiaryTier(userEmail) {
+  return (await getDiaryEntitlement(userEmail)).tier;
 }
 
 async function checkAndIncrementChatContinueUsage(userEmail, diaryEntryId, existingSessionId) {
@@ -1952,7 +1960,7 @@ async function logCompareApiError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, upsertChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, makeTurnLookup, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
+module.exports = { init, query, hasDiaryPro, getDiaryEntitlement, getDiaryTier, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, upsertChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, makeTurnLookup, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {
