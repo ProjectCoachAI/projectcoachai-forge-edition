@@ -1188,23 +1188,23 @@ Everything is ready — head to your workspace to get started.
       <div class="stats-row">
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">Uptime (30d)</div>
-          <div class="stat-card-value">99.7%</div>
-          <div class="stat-card-delta delta-up">Railway · All systems go</div>
+          <div class="stat-card-value" id="sh-uptime">&mdash;</div>
+          <div class="stat-card-sub" id="sh-uptime-sub">No data yet &middot; needs uptime monitor</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--amber)">
-          <div class="stat-card-label">Open Issues</div>
-          <div class="stat-card-value">5</div>
-          <div class="stat-card-sub">2 critical · 3 minor</div>
+          <div class="stat-card-label">Services not operational</div>
+          <div class="stat-card-value" id="sh-issues">&mdash;</div>
+          <div class="stat-card-sub" id="sh-issues-sub">Checking&hellip;</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--blue)">
-          <div class="stat-card-label">Avg API Latency</div>
-          <div class="stat-card-value">3.2s</div>
-          <div class="stat-card-sub">Across all providers</div>
+          <div class="stat-card-label">Backend response</div>
+          <div class="stat-card-value" id="sh-latency">&mdash;</div>
+          <div class="stat-card-sub" id="sh-latency-sub">Measured from this browser</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">Error Rate (24h)</div>
-          <div class="stat-card-value">0.4%</div>
-          <div class="stat-card-delta delta-up">Below 1% threshold</div>
+          <div class="stat-card-value">&mdash;</div>
+          <div class="stat-card-sub">No data yet</div>
         </div>
       </div>
 
@@ -1213,55 +1213,13 @@ Everything is ready — head to your workspace to get started.
           <div class="panel-header">
             <div class="panel-title"><span class="panel-title-dot"></span>Service Status</div>
           </div>
-          <div class="panel-body" style="padding:12px 20px">
-            <div class="health-row">
-              <div class="health-service">Railway (Backend)</div>
-              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
-              <div class="health-latency">42ms</div>
-              <div class="health-uptime">99.9%</div>
-            </div>
-            <div class="health-row">
-              <div class="health-service">Stripe (Payments)</div>
-              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
-              <div class="health-latency">210ms</div>
-              <div class="health-uptime">100%</div>
-            </div>
-            <div class="health-row">
-              <div class="health-service">Claude API</div>
-              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
-              <div class="health-latency">1.8s</div>
-              <div class="health-uptime">99.8%</div>
-            </div>
-            <div class="health-row">
-              <div class="health-service">OpenAI API</div>
-              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
-              <div class="health-latency">2.1s</div>
-              <div class="health-uptime">99.5%</div>
-            </div>
-            <div class="health-row">
-              <div class="health-service">Gemini API</div>
-              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
-              <div class="health-latency">3.4s</div>
-              <div class="health-uptime">99.7%</div>
-            </div>
-            <div class="health-row">
-              <div class="health-service">DeepSeek API</div>
-              <div class="health-status"><span class="status-dot dot-amber"></span>Degraded</div>
-              <div class="health-latency">8.1s</div>
-              <div class="health-uptime">97.2%</div>
-            </div>
-            <div class="health-row" style="border-bottom:none">
-              <div class="health-service">forge.css / CDN</div>
-              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
-              <div class="health-latency">12ms</div>
-              <div class="health-uptime">100%</div>
-            </div>
-          </div>
+          <div class="panel-body" style="padding:12px 20px" id="sh-rows"><div style="padding:12px 0;color:var(--text-muted);font-size:12px">Checking&hellip;</div></div>
+          <div style="padding:0 20px 14px;font-size:11px;color:var(--text-muted)" id="sh-note">Live checks from this browser. Latency = measured response time; uptime history needs the uptime monitor.</div>
         </div>
 
         <div class="panel">
           <div class="panel-header">
-            <div class="panel-title"><span class="panel-title-dot" style="background:var(--red)"></span>Open Dev Tickets</div>
+            <div class="panel-title"><span class="panel-title-dot" style="background:var(--red)"></span>Dev notes (hand-kept, not live)</div>
           </div>
           <div class="panel-body" style="padding:12px 20px">
             <div class="health-row">
@@ -1755,10 +1713,122 @@ function nav(id, el) {
   if (id === 'feature-usage')  loadFeatureUsage();
   if (id === 'referrals')      loadReferralStats();
   if (id === 'qr')             loadQRStats();
+  if (id === 'system')         loadSystemHealth();
   if (el) el.classList.add('active');
   const titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.textContent = titles[id] || id;
   window._currentView = id;
+}
+
+// ── System Health: real checks only ───────────────────────────────────────
+// Every figure on this page comes from a live check made by this browser.
+// Anything without a real source shows "No data yet" — never a typed-in number.
+var SH_SERVICES = [
+  { name: 'Backend (api.projectcoachai.com)', kind: 'backend' },
+  { name: 'Forge web (forge.projectcoachai.com)', kind: 'web' },
+  { name: 'Railway (platform)', kind: 'statuspage', url: 'https://status.railway.com/api/v2/status.json', page: 'https://status.railway.com' },
+  { name: 'Claude API', kind: 'statuspage', url: 'https://status.claude.com/api/v2/status.json', page: 'https://status.claude.com' },
+  { name: 'OpenAI API', kind: 'statuspage', url: 'https://status.openai.com/api/v2/status.json', page: 'https://status.openai.com' },
+  { name: 'DeepSeek API', kind: 'statuspage', url: 'https://status.deepseek.com/api/v2/status.json', page: 'https://status.deepseek.com' },
+  { name: 'Gemini API', kind: 'none', page: 'https://aistudio.google.com/status' },
+  { name: 'Stripe (payments)', kind: 'statuspage', url: 'https://status.stripe.com/current', page: 'https://status.stripe.com', stripe: true }
+];
+
+function shTimed(url, opts) {
+  var t0 = performance.now();
+  return fetch(url, Object.assign({ cache: 'no-store' }, opts || {})).then(function(r) {
+    return { r: r, ms: Math.round(performance.now() - t0) };
+  });
+}
+function shFmtMs(ms) { return ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms'; }
+
+async function shCheck(svc) {
+  // returns { state: 'ok'|'degraded'|'down'|'unknown', text, ms }
+  try {
+    if (svc.kind === 'backend') {
+      var x = await shTimed('https://api.projectcoachai.com/health');
+      if (!x.r.ok) return { state: 'down', text: 'HTTP ' + x.r.status, ms: x.ms };
+      var j = null; try { j = await x.r.json(); } catch (e) {}
+      if (j && j.status === 'ok') return { state: 'ok', text: 'Operational', ms: x.ms };
+      return { state: 'degraded', text: 'Unexpected response', ms: x.ms };
+    }
+    if (svc.kind === 'web') {
+      var w = await shTimed(location.origin + '/');
+      return w.r.ok ? { state: 'ok', text: 'Operational', ms: w.ms } : { state: 'down', text: 'HTTP ' + w.r.status, ms: w.ms };
+    }
+    if (svc.kind === 'statuspage') {
+      var y = await shTimed(svc.url);
+      if (!y.r.ok) return { state: 'unknown', text: 'No data yet' };
+      var d = await y.r.json();
+      var ind = d && d.status && d.status.indicator;
+      if (svc.stripe) {
+        // Stripe's feed uses a different shape: { largestatus: 'up' | ... }
+        var ls = d && d.largestatus;
+        if (ls === 'up') return { state: 'ok', text: 'Operational' };
+        if (ls) return { state: 'degraded', text: String(ls).slice(0, 40) };
+        return { state: 'unknown', text: 'No data yet' };
+      }
+      if (ind === 'none') return { state: 'ok', text: 'Operational' };
+      if (ind === 'minor') return { state: 'degraded', text: 'Degraded' };
+      if (ind === 'major' || ind === 'critical') return { state: 'down', text: 'Outage' };
+      return { state: 'unknown', text: 'No data yet' };
+    }
+  } catch (e) {
+    if (svc.kind === 'backend' || svc.kind === 'web') return { state: 'down', text: 'Unreachable' };
+  }
+  return { state: 'unknown', text: 'No data yet' };
+}
+
+var _shBusy = false;
+async function loadSystemHealth() {
+  if (_shBusy) return;
+  _shBusy = true;
+  try {
+    var results = await Promise.all(SH_SERVICES.map(shCheck));
+    var rows = document.getElementById('sh-rows');
+    if (!rows) return;
+    rows.textContent = '';
+    var notOk = 0, unknown = 0;
+    SH_SERVICES.forEach(function(svc, i) {
+      var res = results[i];
+      if (res.state === 'degraded' || res.state === 'down') notOk++;
+      if (res.state === 'unknown') unknown++;
+      var row = document.createElement('div');
+      row.className = 'health-row';
+      var name = document.createElement('div');
+      name.className = 'health-service';
+      if (svc.page) {
+        var a = document.createElement('a');
+        a.href = svc.page; a.target = '_blank'; a.rel = 'noopener';
+        a.style.color = 'inherit'; a.style.textDecoration = 'none';
+        a.textContent = svc.name;
+        name.appendChild(a);
+      } else { name.textContent = svc.name; }
+      var st = document.createElement('div');
+      st.className = 'health-status';
+      var dot = document.createElement('span');
+      dot.className = 'status-dot';
+      dot.style.background = res.state === 'ok' ? 'var(--green)' : res.state === 'degraded' ? 'var(--amber)' : res.state === 'down' ? 'var(--red)' : 'var(--text-muted)';
+      st.appendChild(dot);
+      st.appendChild(document.createTextNode(res.text));
+      var lat = document.createElement('div');
+      lat.className = 'health-latency';
+      lat.textContent = res.ms != null ? shFmtMs(res.ms) : '\u2014';
+      var up = document.createElement('div');
+      up.className = 'health-uptime';
+      up.textContent = '\u2014';
+      row.appendChild(name); row.appendChild(st); row.appendChild(lat); row.appendChild(up);
+      rows.appendChild(row);
+    });
+    var be = results[0];
+    var elL = document.getElementById('sh-latency'); if (elL) elL.textContent = be.ms != null ? shFmtMs(be.ms) : '\u2014';
+    var elLs = document.getElementById('sh-latency-sub'); if (elLs) elLs.textContent = be.state === 'ok' ? 'Backend /health, measured from this browser' : 'Backend: ' + be.text;
+    var elI = document.getElementById('sh-issues'); if (elI) elI.textContent = String(notOk);
+    var elIs = document.getElementById('sh-issues-sub');
+    if (elIs) elIs.textContent = unknown ? (unknown + ' with no data yet') : 'All checked services reporting';
+    var note = document.getElementById('sh-note');
+    if (note) note.textContent = 'Last checked ' + new Date().toLocaleTimeString() + '. Live checks from this browser; "No data yet" = no readable source. Uptime history needs the uptime monitor.';
+  } finally { _shBusy = false; }
 }
 
 function refresh() {
@@ -1771,6 +1841,7 @@ function refresh() {
   else if (id === 'students')       loadStudents();
   else if (id === 'signal')         loadSignals();
   else if (id === 'network')        loadNetwork();
+  else if (id === 'system')         loadSystemHealth();
   else if (id === 'users')          loadUsers();
   else if (id === 'subscriptions')  loadSubscriptions();
   else if (id === 'revenue')        loadRevenue();
