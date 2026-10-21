@@ -5,6 +5,23 @@ const path = require('path');
 const crypto = require('crypto');
 const { sendMail } = require('../lib/emailTransport');
 
+// Which product the person is using. Diary has its own website, so a request that
+// comes from it gets Diary's name, sender and links in the emails; everything else
+// stays Forge. The brand is chosen only from this fixed list, using the browser's
+// Origin header, so nothing a visitor types can put its own link in an email.
+const BRANDS = {
+  diary: { name: 'Diary', from: 'Diary <noreply@projectcoachai.com>', base: 'https://diary.projectcoachai.com', color: '#C17D3C' },
+  forge: { name: 'Forge', from: 'Forge <noreply@projectcoachai.com>', base: 'https://forge.projectcoachai.com', color: '#ff6b35' }
+};
+function brandFor(req) {
+  let host = '';
+  try { host = new URL(req.get('origin') || req.get('referer') || '').hostname; } catch (_) {}
+  return host === 'diary.projectcoachai.com' ? BRANDS.diary : BRANDS.forge;
+}
+function escapeHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 const router = express.Router();
 
 // query() is used below (referral code, referral conversion, Google token) but
@@ -157,15 +174,16 @@ router.post('/register', async (req, res) => {
       const vToken = require('crypto').randomBytes(32).toString('hex');
       const vExp = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       await db.saveUser(email, { verify_token: vToken, verify_token_exp: vExp });
-      const verifyUrl = 'https://forge.projectcoachai.com/verify-email.html?token=' + vToken + '&email=' + encodeURIComponent(email);
+      const brand = brandFor(req);
+      const verifyUrl = brand.base + '/verify-email.html?token=' + vToken + '&email=' + encodeURIComponent(email);
       await sendMail({
-        from: 'Forge <noreply@projectcoachai.com>',
+        from: brand.from,
         to: email,
-        subject: 'Welcome to Forge — verify your email',
+        subject: 'Welcome to ' + brand.name + ' — verify your email',
         html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto">' +
-          '<h2 style="color:#ff6b35">Welcome to Forge, ' + name + '!</h2>' +
+          '<h2 style="color:' + brand.color + '">Welcome to ' + brand.name + ', ' + escapeHtml(name) + '!</h2>' +
           '<p>Please verify your email to fully activate your account.</p>' +
-          '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:#ff6b35;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
+          '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:' + brand.color + ';color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
           '<p style="color:#888;font-size:12px;margin-top:24px">Link expires in 24 hours.</p>' +
           '</div>'
       });
@@ -250,15 +268,19 @@ router.post('/password-reset/request', async (req, res) => {
       })
     });
 
-    const resetLinkBase = process.env.AUTH_RESET_LINK_BASE || 'forge://reset-password';
+    const brand = brandFor(req);
+    const isDiary = brand === BRANDS.diary;
+    const resetLinkBase = isDiary
+      ? brand.base + '/reset-password.html'
+      : (process.env.AUTH_RESET_LINK_BASE || 'forge://reset-password');
     const resetLink = `${resetLinkBase}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
 
     let deliveredViaEmail = false;
     try {
       await sendMail({
-        from: `"ProjectCoachAI Forge Edition" <no-reply@projectcoachai.com>`,
+        from: isDiary ? brand.from : `"ProjectCoachAI Forge Edition" <no-reply@projectcoachai.com>`,
         to: email,
-        subject: 'Reset your ProjectCoachAI password',
+        subject: isDiary ? 'Reset your Diary password' : 'Reset your ProjectCoachAI password',
         text: [
           `Hi ${user.name || 'there'},`,
           '',
@@ -523,16 +545,17 @@ router.post('/send-verification', async (req, res) => {
     const exp = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     await db.saveUser(email, { verify_token: token, verify_token_exp: exp });
 
-    const verifyUrl = 'https://forge.projectcoachai.com/verify-email.html?token=' + token + '&email=' + encodeURIComponent(email);
+    const brand = brandFor(req);
+    const verifyUrl = brand.base + '/verify-email.html?token=' + token + '&email=' + encodeURIComponent(email);
     await sendMail({
-      from: 'Forge <noreply@projectcoachai.com>',
+      from: brand.from,
       to: email,
-      subject: 'Verify your Forge email',
+      subject: 'Verify your ' + brand.name + ' email',
       html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto">' +
-        '<h2 style="color:#ff6b35">Verify your Forge email</h2>' +
+        '<h2 style="color:' + brand.color + '">Verify your ' + brand.name + ' email</h2>' +
         '<p>Click the button below to verify your email address.</p>' +
-        '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:#ff6b35;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
-        '<p style="color:#888;font-size:12px;margin-top:24px">Link expires in 24 hours. If you did not create a Forge account, ignore this email.</p>' +
+        '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:' + brand.color + ';color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
+        '<p style="color:#888;font-size:12px;margin-top:24px">Link expires in 24 hours. If you did not create a ' + brand.name + ' account, ignore this email.</p>' +
         '</div>'
     });
     res.json({ success: true, message: 'Verification email sent' });
