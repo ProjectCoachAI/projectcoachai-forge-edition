@@ -272,7 +272,7 @@ router.post('/password-reset/request', async (req, res) => {
     const isDiary = brand === BRANDS.diary;
     const resetLinkBase = isDiary
       ? brand.base + '/reset-password.html'
-      : (process.env.AUTH_RESET_LINK_BASE || 'forge://reset-password');
+      : (process.env.AUTH_RESET_LINK_BASE || brand.base + '/reset-password.html');
     const resetLink = `${resetLinkBase}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
 
     let deliveredViaEmail = false;
