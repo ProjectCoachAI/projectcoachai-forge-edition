@@ -75,6 +75,45 @@ function productForTier(tierId) {
   return 'forge';
 }
 
+// ── Which plan a price buys ───────────────────────────────────────────────────
+// The browser tells us both a priceId and a tierId when it starts checkout.
+// The tierId is what the webhook later writes to users.tier, so it must never be
+// taken on trust: someone could pay for Diary Pro and claim 'team'. Each price we
+// sell is registered here with the plan it buys. A price that is not listed is
+// refused. A tierId that does not belong to the price is replaced by the price's
+// own plan. 'canonical' is the plain plan name the rest of the backend already
+// recognises; 'accepts' also lists the spelling existing pages send.
+const PRICE_PLANS = {};
+function registerPrice(priceId, canonical, ...alsoAccept) {
+  if (!priceId) return;
+  PRICE_PLANS[priceId] = { tier: canonical, accepts: [canonical, ...alsoAccept] };
+}
+registerPrice(PRICE_IDS.creator,        'creator');
+registerPrice(PRICE_IDS.professional,   'professional', 'work-like-a-pro');
+registerPrice(PRICE_IDS.team,           'team');
+registerPrice(PRICE_IDS['creator-yearly'],      'creator',      'creator-yearly');
+registerPrice(PRICE_IDS['professional-yearly'], 'professional', 'professional-yearly', 'work-like-a-pro');
+registerPrice(PRICE_IDS['team-yearly'],         'team',         'team-yearly');
+registerPrice(PRICE_IDS['diary-pro-monthly'], 'diary-pro', 'diary-pro-monthly');
+registerPrice(PRICE_IDS['diary-pro-yearly'],  'diary-pro', 'diary-pro-yearly');
+registerPrice(PRICE_IDS['sweep-pro'],         'sweep-pro');
+registerPrice(PRICE_IDS['sweep-pro-yearly'],  'sweep-pro', 'sweep-pro-yearly');
+// Any other price that is sold through this endpoint (for example a product not
+// listed above) is added in Railway without a code change:
+//   STRIPE_EXTRA_PRICES = price_xxx:excel-pro,price_yyy:documents-pro
+(process.env.STRIPE_EXTRA_PRICES || '').split(',').forEach(pair => {
+  const [pid, tier] = pair.split(':').map(x => (x || '').trim());
+  if (pid && tier) registerPrice(pid, tier);
+});
+
+// Returns { tier, corrected } for a price, or null if we don't sell that price.
+function resolvePlan(priceId, claimedTier) {
+  const plan = PRICE_PLANS[priceId];
+  if (!plan) return null;
+  if (claimedTier && plan.accepts.includes(claimedTier)) return { tier: claimedTier, corrected: false };
+  return { tier: plan.tier, corrected: true };
+}
+
 let _subscriptionsTableEnsured = false;
 async function ensureSubscriptionsTable() {
   if (_subscriptionsTableEnsured) return;
@@ -132,12 +171,26 @@ router.get('/subscriptions/mine', requireAuth, async (req, res) => {
 // Create Checkout Session
 router.post('/create-checkout-session', optionalAuth, async (req, res) => {
   try {
-    const { priceId, tierId, successUrl, cancelUrl } = req.body;
+    const { priceId, tierId: claimedTierId, successUrl, cancelUrl } = req.body;
     
     const userEmail = req.userEmail || req.body.email || null;
 
     if (!priceId) {
       return res.status(400).json({ error: 'Price ID required' });
+    }
+
+    // The plan comes from the price, never from the browser (see PRICE_PLANS).
+    const plan = resolvePlan(priceId, claimedTierId);
+    if (!plan) {
+      console.warn('[Stripe] checkout refused: unknown priceId=' + priceId + ' claimedTier=' + claimedTierId + ' user=' + (userEmail || 'anonymous'));
+      return res.status(400).json({
+        error: 'This plan is not available right now. Please contact support@projectcoachai.com.',
+        code: 'UNKNOWN_PRICE'
+      });
+    }
+    const tierId = plan.tier;
+    if (plan.corrected) {
+      console.warn('[Stripe] tier corrected from price: priceId=' + priceId + ' claimed=' + claimedTierId + ' using=' + tierId + ' user=' + (userEmail || 'anonymous'));
     }
 
     // Check for existing active subscription to prevent duplicates
@@ -150,6 +203,24 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
           error: 'You already have an active ' + tierId + ' subscription. Please manage your subscription in your Profile instead of purchasing again.',
           code: 'ALREADY_SUBSCRIBED'
         });
+      }
+      // users.tier only shows the most recent purchase, so someone who bought
+      // Diary Pro and then Sweep would pass the check above and could buy Diary
+      // Pro a second time. The per-product table keeps one row per product.
+      try {
+        await ensureSubscriptionsTable();
+        const have = await db.query(
+          "SELECT tier FROM subscriptions WHERE user_email=$1 AND product=$2 AND status='active'",
+          [userEmail, productForTier(tierId)]
+        );
+        if (have.rows[0] && have.rows[0].tier === tierId) {
+          return res.status(400).json({
+            error: 'You already have an active ' + tierId + ' subscription. Please manage your subscription in your Profile instead of purchasing again.',
+            code: 'ALREADY_SUBSCRIBED'
+          });
+        }
+      } catch (e) {
+        console.warn('[Stripe] per-product duplicate check failed (continuing):', e.message);
       }
       // If user has existing Stripe customer, use it
       if (user?.stripe_customer_id) {
@@ -275,14 +346,22 @@ router.get('/verify-session/:sessionId', async (req, res) => {
 });
 
 // Create Customer Portal Session
-router.post('/create-portal-session', async (req, res) => {
+// Requires a login. The customer is always the logged-in user's own Stripe
+// customer; a customerId in the request is ignored (it used to be trusted, so
+// anyone who knew an ID could open that customer's billing portal).
+router.post('/create-portal-session', requireAuth, async (req, res) => {
   try {
-    const { customerId, returnUrl } = req.body;
-    
+    const { customerId: requestedCustomerId, returnUrl } = req.body || {};
+    const db = require('../lib/db');
+    const own = await db.query('SELECT stripe_customer_id FROM users WHERE email=$1', [req.userEmail]);
+    const customerId = own.rows[0] && own.rows[0].stripe_customer_id;
     if (!customerId) {
-      return res.status(400).json({ error: 'Customer ID required' });
+      return res.status(404).json({ error: 'No billing account was found for this login.' });
     }
-    
+    if (requestedCustomerId && requestedCustomerId !== customerId) {
+      console.warn('[Stripe] portal: request named a different customer than the logged-in user\'s; using the user\'s own. user=' + req.userEmail);
+    }
+
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl || 'projectcoachai://subscription-managed',
@@ -326,28 +405,32 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             await db.query('UPDATE users SET diary_saves_count=0 WHERE email=$1', [email]).catch(()=>{});
           }
           console.log(`Checkout complete: ${email} -> ${tierId}`);
-          // Send confirmation email to user
-          try {
-            await sendMail({
-              from: '"Diary" <noreply@projectcoachai.com>',
-              to: email,
-              subject: 'Welcome to Diary Pro 🎉',
-              html: '<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;background:#F5F3EE;padding:32px;border-radius:12px">' +
-                '<h2 style="color:#1B2A4A;font-size:24px;margin-bottom:8px">You are now on Diary Pro</h2>' +
-                '<p style="color:#4A4035;font-size:15px;line-height:1.7">Your AI memory is now unlimited — every answer you save is stored permanently in your personal archive.</p>' +
-                '<div style="margin:24px 0">' +
-                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Unlimited saves</p>' +
-                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Lifetime archive — stored permanently</p>' +
-                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Full search across everything</p>' +
-                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Auto-categories &amp; smart tags</p>' +
-                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Quick Answer — ask any AI, save instantly</p>' +
-                '</div>' +
-                '<a href="https://diary.projectcoachai.com/app.html" style="display:inline-block;padding:12px 24px;background:#C17D3C;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-family:sans-serif">Open My Diary →</a>' +
-                '<p style="color:#9E9890;font-size:12px;margin-top:24px">Questions? Reply to this email or contact support@projectcoachai.com</p>' +
-                '<p style="color:#9E9890;font-size:11px">Xencore Global GmbH · Zürich, Switzerland</p>' +
-                '</div>'
-            });
-          } catch(mailErr) { console.warn('[Stripe] Welcome email failed:', mailErr.message); }
+          // Welcome email: this one is written for Diary Pro, so it is only sent
+          // for a Diary purchase (it used to go to every buyer, Forge and Sweep
+          // included). The list matches what Diary Pro actually adds.
+          if (productForTier(tierId) === 'diary') {
+            try {
+              await sendMail({
+                from: '"Diary" <noreply@projectcoachai.com>',
+                to: email,
+                subject: 'Welcome to Diary Pro 🎉',
+                html: '<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;background:#F5F3EE;padding:32px;border-radius:12px">' +
+                  '<h2 style="color:#1B2A4A;font-size:24px;margin-bottom:8px">You are now on Diary Pro</h2>' +
+                  '<p style="color:#4A4035;font-size:15px;line-height:1.7">Thank you for upgrading. Here is what Diary Pro adds to your free plan:</p>' +
+                  '<div style="margin:24px 0">' +
+                  '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Unlimited search across your whole diary</p>' +
+                  '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Unlimited Continue Conversation on your saved entries</p>' +
+                  '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Much longer continued conversations</p>' +
+                  '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Unlimited Listen</p>' +
+                  '</div>' +
+                  '<p style="color:#4A4035;font-size:14px;line-height:1.7">Saving stays free and unlimited, as before, and your diary is stored permanently.</p>' +
+                  '<a href="https://diary.projectcoachai.com/app.html" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#C17D3C;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-family:sans-serif">Open My Diary →</a>' +
+                  '<p style="color:#9E9890;font-size:12px;margin-top:24px">Questions? Reply to this email or contact support@projectcoachai.com</p>' +
+                  '<p style="color:#9E9890;font-size:11px">Xencore Global GmbH · Zürich, Switzerland</p>' +
+                  '</div>'
+              });
+            } catch(mailErr) { console.warn('[Stripe] Welcome email failed:', mailErr.message); }
+          }
           // Mark referral as converted
           await db.query(
             'UPDATE referral_clicks SET converted=TRUE, signup_email=$1 WHERE signup_email=$1 AND converted=FALSE',
@@ -370,10 +453,19 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       if (customerId && sub.status === 'active') {
         try {
           const db = require('../lib/db');
-          await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE stripe_customer_id=$2', [tierId, customerId]);
-          console.log(`Subscription updated: ${customerId} -> ${tierId}`);
-          const userRow = await db.query('SELECT email FROM users WHERE stripe_customer_id=$1', [customerId]);
+          const userRow = await db.query('SELECT email, tier FROM users WHERE stripe_customer_id=$1', [customerId]);
           const userEmail = userRow.rows[0]?.email;
+          const currentTier = userRow.rows[0]?.tier;
+          // users.tier holds one value, so it is only changed when this update is
+          // for the same product it already shows (a plan change), or when the
+          // user is on the free tier. Otherwise a renewal or change on an older
+          // product would overwrite a newer one. The per-product table below is
+          // always updated.
+          const sameProduct = !currentTier || currentTier === 'starter' || productForTier(currentTier) === productForTier(tierId);
+          if (sameProduct) {
+            await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE stripe_customer_id=$2', [tierId, customerId]);
+          }
+          console.log(`Subscription updated: ${customerId} -> ${tierId}${sameProduct ? '' : ' (users.tier left as is: different product)'}`);
           if (userEmail) await upsertSubscription(userEmail, productForTier(tierId), tierId, customerId, 'active');
         } catch(err) { console.error('DB update failed:', err.message); }
       }
@@ -383,18 +475,24 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       const sub = event.data.object;
       try {
         const db = require('../lib/db');
-        await db.query('UPDATE users SET tier=$1 WHERE stripe_customer_id=$2', ['starter', sub.customer]);
-        console.log(`Subscription cancelled: ${sub.customer} -> starter`);
         const cancelledTierId = sub.metadata?.tierId || null;
         const product = productForTier(cancelledTierId);
-        if (product) {
-          const userRow = await db.query('SELECT email FROM users WHERE stripe_customer_id=$1', [sub.customer]);
-          const userEmail = userRow.rows[0]?.email;
-          if (userEmail) {
-            await ensureSubscriptionsTable();
-            await db.query(`UPDATE subscriptions SET status='canceled', updated_at=NOW() WHERE user_email=$1 AND product=$2`, [userEmail, product]);
-          }
+        const userRow = await db.query('SELECT email FROM users WHERE stripe_customer_id=$1', [sub.customer]);
+        const userEmail = userRow.rows[0]?.email;
+        let newTier = 'starter';
+        if (product && userEmail) {
+          await ensureSubscriptionsTable();
+          await db.query(`UPDATE subscriptions SET status='canceled', updated_at=NOW() WHERE user_email=$1 AND product=$2`, [userEmail, product]);
+          // The user may still hold another product (for example Forge as well as
+          // Diary). users.tier then shows that one instead of dropping to free.
+          const left = await db.query(
+            `SELECT tier FROM subscriptions WHERE user_email=$1 AND status='active' ORDER BY updated_at DESC LIMIT 1`,
+            [userEmail]
+          );
+          if (left.rows[0]) newTier = left.rows[0].tier;
         }
+        await db.query('UPDATE users SET tier=$1 WHERE stripe_customer_id=$2', [newTier, sub.customer]);
+        console.log(`Subscription cancelled: ${sub.customer} -> ${newTier}`);
       } catch(err) { console.error('DB update failed:', err.message); }
       break;
     }
@@ -484,6 +582,8 @@ router.post('/revenue/resync', requireAuth, requireAdmin, async (req, res) => {
 // so it reuses this exact mapping/upsert logic instead of duplicating it.
 router.PRICE_IDS = PRICE_IDS;
 router.productForTier = productForTier;
+router.resolvePlan = resolvePlan;
+router.PRICE_PLANS = PRICE_PLANS;
 router.upsertSubscription = upsertSubscription;
 router.ensureSubscriptionsTable = ensureSubscriptionsTable;
 
