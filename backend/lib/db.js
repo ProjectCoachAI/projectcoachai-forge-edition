@@ -514,6 +514,11 @@ async function init() {
   // Safe migrations — each runs independently, never blocks startup
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) DEFAULT 'en'").catch(() => {});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_student BOOLEAN DEFAULT FALSE").catch(() => {});
+  // Password reset: routes/auth.js stores the reset token hash and expiry here.
+  // This used to sit inside migrateFromJson(), which returns early on the live
+  // server (no data/users.json), so the column was never created and every
+  // "forgot password" request failed with a server error.
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset JSONB").catch(() => {});
   await migrateDiary().catch(e => console.warn('[Diary migration error]', e.message));
   console.log('🐘 [DB] PostgreSQL schema ready');
   await migrateFromJson().catch(() => {});
@@ -584,10 +589,6 @@ async function migrateFromJson() {
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_token_expiry BIGINT").catch(() => {});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS diary_saves_count INTEGER DEFAULT 0").catch(() => {});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS diary_enabled BOOLEAN DEFAULT TRUE").catch(() => {});
-  // Password reset: routes/auth.js stores the reset token hash and expiry here.
-  // The column was never created, so every "forgot password" request failed with
-  // a server error and no reset could be completed.
-  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset JSONB").catch(() => {});
 
   await query('INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
         [email, ym, d.used||0, JSON.stringify(d.entries||[])]);
