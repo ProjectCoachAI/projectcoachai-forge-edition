@@ -63,19 +63,21 @@
     .diary-layout { display: flex; max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 58px); }
 
     /* SIDEBAR */
-    .diary-sidebar { width: 200px; flex-shrink: 0; border-right: 0.5px solid #D6D2C8; padding: 1.5rem 1rem; position: sticky; top: 58px; height: calc(100vh - 58px); overflow-y: auto; transition: margin-left 0.2s ease, transform 0.25s ease; }
+    .diary-sidebar { width: 224px; flex-shrink: 0; border-right: 0.5px solid #D6D2C8; padding: 1.5rem 1rem; position: sticky; top: 58px; height: calc(100vh - 58px); overflow-y: auto; transition: margin-left 0.2s ease, transform 0.25s ease; }
     /* Collapsed via a NEGATIVE margin rather than display:none, so the
        sidebar's own collapse can be genuinely animated — display:none has
        no meaningful transition at all, it just snaps instantly. */
-    .diary-sidebar.sidebar-collapsed { margin-left: -232px; } /* 200px width + 1rem*2 padding + border, so nothing peeks out */
+    .diary-sidebar.sidebar-collapsed { margin-left: -256px; } /* 224px width + 1rem*2 padding + border, so nothing peeks out */
     .sidebar-backdrop { display: none; }
     .sidebar-title { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #9E9890; margin-bottom: 0.6rem; padding: 0 0.5rem; }
     .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #6B6559; transition: all 0.15s; margin-bottom: 2px; }
     .cat-item:hover { background: #EDEAE3; color: #1B2A4A; }
     .cat-item.active { background: #1B2A4A; color: #F5F3EE; }
-    .cat-count { font-size: 11px; opacity: 0.7; }
-    .cat-item > span:first-child { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+    .cat-item { gap: 8px; } /* keeps the count from touching a long name */
+    .cat-count { font-size: 11px; opacity: 0.7; flex-shrink: 0; }
+    .cat-item > span:first-child { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
     .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+    .cat-item.active .cat-dot { box-shadow: 0 0 0 1.5px rgba(245,243,238,0.85); } /* stays visible on the navy row */
     .sidebar-divider { height: 0.5px; background: #D6D2C8; margin: 1rem 0; }
 
     /* MAIN */
@@ -228,6 +230,8 @@
     .entry-content p { margin-bottom: 0.5rem; }
     .entry-content h1,.entry-content h2,.entry-content h3 { font-family: Lora,serif; color: #1B2A4A; margin: 0.75rem 0 0.4rem; }
     .entry-content ul,.entry-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
+    /* Two-digit list numbers (10., 11. ...) were cut off at the left edge of the scrolling box. */
+    .entry-content ol { padding-left: 2.1rem; }
     .entry-content code { background: #EDEAE3; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
     .entry-content strong { color: #1B2A4A; }
     .entry-content.md img { display: none; }
@@ -359,6 +363,7 @@
     .entry-panel-content p { margin-bottom: 0.75rem; }
     .entry-panel-content h1,.entry-panel-content h2,.entry-panel-content h3 { font-family: 'Lora', serif; margin: 1rem 0 0.5rem; color: #1B2A4A; }
     .entry-panel-content ul,.entry-panel-content ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .entry-panel-content ol { padding-left: 2.2rem; }
     .entry-panel-content code { background: #EDEAE3; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
     .entry-panel-content strong { color: #1B2A4A; }
     .entry-panel-actions { padding: 0.75rem 1.25rem; border-top: 0.5px solid #D6D2C8; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
@@ -2753,7 +2758,15 @@ function renderEntryCard(e) {
 // Each category gets one stable colour, worked out from its name, so the same
 // category looks the same in the list, the sidebar and an open entry. Amber and
 // orange are left out on purpose (they mean "action"); General stays neutral.
-var CAT_PALETTE = ['#2F5F9E', '#216B66', '#3F6B2A', '#6B4B9A', '#A23C5B', '#434FA0', '#7C4F32', '#4A5F72', '#8A3F7E', '#6B6420'];
+var CAT_PALETTE = ['#2F5F9E', '#216B66', '#3F6B2A', '#6B4B9A', '#A23C5B', '#434FA0', '#7C4F32', '#4A5F72', '#8A3F7E', '#6B6420',
+  '#0E7490', '#9F3A2E', '#5C6B1F', '#B4532A', '#3E7C59', '#6B5B95'];
+// Past the palette, extra colours are generated (dark enough for white-ish backgrounds) so no category ever has to share.
+function _extraCatColor(i) {
+  var h = ((i * 137.508) % 360) / 360, s = 0.5, l = 0.36;
+  function f(p, q, t) { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q - p) * 6 * t; if (t < 1/2) return q; if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; }
+  var q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  return '#' + [f(p, q, h + 1/3), f(p, q, h), f(p, q, h - 1/3)].map(function(x) { var v = Math.round(x * 255).toString(16); return v.length < 2 ? '0' + v : v; }).join('');
+}
 var _catColorMap = {};
 function _catHash(n) {
   var h = 0;
@@ -2770,6 +2783,7 @@ function assignCatColors(names) {
   keys.forEach(function(k) {
     var slot = _catHash(k) % CAT_PALETTE.length, tries = 0;
     while (taken[slot] && tries < CAT_PALETTE.length) { slot = (slot + 1) % CAT_PALETTE.length; tries++; }
+    if (taken[slot]) { map[k] = _extraCatColor(Object.keys(map).length); return; }
     taken[slot] = true;
     map[k] = CAT_PALETTE[slot];
   });
@@ -4485,7 +4499,7 @@ function getTableArtifactSource(entry, art) {
     if (cleanKey(lines[art.position]) !== cleanKey(art.headers.join(''))) return null;
     var offset = 0;
     for (var i = 0; i < art.position; i++) offset += lines[i].length + 1;
-    var re = new RegExp('⁣\\*\\*([^*]+)\\*\\*⁣', 'g');
+    var re = new RegExp('⁣\\*\\*\\**([^*]+?)\\**\\*\\*⁣', 'g');
     var m, qIdx = -1, question = null;
     while ((m = re.exec(content)) !== null) {
       if (m.index >= offset) break;
@@ -4561,7 +4575,7 @@ function getChecklistArtifactSource(entry, art) {
     if (lineKey !== itemKey && itemKey.indexOf(lineKey) !== 0) return null;
     var offset = 0;
     for (var i = 0; i < art.position; i++) offset += lines[i].length + 1;
-    var re = new RegExp('⁣\\*\\*([^*]+)\\*\\*⁣', 'g');
+    var re = new RegExp('⁣\\*\\*\\**([^*]+?)\\**\\*\\*⁣', 'g');
     var m, qIdx = -1, question = null;
     while ((m = re.exec(content)) !== null) {
       if (m.index >= offset) break;
@@ -4618,7 +4632,7 @@ function cleanLabel(t) {
 function entryQuestions(entry) {
   var out = [];
   try {
-    var re = new RegExp('\\u2063\\*\\*([^*]+)\\*\\*\\u2063', 'g');
+    var re = new RegExp('\\u2063\\*\\*\\**([^*]+?)\\**\\*\\*\\u2063', 'g');
     var content = String((entry && entry.content) || ''), m;
     while ((m = re.exec(content)) !== null) out.push(m[1]);
   } catch (_e) {}
@@ -6444,7 +6458,7 @@ function extractTurnTitles(text) {
   var sourcesExtracted = extractSourcesBlock(text);
   var cleanText = sourcesExtracted.mainText;
   var TITLE_MARK = '\u2063';
-  var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
+  var markerRe = new RegExp(TITLE_MARK + '\\*\\*\\**([^*]+?)\\**\\*\\*' + TITLE_MARK, 'g');
   var titles = [];
   var m;
   while ((m = markerRe.exec(cleanText)) !== null) {
@@ -6478,7 +6492,7 @@ function renderWithBubblesSegments(text) {
   var sourcesHtml = sourcesExtracted.sourcesHtml;
 
   var TITLE_MARK = '\u2063';
-  var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
+  var markerRe = new RegExp(TITLE_MARK + '\\*\\*\\**([^*]+?)\\**\\*\\*' + TITLE_MARK, 'g');
   var segments = [];
   var current = '';
   var lastIndex = 0;

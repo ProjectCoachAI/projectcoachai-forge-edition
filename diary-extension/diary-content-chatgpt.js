@@ -187,8 +187,9 @@ async function attemptChatGPTClipboardCapture() {
         } else if (clipText && clipText.trim().length > 0) {
           var ct = clipText.trim();
           if (role === 'user') {
-            clipParts.push(boldQuestion(ct.slice(0, 2000)));
-            if (!sawFirstUser) { firstUserClip = ct; sawFirstUser = true; }
+            var ctQ = ct.replace(/^\*{2,}\s*([\s\S]*?)\s*\*{2,}$/, '$1');
+            clipParts.push(boldQuestion(ctQ.slice(0, 2000)));
+            if (!sawFirstUser) { firstUserClip = ctQ; sawFirstUser = true; }
           } else {
             clipParts.push(ct);
           }

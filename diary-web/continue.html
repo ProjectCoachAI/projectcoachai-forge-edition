@@ -52,6 +52,7 @@
   .chat-msg-body p { margin:4px 0; }
   .chat-msg-body h1,.chat-msg-body h2,.chat-msg-body h3 { font-family:'Lora',serif; margin:0.75rem 0 0.4rem; color:#1B2A4A; }
   .chat-msg-body ul,.chat-msg-body ol { margin:2px 0 4px; padding-left:1.4em; }
+  .chat-msg-body ol { padding-left:2.1em; }
   .chat-msg-body li { margin:1px 0; }
   .chat-msg-footer { display:flex; gap:8px; margin-top:10px; }
   .chat-msg.loading .chat-msg-body { color:#9E9890; font-style:italic; }
@@ -1141,7 +1142,7 @@ function renderWithBubbles(text) {
   }
 
   var TITLE_MARK = '\u2063';
-  var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
+  var markerRe = new RegExp(TITLE_MARK + '\\*\\*\\**([^*]+?)\\**\\*\\*' + TITLE_MARK, 'g');
   var html = '';
   var lastIndex = 0;
   var m;
@@ -2071,7 +2072,7 @@ async function loadContextRelated(entryId) {
     }
 
     var TITLE_MARK = '\u2063';
-    var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
+    var markerRe = new RegExp(TITLE_MARK + '\\*\\*\\**([^*]+?)\\**\\*\\*' + TITLE_MARK, 'g');
     var lastIndex = 0;
     var m;
     while ((m = markerRe.exec(text)) !== null) {
@@ -2112,10 +2113,13 @@ async function loadContextRelated(entryId) {
     // always the smaller one) so a genuine truncation difference is
     // correctly recognized as the same question, not mistaken for a
     // real content difference.
+    // Some saved prompts (ChatGPT) carry their own leading/trailing ** from the
+    // provider's copy text; ignore those when comparing and when showing.
+    var promptClean = String(entry.prompt || '').replace(/^[\s*]+|[\s*]+$/g, '');
     var firstQuestionAlreadyCaptured = messages.length > 0 && messages[0].role === 'user' &&
-      entry.prompt && messages[0].content.trim().slice(0, entry.prompt.trim().length) === entry.prompt.trim();
-    if (entry.prompt && !firstQuestionAlreadyCaptured) {
-      messages.unshift({ role: 'user', content: entry.prompt });
+      promptClean && messages[0].content.trim().slice(0, promptClean.length) === promptClean;
+    if (promptClean && !firstQuestionAlreadyCaptured) {
+      messages.unshift({ role: 'user', content: promptClean });
     }
 
     if (sourcesText && messages.length && messages[messages.length - 1].role === 'assistant') {
