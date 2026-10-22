@@ -68,12 +68,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Allow Google OAuth popup
-app.use((req, res, next) => {
-  res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
-  next();
-});
-
 // Stripe webhook needs raw body BEFORE express.json()
 // Production middleware
 app.use(compression());
@@ -129,7 +123,6 @@ try {
     app.use('/api/feedback', contactLimiter, contactRoutes);
     app.use('/api/network', require('./routes/network'));
     app.use('/api/signal', require('./routes/signal'));
-    app.use('/api/network', require('./routes/network'));
 } catch (e) { console.warn('Contact routes skipped:', e.message); }
 try {
     app.use('/api/invite', require('./routes/invite'));
@@ -162,8 +155,12 @@ try {
     app.use('/api/auth/2fa', require('./routes/2fa'));
     app.use('/api/auth/register', registerLimiter);
     app.use('/api/auth/signin', authLimiter);
-    app.use('/api/auth/reset-password', authLimiter);
-    app.use('/api/auth/forgot-password', authLimiter);
+    // These are the real routes in routes/auth.js. The limiter used to be mounted
+    // on /reset-password and /forgot-password, which do not exist, so reset and
+    // password-change requests were never rate-limited.
+    app.use('/api/auth/password-reset', authLimiter);
+    app.use('/api/auth/password-change', authLimiter);
+    app.use('/api/auth/send-verification', authLimiter);
     app.use('/api/auth', authRoutes);
     console.log('Auth routes loaded');
 } catch (e) { console.warn('Auth routes skipped:', e.message); }
