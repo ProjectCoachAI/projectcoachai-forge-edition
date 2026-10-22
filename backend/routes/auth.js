@@ -293,9 +293,9 @@ router.post('/password-reset/request', async (req, res) => {
         afterButton: 'This link is valid for 15 minutes. If you did not ask for this, you can ignore this email. Your password will not change.'
       });
       await sendMail({
-        from: isDiary ? brand.from : `"ProjectCoachAI Forge Edition" <no-reply@projectcoachai.com>`,
+        from: brand.from,
         to: email,
-        subject: isDiary ? 'Reset your Diary password' : 'Reset your ProjectCoachAI password',
+        subject: 'Reset your ' + brand.name + ' password',
         html: mail.html,
         text: mail.text
       });
@@ -696,9 +696,24 @@ router.patch('/me', async (req, res) => {
     if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
     const session = await db.getSession(token);
     if (!session) return res.status(401).json({ success: false, error: 'Session expired' });
-    const { name } = req.body;
-    if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Name is required' });
-    await db.query('UPDATE users SET name=$1, updated_at=NOW() WHERE email=$2', [String(name).trim().slice(0, 100), session.user_email]);
+    const { name, avatar } = req.body || {};
+    const fields = {};
+    if (name !== undefined) {
+      if (!String(name).trim()) return res.status(400).json({ success: false, error: 'Name is required' });
+      fields.name = String(name).trim().slice(0, 100);
+    }
+    if (avatar) {
+      const a = String(avatar);
+      if (!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(a)) {
+        return res.status(400).json({ success: false, error: 'Please use a PNG, JPEG, WebP or GIF image.' });
+      }
+      if (a.length > 700000) {
+        return res.status(413).json({ success: false, error: 'That image is too large. Please choose a smaller one.' });
+      }
+      fields.avatar = a;
+    }
+    if (Object.keys(fields).length === 0) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    await db.saveUser(session.user_email, fields);
     res.json({ success: true });
   } catch (err) {
     console.error('[Auth] PATCH /me error:', err.message);
