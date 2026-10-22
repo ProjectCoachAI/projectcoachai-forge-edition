@@ -4,24 +4,21 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { sendMail } = require('../lib/emailTransport');
+const { renderEmail } = require('../lib/emailTemplate');
 
 // Which product the person is using. Diary has its own website, so a request that
 // comes from it gets Diary's name, sender and links in the emails; everything else
 // stays Forge. The brand is chosen only from this fixed list, using the browser's
 // Origin header, so nothing a visitor types can put its own link in an email.
 const BRANDS = {
-  diary: { name: 'Diary', from: 'Diary <noreply@projectcoachai.com>', base: 'https://diary.projectcoachai.com', color: '#C17D3C' },
-  forge: { name: 'Forge', from: 'Forge <noreply@projectcoachai.com>', base: 'https://forge.projectcoachai.com', color: '#ff6b35' }
+  diary: { key: 'diary', name: 'Diary', from: 'Diary <noreply@projectcoachai.com>', base: 'https://diary.projectcoachai.com', color: '#C17D3C' },
+  forge: { key: 'forge', name: 'Forge', from: 'Forge <noreply@projectcoachai.com>', base: 'https://forge.projectcoachai.com', color: '#ff6b35' }
 };
 function brandFor(req) {
   let host = '';
   try { host = new URL(req.get('origin') || req.get('referer') || '').hostname; } catch (_) {}
   return host === 'diary.projectcoachai.com' ? BRANDS.diary : BRANDS.forge;
 }
-function escapeHtml(v) {
-  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
 const router = express.Router();
 
 // query() is used below (referral code, referral conversion, Google token) but
@@ -176,16 +173,21 @@ router.post('/register', async (req, res) => {
       await db.saveUser(email, { verify_token: vToken, verify_token_exp: vExp });
       const brand = brandFor(req);
       const verifyUrl = brand.base + '/verify-email.html?token=' + vToken + '&email=' + encodeURIComponent(email);
+      const mail = renderEmail({
+        brand,
+        preheader: 'Confirm your email address to finish setting up your ' + brand.name + ' account.',
+        heading: 'Welcome to ' + brand.name + ', ' + String(name || '').trim().slice(0, 60) + '!',
+        paragraphs: ['Please confirm your email address to finish setting up your account.'],
+        buttonLabel: 'Verify email',
+        buttonUrl: verifyUrl,
+        afterButton: 'This link is valid for 24 hours. If you did not create a ' + brand.name + ' account, you can ignore this email.'
+      });
       await sendMail({
         from: brand.from,
         to: email,
         subject: 'Welcome to ' + brand.name + ' — verify your email',
-        html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto">' +
-          '<h2 style="color:' + brand.color + '">Welcome to ' + brand.name + ', ' + escapeHtml(name) + '!</h2>' +
-          '<p>Please verify your email to fully activate your account.</p>' +
-          '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:' + brand.color + ';color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
-          '<p style="color:#888;font-size:12px;margin-top:24px">Link expires in 24 hours.</p>' +
-          '</div>'
+        html: mail.html,
+        text: mail.text
       });
     } catch(mailErr) { console.warn('[Auth] Verification email failed:', mailErr.message); }
 
@@ -277,19 +279,25 @@ router.post('/password-reset/request', async (req, res) => {
 
     let deliveredViaEmail = false;
     try {
+      const firstName = String(user.name || '').trim().split(/\s+/)[0].slice(0, 40);
+      const mail = renderEmail({
+        brand,
+        preheader: 'Use this link to choose a new password. It is valid for 15 minutes.',
+        heading: 'Reset your ' + brand.name + ' password',
+        paragraphs: [
+          'Hi ' + (firstName || 'there') + ',',
+          'We received a request to reset the password for your ' + brand.name + ' account. Use the button below to choose a new one.'
+        ],
+        buttonLabel: 'Reset password',
+        buttonUrl: resetLink,
+        afterButton: 'This link is valid for 15 minutes. If you did not ask for this, you can ignore this email. Your password will not change.'
+      });
       await sendMail({
         from: isDiary ? brand.from : `"ProjectCoachAI Forge Edition" <no-reply@projectcoachai.com>`,
         to: email,
         subject: isDiary ? 'Reset your Diary password' : 'Reset your ProjectCoachAI password',
-        text: [
-          `Hi ${user.name || 'there'},`,
-          '',
-          'We received a request to reset your password.',
-          'Use this link to reset it (valid for 15 minutes):',
-          resetLink,
-          '',
-          'If you did not request this, you can ignore this message.'
-        ].join('\n')
+        html: mail.html,
+        text: mail.text
       });
       deliveredViaEmail = true;
     } catch (mailError) {
@@ -555,16 +563,21 @@ router.post('/send-verification', async (req, res) => {
 
     const brand = brandFor(req);
     const verifyUrl = brand.base + '/verify-email.html?token=' + token + '&email=' + encodeURIComponent(email);
+    const mail = renderEmail({
+      brand,
+      preheader: 'Confirm your email address for ' + brand.name + '.',
+      heading: 'Verify your ' + brand.name + ' email',
+      paragraphs: ['Click the button below to confirm your email address.'],
+      buttonLabel: 'Verify email',
+      buttonUrl: verifyUrl,
+      afterButton: 'This link is valid for 24 hours. If you did not create a ' + brand.name + ' account, you can ignore this email.'
+    });
     await sendMail({
       from: brand.from,
       to: email,
       subject: 'Verify your ' + brand.name + ' email',
-      html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto">' +
-        '<h2 style="color:' + brand.color + '">Verify your ' + brand.name + ' email</h2>' +
-        '<p>Click the button below to verify your email address.</p>' +
-        '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:' + brand.color + ';color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
-        '<p style="color:#888;font-size:12px;margin-top:24px">Link expires in 24 hours. If you did not create a ' + brand.name + ' account, ignore this email.</p>' +
-        '</div>'
+      html: mail.html,
+      text: mail.text
     });
     res.json({ success: true, message: 'Verification email sent' });
   } catch (err) {
