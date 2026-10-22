@@ -357,11 +357,18 @@ router.post('/password-reset/confirm', async (req, res) => {
 
 router.post('/password-change', async (req, res) => {
   try {
-    const email = normalizeEmail(req.body?.email);
+    // The person must be signed in, and the account is the one on their session.
+    // This route used to take any email from the request body with no sign-in at
+    // all, and the profile pages never sent one, so it always answered 400.
+    const authToken = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (!authToken) return res.status(401).json({ success: false, error: 'Authentication required' });
+    const authSession = await db.getSession(authToken);
+    if (!authSession) return res.status(401).json({ success: false, error: 'Session expired' });
+    const email = normalizeEmail(authSession.user_email);
     const currentPassword = String(req.body?.currentPassword || '');
     const newPassword = String(req.body?.newPassword || '');
-    if (!email || !currentPassword || !newPassword) {
-      return res.status(400).json({ success: false, error: 'Email, current password, and new password are required' });
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Current password and new password are required' });
     }
     if (newPassword.length < 8) {
       return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long' });
