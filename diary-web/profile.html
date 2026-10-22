@@ -224,6 +224,10 @@
           </div>
           <span class="plan-badge free" id="planBadge">Free</span>
         </div>
+        <div id="billingActions" style="display:none;margin:0 0 1rem;">
+          <button class="btn btn-gold" id="billingBtn" onclick="openBillingPortal(this)">Manage billing &amp; cancel</button>
+          <p style="font-size:12px;color:#9E9890;margin-top:6px;max-width:520px;">Opens Stripe, our payment provider, where you can update your card, download invoices or cancel. If you cancel, Diary Pro stays active until the end of the period you have paid for.</p>
+        </div>
         <div class="upgrade-nudge" id="upgradeNudge">
           <h3>Upgrade to Pro</h3>
           <p>Unlimited saves, lifetime storage, and the full Diary experience.</p>
@@ -406,7 +410,7 @@
       document.getElementById('planName').textContent = planLabel;
       document.getElementById('planBadge').textContent = planLabel;
       document.getElementById('planBadge').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
-      if (isPro) document.getElementById('upgradeNudge').style.display = 'none';
+      if (isPro) { document.getElementById('upgradeNudge').style.display = 'none'; document.getElementById('billingActions').style.display = 'block'; }
 
       // Member since
       if (user.createdAt) {
@@ -576,6 +580,17 @@
         } else { showNotification((r.data && r.data.error) || 'Failed to update avatar.', 'error'); }
       } catch(e) { showNotification('Could not read that image. Please try another.', 'error'); }
       input.value = '';
+    }
+
+    async function openBillingPortal(btn) {
+      var label = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Opening…';
+      try {
+        var r = await Forge.request('POST', '/api/stripe/create-portal-session', { returnUrl: window.location.origin + '/profile' });
+        if (r.ok && r.data && r.data.url) { window.location.href = r.data.url; return; }
+        showNotification((r.data && r.data.error) || 'Could not open billing. Please email support@projectcoachai.com.', 'error');
+      } catch (e) { showNotification('Could not open billing. Please email support@projectcoachai.com.', 'error'); }
+      btn.disabled = false; btn.textContent = label;
     }
 
     function handleSignOut() {

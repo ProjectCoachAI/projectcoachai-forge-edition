@@ -6,7 +6,6 @@
   <title>My Diary</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/markdown.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* overflow-anchor: none — confirmed as a real, direct fix via actual
@@ -75,6 +74,8 @@
     .cat-item:hover { background: #EDEAE3; color: #1B2A4A; }
     .cat-item.active { background: #1B2A4A; color: #F5F3EE; }
     .cat-count { font-size: 11px; opacity: 0.7; }
+    .cat-item > span:first-child { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+    .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
     .sidebar-divider { height: 0.5px; background: #D6D2C8; margin: 1rem 0; }
 
     /* MAIN */
@@ -127,8 +128,8 @@
     .qa-src span { color: #9E9890; }
     .qa-note { width: 100%; background: #fff; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #1B2A4A; font-family: Inter,sans-serif; outline: none; resize: none; min-height: 48px; box-sizing: border-box; }
     .qa-note:focus { border-color: #C17D3C; }
-    .qa-save-btn { margin-top: 8px; background: #C17D3C; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: Inter,sans-serif; transition: background 0.2s; }
-    .qa-save-btn:hover { background: #A5682F; }
+    .qa-save-btn { margin-top: 8px; background: #1B2A4A; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: Inter,sans-serif; transition: background 0.2s; }
+    .qa-save-btn:hover { background: #243A63; }
 
     /* ENTRY CARDS */
     .entry-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; margin-bottom: 8px; transition: border-color 0.2s; position: relative; }
@@ -140,12 +141,6 @@
     .bulk-bar { display: none; position: sticky; top: 58px; z-index: 100; background: #1B2A4A; color: #F5F3EE; padding: 10px 16px; border-radius: 8px; margin-bottom: 10px; align-items: center; gap: 12px; font-size: 13px; }
     .bulk-bar.visible { display: flex; }
     .bulk-bar-count { font-weight: 600; flex: 1; }
-    .bulk-btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit; }
-    .bulk-btn-delete { background: #B91C1C; color: #fff; }
-    .bulk-btn-favorite { background: #C17D3C; color: #fff; }
-    .bulk-btn-delete:hover { background: #991B1B; }
-    .bulk-btn-clear { background: transparent; color: #D6D2C8; border: 0.5px solid #D6D2C8; }
-    .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
     .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 0; }
     .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
     .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 0.7rem 1.25rem; cursor: pointer; }
@@ -236,9 +231,21 @@
     .entry-content code { background: #EDEAE3; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
     .entry-content strong { color: #1B2A4A; }
     .entry-content.md img { display: none; }
-    /* Tables and empty paragraphs in rendered markdown: see /css/markdown.css (single source). */
+    .entry-content.md p:empty { display: none; }
+    .entry-panel-content p:empty { display: none; }
+
+    .entry-content.md table, .entry-panel-content table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 13px; }
+    .entry-content.md th, .entry-panel-content th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
+    .entry-content.md td, .entry-panel-content td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
+    .entry-content.md tr:nth-child(even) td, .entry-panel-content tr:nth-child(even) td { background: #FAFAF8; }
+    .reader-md p:empty { display: none; }
+    .reader-md table { border-collapse: collapse; margin: 0.75rem 0; font-size: 13px; }
+    .reader-md th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
+    .reader-md td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
+    .reader-md tr:nth-child(even) td { background: #FAFAF8; }
     .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; }
-    .entry-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
+    /* Tags are plain outlines so they never read as the (coloured, filled) category pill. */
+    .entry-tag { font-size: 10px; padding: 1px 8px; border-radius: 20px; background: transparent; color: #6B6559; border: 0.5px solid #D6D2C8; }
     .entry-related { margin: 0 0 0.75rem; padding: 0.75rem 0.9rem; border: 0.5px solid #D6D2C8; border-radius: 8px; background: #FDFCFA; }
     .entry-related-title { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #9E9890; margin-bottom: 0.4rem; }
     .entry-related-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; width: 100%; text-align: left; background: none; border: 0; border-top: 0.5px solid #EDEAE3; padding: 7px 0; cursor: pointer; font-family: inherit; color: #1B2A4A; }
@@ -252,7 +259,7 @@
     .rel-chips { display: flex; gap: 4px; flex-wrap: wrap; }
     .rel-chip { font-size: 10px; padding: 1px 7px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
     .entry-tag.clickable { cursor: pointer; transition: background 0.15s, color 0.15s; }
-    .entry-tag.clickable:hover { background: #1B2A4A; color: #fff; }
+    .entry-tag.clickable:hover { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
     .tag-filter-bar { display: none; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; background: #EDEAE3; border-radius: 8px; font-size: 12px; color: #3D3830; }
     .tag-filter-bar button { margin-left: auto; background: none; border: none; color: #6B6559; cursor: pointer; font-size: 12px; text-decoration: underline; }
     .entry-note-preview { font-size: 12px; color: #6B6559; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; font-style: italic; }
@@ -260,16 +267,16 @@
     .entry-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 0.5px solid #D6D2C8; }
     .entry-btn { font-size: 11px; padding: 4px 10px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: Inter,sans-serif; transition: all 0.15s; }
     .entry-btn:hover { border-color: #1B2A4A; color: #1B2A4A; }
-    .entry-btn.primary { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
-    /* High-contrast accent style, matching the existing "Back to Claude"
-       button's own orange treatment — confirmed via direct feedback as
-       a specific, real request: Continue in Forge, Sync, and Share are
-       genuinely key, action-oriented moments that were previously
-       visually identical to lower-stakes actions like Copy or Move to,
-       buried in the same, undifferentiated row. */
-    .entry-btn.accent { background: #C17D3C; color: #fff; border-color: #C17D3C; }
-    .entry-btn.accent:hover { background: #A5682F; border-color: #A5682F; }
+    .entry-btn.primary { background: #1B2A4A; color: #fff; border-color: #1B2A4A; font-weight: 500; }
+    .entry-btn.primary:hover { background: #243A63; border-color: #243A63; color: #fff; }
+    /* Button system: one filled navy button per card ("primary", Continue in
+       Forge); everything else is an outline; red text for delete. "accent" is
+       only the selected/on state of a toggle (the thumbs), as a tint, so it can
+       never be mistaken for a second main action. */
+    .entry-btn.accent { background: rgba(193,125,60,0.12); color: #A86B2F; border-color: rgba(193,125,60,0.45); }
+    .entry-btn.accent:hover { background: rgba(193,125,60,0.2); border-color: #C17D3C; color: #8F5A27; }
     .entry-btn.danger { color: #B91C1C; border-color: #FCA5A5; }
+    .entry-btn:focus-visible, .share-btn:focus-visible, .page-btn:focus-visible { outline: 2px solid #C17D3C; outline-offset: 2px; }
     .entry-btn.danger:hover { background: #FEF2F2; }
     .entry-source-icon { font-size: 18px; flex-shrink: 0; }
     .entry-meta { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
@@ -292,8 +299,6 @@
     .entry-source { display: inline-block; width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .entry-date { font-size: 11px; color: #9E9890; }
     .diary-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 1.5rem; }
-    .page-btn { font-size: 12px; padding: 5px 12px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: Inter,sans-serif; }
-    .page-btn.active { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
     .page-info { font-size: 12px; color: #9E9890; }
 
     /* ENTRIES */
@@ -359,8 +364,6 @@
     .entry-panel-actions { padding: 0.75rem 1.25rem; border-top: 0.5px solid #D6D2C8; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
     .share-btn { font-size: 12px; padding: 6px 12px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
     .share-btn:hover { border-color: #1B2A4A; color: #1B2A4A; }
-    .share-btn.amber { background: #C17D3C; color: #fff; border-color: #C17D3C; }
-    .share-btn.amber:hover { background: #A5682F; }
 
     /* IMPORT MODAL */
     .import-overlay { display: none; position: fixed; inset: 0; background: rgba(27,42,74,0.5); backdrop-filter: blur(4px); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
@@ -1718,12 +1721,14 @@ async function loadCategories() {
     var allItem = document.getElementById('cat-all');
     catList.innerHTML = '';
     catList.appendChild(allItem);
+    assignCatColors(cats.map(function(c) { return c.category; }));
+    recolorCategoryPills();
     cats.forEach(function(cat) {
       var div = document.createElement('div');
       div.className = 'cat-item' + (activeCategory === cat.category ? ' active' : '');
       div.id = 'cat-' + cat.category.replace(/\s+/g, '-');
       div.onclick = function() { filterCategory(cat.category); };
-      div.innerHTML = '<span>' + cat.category + '</span><span class="cat-count">' + cat.count + '</span>';
+      div.innerHTML = '<span><i class="cat-dot" style="background:' + catColor(cat.category) + '"></i>' + escHtml(cat.category) + '</span><span class="cat-count">' + cat.count + '</span>';
       catList.appendChild(div);
     });
   } catch(_) {}
@@ -2295,7 +2300,7 @@ function renderEntryCard(e) {
           (e.decision_note && e.decision_note.trim() ? '<div class="entry-note-preview" title="Your decision note">Note: ' + escHtml(e.decision_note.trim().replace(/\s+/g, ' ').slice(0, 140)) + '</div>' : '') +
         '</div>' +
         '<div class="entry-sub">' +
-          '<span class="entry-category">' + (e.category || 'General') + '</span>' +
+          '<span class="entry-category" style="' + catPillStyle(e.category || 'General') + '">' + escHtml(e.category || 'General') + '</span>' +
           // Category Audit Phase 2: shown only when metadata carries the
           // fields Phase 2's backend sets (categoryAutoUpdatedAt,
           // categoryPreviousValue) AND the user hasn't already dismissed
@@ -2663,7 +2668,7 @@ function renderEntryCard(e) {
         var isHosted = att.status === 'hosted' && att.url;
         var clickHandler, badge;
         if (isHosted) {
-          clickHandler = 'openAttachmentFromRow(this)';
+          clickHandler = 'openAttachmentReader(\'' + att.url.replace(/'/g, "\\'") + '\', \'' + escHtml(att.filename || 'Attachment').replace(/'/g, "\\'") + '\', \'' + type.replace(/'/g, "\\'") + '\')';
           badge = ' <span style="color:#9E9890;">&#8226; Read here</span>';
         } else if (origUrl) {
           clickHandler = 'openOriginalUrl(this)';
@@ -2673,10 +2678,6 @@ function renderEntryCard(e) {
           badge = '';
         }
         var dataOrigAttr = (!isHosted && origUrl) ? ' data-orig-url="' + origUrl + '"' : '';
-        // Values for the reader go in data-* attributes (HTML-escaped), never
-        // inside an inline JavaScript string: a file name containing a
-        // backslash or quote used to be able to break the handler.
-        if (isHosted) dataOrigAttr = ' data-att-url="' + escHtml(att.url) + '" data-att-name="' + escHtml(att.filename || 'Attachment') + '" data-att-type="' + escHtml(type) + '"';
         var clickable = clickHandler ? ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;cursor:pointer;" onclick="' + clickHandler + '"' + dataOrigAttr : ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;"';
         // NOTE: added — attachments can accumulate quickly across a
         // long-running conversation (confirmed live, a real usage
@@ -2685,7 +2686,7 @@ function renderEntryCard(e) {
         // event.stopPropagation() is required: the row itself already
         // has its own click handler for opening the attachment, and
         // this button must not also trigger that.
-        var deleteBtn = '<button class="attachment-delete-btn" data-entry-id="' + e.id + '" data-att-name="' + escHtml(att.filename || '') + '" data-att-type="' + escHtml(att.type || '') + '" onclick="event.stopPropagation();deleteAttachmentFromBtn(this)" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;padding:2px 6px;flex-shrink:0;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>';
+        var deleteBtn = '<button class="attachment-delete-btn" onclick="event.stopPropagation();deleteAttachment(' + e.id + ',\'' + escHtml(att.filename || '').replace(/'/g, "\\'") + '\',\'' + (att.type || '').replace(/'/g, "\\'") + '\')" title="Remove attachment" style="background:none;border:none;cursor:pointer;color:#B0A99A;padding:2px 6px;flex-shrink:0;display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>';
         // NOTE: added — Priority 8's proactive-notice decision was
         // designed but never actually implemented in this UI. Before
         // this, the ONLY visible difference between a captured and a
@@ -2727,7 +2728,7 @@ function renderEntryCard(e) {
         ' — this entry\'s own content won\'t include what happens there. ' +
         '<a href="/continue.html?entryId=' + e.id + '" style="color:#C17D3C;font-weight:500;">Open the Forge conversation &rarr;</a>' +
         '<div style="margin-top:6px;">' +
-          '<button class="entry-btn accent" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">' + heroicon('arrow-path') + ' Sync</button>' +
+          '<button class="entry-btn" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">' + heroicon('arrow-path') + ' Sync</button>' +
         '</div>' +
       '</div>' : '') +
       '<div class="entry-related" id="related-' + e.id + '" style="display:none"></div>' +
@@ -2735,10 +2736,10 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">' + heroicon('link') + ' Open original &#8599;</button>' : '') +
-        (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">' + heroicon('link') + ' New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
-        '<button class="entry-btn accent" onclick="window.location.href=\'/continue.html?entryId=' + e.id + '\'">' + heroicon('chat-bubble-left-right') + ' Continue in Forge</button>' +
-        '<button class="entry-btn accent" onclick="shareEntry(' + e.id + ')">' + heroicon('link') + ' Share</button>' +
+        (origUrl ? '<button class="entry-btn" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">' + heroicon('link') + ' Open original &#8599;</button>' : '') +
+        (continueUrl ? '<button class="entry-btn" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">' + heroicon('link') + ' New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
+        '<button class="entry-btn primary" onclick="window.location.href=\'/continue.html?entryId=' + e.id + '\'">' + heroicon('chat-bubble-left-right') + ' Continue in Forge</button>' +
+        '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">' + heroicon('link') + ' Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">' + heroicon('clipboard-document') + ' Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">' + heroicon('folder') + ' Move to…</button>' +
         '<button class="entry-btn' + (e.rating === 'up' ? ' accent' : '') + '" id="rateUpBtn-' + e.id + '" onclick="rateEntry(' + e.id + ', \'up\')" title="Helpful">' + heroicon('hand-thumb-up', 14, e.rating === 'up') + '</button>' +
@@ -2747,6 +2748,49 @@ function renderEntryCard(e) {
       '</div>' +
     '</div>' +
   '</div>';
+}
+
+// Each category gets one stable colour, worked out from its name, so the same
+// category looks the same in the list, the sidebar and an open entry. Amber and
+// orange are left out on purpose (they mean "action"); General stays neutral.
+var CAT_PALETTE = ['#2F5F9E', '#216B66', '#3F6B2A', '#6B4B9A', '#A23C5B', '#434FA0', '#7C4F32', '#4A5F72', '#8A3F7E', '#6B6420'];
+var _catColorMap = {};
+function _catHash(n) {
+  var h = 0;
+  for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
+  return h;
+}
+// Gives every known category its own colour where the palette allows: each
+// takes the slot its name points to, or the next free one. Done in name order
+// so adding one category rarely changes the colours of the others.
+function assignCatColors(names) {
+  var map = {}, taken = {};
+  var keys = (names || []).map(function(x) { return String(x || '').trim().toLowerCase(); })
+    .filter(function(x, i, a) { return x && x !== 'general' && a.indexOf(x) === i; }).sort();
+  keys.forEach(function(k) {
+    var slot = _catHash(k) % CAT_PALETTE.length, tries = 0;
+    while (taken[slot] && tries < CAT_PALETTE.length) { slot = (slot + 1) % CAT_PALETTE.length; tries++; }
+    taken[slot] = true;
+    map[k] = CAT_PALETTE[slot];
+  });
+  _catColorMap = map;
+}
+function catColor(name) {
+  var n = String(name || 'General').trim().toLowerCase();
+  if (!n || n === 'general') return '#5F594E';
+  return _catColorMap[n] || CAT_PALETTE[_catHash(n) % CAT_PALETTE.length];
+}
+// Re-colours pills already on screen (the list can draw before the sidebar's
+// category list has loaded).
+function recolorCategoryPills() {
+  document.querySelectorAll('.entry-category, .entry-panel-cat').forEach(function(el) {
+    if (el.textContent) el.style.cssText = (el.style.display === 'none' ? 'display:none;' : '') + catPillStyle(el.textContent);
+  });
+}
+function catPillStyle(name) {
+  var c = catColor(name);
+  var r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
+  return 'background:rgba(' + r + ',' + g + ',' + b + ',0.12);color:' + c + ';border-color:rgba(' + r + ',' + g + ',' + b + ',0.35);';
 }
 
 function escHtml(str) {
@@ -4958,16 +5002,6 @@ async function extractPptxText(arrayBuffer, includeImages) {
   return slideTexts.join('\n\n');
 }
 
-// Click handlers for the attachment rows. They read the file name, URL and
-// type from data-* attributes (see the attachment row builder), so no
-// attachment text is ever placed inside an inline JavaScript string.
-function openAttachmentFromRow(el) {
-  openAttachmentReader(el.getAttribute('data-att-url'), el.getAttribute('data-att-name'), el.getAttribute('data-att-type'));
-}
-function deleteAttachmentFromBtn(el) {
-  deleteAttachment(Number(el.getAttribute('data-entry-id')), el.getAttribute('data-att-name'), el.getAttribute('data-att-type'));
-}
-
 async function openAttachmentReader(url, filename, type, libraryFileId) {
   var modal = document.getElementById('attachmentReaderModal');
   var titleEl = document.getElementById('attachmentReaderTitle');
@@ -6170,7 +6204,7 @@ function openEntry(id) {
   document.getElementById('panelSource').textContent = SOURCE_LABELS[e.source] || e.source || 'Unknown';
   var catEl = document.getElementById('panelCat');
   if (e.category && e.category !== 'General') {
-    catEl.textContent = e.category; catEl.style.display = '';
+    catEl.textContent = e.category; catEl.style.cssText = catPillStyle(e.category); catEl.style.display = '';
   } else { catEl.style.display = 'none'; }
   var d = new Date(e.created_at || e.timestamp || Date.now());
   document.getElementById('panelDate').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) + ' at ' + d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
