@@ -90,6 +90,8 @@
     .source-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
     .src-chip { font-size: 11px; padding: 4px 12px; border-radius: 20px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
     .src-chip:hover { border-color: #1B2A4A; color: #1B2A4A; }
+    /* Source lists show the full citation text and wrap, rather than a clipped 180px pill. */
+    .sources-collapsible a[data-cite-pill] { display: inline !important; max-width: none !important; white-space: normal !important; overflow: visible !important; text-overflow: clip !important; padding: 1px 8px; line-height: 1.7; }
     .src-chip.active { background: #1B2A4A; color: #F5F3EE; border-color: #1B2A4A; }
 
     /* QUICK ANSWER */
@@ -1134,6 +1136,19 @@ async function performEntrySync(entryId) {
 }
 window.performEntrySync = performEntrySync;
 
+// Display only: a title saved all in sentence case ("World's twenty most populous cities ranked")
+// is shown in Title Case so the same question reads alike across providers. Titles that
+// already contain capitals after the first letter (acronyms, names, Title Case) are left alone.
+function displayTitle(t) {
+  t = String(t == null ? '' : t);
+  if (!t || /[A-Z]/.test(t.slice(1))) return t;
+  var small = /^(a|an|and|as|at|but|by|for|in|of|on|or|the|to|vs|via|with)$/;
+  return t.split(' ').map(function(w, i) {
+    if (!w) return w;
+    if (i > 0 && small.test(w)) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
 // ── Same topic in other AIs ─────────────────────────────────────────────────
 // Shown inside an open entry when the person has saved the same subject from a
 // different AI. Looked up when the entry is opened (see GET
@@ -1168,7 +1183,7 @@ function renderRelatedEntries(entryId, related) {
     var chips = (r.types || []).map(function(t) { return '<span class="rel-chip">' + escHtml(RELATED_TYPE_LABELS[t] || t) + '</span>'; }).join('');
     if (r.archived) chips = '<span class="rel-chip">Archived</span>' + chips;
     html += '<button type="button" class="entry-related-item' + (i === 0 ? ' first' : '') + '" onclick="event.stopPropagation();openRelatedEntry(' + r.id + ')">' +
-      '<span class="rel-title">' + escHtml(r.title || 'Untitled entry') + '</span>' +
+      '<span class="rel-title">' + escHtml(displayTitle(r.title) || 'Untitled entry') + '</span>' +
       '<span class="rel-meta">' + escHtml(meta) + '</span>' +
       (chips ? '<span class="rel-chips">' + chips + '</span>' : '') +
     '</button>';
