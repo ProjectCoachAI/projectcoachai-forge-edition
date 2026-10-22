@@ -342,8 +342,9 @@ router.post('/password-reset/confirm', async (req, res) => {
     }
 
     await db.saveUser(email, {
+      // saveUser() already sets updated_at; passing it here made the UPDATE assign
+      // that column twice, which the database rejects (500 "Failed to reset password").
       password_hash: hashPassword(newPassword),
-      updated_at: new Date().toISOString(),
       password_reset: null
     });
 
@@ -378,7 +379,7 @@ router.post('/password-change', async (req, res) => {
       return res.status(400).json({ success: false, error: 'New password must be different from current password' });
     }
 
-    await db.saveUser(email, { password_hash: hashPassword(newPassword), updated_at: new Date().toISOString() });
+    await db.saveUser(email, { password_hash: hashPassword(newPassword) });
     return res.json({ success: true });
   } catch (error) {
     console.error('❌ [Auth API] password-change failed:', error);
