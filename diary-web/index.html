@@ -815,7 +815,7 @@
             <li><span class="check">&#10003;</span> Unlimited saves</li>
             <li><span class="check">&#10003;</span> Works with Claude, ChatGPT, Gemini &amp; more</li>
             <li><span class="check">&#10003;</span> 20 searches/day across your saved Diary</li>
-            <li><span class="check">&#10003;</span> Continue Conversation — up to 20 entries/month</li>
+            <li><span class="check">&#10003;</span> Continue Conversation — 20 per month</li>
             <li><span class="check">&#10003;</span> Lifetime diary — stored permanently</li>
             <li><span class="check">&#10003;</span> Auto-categories &amp; smart tags</li>
             <li><span class="check">&#10003;</span> Quick Answer — ask any AI, save instantly</li>
@@ -837,7 +837,7 @@
           <ul class="card-features">
             <li><span class="check">&#10003;</span> Unlimited saves</li>
             <li><span class="check">&#10003;</span> Unlimited search</li>
-            <li><span class="check">&#10003;</span> Continue Conversation on unlimited entries</li>
+            <li><span class="check">&#10003;</span> Continue Conversation — unlimited</li>
             <li><span class="check">&#10003;</span> Lifetime diary — stored permanently</li>
             <li><span class="check">&#10003;</span> Auto-categories &amp; smart tags</li>
             <li><span class="check">&#10003;</span> Quick Answer — ask any AI, save instantly</li>
@@ -974,6 +974,14 @@
           // Web Store link instead, even though .href had already been correctly set to /app.html.
           var hero = document.getElementById('heroCta');
           if (hero) { hero.href = '/app.html'; hero.textContent = 'Back to your Diary →'; hero.onclick = null; }
+          // Signed-in visitors are already past the pitch: welcome them back instead.
+          var eyebrow = document.querySelector('.hero-eyebrow');
+          if (eyebrow) eyebrow.textContent = 'Welcome back, ' + name;
+          var headline = document.querySelector('.hero-headline');
+          if (headline) headline.innerHTML = 'Pick up where you left off. <em>Your Diary is ready.</em>';
+          var heroSub = document.querySelector('.hero-sub');
+          if (heroSub) heroSub.textContent = 'Your saved conversations are organised and searchable by meaning. Open your Diary, or continue any saved entry in Forge.';
+          if (hero && hero.nextElementSibling) hero.nextElementSibling.style.display = 'none';
           var close = document.getElementById('closeCta');
           if (close) { close.href = '/app.html'; close.textContent = 'Back to your Diary →'; close.onclick = null; }
           // Update pricing CTAs — logged in users go to checkout not signup
