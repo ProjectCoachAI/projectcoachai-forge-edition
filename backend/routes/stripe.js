@@ -183,6 +183,15 @@ router.get('/subscriptions/mine', requireAuth, async (req, res) => {
   }
 });
 
+// Plain plan name for messages shown to customers (never the internal id).
+function planLabel(tierId) {
+  const t = String(tierId || '');
+  if (t.indexOf('diary-pro') === 0) return 'Diary Pro';
+  if (t.indexOf('sweep-pro') === 0) return 'Sweep Pro';
+  const base = t.replace(/-(monthly|yearly)$/, '');
+  return base ? base.charAt(0).toUpperCase() + base.slice(1).replace(/-/g, ' ') : 'paid';
+}
+
 // Create Checkout Session
 router.post('/create-checkout-session', optionalAuth, async (req, res) => {
   try {
@@ -215,7 +224,7 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
       const user = existing.rows[0];
       if (user && user.tier === tierId) {
         return res.status(400).json({ 
-          error: 'You already have an active ' + tierId + ' subscription. Please manage your subscription in your Profile instead of purchasing again.',
+          error: 'You already have an active ' + planLabel(tierId) + ' subscription. Please manage it from your Profile (Manage billing) instead of purchasing again.',
           code: 'ALREADY_SUBSCRIBED'
         });
       }
@@ -230,7 +239,7 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
         );
         if (have.rows[0] && have.rows[0].tier === tierId) {
           return res.status(400).json({
-            error: 'You already have an active ' + tierId + ' subscription. Please manage your subscription in your Profile instead of purchasing again.',
+            error: 'You already have an active ' + planLabel(tierId) + ' subscription. Please manage it from your Profile (Manage billing) instead of purchasing again.',
             code: 'ALREADY_SUBSCRIBED'
           });
         }
