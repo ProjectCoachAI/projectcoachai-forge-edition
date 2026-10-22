@@ -247,6 +247,8 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
     const isStudent = !!(await db.query('SELECT is_student FROM users WHERE email=$1', [userEmail]).then(r => r.rows[0]?.is_student).catch(() => false));
     const studentDiscount = isStudent ? { discounts: [{ coupon: 'STUDENT50' }] } : {};
 
+    // Diary is sold on its own, so its checkout says "Diary" and returns to Diary.
+    const isDiaryPurchase = productForTier(tierId) === 'diary';
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       ...(userEmail ? { customer_email: userEmail } : {}),
@@ -260,11 +262,17 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
       ...taxCheckoutParams(),
       custom_text: {
         submit: {
-          message: 'ProjectCoachAI Forge Edition by Xencore Global GmbH'
+          message: isDiaryPurchase
+            ? 'Diary by Xencore Global GmbH'
+            : 'ProjectCoachAI Forge Edition by Xencore Global GmbH'
         }
       },
-      success_url: successUrl || 'https://forge.projectcoachai.com/pricing.html?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: cancelUrl || 'https://forge.projectcoachai.com/pricing.html?canceled=true',
+      success_url: successUrl || (isDiaryPurchase
+        ? 'https://diary.projectcoachai.com/app.html?upgraded=true'
+        : 'https://forge.projectcoachai.com/pricing.html?session_id={CHECKOUT_SESSION_ID}'),
+      cancel_url: cancelUrl || (isDiaryPurchase
+        ? 'https://diary.projectcoachai.com/app.html'
+        : 'https://forge.projectcoachai.com/pricing.html?canceled=true'),
       metadata: {
         tierId: tierId,
         userId: req.headers['x-user-id'] || 'anonymous'
@@ -379,7 +387,7 @@ router.post('/create-portal-session', requireAuth, async (req, res) => {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: returnUrl || 'projectcoachai://subscription-managed',
+      return_url: returnUrl || defaultPortalReturn(req),
     });
     
     res.json({ url: session.url });
@@ -388,6 +396,17 @@ router.post('/create-portal-session', requireAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Where "Return to ..." in the billing portal goes when the page did not say.
+// Web visitors land back on the site they came from. The desktop-app link stays
+// the fallback for requests that do not come from a browser page.
+function defaultPortalReturn(req) {
+  let host = '';
+  try { host = new URL(req.get('origin') || req.get('referer') || '').hostname; } catch (_) {}
+  if (host === 'diary.projectcoachai.com') return 'https://diary.projectcoachai.com/profile';
+  if (host === 'forge.projectcoachai.com') return 'https://forge.projectcoachai.com/profile.html';
+  return 'projectcoachai://subscription-managed';
+}
 
 // Webhook Handler (for subscription updates)
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
