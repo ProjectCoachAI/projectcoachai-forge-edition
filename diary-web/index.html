@@ -971,6 +971,8 @@
               ' ' + name + '</a>' +
               '<button onclick="Forge.auth.signout().then(function(){location.reload();})" style="font-size:13px;color:#9E9890;background:none;border:none;cursor:pointer;margin-left:0.5rem;font-family:Inter,sans-serif;">Sign out</button>';
           }
+          // The filled "My Diary" button replaces the plain nav link, so hide the duplicate.
+          document.querySelectorAll('.nav-links a.nav-link[href="/app.html"]').forEach(function(a) { a.style.display = 'none'; });
           // Update hero and close CTAs
           // Confirmed as a real, direct bug: both elements' own onclick="installExtension(event)"
           // (from the original, logged-out markup) was never removed here — only .href/.textContent
