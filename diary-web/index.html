@@ -815,7 +815,7 @@
             <li><span class="check">&#10003;</span> Unlimited saves</li>
             <li><span class="check">&#10003;</span> Works with Claude, ChatGPT, Gemini &amp; more</li>
             <li><span class="check">&#10003;</span> 20 searches/day across your saved Diary</li>
-            <li><span class="check">&#10003;</span> Continue Conversation — 20 per month</li>
+            <li><span class="check">&#10003;</span> Continue Conversation — 20/month</li>
             <li><span class="check">&#10003;</span> Lifetime diary — stored permanently</li>
             <li><span class="check">&#10003;</span> Auto-categories &amp; smart tags</li>
             <li><span class="check">&#10003;</span> Quick Answer — ask any AI, save instantly</li>
@@ -837,7 +837,7 @@
           <ul class="card-features">
             <li><span class="check">&#10003;</span> Unlimited saves</li>
             <li><span class="check">&#10003;</span> Unlimited search</li>
-            <li><span class="check">&#10003;</span> Continue Conversation — unlimited</li>
+            <li><span class="check">&#10003;</span> Continue Conversation — Unlimited</li>
             <li><span class="check">&#10003;</span> Lifetime diary — stored permanently</li>
             <li><span class="check">&#10003;</span> Auto-categories &amp; smart tags</li>
             <li><span class="check">&#10003;</span> Quick Answer — ask any AI, save instantly</li>
@@ -866,8 +866,8 @@
       var forgePrice = document.getElementById('forge-price');
       var forgeAnnual = document.getElementById('forge-annual');
       var isYearly = false;
-      toggle.addEventListener('click', function() {
-        isYearly = !isYearly;
+      function applyBilling(y) {
+        isYearly = y;
         toggle.classList.toggle('yearly', isYearly);
         toggle.setAttribute('aria-checked', isYearly);
         labelMonthly.classList.toggle('active', !isYearly);
@@ -893,7 +893,13 @@
           proPrice.textContent = '$14.95'; proAnnual.innerHTML = '&nbsp;';
           if (forgePrice && forgeAnnual) { forgePrice.textContent = '$14.99'; forgeAnnual.innerHTML = '&nbsp;'; }
         }
-      });
+      }
+      // The switch, both labels and a page restored from the back/forward cache all go through
+      // the one function, so the switch position and the price can never disagree.
+      toggle.addEventListener('click', function() { applyBilling(!isYearly); });
+      labelMonthly.addEventListener('click', function() { applyBilling(false); });
+      labelYearly.addEventListener('click', function() { applyBilling(true); });
+      window.addEventListener('pageshow', function() { applyBilling(toggle.classList.contains('yearly')); });
     })();
 
   function installExtension(e) {
