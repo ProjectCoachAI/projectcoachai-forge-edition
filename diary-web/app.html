@@ -247,11 +247,12 @@
     .reader-md th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
     .reader-md td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
     .reader-md tr:nth-child(even) td { background: #FAFAF8; }
-    .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; margin-top: 16px; }
     /* Tags are plain outlines so they never read as the (coloured, filled) category pill. */
     .entry-tag { font-size: 10px; padding: 1px 8px; border-radius: 20px; background: transparent; color: #6B6559; border: 0.5px solid #D6D2C8; }
-    .entry-related { margin: 0 0 0.75rem; padding: 0.75rem 0.9rem; border: 0.5px solid #D6D2C8; border-radius: 8px; background: #FDFCFA; }
-    .entry-related-title { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #9E9890; margin-bottom: 0.4rem; }
+    /* Related-conversations card: a tinted card with a left accent stripe, so it reads as a feature, not a footnote. */
+    .entry-related { margin: 24px 0 0; padding: 16px; border: 0.5px solid rgba(193,125,60,0.35); border-left: 3px solid #C17D3C; border-radius: 8px; background: #FDF8F2; }
+    .entry-related-title { font-size: 14px; font-weight: 700; color: #1B2A4A; margin-bottom: 0.6rem; }
     .entry-related-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; width: 100%; text-align: left; background: none; border: 0; border-top: 0.5px solid #EDEAE3; padding: 7px 0; cursor: pointer; font-family: inherit; color: #1B2A4A; }
     .entry-related-item.first { border-top: 0; }
     .entry-related-group { font-size: 12px; font-weight: 600; color: #3D3830; margin: 0.5rem 0 0.1rem; }
@@ -268,7 +269,7 @@
     .tag-filter-bar button { margin-left: auto; background: none; border: none; color: #6B6559; cursor: pointer; font-size: 12px; text-decoration: underline; }
     .entry-note-preview { font-size: 12px; color: #6B6559; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; font-style: italic; }
     .entry-note textarea { width: 100%; background: #F5F3EE; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #1B2A4A; font-family: Inter,sans-serif; resize: vertical; outline: none; min-height: 60px; box-sizing: border-box; }
-    .entry-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 0.5px solid #D6D2C8; }
+    .entry-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 24px; padding-top: 16px; border-top: 0.5px solid #D6D2C8; }
     .entry-btn { font-size: 11px; padding: 4px 10px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: Inter,sans-serif; transition: all 0.15s; }
     .entry-btn:hover { border-color: #1B2A4A; color: #1B2A4A; }
     .entry-btn.primary { background: #1B2A4A; color: #fff; border-color: #1B2A4A; font-weight: 500; }
@@ -1149,7 +1150,7 @@ function renderRelatedEntries(entryId, related) {
   var box = document.getElementById('related-' + entryId);
   if (!box) return;
   if (!related || !related.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  var html = '<div class="entry-related-title">Same topic in other AIs</div>';
+  var html = '<div class="entry-related-title">Related conversations in other AIs</div>';
   var groups = [
     { label: 'Looks like the same question', items: related.filter(function(r) { return r.similarity >= RELATED_SAME_MIN; }) },
     { label: 'Might be similar', items: related.filter(function(r) { return !(r.similarity >= RELATED_SAME_MIN); }) }
@@ -2396,7 +2397,7 @@ function renderEntryCard(e) {
       // detectAndStoreArtifacts in db.js) — never recomputed here at
       // render time.
       ((_eartifacts && _eartifacts.length) ?
-        '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;padding-top:16px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
           _eartifacts.map(function(art, idx) {
             if (art.type !== 'table') return '';
             var tblSrc = getTableArtifactSource(e, art);
@@ -2436,7 +2437,7 @@ function renderEntryCard(e) {
         var citationArt = (_eartifacts || []).filter(function(a) { return a.type === 'citations'; })[0];
         if (!citationArt || !citationArt.sources || !citationArt.sources.length) return '';
         var sid = 'citations-' + e.id + '-' + Math.random().toString(36).slice(2, 10);
-        return '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+        return '<div style="margin-top:24px;padding-top:16px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
           '<button onclick="var b=document.getElementById(\'' + sid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.citations-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
             'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;font-family:Inter,sans-serif;">' +
             '<span class="citations-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
@@ -2489,7 +2490,7 @@ function renderEntryCard(e) {
         var checklistArt = (_eartifacts || []).filter(function(a) { return a.type === 'checklist'; })[0];
         if (!checklistArt || !checklistArt.items || !checklistArt.items.length) return '';
         var cid = 'checklist-' + e.id + '-' + Math.random().toString(36).slice(2, 10);
-        return '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+        return '<div style="margin-top:24px;padding-top:16px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
           '<button onclick="var b=document.getElementById(\'' + cid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'flex\';this.querySelector(\'.checklist-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
             'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;font-family:Inter,sans-serif;">' +
             '<span class="checklist-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(0deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
@@ -2536,7 +2537,7 @@ function renderEntryCard(e) {
           '</div>' +
         '</div>';
       })()) +
-      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + (function() {
+      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:24px;padding-top:16px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + (function() {
         // Gallery navigation list built from the images artifact
         // specifically (deduped, failed-hosting entries already
         // excluded) — kept separate from the render loop just below,
@@ -2609,7 +2610,7 @@ function renderEntryCard(e) {
         var reasoningArt = (_eartifacts || []).filter(function(a) { return a.type === 'reasoning'; })[0];
         if (!reasoningArt || !reasoningArt.steps || !reasoningArt.steps.length) return '';
         var rid = 'reasoning-' + e.id + '-' + Math.random().toString(36).slice(2, 10);
-        return '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
+        return '<div style="margin-top:24px;padding-top:16px;border-top:0.5px solid #D6D2C8;" onclick="event.stopPropagation();">' +
           '<button onclick="var b=document.getElementById(\'' + rid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.reasoning-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
             'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;font-family:Inter,sans-serif;">' +
             '<span class="reasoning-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(-90deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
@@ -2727,7 +2728,7 @@ function renderEntryCard(e) {
       // links straight back into the same Forge conversation rather
       // than making the person hunt for the "Continue in Forge" button
       // again lower in the actions row.
-      (_emeta && _emeta.chatSessionId ? '<div style="font-size:12px;color:#6B6559;margin-top:10px;padding:8px 12px;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.25);border-radius:8px;line-height:1.5;">' +
+      (_emeta && _emeta.chatSessionId ? '<div style="font-size:12px;color:#6B6559;margin-top:24px;padding:12px 16px;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.25);border-radius:8px;line-height:1.5;">' +
         heroicon('chat-bubble-left-right') + ' Continued in Forge' +
         (_emeta.forkedToForgeAt ? ' on ' + new Date(_emeta.forkedToForgeAt).toLocaleDateString(undefined, {month:'short',day:'numeric',year:'numeric'}) : '') +
         ' — this entry\'s own content won\'t include what happens there. ' +
@@ -2737,7 +2738,7 @@ function renderEntryCard(e) {
         '</div>' +
       '</div>' : '') +
       '<div class="entry-related" id="related-' + e.id + '" style="display:none"></div>' +
-      '<div class="entry-note" style="margin-top:12px">' +
+      '<div class="entry-note" style="margin-top:24px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
