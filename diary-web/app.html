@@ -266,6 +266,7 @@
     .entry-related-item:hover .rel-title { color: #C17D3C; }
     .entry-related-item:focus-visible { outline: 2px solid #C17D3C; outline-offset: 2px; border-radius: 4px; }
     .rel-title { font-size: 13px; font-weight: 500; flex: 1 1 220px; min-width: 0; }
+    .rel-compare { font-size: 12px; font-weight: 600; color: #C17D3C; text-decoration: underline; text-underline-offset: 2px; margin-left: auto; cursor: pointer; }
     .rel-meta { font-size: 12px; color: #6B6559; white-space: nowrap; }
     .rel-chips { display: flex; gap: 4px; flex-wrap: wrap; }
     .rel-chip { font-size: 10px; padding: 1px 7px; border-radius: 20px; background: #EDEAE3; color: #6B6559; }
@@ -1166,6 +1167,136 @@ window._relatedCache = window._relatedCache || {};
 // The server already drops anything below its own cut-off (0.72).
 var RELATED_SAME_MIN = 0.92;
 
+// ---- Compare answers (this entry vs a related one from another AI) -----------
+// Deterministic and local: finds the amounts each answer mentions and shows where
+// they agree, nearly agree or differ. No guessing about meaning.
+window._compareCache = window._compareCache || {};
+function _cmpClean(t) { return String(t == null ? '' : t).replace(/https?:\/\/[^\s)>\]]+/g, ' ').replace(/[⁣␟-]/g, ''); }
+function _cmpMd(s) { return String(s || '').replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`~#>]/g, '').replace(/\s+/g, ' ').trim(); }
+var _CMP_FILLER = /^(starts?|starting|costs?|priced?|prices?|from|at|about|around|roughly|approximately|approx\.?|is|are|was|were|of|for|to|up|only|just|over|under|range|ranges|ranging|between|and|the|a|an|in|by|with|on|as|per|est\.?|estimated|it|its|this|that|which|then|now|but|or|expect|expected|near|listed|earn|earns|typically|usually|would|could|can|should|may|will|asked|said|quoted|offered|reach|reaches|pays|paid|get|gets)$/i;
+function _cmpCtx(text, idx) {
+  var ls = text.lastIndexOf('\n', idx - 1) + 1, le = text.indexOf('\n', idx); if (le < 0) le = text.length;
+  var line = text.slice(ls, le), pos = idx - ls;
+  if (/^\s*\|/.test(line)) {
+    var cells = line.split('|');
+    for (var i = 0; i < cells.length; i++) { var c = _cmpMd(cells[i]); if (/[A-Za-z]{2,}/.test(c)) return c.length > 46 ? c.slice(0, 45) + '…' : c; }
+    return '';
+  }
+  var before = line.slice(0, pos), start = 0, re = /[.!?](?=\s)/g, m;
+  while ((m = re.exec(before)) !== null) start = m.index + 1;
+  var AMT = '(?:[$€£¥₹]|CHF)\\s?\\d[\\d,.]*\\s?(?:k|K|m|M|bn|L|lakh|Cr)?';
+  var seg = _cmpMd(before.slice(start))
+    .replace(new RegExp(AMT + '(?:\\s*(?:–|—|-|to)\\s*(?:[$€£¥₹]|CHF)?\\s?\\d[\\d,.]*\\s?(?:k|K|m|M|bn|L|lakh|Cr)?)?\\+?', 'g'), ' ')
+    .replace(/(?:per|\/)\s*(?:year|month|hour|day|week|annum)|\b(?:annually|monthly|hourly)\b/gi, ' ')
+    .replace(/^(?:[-+]+|\d+[.)])\s*/, '');
+  seg = seg.replace(/\([^)]*\)/g, ' ');
+  // Drop an unfinished parenthesis and loose dashes left behind.
+  var open = seg.lastIndexOf('(');
+  if (open >= 0 && seg.indexOf(')', open) < 0) seg = seg.slice(0, open);
+  seg = seg.replace(/\s[–—-]+(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+  var words = seg.split(/\s+/).filter(Boolean);
+  while (words.length && (_CMP_FILLER.test(words[words.length - 1].replace(/[:,;(~≈–—-]+$/g, '')) || /^[:,;(~≈–—-]+$/.test(words[words.length - 1]))) words.pop();
+  var out = words.slice(-7).join(' ').split(/,|;|\bI['’]d\b|\bI\b|\bwe\b|\byou\b/)[0].trim().replace(/[:,;(~≈–—-]+$/, '');
+  if (/^(why|note|notes|summary|overall|tip|tips|answer|result|results|total|so|here)$/i.test(out)) return '';
+  return /[A-Za-z]{2,}/.test(out) ? out : '';
+}
+function _cmpAmounts(content) {
+  var text = _cmpClean(content), out = [], seen = {}, taken = [];
+  var MULT = { k: 1e3, m: 1e6, bn: 1e9, l: 1e5, lakh: 1e5, cr: 1e7 };
+  function num(n, u) { var v = parseFloat(String(n).replace(/,/g, '')); return isNaN(v) ? NaN : v * (u ? (MULT[u.toLowerCase()] || 1) : 1); }
+  function overlaps(s, e) { return taken.some(function(r) { return s < r[1] && e > r[0]; }); }
+  var CUR = '(\\$|\u20AC|\u00A3|\u00A5|\u20B9|CHF\\s?)', N = '(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)\\s?(k|K|m|M|bn|L|lakh|Cr)?';
+  var rangeRe = new RegExp(CUR + '\\s?' + N + '\\s*(?:\u2013|\u2014|-|to)\\s*' + CUR + '?\\s?' + N + '(?![\\d])', 'g'), m;
+  function push(item, idx, end) { if (seen[item.key]) return; seen[item.key] = true; taken.push([idx, end]); item.ctx = _cmpCtx(text, idx); out.push(item); }
+  while ((m = rangeRe.exec(text)) !== null) {
+    var cur = m[1].trim(), lo = num(m[2], m[3] || m[6]), hi = num(m[5], m[6] || m[3]);
+    if (isNaN(lo) || isNaN(hi)) continue;
+    if (hi < lo) { var t = lo; lo = hi; hi = t; }
+    push({ text: m[0].trim(), cur: cur, lo: lo, hi: hi, range: true, key: cur + '|' + Math.round(lo) + '-' + Math.round(hi) }, m.index, m.index + m[0].length);
+  }
+  var re = new RegExp(CUR + '\\s?' + N + '\\b', 'g');
+  while ((m = re.exec(text)) !== null) {
+    if (overlaps(m.index, m.index + m[0].length)) continue;
+    var c = m[1].trim(), v = num(m[2], m[3]); if (isNaN(v)) continue;
+    push({ text: m[0].trim(), cur: c, lo: v, hi: v, range: false, key: c + '|' + Math.round(v) }, m.index, m.index + m[0].length);
+  }
+  return out;
+}
+function _cmpDomains(entry) {
+  var arts = []; try { arts = (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch (_) {}
+  var set = {};
+  arts.forEach(function(a) { if (a && a.type === 'citations') (a.sources || []).forEach(function(s) { try { set[new URL(s.url).hostname.replace(/^www\./, '')] = 1; } catch (_) {} }); });
+  return Object.keys(set);
+}
+function _cmpCompare(a, b) {
+  var A = _cmpAmounts(a.content), B = _cmpAmounts(b.content), bm = {}; B.forEach(function(x) { bm[x.key] = x; });
+  var agree = [], restA = [];
+  A.forEach(function(x) { if (bm[x.key]) { agree.push({ a: x, b: bm[x.key] }); delete bm[x.key]; } else restA.push(x); });
+  var restB = B.filter(function(x) { return bm[x.key]; });
+  var close = [], onlyA = [];
+  restA.forEach(function(x) {
+    var best = -1, bd = 0.05;
+    restB.forEach(function(y, i) {
+      if (y.cur !== x.cur || y.range !== x.range || !(x.hi > 0) || !(y.hi > 0)) return;
+      var d1 = Math.abs(x.lo - y.lo) / Math.max(x.lo, y.lo, 1), d2 = Math.abs(x.hi - y.hi) / Math.max(x.hi, y.hi, 1), d = Math.max(d1, d2);
+      if (d <= bd && d > 0) { bd = d; best = i; }
+    });
+    if (best >= 0) { close.push({ a: x, b: restB[best] }); restB.splice(best, 1); } else onlyA.push(x);
+  });
+  var da = _cmpDomains(a), db = _cmpDomains(b), dbSet = {}; db.forEach(function(d) { dbSet[d] = 1; });
+  var shared = da.filter(function(d) { return dbSet[d]; });
+  var daSet = {}; da.forEach(function(d) { daSet[d] = 1; });
+  return { agree: agree, close: close, onlyA: onlyA, onlyB: restB, totalA: A.length, totalB: B.length,
+    src: { shared: shared, onlyA: da.filter(function(d) { return !dbSet[d]; }), onlyB: db.filter(function(d) { return !daSet[d]; }), a: da.length, b: db.length } };
+}
+function _cmpRow(c1, c2, c3) {
+  return '<div style="display:grid;grid-template-columns:minmax(80px,0.8fr) 1.1fr 1.1fr;gap:10px;padding:7px 0;border-top:0.5px solid #E8E4DA;font-size:12px;line-height:1.45;"><div style="font-weight:600;color:#1B2A4A;">' + c1 + '</div><div style="color:#4A4035;">' + c2 + '</div><div style="color:#4A4035;">' + c3 + '</div></div>';
+}
+function _cmpList(items, empty) {
+  if (!items.length) return '<div style="font-size:12px;color:#9E9890;padding:6px 0;">' + empty + '</div>';
+  return items.slice(0, 10).map(function(x) { return '<div style="padding:5px 0;border-top:0.5px solid #E8E4DA;font-size:12px;line-height:1.45;"><span style="font-weight:600;color:#1B2A4A;">' + escHtml(x.text) + '</span>' + (x.ctx ? ' <span style="color:#6B6559;">— ' + escHtml(x.ctx) + '</span>' : '') + '</div>'; }).join('') +
+    (items.length > 10 ? '<div style="font-size:11px;color:#9E9890;padding:4px 0;">+ ' + (items.length - 10) + ' more</div>' : '');
+}
+async function openCompare(aId, bId) {
+  var a = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === aId; });
+  var body = document.getElementById('compareBody'), modal = document.getElementById('compareModal');
+  if (!a || !body || !modal) return;
+  body.innerHTML = '<div style="font-size:13px;color:#6B6559;padding:24px 0;">Loading…</div>';
+  modal.style.display = 'flex';
+  var b = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === bId; }) || window._compareCache[bId];
+  if (!b || typeof b.content !== 'string') {
+    try {
+      var r = await Forge.request('GET', '/api/diary/' + bId);
+      if (r && r.ok && r.data && r.data.entry) { b = r.data.entry; window._compareCache[bId] = b; }
+    } catch (_) {}
+  }
+  if (!b) { body.innerHTML = '<div style="font-size:13px;color:#B03A2E;padding:24px 0;">Could not load the other answer. Please try again.</div>'; return; }
+  var res = _cmpCompare(a, b), la = SOURCE_LABELS[a.source] || a.source || 'This answer', lb = SOURCE_LABELS[b.source] || b.source || 'Other answer';
+  if (la === lb) { la += ' (this)'; lb += ' (other)'; }
+  function when(e) { try { var d = new Date(e.created_at); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) { return ''; } }
+  var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">' +
+    [[a, la, aId], [b, lb, bId]].map(function(p) { return '<div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;">' + escHtml(p[1]) + (when(p[0]) ? ' · ' + escHtml(when(p[0])) : '') + '</div><div style="font-size:13px;font-weight:600;color:#1B2A4A;margin-top:3px;">' + escHtml(displayTitle(p[0].title) || 'Untitled entry') + '</div><button type="button" onclick="closeCompare();openRelatedEntry(' + p[2] + ')" style="margin-top:6px;background:none;border:none;padding:0;color:#C17D3C;font-size:12px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;">Open entry</button></div>'; }).join('') + '</div>';
+  var nA = res.totalA, nB = res.totalB;
+  if (!nA && !nB && !res.src.a && !res.src.b) {
+    h += '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:8px 0;">Neither answer contains amounts or cited sources, so there is nothing numeric to compare. Open both entries to read them side by side.</div>';
+  } else {
+    h += '<div style="font-size:13px;color:#1B2A4A;line-height:1.5;margin-bottom:6px;">' +
+      (nA || nB ? 'Both answers mention <b>' + res.agree.length + '</b> of the same figure' + (res.agree.length === 1 ? '' : 's') + (res.close.length ? ', and <b>' + res.close.length + '</b> that are close but not equal' : '') + '. ' + escHtml(la) + ' has <b>' + res.onlyA.length + '</b> only it mentions; ' + escHtml(lb) + ' has <b>' + res.onlyB.length + '</b>.' : 'No amounts to compare in these answers.') + '</div>';
+    if (res.agree.length) h += '<div style="font-size:12px;font-weight:700;color:#1B2A4A;margin:12px 0 2px;">Same figure in both</div>' + _cmpRow('', escHtml(la), escHtml(lb)).replace(/border-top:[^;]*;/, '').replace(/color:#4A4035/g, 'color:#9E9890') + res.agree.slice(0, 12).map(function(p) { return _cmpRow(escHtml(p.a.text), escHtml(p.a.ctx || '—'), escHtml(p.b.ctx || '—')); }).join('') + (res.agree.length > 12 ? '<div style="font-size:11px;color:#9E9890;padding:4px 0;">+ ' + (res.agree.length - 12) + ' more</div>' : '');
+    if (res.close.length) h += '<div style="font-size:12px;font-weight:700;color:#1B2A4A;margin:14px 0 2px;">Close but not equal (within 5%)</div>' + res.close.slice(0, 10).map(function(p) { return _cmpRow(escHtml(p.a.text) + ' vs ' + escHtml(p.b.text), escHtml(p.a.ctx || '—'), escHtml(p.b.ctx || '—')); }).join('');
+    if (nA || nB) h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;"><div><div style="font-size:12px;font-weight:700;color:#1B2A4A;">Only in ' + escHtml(la) + ' (' + res.onlyA.length + ')</div>' + _cmpList(res.onlyA, 'Nothing extra.') + '</div><div><div style="font-size:12px;font-weight:700;color:#1B2A4A;">Only in ' + escHtml(lb) + ' (' + res.onlyB.length + ')</div>' + _cmpList(res.onlyB, 'Nothing extra.') + '</div></div>';
+    if (res.src.a || res.src.b) {
+      var chips = function(list, bg) { return list.length ? list.slice(0, 12).map(function(d) { return '<span style="display:inline-block;font-size:11px;padding:2px 8px;margin:2px 4px 2px 0;border-radius:20px;background:' + bg + ';color:#4A4035;">' + escHtml(d) + '</span>'; }).join('') : '<span style="font-size:12px;color:#9E9890;">none</span>'; };
+      h += '<div style="font-size:12px;font-weight:700;color:#1B2A4A;margin:16px 0 4px;">Sources cited</div><div style="font-size:12px;color:#4A4035;line-height:1.7;">Both cite: ' + chips(res.src.shared, '#E8F0E4') + '<br>Only ' + escHtml(la) + ': ' + chips(res.src.onlyA, '#EDEAE3') + '<br>Only ' + escHtml(lb) + ': ' + chips(res.src.onlyB, '#EDEAE3') + '</div>';
+    }
+    h += '<div style="font-size:11px;color:#9E9890;margin-top:14px;">Figures are matched by exact value across the whole conversation (ranges as a whole), so the same figure in another currency or unit will show up as a difference.</div>';
+  }
+  body.innerHTML = h;
+}
+function closeCompare() { var m = document.getElementById('compareModal'); if (m) m.style.display = 'none'; }
+window.openCompare = openCompare; window.closeCompare = closeCompare;
+document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') closeCompare(); });
+
 function renderRelatedEntries(entryId, related) {
   var box = document.getElementById('related-' + entryId);
   if (!box) return;
@@ -1191,6 +1322,7 @@ function renderRelatedEntries(entryId, related) {
       '<span class="rel-title">' + escHtml(displayTitle(r.title) || 'Untitled entry') + '</span>' +
       '<span class="rel-meta">' + escHtml(meta) + '</span>' +
       (chips ? '<span class="rel-chips">' + chips + '</span>' : '') +
+      '<span class="rel-compare" role="button" tabindex="0" onclick="event.stopPropagation();openCompare(' + entryId + ',' + r.id + ')" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();openCompare(' + entryId + ',' + r.id + ')}">Compare answers</span>' +
     '</button>';
    });
   });
@@ -7550,6 +7682,15 @@ document.addEventListener('keydown', function(e) {
      simply not work, with no visible indicator anything is scrollable
      at all, even though it's technically enabled. -webkit-overflow-
      scrolling:touch added below fixes this specific iOS gotcha. -->
+<div id="compareModal" onclick="if(event.target===this)closeCompare()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.6);z-index:10003;align-items:center;justify-content:center;">
+  <div role="dialog" aria-label="Compare answers" style="background:#F5F3EE;width:min(760px,94vw);max-height:86vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 40px rgba(0,0,0,0.4);font-family:Inter,sans-serif;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-size:15px;font-weight:700;color:#1B2A4A;">Compare answers</div>
+      <button onclick="closeCompare()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+    </div>
+    <div id="compareBody"></div>
+  </div>
+</div>
 <div id="artifactHelpModal" onclick="if(event.target===this)closeArtifactHelp()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.6);z-index:10002;align-items:center;justify-content:center;">
   <div role="dialog" aria-label="What can I do with this?" style="background:#F5F3EE;width:min(440px,92vw);max-height:80vh;overflow:auto;border-radius:8px;padding:18px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.4);font-family:Inter,sans-serif;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
