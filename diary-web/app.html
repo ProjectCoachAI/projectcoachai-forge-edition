@@ -7036,6 +7036,16 @@ function jumpToTurn(entryId, turnIndex) {
     if (!alreadyVisible) {
       container.scrollTop = Math.max(0, container.scrollTop + (targetRect.top - safeOffsetViewport) - 12);
     }
+    // The entry's own pane can sit partly or wholly above (or below) the
+    // visible page, e.g. after "View source" is clicked from the buttons at
+    // the bottom of a long entry. Scrolling only the pane then leaves the
+    // question out of sight, so bring it into view on the page as well.
+    var afterRect = targetEl.getBoundingClientRect();
+    var pageTopLimit = STICKY_HEADER_OFFSET;
+    if (searchBar) pageTopLimit = Math.max(pageTopLimit, searchBar.getBoundingClientRect().bottom);
+    if (afterRect.top < pageTopLimit || afterRect.top > window.innerHeight - 120) {
+      window.scrollBy({ top: afterRect.top - pageTopLimit - 24, behavior: 'smooth' });
+    }
   } else {
     // Short entry, no internal scroll active at all — the entry itself
     // still grows/shrinks the outer page's own layout.
