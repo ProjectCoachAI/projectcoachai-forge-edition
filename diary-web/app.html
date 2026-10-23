@@ -5155,10 +5155,26 @@ function _clEntry(entryId) { return (window._diaryEntries || allEntries || []).f
 function _clArts(entry) { try { return (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch (_) { return []; } }
 function _clItems(entry) { var c = _clArts(entry).filter(function(a) { return a.type === 'checklist'; })[0]; return c && c.items ? c.items : []; }
 function _clPlain(t) { return stripMarkdownForPlainText(stripCitationMarkersForPlainText(String(t == null ? '' : t))); }
+// Applies a done/undone change to every copy of an item (in memory and on
+// screen), so the open entry and My tasks always agree.
+function syncChecklistItem(entryId, text, done) {
+  var entry = _clEntry(entryId);
+  if (entry) {
+    var arts = _clArts(entry), cl = arts.filter(function(a) { return a.type === 'checklist'; })[0];
+    if (cl && cl.items) { cl.items.forEach(function(i) { if (i.text === text) i.done = done; }); entry.artifacts = arts; }
+  }
+  document.querySelectorAll('[data-entry="' + entryId + '"][data-cid] input[type=checkbox]').forEach(function(cb) {
+    if (cb.getAttribute('data-text') !== text) return;
+    cb.checked = done;
+    if (cb.parentElement) { cb.parentElement.style.color = done ? '#9E9890' : '#4A4035'; cb.parentElement.style.textDecoration = done ? 'line-through' : 'none'; }
+  });
+  updateChecklistProgress(entryId);
+}
 function updateChecklistProgress(entryId) {
-  var entry = _clEntry(entryId); if (!entry) return;
-  var items = _clItems(entry), done = items.filter(function(i) { return i.done; }).length;
   var box = document.querySelector('[data-entry="' + entryId + '"][data-cid]'); if (!box) return;
+  var entry = _clEntry(entryId);
+  var items = entry ? _clItems(entry) : [].slice.call(box.querySelectorAll('input[type=checkbox]')).map(function(c) { return { done: c.checked }; });
+  var done = items.filter(function(i) { return i.done; }).length;
   var cid = box.getAttribute('data-cid');
   var label = document.getElementById(cid + '-label'), bar = document.getElementById(cid + '-bar');
   if (label) label.textContent = 'Checklist · ' + done + ' of ' + items.length + ' done';
@@ -5246,11 +5262,7 @@ async function myTaskToggle(cb) {
     var e = (window._myTasks.entries || []).find(function(x) { return x.id === id; });
     if (e) { e.open = e.open.filter(function(t) { return t !== text; }); e.done += 1; if (!e.open.length) window._myTasks.entries = window._myTasks.entries.filter(function(x) { return x.id !== id; }); }
     // Keep an already-loaded copy of the entry in step.
-    var entry = _clEntry(id);
-    if (entry) {
-      var arts = _clArts(entry), cl = arts.filter(function(a) { return a.type === 'checklist'; })[0];
-      if (cl) { var it = cl.items.filter(function(i) { return i.text === text; })[0]; if (it) it.done = true; entry.artifacts = arts; updateChecklistProgress(id); }
-    }
+    syncChecklistItem(id, text, true);
     setTimeout(renderMyTasks, 250);
   } catch (_) { cb.checked = false; cb.disabled = false; showTopToast('Could not save — please try again.', true); }
 }
@@ -5269,8 +5281,7 @@ async function toggleChecklistItem(entryId, text, done, checkboxEl) {
       try { artifacts = (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch(_e) {}
       var checklist = artifacts.filter(function(a) { return a.type === 'checklist'; })[0];
       if (checklist) {
-        var item = checklist.items.filter(function(i) { return i.text === text; })[0];
-        if (item) item.done = done;
+        checklist.items.forEach(function(i) { if (i.text === text) i.done = done; });
         entry.artifacts = artifacts;
       }
     }
@@ -5282,7 +5293,7 @@ async function toggleChecklistItem(entryId, text, done, checkboxEl) {
       checkboxEl.parentElement.style.color = done ? '#9E9890' : '#4A4035';
       checkboxEl.parentElement.style.textDecoration = done ? 'line-through' : 'none';
     }
-    updateChecklistProgress(entryId);
+    syncChecklistItem(entryId, text, done);
   } catch (e) {
     console.warn('[Diary] Failed to save checklist item state:', e.message);
     if (checkboxEl) checkboxEl.checked = !done;
