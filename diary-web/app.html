@@ -7690,17 +7690,18 @@ window.DiaryTableChart = (function () {
   var C = { mode: false, col: -1, cols: [], getData: null };
   var CUR = '(€|\\$|£|₹|¥|CHF|USD|EUR|INR|GBP)?';
   var NUM = '(\\d[\\d,]*(?:\\.\\d+)?)\\s*([kKmM])?';
-  var RE = new RegExp('^' + CUR + '\\s*' + NUM + '(?:\\s*(?:–|—|-|to)\\s*' + CUR + '\\s*' + NUM + ')?\\s*(%|/\\s*[a-z]+)?\\s*(\\+)?$', 'i');
+  var RE = new RegExp('^' + CUR + '\\s*' + NUM + '(?:\\s*(?:–|—|-|to)\\s*' + CUR + '\\s*' + NUM + ')?\\s*(%|(?:/|\\bper\\s+)\\s*[a-z]+)?\\s*(\\+)?\\s*(?:avg\\.?|average|each|net|gross)?$', 'i');
   function val(n, m) { var v = parseFloat(String(n).replace(/,/g, '')); if (m) v *= /k/i.test(m) ? 1e3 : 1e6; return v; }
   function parseCell(s) {
     var t = String(s == null ? '' : s).trim();
     if (!t || /^[—–\-\s]+$/.test(t)) return { empty: true };
-    t = t.replace(/^(~|≈|about|approx\.?|around|circa)\s*/i, '');
+    t = t.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    t = t.replace(/^((?:~|≈|about|approx\.?|around|circa|up to|from|over|under|avg\.?|average|max|min)\s*)+/i, '');
     var m = RE.exec(t); if (!m) return { text: t, bad: true };
     var lo = val(m[2], m[3]), hi = m[5] ? val(m[5], m[6]) : lo;
     if (isNaN(lo) || isNaN(hi)) return { text: t, bad: true };
     if (hi < lo) { var x = lo; lo = hi; hi = x; }
-    return { lo: lo, hi: hi, range: !!m[5], open: !!m[8], cur: (m[1] || m[4] || '').toUpperCase(), unit: (m[7] || '').replace(/\s+/g, '').toLowerCase(), text: String(s).trim() };
+    return { lo: lo, hi: hi, range: !!m[5], open: !!m[8], cur: (m[1] || m[4] || '').toUpperCase(), unit: (m[7] || '').replace(/\s+/g, '').toLowerCase().replace(/^per/, '/'), text: String(s).trim() };
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   // Which columns can be charted, and which rows of each belong together (same currency + unit).
@@ -7736,6 +7737,7 @@ window.DiaryTableChart = (function () {
       items.push({ label: label.length > 46 ? label.slice(0, 45) + '…' : label, p: p });
     });
     if (!items.length) return null;
+    var hasRange = items.some(function (x) { return x.p.range; });
     var maxHi = Math.max.apply(null, items.map(function (x) { return x.p.hi; })), step = nice(maxHi / 5), nt = Math.max(2, Math.ceil(maxHi / step)), top = step * nt, cur = items[0].p.cur;
     var labelW = Math.min(310, Math.max.apply(null, items.map(function (x) { return x.label.length; })) * 6.6 + 14);
     var valueW = Math.min(190, Math.max.apply(null, items.map(function (x) { return x.p.text.length; })) * 6.3 + 12);
@@ -7754,9 +7756,14 @@ window.DiaryTableChart = (function () {
       var cy = y0 + k * rowH + rowH / 2, a = it.p.range ? it.p.lo : 0, b = it.p.hi;
       var xa = sx(a), xb = Math.max(sx(b), xa + 3);
       g += '<text x="' + (x0 - 10) + '" y="' + (cy + 4) + '" ' + f + ' font-size="12" fill="#1B2A4A" text-anchor="end">' + esc(it.label) + '</text>';
-      g += '<rect x="' + xa + '" y="' + (cy - 9) + '" width="' + (xb - xa) + '" height="18" rx="3" fill="#C17D3C"/>';
+      if (!it.p.range && hasRange) {
+        xb = sx(b);
+        g += '<circle cx="' + xb + '" cy="' + cy + '" r="6.5" fill="#C17D3C"/>';
+      } else {
+        g += '<rect x="' + xa + '" y="' + (cy - 9) + '" width="' + (xb - xa) + '" height="18" rx="3" fill="#C17D3C"/>';
+      }
       if (it.p.open) g += '<path d="M' + xb + ' ' + (cy - 9) + ' l9 9 l-9 9 z" fill="#C17D3C" opacity="0.55"/>';
-      g += '<text x="' + (xb + (it.p.open ? 14 : 8)) + '" y="' + (cy + 4) + '" ' + f + ' font-size="11.5" fill="#6B6559">' + esc(it.p.text) + '</text>';
+      g += '<text x="' + (xb + (it.p.open ? 14 : (!it.p.range && hasRange ? 12 : 8))) + '" y="' + (cy + 4) + '" ' + f + ' font-size="11.5" fill="#6B6559">' + esc(it.p.text) + '</text>';
     });
     if (notes) g += '<text x="10" y="' + (H - 12) + '" ' + f + ' font-size="10.5" fill="#9E9890">Not charted: ' + esc(skipped.join('; ').slice(0, 150)) + '</text>';
     return { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' + g + '</svg>', w: W, h: H };
