@@ -1077,8 +1077,8 @@ async function updateSyncButtonLabel() {
   ]);
   var opensNewTab = !(tabCheck && tabCheck.isOpen);
   btn.dataset.syncedText = syncedText;
-  btn.textContent = '\u{1F504} Sync';
-  btn.title = syncedText + (opensNewTab ? ' \u2014 syncing opens the original conversation in a new tab' : ' \u2014 pull in anything new from the original conversation');
+  btn.textContent = '\u{1F504} ' + syncedText;
+  btn.title = 'Click to sync \u2014 ' + syncedText.charAt(0).toLowerCase() + syncedText.slice(1) + (opensNewTab ? ' \u2014 syncing opens the original conversation in a new tab' : ' \u2014 pull in anything new from the original conversation');
 }
 
 async function performSync() {
@@ -3045,6 +3045,7 @@ window.zoomPdfOut = zoomPdfOut;
   <div style="background:#F5F3EE;width:min(880px,92vw);height:80vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;gap:12px;">
       <input id="tableArtifactFilter" type="text" placeholder="Filter rows..." oninput="renderChatTableBody()" style="flex:1;font-size:16px;padding:6px 10px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>
+      <button id="tableChartBtn" onclick="DiaryTableChart.toggle()" title="Show this table as a chart" style="display:none;font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Chart</button>
       <button onclick="copyChatTable(this)" title="Copy the table so you can paste it into Excel or Google Sheets" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Copy</button>
       <button onclick="exportChatTableXlsx()" title="Download as an Excel file" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Excel</button>
       <button onclick="exportChatTableCsv()" title="Download as CSV" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">CSV</button>
@@ -3076,6 +3077,7 @@ window.zoomPdfOut = zoomPdfOut;
     return rows;
   }
   window.renderChatTableBody = function () {
+    if (window.DiaryTableChart && DiaryTableChart.mode) { DiaryTableChart.render(document.getElementById('tableArtifactBody')); return; }
     if (!cur) return;
     var rows = visibleRows();
     var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Inter,sans-serif;"><thead><tr style="background:#EDE9E0;">';
@@ -3113,6 +3115,7 @@ window.zoomPdfOut = zoomPdfOut;
     if (f) f.value = '';
     var modal = document.getElementById('tableArtifactModal');
     if (modal) modal.style.display = 'flex';
+    if (window.DiaryTableChart) DiaryTableChart.onOpen();
     window.renderChatTableBody();
   };
   window.closeChatTable = function () {
@@ -3121,6 +3124,11 @@ window.zoomPdfOut = zoomPdfOut;
     cur = null;
   };
   function tblName() { var h = document.getElementById('ctxTitle'); return DiaryTableExport.fileName(h && h.textContent); }
+  window._chatTableData = function (all) {
+    if (!cur) return null;
+    var rows = (all ? cur.rows : visibleRows()).map(function (r) { return r.map(plain); });
+    return { headers: cur.headers.map(plain), rows: rows, name: tblName() };
+  };
   window.copyChatTable = function (btn) {
     if (!cur) return;
     var rows = visibleRows().map(function (r) { return r.map(plain); });
@@ -3261,6 +3269,125 @@ window.DiaryTableExport = (function () {
   function toast(msg) { try { if (window.Forge && Forge.showToast) { Forge.showToast(msg, 'success'); return; } } catch (_) {} try { if (typeof showToast === 'function') { showToast(msg); return; } } catch (_) {} }
   return { makeXlsx: makeXlsx, toTsv: toTsv, download: download, copy: copy, fileName: fileName, toast: toast };
 })();
+</script>
+<script>
+/* Table chart: horizontal bars (or low-high range bars) for a numeric column. Plain SVG, no libraries. */
+window.DiaryTableChart = (function () {
+  var C = { mode: false, col: -1, cols: [], getData: null };
+  var CUR = '(€|\\$|£|₹|¥|CHF|USD|EUR|INR|GBP)?';
+  var NUM = '(\\d[\\d,]*(?:\\.\\d+)?)\\s*([kKmM])?';
+  var RE = new RegExp('^' + CUR + '\\s*' + NUM + '(?:\\s*(?:–|—|-|to)\\s*' + CUR + '\\s*' + NUM + ')?\\s*(%|/\\s*[a-z]+)?\\s*(\\+)?$', 'i');
+  function val(n, m) { var v = parseFloat(String(n).replace(/,/g, '')); if (m) v *= /k/i.test(m) ? 1e3 : 1e6; return v; }
+  function parseCell(s) {
+    var t = String(s == null ? '' : s).trim();
+    if (!t || /^[—–\-\s]+$/.test(t)) return { empty: true };
+    t = t.replace(/^(~|≈|about|approx\.?|around|circa)\s*/i, '');
+    var m = RE.exec(t); if (!m) return { text: t, bad: true };
+    var lo = val(m[2], m[3]), hi = m[5] ? val(m[5], m[6]) : lo;
+    if (isNaN(lo) || isNaN(hi)) return { text: t, bad: true };
+    if (hi < lo) { var x = lo; lo = hi; hi = x; }
+    return { lo: lo, hi: hi, range: !!m[5], open: !!m[8], cur: (m[1] || m[4] || '').toUpperCase(), unit: (m[7] || '').replace(/\s+/g, '').toLowerCase(), text: String(s).trim() };
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  // Which columns can be charted, and which rows of each belong together (same currency + unit).
+  function analyze(headers, rows) {
+    var out = [];
+    headers.forEach(function (h, ci) {
+      var cells = rows.map(function (r) { return parseCell(r[ci]); });
+      var nonEmpty = cells.filter(function (c) { return !c.empty; });
+      var good = cells.filter(function (c) { return !c.empty && !c.bad; });
+      if (good.length < 2 || good.length < nonEmpty.length * 0.6) return;
+      var groups = {}; good.forEach(function (c) { var k = c.cur + '|' + c.unit; groups[k] = (groups[k] || 0) + 1; });
+      var best = null; Object.keys(groups).forEach(function (k) { if (!best || groups[k] > groups[best]) best = k; });
+      if (groups[best] < 2 || groups[best] < nonEmpty.length * 0.5) return;
+      out.push({ index: ci, header: h, key: best });
+    });
+    return out;
+  }
+  function nice(max) { var p = Math.pow(10, Math.floor(Math.log10(max || 1))), f = max / p; var n = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10; return n * p; }
+  function compact(v, cur) {
+    var s; if (cur === '₹' || cur === 'INR') { if (v >= 1e7) s = (v / 1e7).toFixed(v % 1e7 ? 1 : 0).replace(/\.0$/, '') + ' Cr'; else if (v >= 1e5) s = (v / 1e5).toFixed(v % 1e5 ? 1 : 0).replace(/\.0$/, '') + ' L'; else if (v >= 1e3) s = (v / 1e3).toFixed(v % 1e3 ? 1 : 0).replace(/\.0$/, '') + 'K'; else s = String(Math.round(v * 100) / 100); return '₹' + s; }
+    if (v >= 1e6) s = (v / 1e6).toFixed(v % 1e6 ? 1 : 0).replace(/\.0$/, '') + 'M'; else if (v >= 1e3) s = (v / 1e3).toFixed(v % 1e3 ? 1 : 0).replace(/\.0$/, '') + 'K'; else s = String(Math.round(v * 100) / 100);
+    var sym = { EUR: '€', USD: '$', GBP: '£', INR: '₹' }[cur] || cur; return (sym && sym.length === 1 ? sym : '') + s + (sym && sym.length > 1 ? ' ' + sym : '');
+  }
+  function buildSvg(d, colInfo) {
+    var labelCol = 0; if (colInfo.index === 0) labelCol = -1;
+    var items = [], skipped = [];
+    d.rows.forEach(function (r, i) {
+      var label = labelCol >= 0 ? String(r[labelCol] || '').trim() : 'Row ' + (i + 1);
+      if (!label) label = 'Row ' + (i + 1);
+      var p = parseCell(r[colInfo.index]);
+      if (p.empty) return;
+      if (p.bad || (p.cur + '|' + p.unit) !== colInfo.key) { skipped.push(label + (p.bad ? '' : ' (different unit)')); return; }
+      items.push({ label: label.length > 46 ? label.slice(0, 45) + '…' : label, p: p });
+    });
+    if (!items.length) return null;
+    var maxHi = Math.max.apply(null, items.map(function (x) { return x.p.hi; })), step = nice(maxHi / 5), nt = Math.max(2, Math.ceil(maxHi / step)), top = step * nt, cur = items[0].p.cur;
+    var labelW = Math.min(310, Math.max.apply(null, items.map(function (x) { return x.label.length; })) * 6.6 + 14);
+    var valueW = Math.min(190, Math.max.apply(null, items.map(function (x) { return x.p.text.length; })) * 6.3 + 12);
+    var W = 760, x0 = labelW + 8, plotW = Math.max(160, W - x0 - valueW - 8), rowH = 34, y0 = 58;
+    var notes = skipped.length ? 1 : 0, H = y0 + items.length * rowH + (notes ? 30 : 8) + 6;
+    function sx(v) { return x0 + (v / top) * plotW; }
+    var f = 'font-family="Inter, Helvetica, Arial, sans-serif"';
+    var g = '<rect width="' + W + '" height="' + H + '" fill="#ffffff"/>';
+    g += '<text x="10" y="20" ' + f + ' font-size="14" font-weight="700" fill="#1B2A4A">' + esc(colInfo.header) + '</text>';
+    for (var i = 0; i <= nt; i++) {
+      var v = step * i, x = sx(v);
+      g += '<line x1="' + x + '" y1="' + (y0 - 8) + '" x2="' + x + '" y2="' + (y0 + items.length * rowH) + '" stroke="#E8E4DA" stroke-width="1"/>';
+      g += '<text x="' + x + '" y="' + (y0 - 14) + '" ' + f + ' font-size="10.5" fill="#9E9890" text-anchor="' + (i === 0 ? 'start' : 'middle') + '">' + esc(compact(v, cur)) + '</text>';
+    }
+    items.forEach(function (it, k) {
+      var cy = y0 + k * rowH + rowH / 2, a = it.p.range ? it.p.lo : 0, b = it.p.hi;
+      var xa = sx(a), xb = Math.max(sx(b), xa + 3);
+      g += '<text x="' + (x0 - 10) + '" y="' + (cy + 4) + '" ' + f + ' font-size="12" fill="#1B2A4A" text-anchor="end">' + esc(it.label) + '</text>';
+      g += '<rect x="' + xa + '" y="' + (cy - 9) + '" width="' + (xb - xa) + '" height="18" rx="3" fill="#C17D3C"/>';
+      if (it.p.open) g += '<path d="M' + xb + ' ' + (cy - 9) + ' l9 9 l-9 9 z" fill="#C17D3C" opacity="0.55"/>';
+      g += '<text x="' + (xb + (it.p.open ? 14 : 8)) + '" y="' + (cy + 4) + '" ' + f + ' font-size="11.5" fill="#6B6559">' + esc(it.p.text) + '</text>';
+    });
+    if (notes) g += '<text x="10" y="' + (H - 12) + '" ' + f + ' font-size="10.5" fill="#9E9890">Not charted: ' + esc(skipped.join('; ').slice(0, 150)) + '</text>';
+    return { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' + g + '</svg>', w: W, h: H };
+  }
+  function btn() { return document.getElementById('tableChartBtn'); }
+  function setBtn() { var b = btn(); if (b) b.textContent = C.mode ? 'Table' : 'Chart'; }
+  C.onOpen = function () {
+    C.mode = false; C.col = -1; C.cols = [];
+    try { var d = C.getData && C.getData(true); if (d) C.cols = analyze(d.headers, d.rows); } catch (e) { C.cols = []; }
+    if (C.cols.length) C.col = 0;
+    var b = btn(); if (b) b.style.display = C.cols.length ? '' : 'none';
+    setBtn();
+  };
+  C.toggle = function () {
+    C.mode = !C.mode; setBtn();
+    var f = document.getElementById('tableArtifactFilter'); if (f) f.dispatchEvent(new Event('input'));
+  };
+  C.setCol = function (i) { C.col = parseInt(i, 10); var f = document.getElementById('tableArtifactFilter'); if (f) f.dispatchEvent(new Event('input')); };
+  C.render = function (body) {
+    if (!body) return;
+    var d = C.getData(false), info = C.cols[C.col], built = info && buildSvg(d, info);
+    var h = '<div style="padding:14px 20px;font-family:Inter,sans-serif;"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">';
+    if (C.cols.length > 1) {
+      h += '<label style="font-size:12px;color:#6B6559;">Chart column <select onchange="DiaryTableChart.setCol(this.value)" style="font-size:13px;padding:3px 6px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;">' +
+        C.cols.map(function (c, i) { return '<option value="' + i + '"' + (i === C.col ? ' selected' : '') + '>' + esc(c.header) + '</option>'; }).join('') + '</select></label>';
+    }
+    h += '<span style="flex:1"></span>' + (built ? '<button type="button" onclick="DiaryTableChart.savePng()" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;">Save image</button>' : '') + '</div>';
+    h += built ? '<div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;padding:6px;overflow-x:auto;">' + built.svg.replace('width="' + built.w + '" height="' + built.h + '"', 'style="width:100%;min-width:560px;height:auto;display:block;"') + '</div>' : '<div style="font-size:12px;color:#6B6559;padding:20px 0;">Nothing to chart with the current filter.</div>';
+    body.innerHTML = h + '</div>';
+    C._last = built;
+  };
+  C.savePng = function () {
+    var b = C._last; if (!b) return;
+    var img = new Image(), url = URL.createObjectURL(new Blob([b.svg], { type: 'image/svg+xml;charset=utf-8' }));
+    img.onload = function () {
+      var cv = document.createElement('canvas'); cv.width = b.w * 2; cv.height = b.h * 2;
+      var cx = cv.getContext('2d'); cx.scale(2, 2); cx.drawImage(img, 0, 0, b.w, b.h); URL.revokeObjectURL(url);
+      cv.toBlob(function (blob) { var d = C.getData(false); DiaryTableExport.download(blob, (d.name || 'table') + ' chart.png'); }, 'image/png');
+    };
+    img.src = url;
+  };
+  C._parseCell = parseCell; C._analyze = analyze; C._buildSvg = buildSvg;
+  return C;
+})();
+DiaryTableChart.getData = function (all) { return window._chatTableData(all); };
 </script>
 </body>
 </html>
