@@ -1077,7 +1077,8 @@ async function updateSyncButtonLabel() {
   ]);
   var opensNewTab = !(tabCheck && tabCheck.isOpen);
   btn.dataset.syncedText = syncedText;
-  btn.textContent = '\u{1F504} ' + syncedText + (opensNewTab ? ' \u2022 opens original conversation' : '');
+  btn.textContent = '\u{1F504} Sync';
+  btn.title = syncedText + (opensNewTab ? ' \u2014 syncing opens the original conversation in a new tab' : ' \u2014 pull in anything new from the original conversation');
 }
 
 async function performSync() {

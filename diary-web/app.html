@@ -2756,6 +2756,7 @@ function renderEntryCard(e) {
           '<button class="entry-btn" id="syncBtn-' + e.id + '" onclick="performEntrySync(' + e.id + ')" style="font-size:11px;padding:3px 8px;" title="Pull in anything new from the original conversation">' + heroicon('arrow-path') + ' Sync</button>' +
         '</div>' +
       '</div>' : '') +
+      entryArtifactHintHtml(e.id, _eartifacts) +
       '<div class="entry-related" id="related-' + e.id + '" style="display:none"></div>' +
       '<div class="entry-note" style="margin-top:24px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
@@ -4727,6 +4728,77 @@ async function viewChecklistSource(entryId) {
   setTimeout(function() { jumpToTurn(entryId, turnIndex); }, 60);
 }
 window.viewChecklistSource = viewChecklistSource;
+
+
+// ---- "What can I do with this?" guidance -------------------------------
+// Describes only the artifact types actually present in the entry. The
+// one-time tip is shown at most once per browser (localStorage, guarded).
+var ARTIFACT_HELP = {
+  table:  { icon: '📊', name: 'Table', text: 'Open it in its own window to sort columns, filter rows and export to CSV.' },
+  checklist: { icon: '☑️', name: 'Checklist', text: 'Tick items off — your ticks are saved with the entry.' },
+  structured_facts: { icon: '📌', name: 'Key facts', text: 'The main facts from the answer, pulled out so you do not have to re-read it.' },
+  citations: { icon: '🔗', name: 'Sources', text: 'The links the AI cited, kept in the order they appeared.' },
+  images: { icon: '🖼️', name: 'Images', text: 'Images from the answer, saved with the entry.' },
+  reasoning: { icon: '🧠', name: 'Reasoning', text: 'The steps the AI showed, collapsed until you want them.' }
+};
+function _artifactTipSeen() { try { return localStorage.getItem('diary_artifact_tip_seen') === '1'; } catch (_) { return false; } }
+function _artifactTipMark() { try { localStorage.setItem('diary_artifact_tip_seen', '1'); } catch (_) {} }
+function _presentArtifactTypes(arts) {
+  var out = [];
+  (arts || []).forEach(function(a) {
+    if (!a || !ARTIFACT_HELP[a.type] || out.indexOf(a.type) !== -1) return;
+    // Mirror what the entry actually renders: key facts without context and
+    // empty lists are not shown, so they are not described either.
+    if (a.type === 'structured_facts' && !(a.facts || []).some(function(f) { return f && f.context; })) return;
+    if (a.type === 'images' && !(a.images || []).length) return;
+    if (a.type === 'citations' && !((a.sources || a.citations || a.items || []).length)) return;
+    if (a.type === 'reasoning' && !(a.steps || []).length) return;
+    out.push(a.type);
+  });
+  return out;
+}
+var _artifactTipShownThisPage = false;
+function entryArtifactHintHtml(entryId, arts) {
+  var types = _presentArtifactTypes(arts);
+  window._artifactHelpTypes = window._artifactHelpTypes || {};
+  window._artifactHelpTypes[entryId] = types;
+  // Only worth mentioning when there is something to act on.
+  var actionable = types.filter(function(t) { return t === 'table' || t === 'checklist'; });
+  if (!types.length || (!actionable.length && types.length < 2)) return '';
+  var tip = '';
+  if (actionable.length && !_artifactTipShownThisPage && !_artifactTipSeen()) {
+    _artifactTipShownThisPage = true;
+    tip = '<div id="artifactTip-' + entryId + '" style="display:flex;align-items:flex-start;gap:10px;margin:0 0 8px;padding:10px 12px;background:#FDF8F2;border:0.5px solid rgba(193,125,60,0.35);border-radius:8px;font-size:12px;color:#4A4035;line-height:1.5;">' +
+      '<div style="flex:1;">Tip: this answer contains ' + (actionable.indexOf('table') !== -1 ? 'a table' : 'a checklist') + ' you can work with, not just read.</div>' +
+      '<button type="button" onclick="event.stopPropagation();dismissArtifactTip(' + entryId + ')" style="background:none;border:none;color:#C17D3C;font-weight:600;font-size:12px;cursor:pointer;padding:0;white-space:nowrap;font-family:Inter,sans-serif;">Got it</button>' +
+    '</div>';
+  }
+  return '<div style="margin-top:20px;" onclick="event.stopPropagation();">' + tip +
+    '<button type="button" onclick="openArtifactHelp(' + entryId + ')" style="background:none;border:none;padding:0;cursor:pointer;font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;text-decoration:underline;text-underline-offset:2px;">What can I do with this?</button></div>';
+}
+function dismissArtifactTip(entryId) {
+  _artifactTipMark();
+  var el = document.getElementById('artifactTip-' + entryId);
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+window.dismissArtifactTip = dismissArtifactTip;
+function openArtifactHelp(entryId) {
+  var types = (window._artifactHelpTypes || {})[entryId] || [];
+  var body = document.getElementById('artifactHelpBody');
+  if (!body) return;
+  body.innerHTML = types.map(function(t) {
+    var h = ARTIFACT_HELP[t];
+    return '<div style="display:flex;gap:12px;padding:10px 0;border-top:0.5px solid #E8E4DA;"><div style="font-size:18px;line-height:1.3;">' + h.icon + '</div><div><div style="font-weight:600;color:#1B2A4A;font-size:13px;">' + h.name + '</div><div style="font-size:12px;color:#4A4035;line-height:1.5;margin-top:2px;">' + h.text + '</div></div></div>';
+  }).join('') || '<div style="font-size:12px;color:#6B6559;">Nothing extra was found in this answer.</div>';
+  document.getElementById('artifactHelpModal').style.display = 'flex';
+  _artifactTipMark();
+  var tip = document.getElementById('artifactTip-' + entryId);
+  if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
+}
+function closeArtifactHelp() { var m = document.getElementById('artifactHelpModal'); if (m) m.style.display = 'none'; }
+window.openArtifactHelp = openArtifactHelp;
+window.closeArtifactHelp = closeArtifactHelp;
+document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') closeArtifactHelp(); });
 
 function openTableArtifact(entryId, artifactIndex) {
   var entry = (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; });
@@ -7440,6 +7512,16 @@ document.addEventListener('keydown', function(e) {
      simply not work, with no visible indicator anything is scrollable
      at all, even though it's technically enabled. -webkit-overflow-
      scrolling:touch added below fixes this specific iOS gotcha. -->
+<div id="artifactHelpModal" onclick="if(event.target===this)closeArtifactHelp()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.6);z-index:10002;align-items:center;justify-content:center;">
+  <div role="dialog" aria-label="What can I do with this?" style="background:#F5F3EE;width:min(440px,92vw);max-height:80vh;overflow:auto;border-radius:8px;padding:18px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.4);font-family:Inter,sans-serif;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:15px;font-weight:700;color:#1B2A4A;">What you can do with this answer</div>
+      <button onclick="closeArtifactHelp()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+    </div>
+    <div id="artifactHelpBody"></div>
+    <div style="font-size:11px;color:#9E9890;margin-top:10px;border-top:0.5px solid #E8E4DA;padding-top:10px;">You can also continue the conversation in Forge, share the entry, or add a decision note.</div>
+  </div>
+</div>
 <div id="tableArtifactModal" onclick="if(event.target===this)closeTableArtifact()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
   <div style="background:#F5F3EE;width:min(880px,92vw);height:80vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;gap:12px;">
