@@ -1304,7 +1304,17 @@ function findChecklistCandidates(text) {
       closeItem();
       // A single bullet on its own isn't meaningfully a "checklist" —
       // not worth spending a classification call on.
-      if (items.length >= 2 && !linkOnly) candidates.push({ items, position });
+      if (items.length >= 2 && !linkOnly) {
+        // The sentence that introduces the list ("Before you reply, do
+        // these:") is what tells a task list from a list of findings, so
+        // it is kept for the classifier.
+        let lead = '';
+        for (let k = position - 1; k >= 0 && k >= position - 4; k--) {
+          const l = (lines[k] || '').trim();
+          if (l) { lead = l.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 200); break; }
+        }
+        candidates.push({ items, position, lead });
+      }
     } else {
       i++;
     }
@@ -1312,67 +1322,100 @@ function findChecklistCandidates(text) {
   return candidates;
 }
 
-function parseChecklistClassification(responseText, expectedLength) {
+// Version 2 classification: one true/false per ITEM (not per list), so a
+// list that mixes real tasks with descriptive lines keeps only the tasks.
+// Returns null on anything malformed — callers treat that as "could not
+// tell", never as "no tasks".
+function parseChecklistClassification(responseText, candidates) {
   try {
-    const cleaned = responseText.trim().replace(/^```json\n?|```$/g, '').trim();
+    const cleaned = responseText.trim().replace(/^```(?:json)?\n?|```$/g, '').trim();
     const parsed = JSON.parse(cleaned);
-    if (!Array.isArray(parsed) || parsed.length !== expectedLength) return null;
-    if (!parsed.every(v => typeof v === 'boolean')) return null;
+    if (!Array.isArray(parsed) || parsed.length !== candidates.length) return null;
+    for (let i = 0; i < parsed.length; i++) {
+      if (!Array.isArray(parsed[i]) || parsed[i].length !== candidates[i].items.length) return null;
+      if (!parsed[i].every(v => typeof v === 'boolean')) return null;
+    }
     return parsed;
   } catch (e) {
     return null;
   }
 }
 
-// Merges freshly re-detected checklist item TEXT against whatever
-// checklist artifact already existed before this re-detection,
-// carrying over each matching item's own "done" state — a genuinely
-// new item (no existing text match) defaults to not-done. This is the
-// direct fix for a real risk confirmed before building any of this:
-// detectAndStoreArtifacts overwrites the ENTIRE artifacts column on
-// every run, so without this merge step, re-syncing or continuing an
-// entry after someone had already checked items off would silently
-// wipe that progress — directly violating the brief's own acceptance
-// criterion ("persists across reload and across sessions"). Matches by
-// exact item text specifically, not position/index — the safer choice
-// given re-detection could plausibly reorder or partially change a
-// list's own content between runs.
 function mergeChecklistState(existingArtifacts, newItemTexts) {
   const existingChecklist = (existingArtifacts || []).find(a => a.type === 'checklist');
   const existingDoneByText = {};
   if (existingChecklist) {
-    existingChecklist.items.forEach(item => { existingDoneByText[item.text] = item.done; });
+    (existingChecklist.items || []).forEach(item => { existingDoneByText[item.text] = item.done; });
   }
-  return newItemTexts.map(text => ({
+  const dismissed = new Set((existingChecklist && existingChecklist.dismissed) || []);
+  return newItemTexts.filter(text => !dismissed.has(text)).map(text => ({
     text,
     done: existingDoneByText.hasOwnProperty(text) ? existingDoneByText[text] : false
   }));
 }
 
-async function detectChecklistArtifacts(text, existingArtifacts, callClaudeHaikuAPI, apiKey) {
-  const candidates = findChecklistCandidates(text);
-  if (!candidates.length || !callClaudeHaikuAPI || !apiKey) return [];
+function _normItem(t) { return String(t || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+
+// { ok, artifacts }: ok=false means the classifier could not be reached or
+// answered badly, so callers that would REPLACE an existing checklist (the
+// refresh job) must leave it alone instead of treating it as "no tasks".
+async function detectChecklistArtifactsEx(text, existingArtifacts, callClaudeHaikuAPI, apiKey) {
+  const found = findChecklistCandidates(text);
+  if (!found.length) return { ok: true, artifacts: [] };
+  if (!callClaudeHaikuAPI || !apiKey) return { ok: false, artifacts: [] };
   try {
-    const prompt = 'You are classifying lists found within a saved AI conversation. For each numbered list below, determine whether it is genuinely a checklist of discrete, actionable requirements or tasks (something a person would "do" or "complete") — as opposed to a list of reasons, examples, facts, or explanatory points (something a person would just "read").\n\n' +
-      candidates.map((c, i) => 'List ' + (i + 1) + ':\n' + c.items.map(item => '- ' + item).join('\n')).join('\n\n') +
-      '\n\nRespond ONLY with a JSON array of booleans, one per list, in order (e.g. [true,false]). No other text.';
-    const response = await callClaudeHaikuAPI(prompt, apiKey, 200);
-    const classifications = parseChecklistClassification(response, candidates.length);
-    // A malformed/unparseable classification response is treated the
-    // same as "nothing classified as a checklist" — never falls back to
-    // guessing every candidate is (or isn't) one.
-    if (!classifications) return [];
-    const checklistCandidates = candidates.filter((c, i) => classifications[i]);
-    if (!checklistCandidates.length) return [];
-    // Brief's own storage note (same reasoning as Citations): one,
-    // single checklist artifact per entry, combining every genuinely-
-    // classified list found anywhere in it — not one artifact per list.
-    const allItems = checklistCandidates.reduce((acc, c) => acc.concat(c.items), []);
-    return [{ type: 'checklist', items: mergeChecklistState(existingArtifacts, allItems), position: checklistCandidates[0].position }];
+    // Bound the work: the first lists in an entry are the ones that matter.
+    const candidates = []; let total = 0;
+    for (const c of found) { if (candidates.length >= 25 || total + c.items.length > 300) break; candidates.push(c); total += c.items.length; }
+    const prompt = 'You are deciding which lines in a saved AI conversation are real to-do items for the person reading it. You get several lists; each has the sentence that introduces it (may be empty) and its items.\n\n' +
+      'For EVERY item answer true only if it is something the reader themselves would do, check, ask, send, prepare, decide or look up — an action or a concrete thing to go and consult (e.g. "Call the recruiter", "Check Glassdoor India", "Ask Olivier what the opportunity is").\n' +
+      'Answer false for anything that describes, summarises, quotes or explains: findings, figures, estimates, reasons, pros and cons, comparisons, options, definitions, examples, status notes, descriptions of what a message or document contains or what the assistant changed or added, ingredients, features, steps the assistant itself performed. When unsure, answer false.\n\n' +
+      candidates.map((c, i) => 'List ' + (i + 1) + (c.lead ? ' (introduced by: "' + c.lead + '")' : '') + ':\n' + c.items.map(item => '- ' + item.slice(0, 300)).join('\n')).join('\n\n') +
+      '\n\nRespond ONLY with a JSON array containing one array of booleans per list, in the same order, each with exactly one boolean per item of that list (e.g. [[true,false,true],[false,false]]). No other text.';
+    const response = await callClaudeHaikuAPI(prompt, apiKey, Math.min(2500, 80 + total * 7));
+    const flags = parseChecklistClassification(response, candidates);
+    if (!flags) return { ok: false, artifacts: [] };
+    const seen = new Set(); const allItems = [];
+    candidates.forEach((c, i) => {
+      const kept = c.items.filter((_, j) => flags[i][j]);
+      // Fewer than two real tasks in a list is a stray line, not a checklist.
+      if (kept.length < 2) return;
+      kept.forEach(t => { const k = _normItem(t); if (!seen.has(k)) { seen.add(k); allItems.push(t); } });
+    });
+    const existing = (existingArtifacts || []).find(a => a.type === 'checklist');
+    const dismissed = (existing && existing.dismissed) || [];
+    const items = mergeChecklistState(existingArtifacts, allItems);
+    if (!items.length) return { ok: true, artifacts: [] };
+    const art = { type: 'checklist', v: 2, items, position: candidates[0].position };
+    if (dismissed.length) art.dismissed = dismissed;
+    return { ok: true, artifacts: [art] };
   } catch (e) {
     console.warn('[Diary] detectChecklistArtifacts classification failed, skipping:', e.message);
-    return [];
+    return { ok: false, artifacts: [] };
   }
+}
+
+async function detectChecklistArtifacts(text, existingArtifacts, callClaudeHaikuAPI, apiKey) {
+  return (await detectChecklistArtifactsEx(text, existingArtifacts, callClaudeHaikuAPI, apiKey)).artifacts;
+}
+
+// Re-runs ONLY checklist detection for one entry, keeping every other
+// artifact and each item's done state. Returns 'updated', 'skipped'
+// (nothing to re-detect from) or 'failed' (classifier unavailable —
+// the existing checklist is left untouched).
+async function refreshChecklistArtifact(entryId, userEmail, callClaudeHaikuAPI, apiKey) {
+  const r = await query('SELECT unified_content, artifacts FROM diary_entries WHERE id=$1 AND user_email=$2', [entryId, userEmail]);
+  if (!r.rows.length) return 'skipped';
+  const arts = r.rows[0].artifacts || [];
+  const idx = arts.findIndex(a => a.type === 'checklist');
+  if (idx === -1) return 'skipped';
+  const text = r.rows[0].unified_content || '';
+  if (!text) { arts[idx].v = 2; await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(arts), entryId, userEmail]); return 'skipped'; }
+  const res = await detectChecklistArtifactsEx(text, arts, callClaudeHaikuAPI, apiKey);
+  if (!res.ok) return 'failed';
+  if (res.artifacts.length) arts.splice(idx, 1, res.artifacts[0]); else arts.splice(idx, 1);
+  await query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(arts), entryId, userEmail]);
+  return 'updated';
 }
 
 // Structured Facts artifact (fourth of the brief's own build order).
@@ -1977,7 +2020,7 @@ async function logCompareApiError(provider, errorMessage) {
   }
 }
 
-module.exports = { init, query, hasDiaryPro, getDiaryEntitlement, getDiaryTier, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, upsertChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, makeTurnLookup, detectCitationArtifacts, detectChecklistArtifacts, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
+module.exports = { init, query, hasDiaryPro, getDiaryEntitlement, getDiaryTier, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, checkAndIncrementChatContinueUsage, getChatContinueUsage, updateStreak, yearMonth, pool, createChatSession, upsertChatSession, getChatSession, updateChatSession, listChatSessions, ensureChatMessageEmbeddingsTable, libraryUpload, libraryList, libraryGet, libraryDelete, logDiaryChatUsage, logDiaryChatError, logCompareApiError, computeAndStoreUnifiedContent, getDiaryEntryIdByChatSessionId, detectTableArtifacts, makeTurnLookup, detectCitationArtifacts, detectChecklistArtifacts, detectChecklistArtifactsEx, refreshChecklistArtifact, findChecklistCandidates, detectStructuredFactsArtifacts, detectImagesArtifacts, detectReasoningArtifacts, detectAndStoreArtifacts, checkAndReserveReadAloudUsage, refundReadAloudUsage, getReadAloudUsage };
 
 // ── Diary migration: add missing columns if they don't exist ─────────────────
 async function migrateDiary() {

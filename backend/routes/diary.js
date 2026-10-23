@@ -1792,10 +1792,73 @@ router.get('/tasks', requireAuth, async (req, res) => {
         open
       });
     }
-    res.json({ success: true, entries, openTotal });
+    // Entries whose checklist was saved before the stricter task detection.
+    const staleR = await db.query(
+      `SELECT COUNT(*) AS n FROM diary_entries
+        WHERE user_email = $1 AND (is_archived = false OR is_archived IS NULL)
+          AND artifacts @> '[{"type":"checklist"}]'::jsonb
+          AND NOT artifacts @> '[{"type":"checklist","v":2}]'::jsonb`,
+      [req.userEmail]
+    );
+    res.json({ success: true, entries, openTotal, stale: parseInt(staleR.rows[0]?.n || 0, 10) });
   } catch (e) {
     console.error('[Diary] tasks list failed:', e.message);
     res.status(500).json({ success: false, error: 'Could not load tasks.' });
+  }
+});
+
+// ── POST /api/diary/tasks/refresh — re-check old checklists in small batches ─
+// Re-runs ONLY checklist detection (stricter task rules) for entries whose
+// checklist predates it. Works through a few entries per call so the page can
+// show progress and stop any time; `afterId` lets the page move past an entry
+// that could not be re-checked instead of retrying it forever.
+router.post('/tasks/refresh', requireAuth, async (req, res) => {
+  try {
+    const afterId = parseInt((req.body && req.body.afterId) || 0, 10) || 0;
+    const key = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+    const staleSql = `FROM diary_entries
+        WHERE user_email = $1 AND id > $2
+          AND artifacts @> '[{"type":"checklist"}]'::jsonb
+          AND NOT artifacts @> '[{"type":"checklist","v":2}]'::jsonb`;
+    const batch = await db.query(`SELECT id ${staleSql} ORDER BY id LIMIT 6`, [req.userEmail, afterId]);
+    let updated = 0, failed = 0, lastId = afterId;
+    for (const row of batch.rows) {
+      lastId = row.id;
+      try {
+        const out = await db.refreshChecklistArtifact(row.id, req.userEmail, callClaudeHaikuAPI, key);
+        if (out === 'updated') updated++; else if (out === 'failed') failed++;
+      } catch (e) { failed++; console.warn('[Diary] checklist refresh failed for entry', row.id, e.message); }
+    }
+    const rem = await db.query(`SELECT COUNT(*) AS n ${staleSql}`, [req.userEmail, lastId]);
+    res.json({ success: true, processed: batch.rows.length, updated, failed, lastId, remaining: parseInt(rem.rows[0]?.n || 0, 10) });
+  } catch (e) {
+    console.error('[Diary] tasks refresh failed:', e.message);
+    res.status(500).json({ success: false, error: 'Could not re-check tasks.' });
+  }
+});
+
+// ── POST /api/diary/:id/checklist-item/dismiss — "this isn't a task" ─────────
+// Removes every item with this exact text from the entry's checklist and
+// remembers it, so re-detection (Sync, Continue) never brings it back.
+router.post('/:id/checklist-item/dismiss', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { text } = req.body || {};
+    if (typeof text !== 'string' || !text) return res.status(400).json({ success: false, error: 'text (string) is required.' });
+    const entryRes = await db.query('SELECT artifacts FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+    if (!entryRes.rows.length) return res.status(404).json({ success: false, error: 'Entry not found.' });
+    const artifacts = entryRes.rows[0].artifacts || [];
+    const checklist = artifacts.find(a => a.type === 'checklist');
+    if (!checklist) return res.status(404).json({ success: false, error: 'No checklist found on this entry.' });
+    checklist.items = (checklist.items || []).filter(i => i.text !== text);
+    const dismissed = Array.isArray(checklist.dismissed) ? checklist.dismissed : [];
+    if (!dismissed.includes(text)) dismissed.push(text);
+    checklist.dismissed = dismissed.slice(-200);
+    await db.query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), id, req.userEmail]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[Diary] checklist dismiss failed:', e.message);
+    res.status(500).json({ success: false, error: 'Could not remove that item.' });
   }
 });
 

@@ -1346,7 +1346,15 @@ async function loadRelatedEntries(entryId) {
 // Opens another entry from the related list. If it is not in the page that is
 // loaded (another page of results, or hidden by a filter), it is fetched and
 // added at the top first, the same way a link from Continue does it.
-async function openRelatedEntry(id) {
+function _scrollToChecklist(id, tries) {
+  var box = document.querySelector('[data-entry="' + id + '"][data-cid]');
+  if (!box) { if (tries > 0) setTimeout(function() { _scrollToChecklist(id, tries - 1); }, 150); return; }
+  if (box.style.display === 'none') box.style.display = 'flex';
+  var wrap = box.parentElement || box;
+  wrap.style.scrollMarginTop = '90px';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+async function openRelatedEntry(id, focus) {
   try {
     var loaded = allEntries.some(function(e) { return e.id === id; });
     if (!loaded) {
@@ -1358,6 +1366,7 @@ async function openRelatedEntry(id) {
       renderEntries();
     }
     if (!expandedIds.has(id)) await toggleEntry(id);
+    if (focus === 'checklist') { _scrollToChecklist(id, 14); return; }
     var card = document.getElementById('entry-' + id);
     if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (_e) {}
@@ -5216,7 +5225,7 @@ function checklistEmailMenu(entryId, btn) {
   var m = document.createElement('div'); m.id = 'clEmailMenu';
   var r = btn.getBoundingClientRect();
   m.style.cssText = 'position:fixed;z-index:10010;background:#fff;border:0.5px solid #D6D2C8;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.18);padding:4px;font-family:Inter,sans-serif;font-size:12px;min-width:150px;left:' + Math.max(8, r.left) + 'px;top:' + (r.bottom + 4) + 'px;';
-  [['gmail', 'Gmail'], ['outlook', 'Outlook'], ['mailto', 'Other email app']].forEach(function(o) {
+  [['gmail', 'Gmail'], ['outlook', 'Outlook'], ['mailto', 'Default mail app']].forEach(function(o) {
     var b = document.createElement('button'); b.type = 'button'; b.textContent = o[1];
     b.style.cssText = 'display:block;width:100%;text-align:left;background:none;border:none;padding:7px 10px;cursor:pointer;color:#1B2A4A;font-size:12px;font-family:Inter,sans-serif;border-radius:5px;';
     b.onmouseover = function() { b.style.background = '#F5F3EE'; }; b.onmouseout = function() { b.style.background = 'none'; };
@@ -5262,6 +5271,50 @@ function _mtView() {
   });
   return out;
 }
+function _mtBanner() {
+  var d = window._myTasks || {}, busy = window._mtBusy, note = window._mtNote;
+  if (busy) return '<div style="background:#FBF3E4;border:0.5px solid #E5CFA0;border-radius:6px;padding:8px 10px;font-size:12px;color:#6B4A12;margin-bottom:10px;">' + escHtml(busy) + '</div>';
+  if (note) return '<div style="background:#EEF5EC;border:0.5px solid #BFD6B8;border-radius:6px;padding:8px 10px;font-size:12px;color:#2F5A28;margin-bottom:10px;">' + escHtml(note) + '</div>';
+  if (d.stale > 0) return '<div style="background:#FBF3E4;border:0.5px solid #E5CFA0;border-radius:6px;padding:8px 10px;font-size:12px;color:#6B4A12;margin-bottom:10px;line-height:1.5;">' + d.stale + ' of your entries were saved with the older task detection, so some lines here may not be real tasks. <button type="button" onclick="recheckTasks()" style="background:none;border:none;padding:0;cursor:pointer;color:#C17D3C;font-weight:600;font-family:Inter,sans-serif;font-size:12px;text-decoration:underline;">Re-check them</button></div>';
+  return '';
+}
+async function recheckTasks() {
+  if (window._mtBusy) return;
+  window._mtNote = ''; window._mtBusy = 'Re-checking your entries…'; renderMyTasks();
+  var after = 0, guard = 0, failed = 0, ok = true;
+  try {
+    while (guard++ < 200) {
+      var r = await Forge.request('POST', '/api/diary/tasks/refresh', { afterId: after });
+      if (!(r && r.ok && r.data && r.data.success)) { ok = false; break; }
+      after = r.data.lastId; failed += r.data.failed || 0;
+      window._mtBusy = 'Re-checking your entries… ' + r.data.remaining + ' left'; renderMyTasks();
+      if (!r.data.processed || !r.data.remaining) break;
+    }
+  } catch (_) { ok = false; }
+  window._mtBusy = '';
+  try { var t = await Forge.request('GET', '/api/diary/tasks'); if (t && t.ok && t.data && t.data.success) window._myTasks = t.data; } catch (_) {}
+  window._mtNote = !ok ? 'Could not finish re-checking. Open My tasks again to continue where it left off.' : failed ? 'Done, except ' + failed + ' entries that could not be re-checked right now. Reload the page to see the cleaned-up checklists in your entries.' : 'Done. Reload the page to see the cleaned-up checklists in your entries.';
+  renderMyTasks();
+}
+async function myTaskDismiss(btn) {
+  var id = parseInt(btn.getAttribute('data-entry'), 10), text = btn.getAttribute('data-text');
+  btn.disabled = true;
+  try {
+    var r = await Forge.request('POST', '/api/diary/' + id + '/checklist-item/dismiss', { text: text });
+    if (!(r && r.ok)) throw new Error('failed');
+    var e = ((window._myTasks && window._myTasks.entries) || []).find(function(x) { return x.id === id; });
+    if (e) { e.open = e.open.filter(function(t) { return t !== text; }); if (!e.open.length) window._myTasks.entries = window._myTasks.entries.filter(function(x) { return x.id !== id; }); }
+    var entry = _clEntry(id);
+    if (entry) {
+      var arts = _clArts(entry), cl = arts.filter(function(a) { return a.type === 'checklist'; })[0];
+      if (cl) { cl.items = (cl.items || []).filter(function(i) { return i.text !== text; }); entry.artifacts = arts; }
+      document.querySelectorAll('[data-entry="' + id + '"][data-cid] input[type=checkbox]').forEach(function(cb) { if (cb.getAttribute('data-text') === text && cb.parentElement) cb.parentElement.remove(); });
+      updateChecklistProgress(id);
+    }
+    renderMyTasks();
+  } catch (_) { btn.disabled = false; showTopToast('Could not remove — please try again.', true); }
+}
+window.recheckTasks = recheckTasks; window.myTaskDismiss = myTaskDismiss;
 function myTasksFilter(v) { window._myTasksQ = v || ''; renderMyTasks(); }
 function renderMyTasks() {
   var body = document.getElementById('myTasksBody'), data = window._myTasks; if (!body || !data) return;
@@ -5272,15 +5325,15 @@ function renderMyTasks() {
   var title = document.getElementById('myTasksTitle'); if (title) title.textContent = 'My tasks' + (allOpen ? ' (' + (filtering ? shown + ' of ' + allOpen : allOpen + ' open') + (filtering ? ' shown)' : ')') : '');
   updateTasksBadge();
   var sb = document.getElementById('myTasksSearch'); if (sb) sb.style.display = allOpen ? 'block' : 'none';
-  if (!allOpen) { body.innerHTML = '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:12px 0;">Nothing open. When an AI answer contains a checklist, its unfinished items will show up here.</div>'; return; }
+  if (!allOpen) { body.innerHTML = _mtBanner() + '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:12px 0;">Nothing open. When an AI answer contains a checklist, its unfinished items will show up here.</div>'; return; }
   if (!view.length) { body.innerHTML = '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:12px 0;">No open tasks match "' + escHtml(window._myTasksQ) + '".</div>'; return; }
-  body.innerHTML = '<div style="font-size:12px;color:#6B6559;margin-bottom:8px;">Open items from the checklists in your answers. Tick one to mark it done.</div>' + view.map(function(x) {
+  body.innerHTML = _mtBanner() + '<div style="font-size:12px;color:#6B6559;margin-bottom:8px;">Open items from the checklists in your answers. Tick one to mark it done, or click &times; if a line is not really a task.</div>' + view.map(function(x) {
     var e = x.e;
     var when = ''; try { var d = new Date(e.created_at); if (!isNaN(d.getTime())) when = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) {}
     return '<div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:8px;padding:10px 12px;margin-bottom:10px;">' +
-      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><button type="button" onclick="closeMyTasks();openRelatedEntry(' + e.id + ')" style="background:none;border:none;padding:0;text-align:left;cursor:pointer;font-size:13px;font-weight:600;color:#1B2A4A;font-family:Inter,sans-serif;">' + escHtml(displayTitle(e.title) || 'Untitled entry') + '</button><span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + escHtml([SOURCE_LABELS[e.source] || e.source, when].filter(Boolean).join(' · ')) + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><button type="button" onclick="closeMyTasks();openRelatedEntry(' + e.id + ',\'checklist\')" style="background:none;border:none;padding:0;text-align:left;cursor:pointer;font-size:13px;font-weight:600;color:#1B2A4A;font-family:Inter,sans-serif;">' + escHtml(displayTitle(e.title) || 'Untitled entry') + '</button><span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + escHtml([SOURCE_LABELS[e.source] || e.source, when].filter(Boolean).join(' · ')) + '</span></div>' +
       '<div style="font-size:11px;color:#9E9890;margin:2px 0 6px;">' + x.open.length + ' open</div>' +
-      x.open.map(function(t) { return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#4A4035;line-height:1.5;padding:3px 0;cursor:pointer;"><input type="checkbox" data-entry="' + e.id + '" data-text="' + escHtml(t) + '" onchange="myTaskToggle(this)" style="margin-top:3px;"><span>' + escHtml(_clPlain(t)) + '</span></label>'; }).join('') +
+      x.open.map(function(t) { return '<div style="display:flex;align-items:flex-start;gap:6px;"><label style="flex:1;display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#4A4035;line-height:1.5;padding:3px 0;cursor:pointer;"><input type="checkbox" data-entry="' + e.id + '" data-text="' + escHtml(t) + '" onchange="myTaskToggle(this)" style="margin-top:3px;"><span>' + escHtml(_clPlain(t)) + '</span></label><button type="button" data-entry="' + e.id + '" data-text="' + escHtml(t) + '" onclick="myTaskDismiss(this)" title="Not a task — remove it" aria-label="Not a task — remove it" style="background:none;border:none;color:#B8B2A6;cursor:pointer;font-size:15px;line-height:1.3;padding:1px 4px;font-family:Inter,sans-serif;" onmouseover="this.style.color=\'#B03A2E\'" onmouseout="this.style.color=\'#B8B2A6\'">&times;</button></div>'; }).join('') +
     '</div>';
   }).join('');
 }
