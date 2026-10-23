@@ -5194,7 +5194,7 @@ function checklistShare(entryId, how) {
     else { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); ok(); } catch (_) { showTopToast('Could not copy.', true); } document.body.removeChild(t); }
   } else if (how === 'email' || how === 'gmail' || how === 'outlook' || how === 'mailto') {
     var q = 'subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(text), url;
-    if (how === 'gmail') url = 'https://mail.google.com/mail/?view=cm&fs=1&' + q;
+    if (how === 'gmail') url = 'https://mail.google.com/mail/?view=cm&fs=1&su=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(text);
     else if (how === 'outlook') url = 'https://outlook.office.com/mail/deeplink/compose?' + q;
     else url = 'mailto:?' + q;
     if (url.length > 6000) { checklistShare(entryId, 'copy'); showTopToast('Long checklist — copied. Paste it into your email.'); return; }
