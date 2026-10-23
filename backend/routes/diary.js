@@ -1754,6 +1754,51 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // ── GET /api/diary/by-prompt — find most recent entry for a prompt ───────────
+// ── GET /api/diary/tasks — open checklist items across all entries ──────────
+// Powers the Diary's "My tasks" view. Reads the checklist artifact already
+// stored on each entry (see detectChecklistArtifacts) and returns, per entry,
+// only the items still open, with progress counts. Archived entries are left
+// out. Registered before '/:id' so "tasks" is never read as an entry id.
+router.get('/tasks', requireAuth, async (req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT id, title, prompt, source, created_at, artifacts
+         FROM diary_entries
+        WHERE user_email = $1
+          AND (is_archived = false OR is_archived IS NULL)
+          AND artifacts @> '[{"type":"checklist"}]'::jsonb
+        ORDER BY created_at DESC
+        LIMIT 300`,
+      [req.userEmail]
+    );
+    const entries = [];
+    let openTotal = 0;
+    for (const row of r.rows) {
+      const arts = Array.isArray(row.artifacts) ? row.artifacts : [];
+      const checklist = arts.find(a => a && a.type === 'checklist');
+      const items = checklist && Array.isArray(checklist.items) ? checklist.items : [];
+      if (!items.length) continue;
+      const open = items.filter(i => i && !i.done && typeof i.text === 'string').map(i => i.text);
+      const done = items.length - open.length;
+      if (!open.length) continue;
+      openTotal += open.length;
+      entries.push({
+        id: row.id,
+        title: row.title || (row.prompt ? String(row.prompt).slice(0, 80) : 'Untitled entry'),
+        source: row.source,
+        created_at: row.created_at,
+        total: items.length,
+        done,
+        open
+      });
+    }
+    res.json({ success: true, entries, openTotal });
+  } catch (e) {
+    console.error('[Diary] tasks list failed:', e.message);
+    res.status(500).json({ success: false, error: 'Could not load tasks.' });
+  }
+});
+
 router.get('/by-prompt', requireAuth, async (req, res) => {
   try {
     const { prompt, source } = req.query;

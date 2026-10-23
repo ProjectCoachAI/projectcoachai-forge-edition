@@ -670,6 +670,7 @@
     <div class="sidebar-divider"></div>
     <div class="cat-item" onclick="toggleFavoriteFilter()" id="favorite-toggle"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"/></svg>Favorites</span><span class="cat-count" id="favorite-count">0</span></div>
     <div class="cat-item" onclick="toggleArchivedFilter()" id="archived-toggle"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:3px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.375 4.5A1.125 1.125 0 0 0 2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125h17.25a1.125 1.125 0 0 0 1.125-1.125v-1.5A1.125 1.125 0 0 0 20.625 4.5H3.375ZM3.75 9.75v9a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-9h-16.5Zm6 1.5h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5Z"/></svg>Archived</span><span class="cat-count" id="archived-count">0</span></div>
+    <div class="cat-item" onclick="openMyTasks()" id="tasks-toggle"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg> My tasks</span></div>
     <div class="sidebar-divider"></div>
     <div class="sidebar-title">Source</div>
     <div id="sourceList">
@@ -2646,9 +2647,10 @@ function renderEntryCard(e) {
           '<button onclick="var b=document.getElementById(\'' + cid + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'flex\';this.querySelector(\'.checklist-chevron\').style.transform=open?\'rotate(-90deg)\':\'rotate(0deg)\';" ' +
             'style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px 0;font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;font-family:Inter,sans-serif;">' +
             '<span class="checklist-chevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(0deg);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></span>' +
-            'Checklist (' + checklistArt.items.length + ')' +
+            '<span id="' + cid + '-label">Checklist \u00b7 ' + checklistArt.items.filter(function(i) { return i.done; }).length + ' of ' + checklistArt.items.length + ' done</span>' +
           '</button>' +
-          '<div id="' + cid + '" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">' +
+          '<div style="height:3px;background:#E8E4DA;border-radius:2px;margin-top:6px;overflow:hidden;"><div id="' + cid + '-bar" style="height:100%;width:' + Math.round(100 * checklistArt.items.filter(function(i) { return i.done; }).length / checklistArt.items.length) + '%;background:#C17D3C;transition:width .2s;"></div></div>' +
+          '<div id="' + cid + '" data-entry="' + e.id + '" data-cid="' + cid + '" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">' +
           checklistArt.items.map(function(item) {
             return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:' + (item.done ? '#9E9890' : '#4A4035') + ';text-decoration:' + (item.done ? 'line-through' : 'none') + ';cursor:pointer;">' +
               '<input type="checkbox" ' + (item.done ? 'checked' : '') + ' data-text="' + escHtml(String(item.text)) + '" onchange="toggleChecklistItem(' + e.id + ',this.getAttribute(\'data-text\'),this.checked,this)" style="margin-top:2px;flex-shrink:0;">' +
@@ -2656,6 +2658,9 @@ function renderEntryCard(e) {
             '</label>';
           }).join('') +
           checklistSourceHtml(e, getChecklistArtifactSource(e, checklistArt)) +
+          '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:6px;font-size:12px;">' +
+            ['copy:Copy', 'email:Email', 'whatsapp:WhatsApp', 'print:Print'].map(function(a) { var p = a.split(':'); return '<button type="button" onclick="checklistShare(' + e.id + ',\'' + p[0] + '\')" style="background:none;border:none;padding:0;cursor:pointer;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;font-size:12px;">' + p[1] + '</button>'; }).join('') +
+          '</div>' +
           '</div>' +
         '</div>';
       })()) +
@@ -4868,7 +4873,7 @@ window.viewChecklistSource = viewChecklistSource;
 // one-time tip is shown at most once per browser (localStorage, guarded).
 var ARTIFACT_HELP = {
   table:  { icon: '📊', name: 'Table', text: 'Open it in its own window to sort columns and filter rows, see it as a chart when it has numbers, then copy it into Excel or Google Sheets or download it as an Excel or CSV file.' },
-  checklist: { icon: '☑️', name: 'Checklist', text: 'Tick items off — your ticks are saved with the entry.' },
+  checklist: { icon: '☑️', name: 'Checklist', text: 'Tick items off (your ticks are saved), see your progress, and copy, email, WhatsApp or print the list. Open items from all your entries are gathered under My tasks.' },
   structured_facts: { icon: '📌', name: 'Key facts', text: 'The main facts from the answer, pulled out so you do not have to re-read it.' },
   citations: { icon: '🔗', name: 'Sources', text: 'The links the AI cited, kept in the order they appeared.' },
   images: { icon: '🖼️', name: 'Images', text: 'Images from the answer, saved with the entry.' },
@@ -5145,6 +5150,94 @@ window.exportTableArtifactCsv = exportTableArtifactCsv;
 // state that silently doesn't survive a reload would be a real,
 // confusing regression against the brief's own explicit acceptance
 // criterion here.
+// ---- Checklist tools: progress, copy / email / WhatsApp / print, My tasks ----
+function _clEntry(entryId) { return (window._diaryEntries || allEntries || []).find(function(x) { return x.id === entryId; }); }
+function _clArts(entry) { try { return (typeof entry.artifacts === 'string' ? JSON.parse(entry.artifacts) : entry.artifacts) || []; } catch (_) { return []; } }
+function _clItems(entry) { var c = _clArts(entry).filter(function(a) { return a.type === 'checklist'; })[0]; return c && c.items ? c.items : []; }
+function _clPlain(t) { return stripMarkdownForPlainText(stripCitationMarkersForPlainText(String(t == null ? '' : t))); }
+function updateChecklistProgress(entryId) {
+  var entry = _clEntry(entryId); if (!entry) return;
+  var items = _clItems(entry), done = items.filter(function(i) { return i.done; }).length;
+  var box = document.querySelector('[data-entry="' + entryId + '"][data-cid]'); if (!box) return;
+  var cid = box.getAttribute('data-cid');
+  var label = document.getElementById(cid + '-label'), bar = document.getElementById(cid + '-bar');
+  if (label) label.textContent = 'Checklist · ' + done + ' of ' + items.length + ' done';
+  if (bar) bar.style.width = (items.length ? Math.round(100 * done / items.length) : 0) + '%';
+}
+function _clText(entry) {
+  var title = displayTitle(entry.title) || 'Checklist';
+  return title + '\n\n' + _clItems(entry).map(function(i) { return (i.done ? '☑ ' : '☐ ') + _clPlain(i.text); }).join('\n');
+}
+function checklistShare(entryId, how) {
+  var entry = _clEntry(entryId); if (!entry) return;
+  var text = _clText(entry), title = displayTitle(entry.title) || 'Checklist';
+  if (how === 'copy') {
+    var ok = function() { showTopToast('Checklist copied.'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, function() { showTopToast('Could not copy.', true); });
+    else { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); ok(); } catch (_) { showTopToast('Could not copy.', true); } document.body.removeChild(t); }
+  } else if (how === 'email') {
+    var url = 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(text);
+    if (url.length > 1900) { checklistShare(entryId, 'copy'); showTopToast('Long checklist — copied. Paste it into your email.'); return; }
+    window.location.href = url;
+  } else if (how === 'whatsapp') {
+    var w = 'https://wa.me/?text=' + encodeURIComponent(text);
+    if (w.length > 1900) { checklistShare(entryId, 'copy'); showTopToast('Long checklist — copied. Paste it into WhatsApp.'); return; }
+    window.open(w, '_blank', 'noopener');
+  } else if (how === 'print') {
+    var win = window.open('', '_blank'); if (!win) { showTopToast('Allow pop-ups to print.', true); return; }
+    win.document.write('<html><head><title>' + escHtml(title) + '</title><style>body{font-family:Georgia,serif;max-width:640px;margin:40px auto;color:#1B2A4A;line-height:1.6}h1{font-size:20px}li{list-style:none;margin:6px 0}</style></head><body><h1>' + escHtml(title) + '</h1><ul style="padding:0">' +
+      _clItems(entry).map(function(i) { return '<li>' + (i.done ? '☑ ' : '☐ ') + escHtml(_clPlain(i.text)) + '</li>'; }).join('') + '</ul></body></html>');
+    win.document.close(); win.focus(); win.print();
+  }
+}
+window.checklistShare = checklistShare;
+
+async function openMyTasks() {
+  var modal = document.getElementById('myTasksModal'), body = document.getElementById('myTasksBody');
+  if (!modal || !body) return;
+  body.innerHTML = '<div style="font-size:13px;color:#6B6559;padding:24px 0;">Loading…</div>';
+  modal.style.display = 'flex';
+  var data = null;
+  try { var r = await Forge.request('GET', '/api/diary/tasks'); if (r && r.ok && r.data && r.data.success) data = r.data; } catch (_) {}
+  if (!data) { body.innerHTML = '<div style="font-size:13px;color:#B03A2E;padding:24px 0;">Could not load your tasks. Please try again.</div>'; return; }
+  window._myTasks = data;
+  renderMyTasks();
+}
+function renderMyTasks() {
+  var body = document.getElementById('myTasksBody'), data = window._myTasks; if (!body || !data) return;
+  var open = 0; data.entries.forEach(function(e) { open += e.open.length; });
+  var title = document.getElementById('myTasksTitle'); if (title) title.textContent = 'My tasks' + (open ? ' (' + open + ' open)' : '');
+  if (!data.entries.length) { body.innerHTML = '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:12px 0;">Nothing open. When an AI answer contains a checklist, its unfinished items will show up here.</div>'; return; }
+  body.innerHTML = '<div style="font-size:12px;color:#6B6559;margin-bottom:8px;">Open items from the checklists in your answers. Tick one to mark it done.</div>' + data.entries.map(function(e) {
+    var when = ''; try { var d = new Date(e.created_at); if (!isNaN(d.getTime())) when = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) {}
+    return '<div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:8px;padding:10px 12px;margin-bottom:10px;">' +
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><button type="button" onclick="closeMyTasks();openRelatedEntry(' + e.id + ')" style="background:none;border:none;padding:0;text-align:left;cursor:pointer;font-size:13px;font-weight:600;color:#1B2A4A;font-family:Inter,sans-serif;">' + escHtml(displayTitle(e.title) || 'Untitled entry') + '</button><span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + escHtml([SOURCE_LABELS[e.source] || e.source, when].filter(Boolean).join(' · ')) + '</span></div>' +
+      '<div style="font-size:11px;color:#9E9890;margin:2px 0 6px;">' + e.done + ' of ' + e.total + ' done</div>' +
+      e.open.map(function(t) { return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#4A4035;line-height:1.5;padding:3px 0;cursor:pointer;"><input type="checkbox" data-entry="' + e.id + '" data-text="' + escHtml(t) + '" onchange="myTaskToggle(this)" style="margin-top:3px;"><span>' + escHtml(_clPlain(t)) + '</span></label>'; }).join('') +
+    '</div>';
+  }).join('');
+}
+async function myTaskToggle(cb) {
+  var id = parseInt(cb.getAttribute('data-entry'), 10), text = cb.getAttribute('data-text'), done = cb.checked;
+  cb.disabled = true;
+  try {
+    var r = await Forge.request('PATCH', '/api/diary/' + id + '/checklist-item', { text: text, done: done });
+    if (!(r && r.ok)) throw new Error('failed');
+    var e = (window._myTasks.entries || []).find(function(x) { return x.id === id; });
+    if (e) { e.open = e.open.filter(function(t) { return t !== text; }); e.done += 1; if (!e.open.length) window._myTasks.entries = window._myTasks.entries.filter(function(x) { return x.id !== id; }); }
+    // Keep an already-loaded copy of the entry in step.
+    var entry = _clEntry(id);
+    if (entry) {
+      var arts = _clArts(entry), cl = arts.filter(function(a) { return a.type === 'checklist'; })[0];
+      if (cl) { var it = cl.items.filter(function(i) { return i.text === text; })[0]; if (it) it.done = true; entry.artifacts = arts; updateChecklistProgress(id); }
+    }
+    setTimeout(renderMyTasks, 250);
+  } catch (_) { cb.checked = false; cb.disabled = false; showTopToast('Could not save — please try again.', true); }
+}
+function closeMyTasks() { var m = document.getElementById('myTasksModal'); if (m) m.style.display = 'none'; }
+window.openMyTasks = openMyTasks; window.closeMyTasks = closeMyTasks; window.myTaskToggle = myTaskToggle;
+document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') closeMyTasks(); });
+
 async function toggleChecklistItem(entryId, text, done, checkboxEl) {
   try {
     var r = await Forge.request('PATCH', '/api/diary/' + entryId + '/checklist-item', { text: text, done: done });
@@ -5169,6 +5262,7 @@ async function toggleChecklistItem(entryId, text, done, checkboxEl) {
       checkboxEl.parentElement.style.color = done ? '#9E9890' : '#4A4035';
       checkboxEl.parentElement.style.textDecoration = done ? 'line-through' : 'none';
     }
+    updateChecklistProgress(entryId);
   } catch (e) {
     console.warn('[Diary] Failed to save checklist item state:', e.message);
     if (checkboxEl) checkboxEl.checked = !done;
@@ -7682,6 +7776,15 @@ document.addEventListener('keydown', function(e) {
      simply not work, with no visible indicator anything is scrollable
      at all, even though it's technically enabled. -webkit-overflow-
      scrolling:touch added below fixes this specific iOS gotcha. -->
+<div id="myTasksModal" onclick="if(event.target===this)closeMyTasks()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.6);z-index:10003;align-items:center;justify-content:center;">
+  <div role="dialog" aria-label="My tasks" style="background:#F5F3EE;width:min(620px,94vw);max-height:86vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 40px rgba(0,0,0,0.4);font-family:Inter,sans-serif;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div id="myTasksTitle" style="font-size:15px;font-weight:700;color:#1B2A4A;">My tasks</div>
+      <button onclick="closeMyTasks()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+    </div>
+    <div id="myTasksBody"></div>
+  </div>
+</div>
 <div id="compareModal" onclick="if(event.target===this)closeCompare()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.6);z-index:10003;align-items:center;justify-content:center;">
   <div role="dialog" aria-label="Compare answers" style="background:#F5F3EE;width:min(760px,94vw);max-height:86vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 40px rgba(0,0,0,0.4);font-family:Inter,sans-serif;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
