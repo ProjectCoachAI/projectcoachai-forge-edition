@@ -5177,11 +5177,11 @@ function checklistShare(entryId, how) {
     else { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); ok(); } catch (_) { showTopToast('Could not copy.', true); } document.body.removeChild(t); }
   } else if (how === 'email') {
     var url = 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(text);
-    if (url.length > 1900) { checklistShare(entryId, 'copy'); showTopToast('Long checklist — copied. Paste it into your email.'); return; }
+    if (url.length > 6000) { checklistShare(entryId, 'copy'); showTopToast('Long checklist — copied. Paste it into your email.'); return; }
     window.location.href = url;
   } else if (how === 'whatsapp') {
     var w = 'https://wa.me/?text=' + encodeURIComponent(text);
-    if (w.length > 1900) { checklistShare(entryId, 'copy'); showTopToast('Long checklist — copied. Paste it into WhatsApp.'); return; }
+    if (w.length > 4000) { checklistShare(entryId, 'copy'); showTopToast('Long checklist — copied. Paste it into WhatsApp.'); return; }
     window.open(w, '_blank', 'noopener');
   } else if (how === 'print') {
     var win = window.open('', '_blank'); if (!win) { showTopToast('Allow pop-ups to print.', true); return; }
@@ -5200,20 +5200,40 @@ async function openMyTasks() {
   var data = null;
   try { var r = await Forge.request('GET', '/api/diary/tasks'); if (r && r.ok && r.data && r.data.success) data = r.data; } catch (_) {}
   if (!data) { body.innerHTML = '<div style="font-size:13px;color:#B03A2E;padding:24px 0;">Could not load your tasks. Please try again.</div>'; return; }
-  window._myTasks = data;
+  window._myTasks = data; window._myTasksQ = '';
+  var sb0 = document.getElementById('myTasksSearch'); if (sb0) sb0.value = '';
   renderMyTasks();
 }
+function _mtView() {
+  var q = (window._myTasksQ || '').trim().toLowerCase(), out = [];
+  ((window._myTasks && window._myTasks.entries) || []).forEach(function(e) {
+    var seen = {}, open = e.open.filter(function(t) { if (seen[t]) return false; seen[t] = 1; return true; });
+    if (q) {
+      var titleHit = (displayTitle(e.title) || '').toLowerCase().indexOf(q) !== -1;
+      if (!titleHit) open = open.filter(function(t) { return _clPlain(t).toLowerCase().indexOf(q) !== -1; });
+    }
+    if (open.length) out.push({ e: e, open: open });
+  });
+  return out;
+}
+function myTasksFilter(v) { window._myTasksQ = v || ''; renderMyTasks(); }
 function renderMyTasks() {
   var body = document.getElementById('myTasksBody'), data = window._myTasks; if (!body || !data) return;
-  var open = 0; data.entries.forEach(function(e) { open += e.open.length; });
-  var title = document.getElementById('myTasksTitle'); if (title) title.textContent = 'My tasks' + (open ? ' (' + open + ' open)' : '');
-  if (!data.entries.length) { body.innerHTML = '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:12px 0;">Nothing open. When an AI answer contains a checklist, its unfinished items will show up here.</div>'; return; }
-  body.innerHTML = '<div style="font-size:12px;color:#6B6559;margin-bottom:8px;">Open items from the checklists in your answers. Tick one to mark it done.</div>' + data.entries.map(function(e) {
+  var all = (function() { var q = window._myTasksQ; window._myTasksQ = ''; var v = _mtView(); window._myTasksQ = q; return v; })();
+  var allOpen = 0; all.forEach(function(x) { allOpen += x.open.length; });
+  var view = _mtView(), shown = 0; view.forEach(function(x) { shown += x.open.length; });
+  var filtering = !!(window._myTasksQ || '').trim();
+  var title = document.getElementById('myTasksTitle'); if (title) title.textContent = 'My tasks' + (allOpen ? ' (' + (filtering ? shown + ' of ' + allOpen : allOpen + ' open') + (filtering ? ' shown)' : ')') : '');
+  var sb = document.getElementById('myTasksSearch'); if (sb) sb.style.display = allOpen ? 'block' : 'none';
+  if (!allOpen) { body.innerHTML = '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:12px 0;">Nothing open. When an AI answer contains a checklist, its unfinished items will show up here.</div>'; return; }
+  if (!view.length) { body.innerHTML = '<div style="font-size:13px;color:#4A4035;line-height:1.5;padding:12px 0;">No open tasks match "' + escHtml(window._myTasksQ) + '".</div>'; return; }
+  body.innerHTML = '<div style="font-size:12px;color:#6B6559;margin-bottom:8px;">Open items from the checklists in your answers. Tick one to mark it done.</div>' + view.map(function(x) {
+    var e = x.e;
     var when = ''; try { var d = new Date(e.created_at); if (!isNaN(d.getTime())) when = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (_) {}
     return '<div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:8px;padding:10px 12px;margin-bottom:10px;">' +
       '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;"><button type="button" onclick="closeMyTasks();openRelatedEntry(' + e.id + ')" style="background:none;border:none;padding:0;text-align:left;cursor:pointer;font-size:13px;font-weight:600;color:#1B2A4A;font-family:Inter,sans-serif;">' + escHtml(displayTitle(e.title) || 'Untitled entry') + '</button><span style="font-size:11px;color:#9E9890;white-space:nowrap;">' + escHtml([SOURCE_LABELS[e.source] || e.source, when].filter(Boolean).join(' · ')) + '</span></div>' +
-      '<div style="font-size:11px;color:#9E9890;margin:2px 0 6px;">' + e.done + ' of ' + e.total + ' done</div>' +
-      e.open.map(function(t) { return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#4A4035;line-height:1.5;padding:3px 0;cursor:pointer;"><input type="checkbox" data-entry="' + e.id + '" data-text="' + escHtml(t) + '" onchange="myTaskToggle(this)" style="margin-top:3px;"><span>' + escHtml(_clPlain(t)) + '</span></label>'; }).join('') +
+      '<div style="font-size:11px;color:#9E9890;margin:2px 0 6px;">' + x.open.length + ' open</div>' +
+      x.open.map(function(t) { return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#4A4035;line-height:1.5;padding:3px 0;cursor:pointer;"><input type="checkbox" data-entry="' + e.id + '" data-text="' + escHtml(t) + '" onchange="myTaskToggle(this)" style="margin-top:3px;"><span>' + escHtml(_clPlain(t)) + '</span></label>'; }).join('') +
     '</div>';
   }).join('');
 }
@@ -5235,7 +5255,7 @@ async function myTaskToggle(cb) {
   } catch (_) { cb.checked = false; cb.disabled = false; showTopToast('Could not save — please try again.', true); }
 }
 function closeMyTasks() { var m = document.getElementById('myTasksModal'); if (m) m.style.display = 'none'; }
-window.openMyTasks = openMyTasks; window.closeMyTasks = closeMyTasks; window.myTaskToggle = myTaskToggle;
+window.myTasksFilter = myTasksFilter; window.openMyTasks = openMyTasks; window.closeMyTasks = closeMyTasks; window.myTaskToggle = myTaskToggle;
 document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') closeMyTasks(); });
 
 async function toggleChecklistItem(entryId, text, done, checkboxEl) {
@@ -7782,6 +7802,7 @@ document.addEventListener('keydown', function(e) {
       <div id="myTasksTitle" style="font-size:15px;font-weight:700;color:#1B2A4A;">My tasks</div>
       <button onclick="closeMyTasks()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
     </div>
+    <input id="myTasksSearch" type="search" placeholder="Search your tasks…" oninput="myTasksFilter(this.value)" autocomplete="off" style="display:none;width:100%;box-sizing:border-box;padding:8px 10px;font-size:13px;font-family:Inter,sans-serif;border:0.5px solid #D6D2C8;border-radius:6px;background:#fff;color:#1B2A4A;margin-bottom:10px;outline:none;">
     <div id="myTasksBody"></div>
   </div>
 </div>

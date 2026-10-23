@@ -1879,9 +1879,10 @@ router.patch('/:id/checklist-item', requireAuth, async (req, res) => {
     const artifacts = entryRes.rows[0].artifacts || [];
     const checklist = artifacts.find(a => a.type === 'checklist');
     if (!checklist) return res.status(404).json({ success: false, error: 'No checklist found on this entry.' });
-    const item = checklist.items.find(i => i.text === text);
-    if (!item) return res.status(404).json({ success: false, error: 'That checklist item was not found — it may have changed since this page loaded.' });
-    item.done = done;
+    // Mark every item with this exact text (answers sometimes repeat a step).
+    const matches = checklist.items.filter(i => i.text === text);
+    if (!matches.length) return res.status(404).json({ success: false, error: 'That checklist item was not found — it may have changed since this page loaded.' });
+    matches.forEach(i => { i.done = done; });
     await db.query('UPDATE diary_entries SET artifacts=$1 WHERE id=$2 AND user_email=$3', [JSON.stringify(artifacts), id, req.userEmail]);
     res.json({ success: true });
   } catch (e) {
