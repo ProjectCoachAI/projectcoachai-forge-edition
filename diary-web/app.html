@@ -249,7 +249,11 @@
     .reader-md th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
     .reader-md td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
     .reader-md tr:nth-child(even) td { background: #FAFAF8; }
-    .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; margin-top: 16px; }
+  
+  /* Tables that are wider than a phone screen scroll sideways inside their own box instead of being clipped or pushing the layout */
+  .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; margin: 0.75rem 0; border-radius: 6px; }
+  .tbl-scroll > table { margin: 0 !important; }
+  .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 0.75rem; margin-top: 16px; }
     /* Tags are plain outlines so they never read as the (coloured, filled) category pill. */
     .entry-tag { font-size: 10px; padding: 1px 8px; border-radius: 20px; background: transparent; color: #6B6559; border: 0.5px solid #D6D2C8; }
     /* Related-conversations card: a tinted card with a left accent stripe, so it reads as a feature, not a footnote. */
@@ -640,7 +644,7 @@
 <!-- Shown only when the Forge Diary extension isn't detected — see initExtensionBanner() -->
 <div class="ext-banner" id="extBanner" style="display:none;" role="region" aria-label="Browser extension">
   <div class="ext-banner-inner">
-    <div class="ext-banner-text"><strong>Add the Forge Diary extension to save unlimited AI answers from Claude, ChatGPT, Gemini and more.</strong></div>
+    <div class="ext-banner-text"><strong>Add the Diary extension to save unlimited AI answers from Claude, ChatGPT, Gemini and more.</strong></div>
     <a class="ext-banner-install" id="extBannerInstall" href="https://chromewebstore.google.com/detail/lkpnmbpcemiejokgobcodchlhcljkhic" target="_blank" rel="noopener">Add to Chrome</a>
     <button type="button" class="ext-banner-dismiss" onclick="dismissExtensionBanner()">Not now</button>
   </div>
@@ -2096,7 +2100,7 @@ function renderEntries() {
       '<div class="diary-empty-icon">📭</div>' +
       '<h3>' + (isFiltered ? 'No results found' : 'No entries yet') + '</h3>' +
       '<p>' + (isFiltered ? 'Try a different search term or browse by category.' :
-        'Run a Synthesis or Sweep and your insights will appear here automatically.') + '</p>' +
+        'Open Claude, ChatGPT, Gemini or Perplexity with the Diary extension and click Save to Diary. Your first entry will appear here.') + '</p>' +
       '' +
       '</div>';
     return;
@@ -4173,7 +4177,7 @@ function shareVia(channel) {
     body = att.url;
   } else {
     var entry = _shareContext.data;
-    title = entry.title || 'Forge Diary Entry';
+    title = entry.title || 'Diary Entry';
     body = (entry.prompt ? 'Q: ' + entry.prompt + nl + nl : '') + (entry.content || '');
   }
   // Attribution footer — same rationale/approach as continue.html's own
@@ -7456,5 +7460,29 @@ document.addEventListener('keydown', function(e) {
     <span id="citePopupSite" style="font-size:11px;color:#9E9890;"></span>
   </div>
 </div>
+<script>
+/* Wrap any rendered table in a sideways-scrolling box (all views: entry, panel, Continue chat, reader). */
+(function () {
+  var SEL = '.entry-content table, .entry-panel-content table, .chat-msg-body table, .reader-md table';
+  function wrap(root) {
+    var tables = (root.querySelectorAll ? root.querySelectorAll(SEL) : []);
+    Array.prototype.forEach.call(tables, function (t) {
+      if (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('tbl-scroll')) return;
+      var box = document.createElement('div');
+      box.className = 'tbl-scroll';
+      t.parentNode.insertBefore(box, t);
+      box.appendChild(t);
+      var cols = (t.rows && t.rows[0]) ? t.rows[0].cells.length : 0;
+      if (cols > 2) t.style.minWidth = Math.min(cols * 110, 900) + 'px';
+    });
+  }
+  var queued = false;
+  new MutationObserver(function () {
+    if (queued) return; queued = true;
+    setTimeout(function () { queued = false; wrap(document); }, 0);
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  wrap(document);
+})();
+</script>
 </body>
 </html>

@@ -61,6 +61,10 @@
   .chat-msg-body th { background:#F5F2EC; color:#1B2A4A; font-weight:600; padding:7px 10px; border:0.5px solid #D6D2C8; text-align:left; }
   .chat-msg-body td { padding:6px 10px; border:0.5px solid #D6D2C8; color:#3D3530; vertical-align:top; }
   .chat-msg-body tr:nth-child(even) td { background:#FAFAF8; }
+
+  /* Tables that are wider than a phone screen scroll sideways inside their own box instead of being clipped or pushing the layout */
+  .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; margin: 0.75rem 0; border-radius: 6px; }
+  .tbl-scroll > table { margin: 0 !important; }
   .chat-msg code { background:#EDE9E0; padding:2px 5px; border-radius:4px; font-size:13px; }
   .chat-icon-btn { background:none; border:0.5px solid #D6D2C8; border-radius:6px; color:#6B6559; cursor:pointer; font-size:11px; padding:3px 8px; transition:all .15s; font-family:'Inter',sans-serif; }
   .chat-icon-btn:hover { color:#1B2A4A; border-color:#C17D3C; }
@@ -3014,5 +3018,29 @@ window.zoomPdfOut = zoomPdfOut;
   if (_resetDateEl) _resetDateEl.textContent = getResetDateString();
 </script>
 
+<script>
+/* Wrap any rendered table in a sideways-scrolling box (all views: entry, panel, Continue chat, reader). */
+(function () {
+  var SEL = '.entry-content table, .entry-panel-content table, .chat-msg-body table, .reader-md table';
+  function wrap(root) {
+    var tables = (root.querySelectorAll ? root.querySelectorAll(SEL) : []);
+    Array.prototype.forEach.call(tables, function (t) {
+      if (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('tbl-scroll')) return;
+      var box = document.createElement('div');
+      box.className = 'tbl-scroll';
+      t.parentNode.insertBefore(box, t);
+      box.appendChild(t);
+      var cols = (t.rows && t.rows[0]) ? t.rows[0].cells.length : 0;
+      if (cols > 2) t.style.minWidth = Math.min(cols * 110, 900) + 'px';
+    });
+  }
+  var queued = false;
+  new MutationObserver(function () {
+    if (queued) return; queued = true;
+    setTimeout(function () { queued = false; wrap(document); }, 0);
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  wrap(document);
+})();
+</script>
 </body>
 </html>

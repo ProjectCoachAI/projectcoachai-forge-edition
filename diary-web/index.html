@@ -480,6 +480,13 @@
         display: none;
       }
 
+      /* Signed-in nav: My Diary button, avatar and Sign out must fit on one line at phone width */
+      .nav-links { gap: 0.6rem; }
+      .nav-cta, .nav-links button { white-space: nowrap; }
+      .nav-cta { padding: 7px 12px; font-size: 13px; }
+      .nav-uname { display: none; }
+      .nav-links button { margin-left: 0 !important; }
+
       .hero {
         padding: 4rem 1.5rem 3.5rem;
       }
@@ -514,7 +521,7 @@
       }
 
       .footer {
-        padding: 1.5rem;
+        padding: 1.5rem 1.5rem 5.5rem; /* room below the links so the Ask Diary button never covers them */
         flex-direction: column;
         gap: 1rem;
         text-align: center;
@@ -549,6 +556,7 @@
     .use-wrap { border-bottom: 0.5px solid #D6D2C8; }
     .use { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; text-align: center; }
     .use-headline { font-family: 'Lora', serif; font-size: 28px; font-weight: 400; color: #1B2A4A; line-height: 1.3; margin-bottom: 2.5rem; }
+    .use-note { max-width: 560px; margin: 2rem auto 0; font-size: 15px; color: #6B6559; line-height: 1.7; }
     .use-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
     .use-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; padding: 1.75rem 1.5rem; display: flex; flex-direction: column; align-items: center; }
     .use-card .step-icon { width: 44px; height: 44px; font-size: 18px; margin-bottom: 0.9rem; }
@@ -597,6 +605,38 @@
     .pricing-note a { color: #C17D3C; }
     .pricing-note a:hover { text-decoration: underline; }
     @media (max-width: 640px) { .pricing-cards { grid-template-columns: 1fr; gap: 2rem; } .pricing { padding: 3rem 1.5rem; } }
+
+    /* ── LAYERED SCREENSHOTS (static): real captures stacked with tilt and depth ── */
+    /* 3D scene: real captures laid on a perspective plane at different depths, fading out at the edges */
+    .scene-box { position: relative; width: 100%; overflow: hidden; }
+    .scene { position: absolute; left: 50%; top: 0; transform-origin: 50% 0; perspective: 1700px; perspective-origin: 50% 40%; }
+    .plane { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
+    .tile { position: absolute; left: var(--x); top: var(--y); width: var(--w); transform: translateZ(var(--z)); border-radius: 12px; overflow: hidden; background: #fff; border: 0.5px solid #CFCABD; box-shadow: 0 30px 60px rgba(27,42,74,0.20); opacity: var(--o, 1); }
+    .tile img { display: block; width: 100%; height: auto; }
+    .tile.is-link { cursor: zoom-in; }
+    .scene-hero-box { -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%); }
+    .scene-hero .plane { width: 1100px; height: 700px; margin: -200px 0 0 -520px; transform: rotateX(56deg) rotateZ(-24deg); }
+    .scene-step .plane { width: 640px; height: 420px; margin: -190px 0 0 -300px; transform: rotateX(52deg) rotateZ(-20deg); }
+    .scene-step .tile { box-shadow: 0 20px 40px rgba(27,42,74,0.20); }
+    .art-wrap { overflow-x: clip; }
+    .art-stack { position: relative; margin-top: 3.4rem; }
+    .art-stack .screenshot-frame { position: relative; z-index: 2; background: #fff; }
+    .peek { position: absolute; inset: 0; border-radius: 10px; border: 0.5px solid #D6D2C8; background-color: #fff; background-repeat: no-repeat; background-size: 100% auto; background-position: top center; pointer-events: none; }
+    .peek-a { z-index: 1; opacity: 0.4; transform: translate(-22px, -22px) rotate(-3deg) scale(0.97); }
+    .peek-b { z-index: 0; opacity: 0.28; transform: translate(22px, -40px) rotate(3deg) scale(0.94); }
+    .upsell { position: relative; max-width: 680px; margin: 3rem auto 0; padding: 3rem 1rem; display: flex; justify-content: center; }
+    .upsell-back { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; border: 0.5px solid #D6D2C8; background: #fff; }
+    .upsell-back img { width: 160%; max-width: none; display: block; margin: -22% 0 0 -26%; filter: blur(2.5px); opacity: 0.75; transform: perspective(900px) rotateX(38deg) rotateZ(-9deg) scale(1.25); transform-origin: 50% 60%; }
+    .upsell-card { position: relative; z-index: 2; max-width: 400px; background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; padding: 1.75rem 1.75rem 1.5rem; text-align: center; box-shadow: 0 18px 48px rgba(27,42,74,0.20), 0 2px 8px rgba(27,42,74,0.06); }
+    .upsell-card .step-icon { margin: 0 auto 0.8rem; width: 40px; height: 40px; font-size: 17px; }
+    .upsell-title { font-family: 'Lora', serif; font-size: 21px; font-weight: 500; color: #1B2A4A; line-height: 1.3; margin-bottom: 0.55rem; }
+    .upsell-body { font-size: 14px; color: #6B6559; line-height: 1.65; margin-bottom: 1.25rem; }
+    .upsell-card .card-cta { margin-bottom: 0; }
+    @media (max-width: 700px) {
+      .peek-a { transform: translate(-8px, -10px) rotate(-2deg) scale(0.97); }
+      .peek-b { transform: translate(8px, -16px) rotate(2deg) scale(0.94); }
+      .upsell { padding: 2rem 0.75rem; }
+    }
   </style>
   <!-- PostHog Analytics -->
   <script>
@@ -634,11 +674,15 @@
     <div style="font-size:12px;color:#9E9890;margin-top:0.75rem;">No credit card required &middot; Works on Chrome, Edge &amp; Opera</div>
   </section>
 
-  <!-- HERO SCREENSHOT: stays hidden until /img/screenshot_hero_search.png exists -->
-  <div class="hero-shot-wrap" id="heroShotWrap" style="display:none;">
-    <div class="hero-shot">
-      <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_hero_search.png', 'Searching saved AI conversations in Diary')">
-        <img src="/img/screenshot_hero_search.png" alt="The Diary entries list with a search active and a matching result showing" onload="document.getElementById('heroShotWrap').style.display='block'" />
+  <!-- HERO SCREENSHOT: real captures on a 3D plane, layered by depth (front crisp, middle behind, back faded) -->
+  <div class="hero-shot-wrap" id="heroShotWrap" style="padding:0;">
+    <div class="scene-box scene-hero-box" data-w="1400" data-h="720">
+      <div class="scene scene-hero" style="width:1400px;height:720px;">
+        <div class="plane">
+          <div class="tile" style="--x:150px;--y:300px;--w:640px;--z:0px;--o:.5;filter:blur(2.5px);" aria-hidden="true"><img src="/img/screenshot_continue_page.jpg" alt="" /></div>
+          <div class="tile" style="--x:330px;--y:200px;--w:520px;--z:170px;--o:.85;" aria-hidden="true"><img src="/img/screenshot_carousel_table.png" alt="" /></div>
+          <div class="tile is-link" style="--x:190px;--y:100px;--w:660px;--z:340px;" onclick="openLightbox('/img/screenshot_diary_list.jpg', 'Your saved conversations in Diary')"><img src="/img/screenshot_diary_list.jpg" alt="The Diary entries list: saved conversations from several AIs, colour-coded categories on the left, and a Related conversations card showing the same question asked in other AIs" /></div>
+        </div>
       </div>
     </div>
   </div>
@@ -691,7 +735,14 @@
           <p class="step-kicker">3 &middot; Continue in Forge</p>
           <h3 class="step-title">Keep building on what you already know.</h3>
           <p class="step-body">Open any saved conversation in Forge and pick up where you left off. Your question and context come with you, so you never start from zero.</p>
-          <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_forge.png', 'Continue in Forge')"><img src="/img/screenshot_carousel_forge.png" alt="A Diary entry showing the Continued in Forge divider, with the saved conversation above it and the continued conversation below" onerror="this.parentNode.style.display='none'" /></div>
+          <div class="scene-box" data-w="640" data-h="360" data-fit="1" style="margin-top:auto;">
+            <div class="scene scene-step" style="width:640px;height:360px;">
+              <div class="plane">
+                <div class="tile" style="--x:40px;--y:150px;--w:440px;--z:0px;--o:.85;" aria-hidden="true"><img src="/img/screenshot_entry_related.jpg" alt="" loading="lazy" /></div>
+                <div class="tile is-link" style="--x:120px;--y:70px;--w:460px;--z:190px;" onclick="openLightbox('/img/screenshot_continue_page.jpg', 'Continue in Forge')"><img src="/img/screenshot_continue_page.jpg" alt="The Continue page in Forge: the saved conversation with its related conversations from other AIs, suggested questions and a message box ready at the bottom" loading="lazy" /></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="how-card">
           <div class="step-icon"><i class="ti ti-notebook" aria-hidden="true"></i></div>
@@ -720,31 +771,45 @@
         <button class="art-tab" role="tab" id="art-tab-code" aria-controls="art-panel-code" aria-selected="false" tabindex="-1" type="button">Code</button>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-summary" aria-labelledby="art-tab-summary">
+        <div class="art-stack"><i class="peek peek-b" aria-hidden="true" style="background-image:url(/img/screenshot_tab_checklist.png)"></i><i class="peek peek-a" aria-hidden="true" style="background-image:url(/img/screenshot_carousel_table.png)"></i>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_summary.png', 'Summary')"><img src="/img/screenshot_tab_summary.png" alt="A Diary entry in Summary view, with three short sections: what this was about, where it landed, and where you left off" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
         <p class="art-caption">Every entry opens with a short summary: what it was about, where it landed and where you left off.</p>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-tables" aria-labelledby="art-tab-tables" hidden>
+        <div class="art-stack"><i class="peek peek-b" aria-hidden="true" style="background-image:url(/img/screenshot_tab_keyfacts.png)"></i><i class="peek peek-a" aria-hidden="true" style="background-image:url(/img/screenshot_tab_checklist.png)"></i>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_carousel_table.png', 'Tables')"><img src="/img/screenshot_carousel_table.png" alt="The Table artifact open on a Diary entry, showing a multi-row table with filter and export controls" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
         <p class="art-caption">Tables become real tables you can filter, sort and export.</p>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-checklists" aria-labelledby="art-tab-checklists" hidden>
+        <div class="art-stack"><i class="peek peek-b" aria-hidden="true" style="background-image:url(/img/screenshot_tab_sources_images.jpg)"></i><i class="peek peek-a" aria-hidden="true" style="background-image:url(/img/screenshot_tab_keyfacts.png)"></i>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_checklist.png', 'Checklists')"><img src="/img/screenshot_tab_checklist.png" alt="A Diary entry with a checklist of snack tips, each with a tick box" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
         <p class="art-caption">Checklists become tick boxes you can work through.</p>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-keyfacts" aria-labelledby="art-tab-keyfacts" hidden>
+        <div class="art-stack"><i class="peek peek-b" aria-hidden="true" style="background-image:url(/img/screenshot_tab_reasoning.png)"></i><i class="peek peek-a" aria-hidden="true" style="background-image:url(/img/screenshot_tab_sources_images.jpg)"></i>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_keyfacts.png', 'Key facts')"><img src="/img/screenshot_tab_keyfacts.png" alt="A Diary entry with Key facts chips showing electric car prices, and topic tags below them" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
         <p class="art-caption">Key facts are pulled out as chips, so the numbers are easy to spot.</p>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-sources" aria-labelledby="art-tab-sources" hidden>
+        <div class="art-stack"><i class="peek peek-b" aria-hidden="true" style="background-image:url(/img/screenshot_tab_code.png)"></i><i class="peek peek-a" aria-hidden="true" style="background-image:url(/img/screenshot_tab_reasoning.png)"></i>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_sources_images.jpg', 'Sources and images')"><img src="/img/screenshot_tab_sources_images.jpg" alt="A Diary entry listing seven numbered sources and a grid of fifteen saved aircraft photos" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
         <p class="art-caption">Sources and images are kept with the entry they came from.</p>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-reasoning" aria-labelledby="art-tab-reasoning" hidden>
+        <div class="art-stack"><i class="peek peek-b" aria-hidden="true" style="background-image:url(/img/screenshot_tab_summary.png)"></i><i class="peek peek-a" aria-hidden="true" style="background-image:url(/img/screenshot_tab_code.png)"></i>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_reasoning.png', 'Reasoning')"><img src="/img/screenshot_tab_reasoning.png" alt="A Diary entry with a Reasoning section of five numbered steps showing how the conclusion was reached, with topic tags below" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
         <p class="art-caption">Reasoning is pulled out as numbered steps, so you can follow how the answer got there.</p>
       </div>
       <div class="art-panel" role="tabpanel" id="art-panel-code" aria-labelledby="art-tab-code" hidden>
+        <div class="art-stack"><i class="peek peek-b" aria-hidden="true" style="background-image:url(/img/screenshot_carousel_table.png)"></i><i class="peek peek-a" aria-hidden="true" style="background-image:url(/img/screenshot_tab_summary.png)"></i>
         <div class="screenshot-frame" onclick="openLightbox('/img/screenshot_tab_code.png', 'Code')"><img src="/img/screenshot_tab_code.png" alt="A Diary entry with a Python function shown in a code box with syntax colours, indentation kept and a Copy button" loading="lazy" onerror="this.parentNode.style.display='none'" /></div>
+        </div>
         <p class="art-caption">Code is kept in its own box, with the indentation intact and a Copy button, so you can always find it again.</p>
       </div>
     </div>
@@ -771,6 +836,7 @@
           <p class="use-body">Spent an hour getting the AI to think through pricing, positioning or a plan. Diary pulls the tables and checklists out of that answer, ready to hand to a team, not a wall of text to re-read and re-summarize.</p>
         </div>
       </div>
+      <p class="use-note">Planning a trip, comparing products, learning something new. If you have ever wished you could find an AI answer again, Diary is for you.</p>
     </div>
   </div>
 
@@ -847,6 +913,16 @@
         </div>
 
       </div>
+      <!-- PRO UPSELL: crisp card over a blurred real capture of the Continue in Forge action -->
+      <div class="upsell">
+        <div class="upsell-back" aria-hidden="true"><img src="/img/screenshot_entry_related.jpg" alt="" loading="lazy" /></div>
+        <div class="upsell-card">
+          <div class="step-icon"><i class="ti ti-arrow-forward-up" aria-hidden="true"></i></div>
+          <h3 class="upsell-title">Unlock unlimited Continue in Forge</h3>
+          <p class="upsell-body">The free plan includes 20 Continue conversations a month. Diary Pro removes the limit, so any saved conversation can pick up where it left off, whenever you need it.</p>
+          <a href="/signup.html" class="card-cta primary">Sign up for Pro</a>
+        </div>
+      </div>
       <p class="pricing-note">
         Already on Pro? <a href="/app.html">Continue any saved entry in Forge in one click.</a><br>
         Diary is also available on the <a href="https://chromewebstore.google.com">Chrome Web Store</a> &middot; Works on Chrome, Edge &amp; Opera.
@@ -915,12 +991,12 @@
         alert('Opera tip: If the item shows as unavailable, go to Opera Settings → Advanced → Allow installation of extensions from other stores, then try again.');
       }, 500);
     } else if (isFirefox) {
-      alert('Forge Diary is available on Chrome, Edge, and Opera. Please open this page in one of those browsers to install.');
+      alert('Diary is available on Chrome, Edge, and Opera. Please open this page in one of those browsers to install.');
     } else {
       // Safari and other browsers
       var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
       if (isSafari) {
-        alert('Forge Diary is available on Chrome, Edge, and Opera. Please open this page in one of those browsers to install.');
+        alert('Diary is available on Chrome, Edge, and Opera. Please open this page in one of those browsers to install.');
       } else {
         window.open(CHROME_URL, '_blank');
       }
@@ -968,7 +1044,7 @@
               (user.picture || user.avatar
                 ? '<img src="' + (user.picture||user.avatar) + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
                 : '<span style="width:22px;height:22px;border-radius:50%;background:#C17D3C;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;">' + name[0].toUpperCase() + '</span>') +
-              ' ' + name + '</a>' +
+              ' <span class="nav-uname">' + name + '</span></a>' +
               '<button onclick="Forge.auth.signout().then(function(){location.reload();})" style="font-size:13px;color:#9E9890;background:none;border:none;cursor:pointer;margin-left:0.5rem;font-family:Inter,sans-serif;">Sign out</button>';
           }
           // The filled "My Diary" button replaces the plain nav link, so hide the duplicate.
@@ -1450,6 +1526,40 @@
       renderCarouselSlides();
       updateCarouselView();
       document.getElementById('landingCarousel').classList.add('visible');
+    })();
+  </script>
+  <script>
+    (function () {
+      var boxes = Array.prototype.slice.call(document.querySelectorAll('.scene-box'));
+      function fit() {
+        boxes.forEach(function (b) {
+          var sc = b.querySelector('.scene'); if (!sc) return;
+          var w = +b.getAttribute('data-w'), h = +b.getAttribute('data-h');
+          if (b.getAttribute('data-fit')) {
+            // Measure the projected tiles, then scale and centre the whole group so it sits fully inside the card.
+            sc.style.transform = 'translateX(-50%)';
+            b.style.height = (h + 400) + 'px';
+            var br = b.getBoundingClientRect(), x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+            Array.prototype.forEach.call(sc.querySelectorAll('.tile'), function (t) {
+              var r = t.getBoundingClientRect();
+              x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom);
+            });
+            var uw = x1 - x0, uh = y1 - y0, pad = 14;
+            var k = Math.min(1, (br.width - pad * 2) / uw);
+            var cx = br.left + br.width / 2, ox = cx, oy = br.top;           // scale origin: top centre of the scene
+            var nx0 = ox + (x0 - ox) * k, ny0 = oy + (y0 - oy) * k;
+            var dx = (br.left + br.width / 2) - (nx0 + uw * k / 2);
+            var dy = pad - (ny0 - br.top);
+            sc.style.transform = 'translate(' + dx + 'px,' + dy + 'px) translateX(-50%) scale(' + k + ')';
+            b.style.height = Math.round(uh * k + pad * 2) + 'px';
+            return;
+          }
+          var k2 = Math.min(1, b.clientWidth / w);
+          sc.style.transform = 'translateX(-50%) scale(' + k2 + ')';
+          b.style.height = Math.round(h * k2) + 'px';
+        });
+      }
+      fit(); window.addEventListener('resize', fit); window.addEventListener('load', fit);
     })();
   </script>
 </body>
