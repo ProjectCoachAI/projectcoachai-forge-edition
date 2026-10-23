@@ -1628,6 +1628,55 @@ function queryAllDeep(selector) {
     return out;
   }
 
+  // Removes ChatGPT's interactive-widget source from text. When an answer
+  // contains a form (a question with choices, a card), ChatGPT's own data and
+  // copy text carry that widget's raw source, which the page itself never
+  // shows: state lines like {@body const [x,setX] = DIL.useState("a")} and
+  // <radio-group> / <radio value="a">Label</radio> blocks. State lines are
+  // dropped; the choices of each group are joined into one plain "Options: A · B"
+  // line (not bullets, so the Diary's checklist doesn't pick them up). Fenced code blocks are never touched, and a
+  // {@ line only counts when it uses DIL./useState, so real code such as
+  // {@link Foo} is left alone. Action buttons (<button onClick={() =>
+  // GenUI.issueNewTurn(...)}>Label</button>) do nothing in a saved copy and
+  // are removed whole, including when split over several lines.
+  function stripChatGPTWidgets(s) {
+    if (!s || (s.indexOf('{@') === -1 && s.indexOf('<radio') === -1 && s.indexOf('<checkbox') === -1 && s.indexOf('<button') === -1)) return s;
+    var lines = s.split('\n'), out = [], inFence = false, group = null;
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      if (/^\s*(```|~~~)/.test(ln)) { inFence = !inFence; out.push(ln); continue; }
+      if (inFence) { out.push(ln); continue; }
+      if (/^\s*\{@\w+.*\}\s*$/.test(ln) && /DIL\.|useState\(/.test(ln)) continue;
+      if (/^\s*<button\b/i.test(ln)) {
+        var end = -1;
+        for (var k = i; k < lines.length && k < i + 8; k++) { if (/<\/button>/i.test(lines[k])) { end = k; break; } }
+        if (end !== -1 && /GenUI\.|onClick\s*=/.test(lines.slice(i, end + 1).join(' '))) { i = end; continue; }
+      }
+      if (/^\s*<(radio|checkbox)-group\b.*>\s*$/i.test(ln)) {
+        for (var j = out.length - 1; j >= 0; j--) {
+          if (out[j].trim()) { out[j] = out[j].replace(/^\s+/, ''); break; }
+        }
+        out.push('');
+        group = [];
+        continue;
+      }
+      if (/^\s*<\/(radio|checkbox)-group>\s*$/i.test(ln)) {
+        if (group && group.length) out.push('Options: ' + group.join(' \u00B7 '));
+        group = null;
+        out.push('');
+        continue;
+      }
+      var opt = /^\s*<(radio|checkbox)\b.*?>(.*?)<\/\1>\s*$/i.exec(ln);
+      if (opt) {
+        if (group) group.push(opt[2].trim()); else out.push(opt[2].trim());
+        continue;
+      }
+      out.push(ln);
+    }
+    if (group && group.length) out.push('Options: ' + group.join(' \u00B7 '));
+    return out.join('\n').replace(/\n{3,}/g, '\n\n');
+  }
+
   function stripEntityArtifacts(s) {
     return stripChatGPTDirectives(s);
   }
@@ -3499,7 +3548,7 @@ function queryAllDeep(selector) {
             fullThread = fullThread + '\n\n' + claudeEmailBlocks.join('\n\n');
           }
         }
-        var contentToSave = stripCitations(fullThread);
+        var contentToSave = stripChatGPTWidgets(stripCitations(fullThread));
         // A picture written into the text as ![..](blob:..) points at a
         // temporary address that only exists in this open tab, so the Diary
         // would show it as raw text. The picture itself is saved separately.
