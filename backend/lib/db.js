@@ -1447,7 +1447,7 @@ function stripMarkdownForContext(s) {
     .replace(/\s+/g, ' ')
     .trim();
 }
-const FACT_TRAILING_FILLER = /\b(starts?|starting|costs?|costing|priced?|pricing|prices?|from|at|about|around|roughly|approximately|approx\.?|is|are|was|were|of|for|to|up|only|just|over|under|ranging|range|ranges|between|and|the|a|an|in|by|with|on|as|per|est\.?|estimated|it|its|this|that|these|those|they|he|she|we|there|which|who|when|where|then|now|but|or)$/i;
+const FACT_TRAILING_FILLER = /\b(starts?|starting|costs?|costing|priced?|pricing|prices?|from|at|about|around|roughly|approximately|approx\.?|is|are|was|were|of|for|to|up|only|just|over|under|ranging|range|ranges|between|and|the|a|an|in|by|with|on|as|per|est\.?|estimated|it|its|this|that|these|those|they|he|she|we|there|which|who|when|where|then|now|but|or|expect|expects|expected|near|listed|earn|earns|earned|typically|usually|would|could|can|should|might|may|will|get|gets|make|makes|pay|pays|paid)$/i;
 function nearestHeadingSubject(text, lineStart) {
   const lines = (lineStart > 0 ? text.slice(0, lineStart - 1) : '').split('\n');
   for (let i = lines.length - 1, steps = 0; i >= 0 && steps < 40; i--, steps++) {
@@ -1528,11 +1528,27 @@ function factContext(text, index) {
       }
     } else {
       seg = stripMarkdownForContext(seg).replace(/^(?:[-+>#]+|\d+[.)])\s*/, '');
+      // If another amount or percentage sits earlier in this sentence, the
+      // words before THIS value describe that earlier amount ("about
+      // \u20AC56,500 per year (~\u20AC4,709"), so only the words after it can
+      // label this one.
+      let afterNumber = false;
+      const numTok = /(?:[$\u20AC\u00A3\u00A5\u20B9]\s?\d[\d,.]*\s?(?:k|K|m|M|bn)?|\d[\d,.]*\s?%|\b\d{1,3}(?:,\d{2,3})+\b|\b\d{3,}\b)/g;
+      let nm; let lastEnd = -1;
+      while ((nm = numTok.exec(seg)) !== null) lastEnd = nm.index + nm[0].length;
+      if (lastEnd >= 0) { seg = seg.slice(lastEnd); afterNumber = true; }
       let words = seg.split(' ').filter(Boolean);
       // Drop trailing connectors and punctuation until a real word is last.
-      while (words.length && (FACT_TRAILING_FILLER.test(words[words.length - 1].replace(/[:,;(\u2013\u2014-]+$/g, '')) || /^[:,;(\u2013\u2014-]+$/.test(words[words.length - 1]))) words.pop();
-      if (words.length) words[words.length - 1] = words[words.length - 1].replace(/[:,;(\u2013\u2014-]+$/g, '');
-      ctx = words.slice(-5).join(' ');
+      while (words.length && (FACT_TRAILING_FILLER.test(words[words.length - 1].replace(/[:,;(~\u2248\u2013\u2014-]+$/g, '')) || /^[:,;(~\u2248\u2013\u2014-]+$/.test(words[words.length - 1]))) words.pop();
+      // Drop leading connectors ("and", "such as", "with"...).
+      while (words.length && /^(and|or|but|with|such|as|including|like|so|then|also|while|where|since|because|if|per|\/)$/i.test(words[0]) && !(words[0].toLowerCase() === 'as' && words[1] && /^\d/.test(words[1]))) words.shift();
+      if (words.length) words[words.length - 1] = words[words.length - 1].replace(/[:,;(~\u2248\u2013\u2014-]+$/g, '');
+      // After an earlier amount, one leftover word ("year", "month") is a
+      // unit, not a subject. Show nothing rather than a wrong label.
+      if (afterNumber && words.length < 2) words = [];
+      ctx = words.slice(-6).join(' ');
+      // First person or a comma means a sentence fragment, not a label.
+      if (/\b(I|I'd|I\u2019d|I'll|I\u2019ll|I'm|I\u2019m|we|you|your|my|our)\b/i.test(ctx) || /,/.test(ctx) || /\($/.test(ctx)) ctx = '';
     }
   }
   ctx = ctx.replace(/^[\s:,;\u2013\u2014-]+|[\s:,;\u2013\u2014-]+$/g, '');
