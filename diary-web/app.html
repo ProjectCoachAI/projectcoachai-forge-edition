@@ -1052,7 +1052,8 @@ async function updateSyncButtonLabelForEntry(entryId) {
   } catch (e) {
     console.warn('[Diary] updateSyncButtonLabelForEntry: CHECK_TAB_OPEN failed, showing label without live tab status:', e.message);
   }
-  btn.textContent = '\u{1F504} ' + syncedText + (opensNewTab ? ' \u2022 opens original conversation' : '');
+  btn.textContent = '\u{1F504} Sync';
+  btn.title = syncedText + (opensNewTab ? ' \u2014 syncing opens the original conversation in a new tab' : ' \u2014 pull in anything new from the original conversation');
 }
 
 async function performEntrySync(entryId) {
@@ -4734,7 +4735,7 @@ window.viewChecklistSource = viewChecklistSource;
 // Describes only the artifact types actually present in the entry. The
 // one-time tip is shown at most once per browser (localStorage, guarded).
 var ARTIFACT_HELP = {
-  table:  { icon: '📊', name: 'Table', text: 'Open it in its own window to sort columns, filter rows and export to CSV.' },
+  table:  { icon: '📊', name: 'Table', text: 'Open it in its own window to sort columns and filter rows, then copy it into Excel or Google Sheets, or download it as an Excel or CSV file.' },
   checklist: { icon: '☑️', name: 'Checklist', text: 'Tick items off — your ticks are saved with the entry.' },
   structured_facts: { icon: '📌', name: 'Key facts', text: 'The main facts from the answer, pulled out so you do not have to re-read it.' },
   citations: { icon: '🔗', name: 'Sources', text: 'The links the AI cited, kept in the order they appeared.' },
@@ -4918,6 +4919,41 @@ window.renderTableArtifactBody = renderTableArtifactBody;
 // per the brief's own acceptance criteria this needs to produce "a file
 // that opens correctly with the same rows/columns" as what someone is
 // actually looking at and has chosen to export.
+
+// Shared by Copy / Excel / CSV: the rows exactly as currently filtered and sorted.
+function _tableExportData() {
+  if (!_currentTableArtifact) return null;
+  var headers = _currentTableArtifact.headers.map(tableCellPlain);
+  var rows = _currentTableArtifact.rows.slice();
+  var f = document.getElementById('tableArtifactFilter');
+  var q = (f && f.value || '').toLowerCase().trim();
+  if (q) rows = rows.filter(function(row) { return row.some(function(c) { return tableCellPlain(c).toLowerCase().includes(q); }); });
+  if (_currentTableArtifact.sortCol !== null) {
+    var col = _currentTableArtifact.sortCol, dir = _currentTableArtifact.sortDir;
+    rows.sort(function(a, b) {
+      var av = tableCellPlain(a[col]), bv = tableCellPlain(b[col]);
+      var an = parseFloat(av.replace(/[$,%]/g, '')), bn = parseFloat(bv.replace(/[$,%]/g, ''));
+      if (!isNaN(an) && !isNaN(bn)) return (an - bn) * dir;
+      return av.localeCompare(bv) * dir;
+    });
+  }
+  var entry = null;
+  try { entry = (window._diaryEntries || []).find(function(x) { return x.id === _currentTableArtifact.entryId; }); } catch (_) {}
+  return { headers: headers, rows: rows.map(function(r) { return r.map(tableCellPlain); }), name: DiaryTableExport.fileName(entry && entry.title) };
+}
+function copyTableArtifact(btn) {
+  var d = _tableExportData(); if (!d) return;
+  DiaryTableExport.copy(DiaryTableExport.toTsv(d.headers, d.rows)).then(function() {
+    if (btn) { var t = btn.textContent; btn.textContent = 'Copied \u2713'; setTimeout(function() { btn.textContent = t; }, 1600); }
+  }, function() { if (btn) { btn.textContent = 'Copy failed'; } });
+}
+function exportTableArtifactXlsx() {
+  var d = _tableExportData(); if (!d) return;
+  DiaryTableExport.download(DiaryTableExport.makeXlsx(d.headers, d.rows), d.name + '.xlsx');
+}
+window.copyTableArtifact = copyTableArtifact;
+window.exportTableArtifactXlsx = exportTableArtifactXlsx;
+
 function exportTableArtifactCsv() {
   if (!_currentTableArtifact) return;
   var headers = _currentTableArtifact.headers;
@@ -4953,7 +4989,7 @@ function exportTableArtifactCsv() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'table.csv';
+  a.download = ((_tableExportData() || {}).name || 'table') + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -7526,7 +7562,9 @@ document.addEventListener('keydown', function(e) {
   <div style="background:#F5F3EE;width:min(880px,92vw);height:80vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;gap:12px;">
       <input id="tableArtifactFilter" type="text" placeholder="Filter rows..." oninput="renderTableArtifactBody()" style="flex:1;font-size:16px;padding:6px 10px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>
-      <button onclick="exportTableArtifactCsv()" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export CSV</button>
+      <button onclick="copyTableArtifact(this)" title="Copy the table so you can paste it into Excel or Google Sheets" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Copy</button>
+      <button onclick="exportTableArtifactXlsx()" title="Download as an Excel file" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Excel</button>
+      <button onclick="exportTableArtifactCsv()" title="Download as CSV" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">CSV</button>
       <button onclick="closeTableArtifact()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
     </div>
     <div id="tableArtifactBody" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0;"></div>
@@ -7574,6 +7612,73 @@ document.addEventListener('keydown', function(e) {
     setTimeout(function () { queued = false; wrap(document); }, 0);
   }).observe(document.documentElement, { childList: true, subtree: true });
   wrap(document);
+})();
+</script>
+<script>
+/* Table export helpers: copy for Excel/Google Sheets (tab-separated) and a real .xlsx file (no libraries). */
+window.DiaryTableExport = (function () {
+  var enc = new TextEncoder();
+  var crcTable = (function () { var t = [], c, n, k; for (n = 0; n < 256; n++) { c = n; for (k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { var c = 0xFFFFFFFF; for (var i = 0; i < b.length; i++) c = crcTable[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function xmlEsc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, ''); }
+  function colName(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function zip(files) {
+    var parts = [], central = [], offset = 0;
+    function u16(n) { return [n & 255, (n >>> 8) & 255]; }
+    function u32(n) { return [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]; }
+    files.forEach(function (f) {
+      var name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+      var local = [].concat(u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0));
+      parts.push(new Uint8Array(local), name, data);
+      central.push({ name: name, crc: crc, size: data.length, offset: offset });
+      offset += local.length + name.length + data.length;
+    });
+    var cdStart = offset, cdSize = 0;
+    central.forEach(function (c) {
+      var h = [].concat(u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21), u32(c.crc), u32(c.size), u32(c.size), u16(c.name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(c.offset));
+      parts.push(new Uint8Array(h), c.name); cdSize += h.length + c.name.length;
+    });
+    parts.push(new Uint8Array([].concat(u32(0x06054b50), u16(0), u16(0), u16(central.length), u16(central.length), u32(cdSize), u32(cdStart), u16(0))));
+    return new Blob(parts, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  function isNum(s) { return /^-?\d{1,15}(\.\d+)?$/.test(s) && !/^-?0\d/.test(s); }
+  function makeXlsx(headers, rows) {
+    var widths = headers.map(function (h) { return String(h).length; });
+    rows.forEach(function (r) { r.forEach(function (c, i) { if (String(c).length > (widths[i] || 0)) widths[i] = String(c).length; }); });
+    var cols = widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + Math.max(8, Math.min(60, w + 2)) + '" customWidth="1"/>'; }).join('');
+    function cell(v, r, i, style) {
+      var s = String(v), ref = colName(i) + r;
+      if (!style && isNum(s)) return '<c r="' + ref + '"><v>' + s + '</v></c>';
+      return '<c r="' + ref + '" t="inlineStr"' + (style ? ' s="1"' : ' s="2"') + '><is><t xml:space="preserve">' + xmlEsc(s) + '</t></is></c>';
+    }
+    var sheetRows = '<row r="1">' + headers.map(function (h, i) { return cell(h, 1, i, true); }).join('') + '</row>';
+    rows.forEach(function (row, ri) { sheetRows += '<row r="' + (ri + 2) + '">' + row.map(function (c, i) { return cell(c, ri + 2, i, false); }).join('') + '</row>'; });
+    var X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    return zip([
+      { name: '[Content_Types].xml', data: X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+      { name: '_rels/.rels', data: X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+      { name: 'xl/workbook.xml', data: X + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Table" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', data: X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+      { name: 'xl/styles.xml', data: X + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
+      { name: 'xl/worksheets/sheet1.xml', data: X + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>' + cols + '</cols><sheetData>' + sheetRows + '</sheetData></worksheet>' }
+    ]);
+  }
+  function toTsv(headers, rows) {
+    var f = function (v) { return String(v).replace(/[\t\r\n]+/g, ' '); };
+    return [headers.map(f).join('\t')].concat(rows.map(function (r) { return r.map(f).join('\t'); })).join('\n');
+  }
+  function download(blob, name) {
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function copy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return new Promise(function (res, rej) { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy') ? res() : rej(); } catch (e) { rej(e); } document.body.removeChild(t); });
+  }
+  function fileName(title) { var s = String(title || 'table').replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60); return (s || 'table'); }
+  function toast(msg) { try { if (window.Forge && Forge.showToast) { Forge.showToast(msg, 'success'); return; } } catch (_) {} try { if (typeof showToast === 'function') { showToast(msg); return; } } catch (_) {} }
+  return { makeXlsx: makeXlsx, toTsv: toTsv, download: download, copy: copy, fileName: fileName, toast: toast };
 })();
 </script>
 </body>
