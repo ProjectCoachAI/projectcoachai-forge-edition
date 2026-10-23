@@ -1367,14 +1367,30 @@ async function detectChecklistArtifactsEx(text, existingArtifacts, callClaudeHai
     // Bound the work: the first lists in an entry are the ones that matter.
     const candidates = []; let total = 0;
     for (const c of found) { if (candidates.length >= 25 || total + c.items.length > 300) break; candidates.push(c); total += c.items.length; }
-    const prompt = 'You are deciding which lines in a saved AI conversation are real to-do items for the person reading it. You get several lists; each has the sentence that introduces it (may be empty) and its items.\n\n' +
-      'For EVERY item answer true only if it is something the reader themselves would do, check, ask, send, prepare, decide or look up — an action or a concrete thing to go and consult (e.g. "Call the recruiter", "Check Glassdoor India", "Ask Olivier what the opportunity is").\n' +
-      'Answer false for anything that describes, summarises, quotes or explains: findings, figures, estimates, reasons, pros and cons, comparisons, options, definitions, examples, status notes, descriptions of what a message or document contains or what the assistant changed or added, ingredients, features, steps the assistant itself performed. When unsure, answer false.\n\n' +
-      candidates.map((c, i) => 'List ' + (i + 1) + (c.lead ? ' (introduced by: "' + c.lead + '")' : '') + ':\n' + c.items.map(item => '- ' + item.slice(0, 300)).join('\n')).join('\n\n') +
-      '\n\nRespond ONLY with a JSON array containing one array of booleans per list, in the same order, each with exactly one boolean per item of that list (e.g. [[true,false,true],[false,false]]). No other text.';
-    const response = await callClaudeHaikuAPI(prompt, apiKey, Math.min(2500, 80 + total * 7));
-    const flags = parseChecklistClassification(response, candidates);
-    if (!flags) return { ok: false, artifacts: [] };
+    const askFlags = async (cands) => {
+      const total2 = cands.reduce((n, c) => n + c.items.length, 0);
+      const prompt = 'You are deciding which lines in a saved AI conversation are real to-do items for the person reading it. You get several lists; each has the sentence that introduces it (may be empty) and its items.\n\n' +
+        'For EVERY item answer true only if it is something the reader themselves would do, check, ask, send, prepare, decide or look up — an action or a concrete thing to go and consult (e.g. "Call the recruiter", "Check Glassdoor India", "Ask Olivier what the opportunity is").\n' +
+        'Answer false for anything that describes, summarises, quotes or explains: findings, figures, estimates, reasons, pros and cons, comparisons, options, definitions, examples, status notes, descriptions of what a message or document contains or what the assistant changed or added, ingredients, features, steps the assistant itself performed. When unsure, answer false.\n\n' +
+        cands.map((c, i) => 'List ' + (i + 1) + (c.lead ? ' (introduced by: "' + c.lead + '")' : '') + ':\n' + c.items.map(item => '- ' + item.slice(0, 300)).join('\n')).join('\n\n') +
+        '\n\nRespond ONLY with a JSON array containing one array of booleans per list, in the same order, each with exactly one boolean per item of that list (e.g. [[true,false,true],[false,false]]). No other text.';
+      // One short retry: transient API errors and rate limits are the
+      // usual cause of a failed run.
+      let response;
+      try { response = await callClaudeHaikuAPI(prompt, apiKey, Math.min(2500, 80 + total2 * 7)); }
+      catch (e1) { await new Promise(r => setTimeout(r, 1500)); response = await callClaudeHaikuAPI(prompt, apiKey, Math.min(2500, 80 + total2 * 7)); }
+      const f = parseChecklistClassification(response, cands);
+      if (!f) console.warn('[Diary] checklist classifier gave an unusable answer for', cands.length, 'list(s), total', total2, 'items. Starts:', String(response || '').slice(0, 120).replace(/\s+/g, ' '));
+      return f;
+    };
+    let flags = await askFlags(candidates);
+    if (!flags) {
+      // A long or messy batch is the usual cause of an unusable answer:
+      // ask about each list on its own. A list that still gets no usable
+      // answer is left out rather than guessed at.
+      flags = [];
+      for (const c of candidates) { const f = await askFlags([c]); flags.push(f ? f[0] : c.items.map(() => false)); }
+    }
     const seen = new Set(); const allItems = [];
     candidates.forEach((c, i) => {
       const kept = c.items.filter((_, j) => flags[i][j]);
