@@ -172,6 +172,7 @@
   <div class="chat-header">
     <a href="/app.html" class="back" id="chatBackLink">&larr; Back to Diary</a>
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <a class="chat-icon-btn" id="openOriginalBtn" href="#" target="_blank" rel="noopener" style="display:none;text-decoration:none;" title="Open the original conversation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/></svg> Open original &#8599;</a>
       <button class="chat-icon-btn" id="syncBtn" onclick="performSync()" title="Pull in anything new from the original conversation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg> Sync</button>
       <span style="display:inline-flex;gap:4px;margin-right:4px;">
         <button onclick="adjustDiaryFontScale(-1)" title="Decrease text size" style="width:24px;height:24px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;color:#4A4035;font-size:11px;font-weight:700;cursor:pointer;line-height:1;">A&#8722;</button>
@@ -1032,6 +1033,22 @@ function formatRelativeTime(isoString) {
 // whether this will be near-instant or involves opening a visible tab
 // to the original conversation, rather than a tab just appearing
 // unannounced once they've already committed to clicking.
+// "Open original": the link back to the conversation this entry was saved
+// from (the same check and the same address the Diary entry's own button
+// uses). Opens in a new tab so this conversation stays where it is. Hidden
+// when the entry has no captured source conversation (e.g. Quick Answer).
+function updateOpenOriginalButton() {
+  var b = document.getElementById('openOriginalBtn');
+  if (!b) return;
+  var u = chatConversationUrl;
+  var ok = typeof u === 'string' && /^https:\/\//i.test(u) &&
+    ['claude.ai','chatgpt.com','gemini.google','perplexity.ai','grok.com','deepseek.com','mistral.ai','meta.ai'].some(function(d) { return u.indexOf(d) !== -1; });
+  if (!ok) { b.style.display = 'none'; return; }
+  b.href = u;
+  b.title = 'Open the original ' + (MODEL_LABELS[chatModel] || 'conversation') + ' conversation';
+  b.style.display = 'inline-block';
+}
+
 async function updateSyncButtonLabel() {
   var btn = document.getElementById('syncBtn');
   if (!btn) return;
@@ -1395,7 +1412,11 @@ async function toggleListenMsg(entryId, msgId) {
 
   var el = document.getElementById(msgId);
   if (!el) return;
-  var cleaned = cleanTextForSpeech(el.innerText || el.textContent || '');
+  var _speechText = el.innerText || el.textContent || '';
+  Array.prototype.forEach.call(el.querySelectorAll('.tbl-view-btn'), function(vb) {
+    _speechText = _speechText.split(vb.innerText || vb.textContent || '').join('');
+  });
+  var cleaned = cleanTextForSpeech(_speechText);
   if (!cleaned) { Forge.showToast('Nothing to read.', 'error'); return; }
 
   var btn = document.getElementById('listen-btn-' + msgId);
@@ -2406,6 +2427,7 @@ async function loadContextRelated(entryId) {
     document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel] || chatModel;
     updateChatImageAttachButtonState();
     chatConversationUrl = meta && meta.url ? meta.url : null;
+    updateOpenOriginalButton();
     chatEntryAttachments = (meta && Array.isArray(meta.attachments)) ? meta.attachments : [];
     updateSyncButtonLabel();
     renderContextStrip(entry, chatModel);
@@ -3018,6 +3040,99 @@ window.zoomPdfOut = zoomPdfOut;
   if (_resetDateEl) _resetDateEl.textContent = getResetDateString();
 </script>
 
+<div id="tableArtifactModal" onclick="if(event.target===this)closeChatTable()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#F5F3EE;width:min(880px,92vw);height:80vh;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:0.5px solid #D6D2C8;flex-shrink:0;background:#fdfdfb;gap:12px;">
+      <input id="tableArtifactFilter" type="text" placeholder="Filter rows..." oninput="renderChatTableBody()" style="flex:1;font-size:16px;padding:6px 10px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:Inter,sans-serif;outline:none;"/>
+      <button onclick="exportChatTableCsv()" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export CSV</button>
+      <button onclick="closeChatTable()" aria-label="Close" style="background:none;border:none;color:#6B6559;font-size:22px;line-height:1;cursor:pointer;padding:0;">&times;</button>
+    </div>
+    <div id="tableArtifactBody" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0;"></div>
+  </div>
+</div>
+<script>
+/* "View table" window for Continue answers: same sort / filter / CSV as the Diary entry's table window. */
+(function () {
+  var cur = null;
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function plain(c) { return String(c == null ? '' : c).replace(/[\uE000-\uE004]/g, '').replace(/\s{2,}/g, ' ').trim(); }
+  function visibleRows() {
+    var rows = cur.rows.slice();
+    var f = document.getElementById('tableArtifactFilter');
+    var q = (f && f.value || '').toLowerCase().trim();
+    if (q) rows = rows.filter(function (r) { return r.some(function (c) { return plain(c).toLowerCase().indexOf(q) !== -1; }); });
+    if (cur.sortCol !== null) {
+      var col = cur.sortCol, dir = cur.sortDir;
+      rows.sort(function (a, b) {
+        var av = plain(a[col]), bv = plain(b[col]);
+        var an = parseFloat(av.replace(/[$,%]/g, '')), bn = parseFloat(bv.replace(/[$,%]/g, ''));
+        if (!isNaN(an) && !isNaN(bn)) return (an - bn) * dir;
+        return av.localeCompare(bv) * dir;
+      });
+    }
+    return rows;
+  }
+  window.renderChatTableBody = function () {
+    if (!cur) return;
+    var rows = visibleRows();
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Inter,sans-serif;"><thead><tr style="background:#EDE9E0;">';
+    cur.headers.forEach(function (h, i) {
+      var arrow = cur.sortCol === i ? (cur.sortDir === 1 ? ' &uarr;' : ' &darr;') : '';
+      html += '<th onclick="sortChatTable(' + i + ')" style="padding:10px 14px;text-align:left;cursor:pointer;position:sticky;top:0;background:#EDE9E0;color:#1B2A4A;font-weight:600;user-select:none;white-space:nowrap;">' + esc(plain(h)) + arrow + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    if (!rows.length) {
+      html += '<tr><td colspan="' + cur.headers.length + '" style="padding:20px;text-align:center;color:#9E9890;">No matching rows.</td></tr>';
+    } else {
+      rows.forEach(function (row, ri) {
+        html += '<tr style="border-bottom:0.5px solid #D6D2C8;' + (ri % 2 === 1 ? 'background:#FAF8F4;' : '') + '">';
+        row.forEach(function (c) { html += '<td style="padding:9px 14px;color:#4A4035;">' + esc(plain(c)) + '</td>'; });
+        html += '</tr>';
+      });
+    }
+    html += '</tbody></table>';
+    var body = document.getElementById('tableArtifactBody');
+    if (body) body.innerHTML = html;
+  };
+  window.sortChatTable = function (i) {
+    if (!cur) return;
+    if (cur.sortCol === i) cur.sortDir *= -1; else { cur.sortCol = i; cur.sortDir = 1; }
+    window.renderChatTableBody();
+  };
+  window.openChatTable = function (btn) {
+    var box = btn && btn.previousElementSibling;
+    var t = box && box.querySelector ? box.querySelector('table') : null;
+    if (!t || !t.rows.length) return;
+    var headRow = t.rows[0];
+    var cells = function (r) { return Array.prototype.map.call(r.cells, function (c) { return (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim(); }); };
+    cur = { headers: cells(headRow), rows: Array.prototype.slice.call(t.rows, 1).map(cells), sortCol: null, sortDir: 1 };
+    var f = document.getElementById('tableArtifactFilter');
+    if (f) f.value = '';
+    var modal = document.getElementById('tableArtifactModal');
+    if (modal) modal.style.display = 'flex';
+    window.renderChatTableBody();
+  };
+  window.closeChatTable = function () {
+    var modal = document.getElementById('tableArtifactModal');
+    if (modal) modal.style.display = 'none';
+    cur = null;
+  };
+  window.exportChatTableCsv = function () {
+    if (!cur) return;
+    var q = function (v) { var s = plain(v); return /["\n,]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    var lines = [cur.headers.map(q).join(',')];
+    visibleRows().forEach(function (r) { lines.push(r.map(q).join(',')); });
+    var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'table.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  };
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && cur) window.closeChatTable(); });
+})();
+</script>
+
 <script>
 /* Wrap any rendered table in a sideways-scrolling box (all views: entry, panel, Continue chat, reader). */
 (function () {
@@ -3032,6 +3147,28 @@ window.zoomPdfOut = zoomPdfOut;
       box.appendChild(t);
       var cols = (t.rows && t.rows[0]) ? t.rows[0].cells.length : 0;
       if (cols > 2) t.style.minWidth = Math.min(cols * 110, 900) + 'px';
+    });
+    // "View table": a button under each table in a Continue answer that opens
+    // the same sortable, filterable window the Diary entry has.
+    Array.prototype.forEach.call(root.querySelectorAll ? root.querySelectorAll('.chat-msg-body .tbl-scroll') : [], function (box) {
+      var t = box.querySelector('table');
+      var next = box.nextElementSibling;
+      var has = !!(next && next.classList && next.classList.contains('tbl-view-btn'));
+      var rowCount = t ? Math.max(0, t.rows.length - 1) : 0;
+      var colCount = (t && t.rows[0]) ? t.rows[0].cells.length : 0;
+      if (!t || rowCount < 2 || colCount < 2) { if (has) next.parentNode.removeChild(next); return; }
+      var label = '\uD83D\uDCCA View table (' + rowCount + ' rows)';
+      if (!has) {
+        var vb = document.createElement('button');
+        vb.type = 'button';
+        vb.className = 'tbl-view-btn';
+        vb.setAttribute('onclick', 'openChatTable(this)');
+        vb.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:#4A4035;font-family:Inter,sans-serif;margin:0 0 0.75rem;';
+        vb.textContent = label;
+        box.parentNode.insertBefore(vb, box.nextSibling);
+      } else if (next.textContent !== label) {
+        next.textContent = label;
+      }
     });
   }
   var queued = false;
