@@ -8047,12 +8047,15 @@ window.DiaryTableExport = (function () {
 </script>
 <script>
 /* Table chart: horizontal bars (or low-high range bars) for a numeric column. Plain SVG, no libraries. */
+/* Table chart: horizontal bars (or low-high range bars) for a numeric column. Plain SVG, no libraries. */
 window.DiaryTableChart = (function () {
-  var C = { mode: false, col: -1, cols: [], getData: null };
+  var C = { mode: false, col: -1, cols: [], getData: null, hideTotals: true };
+  var TOTAL = /^\s*(grand\s+total|total|sum|overall|all\b)/i;
   var CUR = '(€|\\$|£|₹|¥|CHF|USD|EUR|INR|GBP)?';
-  var NUM = '(\\d[\\d,]*(?:\\.\\d+)?)\\s*([kKmM])?';
+  var NUM = '(\\d[\\d,]*(?:\\.\\d+)?)\\s*(trillion|billion|million|thousand|crore|lakh|lac|bn|mn|tn|k|m|b)?(?![a-z])';
   var RE = new RegExp('^' + CUR + '\\s*' + NUM + '(?:\\s*(?:–|—|-|to)\\s*' + CUR + '\\s*' + NUM + ')?\\s*(%|(?:/|\\bper\\s+)\\s*[a-z]+)?\\s*(\\+)?\\s*(?:avg\\.?|average|each|net|gross)?$', 'i');
-  function val(n, m) { var v = parseFloat(String(n).replace(/,/g, '')); if (m) v *= /k/i.test(m) ? 1e3 : 1e6; return v; }
+  var MULT = { k: 1e3, thousand: 1e3, m: 1e6, mn: 1e6, million: 1e6, b: 1e9, bn: 1e9, billion: 1e9, t: 1e12, tn: 1e12, trillion: 1e12, lakh: 1e5, lac: 1e5, crore: 1e7 };
+  function val(n, m) { var v = parseFloat(String(n).replace(/,/g, '')); if (m) v *= MULT[String(m).toLowerCase()] || 1; return v; }
   function parseCell(s) {
     var t = String(s == null ? '' : s).trim();
     if (!t || /^[—–\-\s]+$/.test(t)) return { empty: true };
@@ -8083,13 +8086,14 @@ window.DiaryTableChart = (function () {
   function nice(max) { var p = Math.pow(10, Math.floor(Math.log10(max || 1))), f = max / p; var n = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10; return n * p; }
   function compact(v, cur) {
     var s; if (cur === '₹' || cur === 'INR') { if (v >= 1e7) s = (v / 1e7).toFixed(v % 1e7 ? 1 : 0).replace(/\.0$/, '') + ' Cr'; else if (v >= 1e5) s = (v / 1e5).toFixed(v % 1e5 ? 1 : 0).replace(/\.0$/, '') + ' L'; else if (v >= 1e3) s = (v / 1e3).toFixed(v % 1e3 ? 1 : 0).replace(/\.0$/, '') + 'K'; else s = String(Math.round(v * 100) / 100); return '₹' + s; }
-    if (v >= 1e6) s = (v / 1e6).toFixed(v % 1e6 ? 1 : 0).replace(/\.0$/, '') + 'M'; else if (v >= 1e3) s = (v / 1e3).toFixed(v % 1e3 ? 1 : 0).replace(/\.0$/, '') + 'K'; else s = String(Math.round(v * 100) / 100);
+    if (v >= 1e12) s = (v / 1e12).toFixed(1).replace(/\.0$/, '') + 'T'; else if (v >= 1e9) s = (v / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B'; else if (v >= 1e6) s = (v / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M'; else if (v >= 1e3) s = (v / 1e3).toFixed(v % 1e3 ? 1 : 0).replace(/\.0$/, '') + 'K'; else s = String(Math.round(v * 100) / 100);
     var sym = { EUR: '€', USD: '$', GBP: '£', INR: '₹' }[cur] || cur; return (sym && sym.length === 1 ? sym : '') + s + (sym && sym.length > 1 ? ' ' + sym : '');
   }
   function buildSvg(d, colInfo) {
     var labelCol = 0; if (colInfo.index === 0) labelCol = -1;
     var items = [], skipped = [];
     d.rows.forEach(function (r, i) {
+      if (C.hideTotals && labelCol >= 0 && TOTAL.test(String(r[labelCol] || ''))) return;
       var label = labelCol >= 0 ? String(r[labelCol] || '').trim() : 'Row ' + (i + 1);
       if (!label) label = 'Row ' + (i + 1);
       var p = parseCell(r[colInfo.index]);
@@ -8132,7 +8136,7 @@ window.DiaryTableChart = (function () {
   function btn() { return document.getElementById('tableChartBtn'); }
   function setBtn() { var b = btn(); if (b) b.textContent = C.mode ? 'Table' : 'Chart'; }
   C.onOpen = function () {
-    C.mode = false; C.col = -1; C.cols = [];
+    C.mode = false; C.col = -1; C.cols = []; C.hideTotals = true;
     try { var d = C.getData && C.getData(true); if (d) C.cols = analyze(d.headers, d.rows); } catch (e) { C.cols = []; }
     if (C.cols.length) C.col = 0;
     var b = btn(); if (b) b.style.display = C.cols.length ? '' : 'none';
@@ -8142,6 +8146,7 @@ window.DiaryTableChart = (function () {
     C.mode = !C.mode; setBtn();
     var f = document.getElementById('tableArtifactFilter'); if (f) f.dispatchEvent(new Event('input'));
   };
+  C.setHide = function (on) { C.hideTotals = !!on; var f = document.getElementById('tableArtifactFilter'); if (f) f.dispatchEvent(new Event('input')); };
   C.setCol = function (i) { C.col = parseInt(i, 10); var f = document.getElementById('tableArtifactFilter'); if (f) f.dispatchEvent(new Event('input')); };
   C.render = function (body) {
     if (!body) return;
@@ -8151,6 +8156,8 @@ window.DiaryTableChart = (function () {
       h += '<label style="font-size:12px;color:#6B6559;">Chart column <select onchange="DiaryTableChart.setCol(this.value)" style="font-size:13px;padding:3px 6px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;">' +
         C.cols.map(function (c, i) { return '<option value="' + i + '"' + (i === C.col ? ' selected' : '') + '>' + esc(c.header) + '</option>'; }).join('') + '</select></label>';
     }
+    var hasTotal = d.rows.some(function (r) { return TOTAL.test(String(r[0] || '')); });
+    if (hasTotal && info && info.index !== 0) h += '<label style="font-size:12px;color:#6B6559;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" ' + (C.hideTotals ? 'checked ' : '') + 'onchange="DiaryTableChart.setHide(this.checked)"> Hide total row</label>';
     h += '<span style="flex:1"></span>' + (built ? '<button type="button" onclick="DiaryTableChart.savePng()" style="font-size:12px;color:#C17D3C;font-weight:500;font-family:Inter,sans-serif;background:none;border:none;cursor:pointer;padding:0;">Save image</button>' : '') + '</div>';
     h += built ? '<div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:6px;padding:6px;overflow-x:auto;">' + built.svg.replace('width="' + built.w + '" height="' + built.h + '"', 'style="width:100%;min-width:560px;height:auto;display:block;"') + '</div>' : '<div style="font-size:12px;color:#6B6559;padding:20px 0;">Nothing to chart with the current filter.</div>';
     body.innerHTML = h + '</div>';
